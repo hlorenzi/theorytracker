@@ -1,3 +1,23 @@
+var C  = 0;
+var Cs = 1;
+var D  = 2;
+var Ds = 3;
+var E  = 4;
+var F  = 5;
+var Fs = 6;
+var G  = 7;
+var Gs = 8;
+var A  = 9;
+var As = 10;
+var B  = 11;
+	
+var scaleMajor = 			{ name: "Major",					pitches: [ C,  D,  E,  F,  G,  A,  B  ] };
+var scaleDorian = 			{ name: "Dorian",					pitches: [ C,  D,  Ds, F,  G,  A,  As ] };
+var scaleMixolydian = 		{ name: "Mixolydian",				pitches: [ C,  D,  E,  F,  G,  A,  As ] };
+var scaleNaturalMinor = 	{ name: "Natural Minor",			pitches: [ C,  D,  Ds, F,  G,  Gs, As ] };
+var scalePhrygianDominant = { name: "Phrygian Dominant",		pitches: [ C,  Cs, E,  F,  G,  Gs, As ] };
+
+
 function SongData()
 {
 	this.beatsPerMinute = 120;
@@ -18,10 +38,10 @@ function SongDataNote(tick, duration, pitch)
 }
 
 
-function SongDataKeyChange(tick, key, tonicPitch)
+function SongDataKeyChange(tick, scale, tonicPitch)
 {
 	this.tick = tick;
-	this.key = key;
+	this.scale = scale;
 	this.tonicPitch = tonicPitch;
 }
 

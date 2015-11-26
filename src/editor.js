@@ -24,6 +24,7 @@ function SongEditor(canvas, songData)
 	this.MARGIN_TOP = 4;
 	this.MARGIN_BOTTOM = 4;
 	this.HEADER_MARGIN = 40;
+	this.NOTE_HEIGHT = 10;
 	this.CHORD_HEIGHT = 60;
 	this.CHORDNOTE_MARGIN = 10;
 	this.KEYCHANGE_BAR_WIDTH = 10;
@@ -151,11 +152,6 @@ SongEditor.prototype.refreshVisualization = function()
 		{
 			block.x1 = x;
 			block.x2 = x;
-			
-			if (nextIsWhat == NEXT_IS_KEYCHANGE)
-				block.key = this.songData.keyChanges[curKeyChange - 1];
-			else if (nextIsWhat == NEXT_IS_METERCHANGE)
-				block.meter = this.songData.meterChanges[curMeterChange - 1];
 		}
 		else
 		{
@@ -181,7 +177,63 @@ SongEditor.prototype.refreshVisualization = function()
 			
 			curBlock++;
 		}
+		
+		// Apply key/meter changes to the following block.
+		if (nextIsWhat == NEXT_IS_KEYCHANGE)
+			this.viewBlocks[curBlock].key = this.songData.keyChanges[curKeyChange - 1];
+		else if (nextIsWhat == NEXT_IS_METERCHANGE)
+			this.viewBlocks[curBlock].meter = this.songData.meterChanges[curMeterChange - 1];
 	}
+}
+
+
+// Returns the row number where a note of the given pitch would be placed,
+// according to the given scale.
+SongEditor.prototype.getPitchRow = function(pitch, scale)
+{
+	// FIXME: This returns test values.
+	return pitch / 2 + (scale.name == "Dorian" ? 0 : 1);
+}
+
+
+SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration)
+{
+	var block = this.viewBlocks[blockIndex];
+	
+	if (tick + duration <= block.tick ||
+		tick >= block.tick + block.duration)
+		return;
+	
+	var row = this.getPitchRow(pitch, block.key.scale);
+	
+	var blockTick = tick - block.tick;
+	var x1 = block.x1 + Math.max(0, blockTick * this.tickZoom);
+	var x2 = block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom);
+	var y1 = block.y2 - (row + 1) * this.NOTE_HEIGHT;
+	var y2 = y1 + this.NOTE_HEIGHT;
+	
+	this.ctx.save();
+	this.ctx.fillStyle = "red";
+	this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+	this.ctx.globalAlpha = 0.5;
+	
+	if (blockTick + duration > block.duration && blockIndex < this.viewBlocks.length - 1)
+	{
+		var nextBlock = this.viewBlocks[blockIndex + 1];
+		var nextRow = this.getPitchRow(pitch, nextBlock.key.scale);
+		
+		var nextY1 = nextBlock.y2 - (nextRow + 1) * this.NOTE_HEIGHT;
+		var nextY2 = nextY1 + this.NOTE_HEIGHT;
+		
+		this.ctx.beginPath();
+		this.ctx.moveTo(block.x2, y1);
+		this.ctx.lineTo(nextBlock.x1, nextY1);
+		this.ctx.lineTo(nextBlock.x1, nextY2);
+		this.ctx.lineTo(block.x2, y2);
+		this.ctx.fill();
+	}
+	
+	this.ctx.restore();
 }
 
 
@@ -192,6 +244,12 @@ SongEditor.prototype.refreshCanvas = function()
 	
 	for (var i = 0; i < this.viewBlocks.length; i++)
 	{
+		for (var n = 0; n < this.songData.notes.length; n++)
+		{
+			var note = this.songData.notes[n];
+			this.drawNote(i, note.pitch, note.tick, note.duration);
+		}
+		
 		var block = this.viewBlocks[i];
 		
 		this.ctx.strokeStyle = "black";
@@ -200,6 +258,7 @@ SongEditor.prototype.refreshCanvas = function()
 		var x2 = Math.min(block.x2, this.canvasWidth - this.MARGIN_LEFT);
 		this.ctx.strokeRect(block.x1, block.y1, x2 - block.x1, block.y2 - block.y1);
 		this.ctx.strokeRect(block.x1, block.y2 + this.CHORDNOTE_MARGIN, x2 - block.x1, this.CHORD_HEIGHT);
+		
 	}
 	
 	for (var i = 0; i < this.viewKeyChanges.length; i++)
