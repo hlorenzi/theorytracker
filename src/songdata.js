@@ -11,11 +11,11 @@ var A  = 9;
 var As = 10;
 var B  = 11;
 	
-var scaleMajor = 			{ name: "Major",					pitches: [ C,  D,  E,  F,  G,  A,  B  ] };
-var scaleDorian = 			{ name: "Dorian",					pitches: [ C,  D,  Ds, F,  G,  A,  As ] };
-var scaleMixolydian = 		{ name: "Mixolydian",				pitches: [ C,  D,  E,  F,  G,  A,  As ] };
-var scaleNaturalMinor = 	{ name: "Natural Minor",			pitches: [ C,  D,  Ds, F,  G,  Gs, As ] };
-var scalePhrygianDominant = { name: "Phrygian Dominant",		pitches: [ C,  Cs, E,  F,  G,  Gs, As ] };
+var scaleMajor = 			{ name: "Major",					degrees: [ C,  D,  E,  F,  G,  A,  B  ] };
+var scaleDorian = 			{ name: "Dorian",					degrees: [ C,  D,  Ds, F,  G,  A,  As ] };
+var scaleMixolydian = 		{ name: "Mixolydian",				degrees: [ C,  D,  E,  F,  G,  A,  As ] };
+var scaleNaturalMinor = 	{ name: "Natural Minor",			degrees: [ C,  D,  Ds, F,  G,  Gs, As ] };
+var scalePhrygianDominant = { name: "Phrygian Dominant",		degrees: [ C,  Cs, E,  F,  G,  Gs, As ] };
 
 
 function SongData()
