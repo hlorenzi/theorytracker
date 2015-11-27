@@ -134,7 +134,7 @@ SongEditor.prototype.refreshRepresentation = function()
 			for (var n = 0; n < this.songData.notes.length; n++)
 			{
 				var note = this.songData.notes[n];
-				var noteRow = this.getNoteRow(note.pitch, block.key);
+				var noteRow = this.getRowForPitch(note.pitch, block.key);
 				var notePos = this.getNotePosition(block, noteRow, note.tick, note.duration);
 				block.notes.push(
 				{

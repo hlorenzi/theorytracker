@@ -5,8 +5,8 @@ function testOnLoad()
 	song.addMeterChange(new SongDataMeterChange(0, 4, 4));
 	song.addKeyChange(new SongDataKeyChange(100, scaleMajor, 2));
 	song.addMeterChange(new SongDataMeterChange(150, 3, 4));
-	song.addKeyChange(new SongDataKeyChange(200, scaleMixolydian, 0));
-	song.addKeyChange(new SongDataKeyChange(300, scalePhrygianDominant, 0));
+	song.addKeyChange(new SongDataKeyChange(200, scaleMixolydian, 11));
+	song.addKeyChange(new SongDataKeyChange(300, scalePhrygianDominant, 4));
 	
 	song.addNote(new SongDataNote(0, 300, 12));
 	song.addNote(new SongDataNote(0, 300, 5));

@@ -1,6 +1,30 @@
+// Returns the scale degree of the given pitch, according to the given key.
+SongEditor.prototype.getDegreeForPitch = function(pitch, key)
+{
+	var pitchInOctave = ((pitch + 12 - key.tonicPitch) % 12);
+	var pitchDegree = key.scale.degrees.length - 0.5;
+	
+	for (var i = 0; i < key.scale.degrees.length; i++)
+	{
+		if (key.scale.degrees[i] == pitchInOctave)
+		{
+			pitchDegree = i;
+			break;
+		}
+		else if (key.scale.degrees[i] > pitchInOctave)
+		{
+			pitchDegree = i - 0.5;
+			break;
+		}
+	}
+	
+	return pitchDegree;
+}
+
+
 // Returns the row index where a note of the given pitch would be placed,
 // according to the given key.
-SongEditor.prototype.getNoteRow = function(pitch, key)
+SongEditor.prototype.getRowForPitch = function(pitch, key)
 {
 	var pitchInOctave = ((pitch + 12 - key.tonicPitch) % 12);
 	var pitchDegree = key.scale.degrees.length - 0.5;
@@ -10,7 +34,7 @@ SongEditor.prototype.getNoteRow = function(pitch, key)
 	{
 		var originalTonicPitch = key.tonicPitch;
 		key.tonicPitch = 0;
-		degreeOffsetFromC = this.getNoteRow(originalTonicPitch, key);
+		degreeOffsetFromC = Math.ceil(this.getRowForPitch(originalTonicPitch, key));
 		key.tonicPitch = originalTonicPitch;
 	}
 	
@@ -32,15 +56,15 @@ SongEditor.prototype.getNoteRow = function(pitch, key)
 }
 
 
-// Returns the scale degree of the given row index.
-SongEditor.prototype.getNoteForRow = function(row, key)
+// Returns the pitch of the given row index, according to the given key.
+SongEditor.prototype.getPitchForRow = function(row, key)
 {
 	var degreeOffsetFromC = 0;
 	if (key.tonicPitch != 0)
 	{
 		var originalTonicPitch = key.tonicPitch;
 		key.tonicPitch = 0;
-		degreeOffsetFromC = this.getNoteRow(originalTonicPitch, key);
+		degreeOffsetFromC = Math.ceil(this.getRowForPitch(originalTonicPitch, key));
 		key.tonicPitch = originalTonicPitch;
 	}
 	
@@ -63,8 +87,8 @@ SongEditor.prototype.getNotePosition = function(block, row, tick, duration)
 }
 
 
-// Returns a color string matching the given row.
-SongEditor.prototype.getColorForRow = function(row)
+// Returns a color string matching the given scale degree.
+SongEditor.prototype.getColorForDegree = function(degree)
 {
 	var colors =
 	[
@@ -76,5 +100,5 @@ SongEditor.prototype.getColorForRow = function(row)
 		"#6b16fc",
 		"#ed18a8"
 	];
-	return colors[(row - (row % 1)) % 7];
+	return colors[(degree - (degree % 1)) % 7];
 }

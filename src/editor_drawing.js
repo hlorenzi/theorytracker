@@ -6,9 +6,10 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 		tick >= block.tick + block.duration)
 		return;
 	
-	var row = this.getNoteRow(pitch, block.key);
+	var deg = this.getDegreeForPitch(pitch, block.key);
+	var row = this.getRowForPitch(pitch, block.key);
 	var pos = this.getNotePosition(block, row, tick, duration);
-	var col = this.getColorForRow(row);
+	var col = this.getColorForDegree(deg);
 	
 	this.ctx.save();
 	this.ctx.fillStyle = col;
@@ -32,7 +33,7 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 	if (tick + duration > block.tick + block.duration && blockIndex < this.viewBlocks.length - 1)
 	{
 		var nextBlock = this.viewBlocks[blockIndex + 1];
-		var nextRow = this.getNoteRow(pitch, nextBlock.key);
+		var nextRow = this.getRowForPitch(pitch, nextBlock.key);
 		
 		var nextY1 = nextBlock.y2 - (nextRow + 1) * this.NOTE_HEIGHT;
 		var nextY2 = nextY1 + this.NOTE_HEIGHT;
@@ -62,7 +63,7 @@ SongEditor.prototype.refreshCanvas = function()
 		// Draw rows.
 		for (var row = 0; row < 14; row++)
 		{
-			this.ctx.strokeStyle = (this.getNoteForRow(row, block.key) == block.key.tonicPitch ? "#bbbbbb" : "#dddddd");
+			this.ctx.strokeStyle = (this.getPitchForRow(row, block.key) == block.key.tonicPitch ? "#bbbbbb" : "#dddddd");
 			this.ctx.lineWidth = 2;
 			this.ctx.beginPath();
 			this.ctx.moveTo(block.x1, block.y2 - row * this.NOTE_HEIGHT);
@@ -176,7 +177,7 @@ SongEditor.prototype.refreshCanvas = function()
 		{
 			this.ctx.fillStyle = "#444444";
 			this.ctx.fillText(
-				"" + theoryNoteName(this.getNoteForRow(row, songKeyChange)),
+				"" + theoryNoteName(this.getPitchForRow(row, songKeyChange)),
 				keyChange.x1 + 4,
 				this.canvasHeight - this.MARGIN_BOTTOM - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row + 1) * this.NOTE_HEIGHT);
 		}
