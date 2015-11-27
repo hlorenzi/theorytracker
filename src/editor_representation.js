@@ -38,7 +38,7 @@ SongEditor.prototype.refreshRepresentation = function()
 		tick: 0,
 		duration: 0,
 		key: new SongDataKeyChange(0, scaleMajor, 0),
-		meter: null,
+		meter: new SongDataMeterChange(0, 4, 4),
 		notes: [],
 		x1: x,
 		y1: blockY1,
@@ -134,7 +134,7 @@ SongEditor.prototype.refreshRepresentation = function()
 			for (var n = 0; n < this.songData.notes.length; n++)
 			{
 				var note = this.songData.notes[n];
-				var noteRow = this.getNoteRow(note.pitch, block.key.scale);
+				var noteRow = this.getNoteRow(note.pitch, block.key);
 				var notePos = this.getNotePosition(block, noteRow, note.tick, note.duration);
 				block.notes.push(
 				{

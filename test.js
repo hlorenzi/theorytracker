@@ -3,14 +3,14 @@ function testOnLoad()
 	var song = new SongData();
 	song.addKeyChange(new SongDataKeyChange(0, scaleMajor, 0));
 	song.addMeterChange(new SongDataMeterChange(0, 4, 4));
-	song.addKeyChange(new SongDataKeyChange(100, scaleDorian, 0));
+	song.addKeyChange(new SongDataKeyChange(100, scaleMajor, 2));
 	song.addMeterChange(new SongDataMeterChange(150, 3, 4));
 	song.addKeyChange(new SongDataKeyChange(200, scaleMixolydian, 0));
 	song.addKeyChange(new SongDataKeyChange(300, scalePhrygianDominant, 0));
 	
-	song.addNote(new SongDataNote(0, 300, 0));
-	song.addNote(new SongDataNote(0, 300, 3));
+	song.addNote(new SongDataNote(0, 300, 12));
 	song.addNote(new SongDataNote(0, 300, 5));
+	song.addNote(new SongDataNote(0, 300, 7));
 	song.addNote(new SongDataNote(325, 25, 0));
 	song.addNote(new SongDataNote(350, 25, 1));
 	song.addNote(new SongDataNote(375, 25, 2));

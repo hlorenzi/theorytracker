@@ -6,7 +6,7 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 		tick >= block.tick + block.duration)
 		return;
 	
-	var row = this.getNoteRow(pitch, block.key.scale);
+	var row = this.getNoteRow(pitch, block.key);
 	var pos = this.getNotePosition(block, row, tick, duration);
 	var col = this.getColorForRow(row);
 	
@@ -32,7 +32,7 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 	if (tick + duration > block.tick + block.duration && blockIndex < this.viewBlocks.length - 1)
 	{
 		var nextBlock = this.viewBlocks[blockIndex + 1];
-		var nextRow = this.getNoteRow(pitch, nextBlock.key.scale);
+		var nextRow = this.getNoteRow(pitch, nextBlock.key);
 		
 		var nextY1 = nextBlock.y2 - (nextRow + 1) * this.NOTE_HEIGHT;
 		var nextY2 = nextY1 + this.NOTE_HEIGHT;
@@ -54,11 +54,40 @@ SongEditor.prototype.refreshCanvas = function()
 	this.ctx.fillStyle = "white";
 	this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 	
-	// Draw notes.
+	// Draw blocks.
 	for (var i = 0; i < this.viewBlocks.length; i++)
 	{
 		var block = this.viewBlocks[i];
 		
+		// Draw rows.
+		for (var row = 0; row < 14; row++)
+		{
+			this.ctx.strokeStyle = (this.getNoteForRow(row, block.key) == block.key.tonicPitch ? "#bbbbbb" : "#dddddd");
+			this.ctx.lineWidth = 2;
+			this.ctx.beginPath();
+			this.ctx.moveTo(block.x1, block.y2 - row * this.NOTE_HEIGHT);
+			this.ctx.lineTo(block.x2, block.y2 - row * this.NOTE_HEIGHT);
+			this.ctx.stroke();
+		}
+		
+		// Draw measures.
+		var submeasureCount = 0;
+		for (var n = block.meter.tick - block.tick; n < block.duration; n += this.WHOLE_NOTE_DURATION / block.meter.denominator)
+		{
+			if (n >= 0)
+			{
+				this.ctx.strokeStyle = (submeasureCount == 0 ? "#bbbbbb" : "#dddddd");
+				this.ctx.lineWidth = 2;
+				this.ctx.beginPath();
+				this.ctx.moveTo(block.x1 + n * this.tickZoom, block.y1);
+				this.ctx.lineTo(block.x1 + n * this.tickZoom, block.y2);
+				this.ctx.stroke();
+			}
+			
+			submeasureCount = (submeasureCount + 1) % block.meter.numerator;
+		}
+		
+		// Draw notes.
 		for (var n = 0; n < block.notes.length; n++)
 		{
 			var noteIndex = block.notes[n].noteIndex;
@@ -73,6 +102,7 @@ SongEditor.prototype.refreshCanvas = function()
 				this.drawNote(i, note.pitch, note.tick, note.duration, noteIndex == this.hoverNote, this.noteSelections[noteIndex]);
 		}
 		
+		// Draw borders.
 		this.ctx.strokeStyle = "black";
 		this.ctx.lineWidth = 2;
 		
@@ -81,11 +111,12 @@ SongEditor.prototype.refreshCanvas = function()
 		this.ctx.strokeRect(block.x1, block.y2 + this.CHORDNOTE_MARGIN, x2 - block.x1, this.CHORD_HEIGHT);
 	}
 	
+	
+	// Draw key changes.
 	this.ctx.font = "14px Tahoma";
 	this.ctx.textAlign = "left";
 	this.ctx.textBaseline = "top";
 	
-	// Draw key changes.
 	for (var i = 0; i < this.viewKeyChanges.length; i++)
 	{
 		var keyChange = this.viewKeyChanges[i];
@@ -132,15 +163,30 @@ SongEditor.prototype.refreshCanvas = function()
 			this.ctx.strokeRect(keyChange.x1, keyChange.y1, keyChange.x2 - keyChange.x1, keyChange.y2 - keyChange.y1);
 		}
 		
+		this.ctx.font = "14px Tahoma";
 		var songKeyChange = this.songData.keyChanges[keyChange.keyChangeIndex];
 		this.ctx.fillStyle = "#aaaaaa";
 		this.ctx.fillText(
 			"" + theoryNoteName(songKeyChange.tonicPitch) + " " + songKeyChange.scale.name,
 			textX,
 			keyChange.y1);
+			
+		this.ctx.font = "10px Tahoma";
+		for (var row = 0; row < 14; row++)
+		{
+			this.ctx.fillStyle = "#444444";
+			this.ctx.fillText(
+				"" + theoryNoteName(this.getNoteForRow(row, songKeyChange)),
+				keyChange.x1 + 4,
+				this.canvasHeight - this.MARGIN_BOTTOM - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row + 1) * this.NOTE_HEIGHT);
+		}
 	}
 	
+	
 	// Draw meter changes.
+	this.ctx.font = "14px Tahoma";
+	this.ctx.textAlign = "left";
+	
 	for (var i = 0; i < this.viewMeterChanges.length; i++)
 	{
 		var meterChange = this.viewMeterChanges[i];

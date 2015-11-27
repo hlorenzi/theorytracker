@@ -106,7 +106,7 @@ SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 	if (this.mouseDragAction == "move")
 	{
 		return {
-			tick: note.tick + tickOffset,
+			tick: Math.max(0, note.tick + tickOffset),
 			duration: note.duration,
 			pitch: note.pitch + pitchOffset
 		};
@@ -129,9 +129,9 @@ SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 		}
 		
 		return {
-			tick: newX1,
+			tick: Math.max(0, newX1),
 			duration: newX2 - newX1,
-			pitch: note.pitch + pitchOffset
+			pitch: note.pitch
 		};
 	}
 }

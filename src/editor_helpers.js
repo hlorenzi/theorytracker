@@ -1,25 +1,50 @@
-// Returns the row number where a note of the given pitch would be placed,
-// according to the given scale.
-SongEditor.prototype.getNoteRow = function(pitch, scale)
+// Returns the row index where a note of the given pitch would be placed,
+// according to the given key.
+SongEditor.prototype.getNoteRow = function(pitch, key)
 {
-	var pitchInOctave = (pitch % 12);
-	var pitchDegree = scale.degrees.length - 0.5;
+	var pitchInOctave = ((pitch + 12 - key.tonicPitch) % 12);
+	var pitchDegree = key.scale.degrees.length - 0.5;
 	
-	for (var i = 0; i < scale.degrees.length; i++)
+	var degreeOffsetFromC = 0;
+	if (key.tonicPitch != 0)
 	{
-		if (scale.degrees[i] == pitchInOctave)
+		var originalTonicPitch = key.tonicPitch;
+		key.tonicPitch = 0;
+		degreeOffsetFromC = this.getNoteRow(originalTonicPitch, key);
+		key.tonicPitch = originalTonicPitch;
+	}
+	
+	for (var i = 0; i < key.scale.degrees.length; i++)
+	{
+		if (key.scale.degrees[i] == pitchInOctave)
 		{
 			pitchDegree = i;
 			break;
 		}
-		else if (scale.degrees[i] > pitchInOctave)
+		else if (key.scale.degrees[i] > pitchInOctave)
 		{
 			pitchDegree = i - 0.5;
 			break;
 		}
 	}
 	
-	return pitchDegree + (Math.floor(pitch / 12) * scale.degrees.length);
+	return pitchDegree + degreeOffsetFromC + (Math.floor((pitch - key.tonicPitch) / 12) * key.scale.degrees.length);
+}
+
+
+// Returns the scale degree of the given row index.
+SongEditor.prototype.getNoteForRow = function(row, key)
+{
+	var degreeOffsetFromC = 0;
+	if (key.tonicPitch != 0)
+	{
+		var originalTonicPitch = key.tonicPitch;
+		key.tonicPitch = 0;
+		degreeOffsetFromC = this.getNoteRow(originalTonicPitch, key);
+		key.tonicPitch = originalTonicPitch;
+	}
+	
+	return key.scale.degrees[(row + key.scale.degrees.length - degreeOffsetFromC) % key.scale.degrees.length] + key.tonicPitch;
 }
 
 

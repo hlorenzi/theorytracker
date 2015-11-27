@@ -36,6 +36,7 @@ function SongEditor(canvas, songData)
 	this.hoverStretchR = false;
 	this.hoverStretchL = false;
 	
+	this.WHOLE_NOTE_DURATION = 100;
 	this.MARGIN_LEFT = 4;
 	this.MARGIN_RIGHT = 4;
 	this.MARGIN_TOP = 4;
@@ -46,7 +47,7 @@ function SongEditor(canvas, songData)
 	this.NOTE_MARGIN_VER = 0.5;
 	this.CHORD_HEIGHT = 60;
 	this.CHORDNOTE_MARGIN = 10;
-	this.KEYCHANGE_BAR_WIDTH = 10;
+	this.KEYCHANGE_BAR_WIDTH = 20;
 	this.METERCHANGE_BAR_WIDTH = 4;
 	
 	this.refreshRepresentation();
