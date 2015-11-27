@@ -187,12 +187,12 @@ SongEditor.prototype.handleMouseMove = function(ev)
 					{
 						this.hoverNote = note.noteIndex;
 						
-						if (mousePos.x <= note.resizeHandleL + 2)
+						if (mousePos.x <= note.resizeHandleL + this.NOTE_STRETCH_MARGIN)
 						{
 							this.canvas.style.cursor = "ew-resize";
 							this.hoverStretchL = true;
 						}
-						else if (mousePos.x >= note.resizeHandleR - 2)
+						else if (mousePos.x >= note.resizeHandleR - this.NOTE_STRETCH_MARGIN)
 						{
 							this.canvas.style.cursor = "ew-resize";
 							this.hoverStretchR = true;

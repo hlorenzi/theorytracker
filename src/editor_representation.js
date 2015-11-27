@@ -37,7 +37,7 @@ SongEditor.prototype.refreshRepresentation = function()
 	{
 		tick: 0,
 		duration: 0,
-		key: new SongDataKeyChange(0, scaleMajor, 0),
+		key: new SongDataKeyChange(0, theory.scales[0], 0),
 		meter: new SongDataMeterChange(0, 4, 4),
 		notes: [],
 		x1: x,
@@ -131,10 +131,11 @@ SongEditor.prototype.refreshRepresentation = function()
 			block.duration = nextChangeTick - block.tick;
 			block.x2 = blockX2;
 			
+			// Add notes' representations.
 			for (var n = 0; n < this.songData.notes.length; n++)
 			{
 				var note = this.songData.notes[n];
-				var noteRow = this.getRowForPitch(note.pitch, block.key);
+				var noteRow = theory.getRowForPitch(note.pitch, block.key);
 				var notePos = this.getNotePosition(block, noteRow, note.tick, note.duration);
 				block.notes.push(
 				{
@@ -171,10 +172,25 @@ SongEditor.prototype.refreshRepresentation = function()
 			curBlock++;
 		}
 		
-		// Apply key/meter changes to the following block.
+		// Apply key/meter changes to the next block.
 		if (nextIsWhat == NEXT_IS_KEYCHANGE)
 			this.viewBlocks[curBlock].key = this.songData.keyChanges[curKeyChange - 1];
 		else if (nextIsWhat == NEXT_IS_METERCHANGE)
 			this.viewBlocks[curBlock].meter = this.songData.meterChanges[curMeterChange - 1];
 	}
+}
+
+
+// Returns the bounds of the given row's note's representation rectangle.
+SongEditor.prototype.getNotePosition = function(block, row, tick, duration)
+{
+	var blockTick = tick - block.tick;
+	return {
+		resizeHandleL: block.x1 + blockTick * this.tickZoom,
+		resizeHandleR: block.x1 + (blockTick + duration) * this.tickZoom,
+		x1: block.x1 + Math.max(0, (blockTick * this.tickZoom) + this.NOTE_MARGIN_HOR),
+		x2: block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom - this.NOTE_MARGIN_HOR),
+		y1: block.y2 - (row + 1) * this.NOTE_HEIGHT + this.NOTE_MARGIN_VER,
+		y2: block.y2 - (row) * this.NOTE_HEIGHT - this.NOTE_MARGIN_VER,
+	};
 }

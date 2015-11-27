@@ -1,23 +1,3 @@
-var C  = 0;
-var Cs = 1;
-var D  = 2;
-var Ds = 3;
-var E  = 4;
-var F  = 5;
-var Fs = 6;
-var G  = 7;
-var Gs = 8;
-var A  = 9;
-var As = 10;
-var B  = 11;
-	
-var scaleMajor = 			{ name: "Major",					degrees: [ C,  D,  E,  F,  G,  A,  B  ] };
-var scaleDorian = 			{ name: "Dorian",					degrees: [ C,  D,  Ds, F,  G,  A,  As ] };
-var scaleMixolydian = 		{ name: "Mixolydian",				degrees: [ C,  D,  E,  F,  G,  A,  As ] };
-var scaleNaturalMinor = 	{ name: "Natural Minor",			degrees: [ C,  D,  Ds, F,  G,  Gs, As ] };
-var scalePhrygianDominant = { name: "Phrygian Dominant",		degrees: [ C,  Cs, E,  F,  G,  Gs, As ] };
-
-
 function SongData()
 {
 	this.beatsPerMinute = 120;
@@ -35,6 +15,14 @@ function SongDataNote(tick, duration, pitch)
 	this.tick = tick;
 	this.duration = duration;
 	this.pitch = pitch;
+}
+
+
+function SongDataChord(tick, duration, chord)
+{
+	this.tick = tick;
+	this.duration = duration;
+	this.chord = chord;
 }
 
 
@@ -112,6 +100,29 @@ SongData.prototype.canAddNote = function(note)
 }
 
 
+// Returns whether it is valid for the given chord to be added to the data.
+SongData.prototype.canAddChord = function(chord)
+{
+	// Check for invalid values.
+	if (!this.isValidTick(chord.tick) ||
+		!this.isValidDuration(chord.duration))
+		return false;
+	
+	// Check whether the given chord collides with any chords already in data.
+	// TODO: Use binary search to avoid iterating through the entire array.
+	for (var i = 0; i < this.chord.length; i++)
+	{
+		var otherChord = this.chord[i];
+		
+		if (otherChord.tick < chord.tick + chord.duration &&
+			otherChord.tick + otherChord.duration > chord.tick)
+			return false;
+	}
+	
+	return true;
+}
+
+
 // Returns whether it is valid for the given key change to be added to the data.
 SongData.prototype.canAddKeyChange = function(keyChange)
 {
@@ -160,6 +171,19 @@ SongData.prototype.addNote = function(note)
 	if (this.canAddNote(note))
 	{
 		arrayAddSortedByTick(this.notes, note);
+		return true;
+	}
+	
+	return false;
+}
+
+
+// Adds the given chord to the data, and returns whether it was successful.
+SongData.prototype.addChord = function(chord)
+{
+	if (this.canAddChord(chord))
+	{
+		arrayAddSortedByTick(this.chords, chord);
 		return true;
 	}
 	
