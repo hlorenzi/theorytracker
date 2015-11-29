@@ -574,7 +574,7 @@ SongEditor.prototype.handleKeyDown = function(ev)
 {
 	var keyCode = (ev.key || ev.which || ev.keyCode);
 	
-	if (keyCode == 46) // Delete key
+	if (keyCode == 46 || keyCode == 8) // Delete/Backspace
 	{
 		// Remove selected objects from the song data.
 		var selectedNotes = [];
@@ -617,6 +617,7 @@ SongEditor.prototype.handleKeyDown = function(ev)
 			}
 		}
 		
+		this.showCursor = true;
 		this.clearHover();
 		this.refreshRepresentation();
 		this.refreshCanvas();

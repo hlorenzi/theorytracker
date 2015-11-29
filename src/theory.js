@@ -43,10 +43,11 @@ function Theory()
 
 	this.chords =
 	[
-		{ name: "Major",		roman: "I",		romanSup: "",	romanSub: "",	pitches: [ C,  E,  G  ] },
-		{ name: "Minor",		roman: "i",		romanSup: "",	romanSub: "",	pitches: [ C,  Ds, G  ] },
-		{ name: "Diminished",	roman: "i",		romanSup: "o",	romanSub: "",	pitches: [ C,  Ds, Fs ] },
-		{ name: "Augmented",	roman: "I",		romanSup: "+",	romanSub: "",	pitches: [ C,  E,  Gs ] }
+		{ name: "Major",		roman: "X",		romanSup: "",		romanSub: "",		pitches: [ C,  E,  G  ] },
+		{ name: "Minor",		roman: "x",		romanSup: "",		romanSub: "",		pitches: [ C,  Ds, G  ] },
+		{ name: "Diminished",	roman: "x",		romanSup: "o",		romanSub: "",		pitches: [ C,  Ds, Fs ] },
+		{ name: "Augmented",	roman: "X",		romanSup: "+",		romanSub: "",		pitches: [ C,  E,  Gs ] },
+		{ name: "Suspended 2",	roman: "X",		romanSup: "",		romanSub: "sus2",	pitches: [ C,  D,  G  ] }
 	];
 	
 
@@ -61,7 +62,7 @@ function Theory()
 	this.getRomanNumeralForPitch = function(pitch, key)
 	{
 		// TODO: Take the scale also into consideration for naming.
-		var numerals = ["I", "♯I", "II", "♯II", "III", "IV", "♯IV", "V", "♯V", "VI", "♯VI", "VII"];
+		var numerals = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
 		return numerals[(pitch + 12 - key.tonicPitch) % 12];
 	};
 	

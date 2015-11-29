@@ -350,7 +350,7 @@ SongEditor.prototype.drawChord = function(blockIndex, chord, tick, duration, hov
 	
 	// Draw roman symbol.
 	var numeral = theory.getRomanNumeralForPitch(chord.rootPitch, block.key);
-	var romanText = chord.chord.roman.replace("I", numeral).replace("i", numeral.toLowerCase());
+	var romanText = chord.chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 	
 	this.ctx.fillStyle = "#000000";
 	this.ctx.textAlign = "center";
@@ -378,6 +378,7 @@ SongEditor.prototype.drawChord = function(blockIndex, chord, tick, duration, hov
 	
 	this.ctx.font = "20px Tahoma";
 	this.ctx.fillText(chord.chord.romanSup, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth + supTextWidth / 2, (pos.y1 + pos.y2) / 2 - 10, maxTextWidth - mainTextWidth - subTextWidth);
+	this.ctx.fillText(chord.chord.romanSub, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth + supTextWidth + subTextWidth / 2, (pos.y1 + pos.y2) / 2 + 10, maxTextWidth - mainTextWidth - supTextWidth);
 	
 	// Draw highlights.
 	this.ctx.save();
