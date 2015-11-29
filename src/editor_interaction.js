@@ -3,6 +3,9 @@ SongEditor.prototype.unselectAll = function()
 	for (var i = 0; i < this.noteSelections.length; i++)
 		this.noteSelections[i] = false;
 	
+	for (var i = 0; i < this.chordSelections.length; i++)
+		this.chordSelections[i] = false;
+	
 	for (var i = 0; i < this.keyChangeSelections.length; i++)
 		this.keyChangeSelections[i] = false;
 	
@@ -14,6 +17,7 @@ SongEditor.prototype.unselectAll = function()
 SongEditor.prototype.clearHover = function()
 {
 	this.hoverNote = -1;
+	this.hoverChord = -1;
 	this.hoverKeyChange = -1;
 	this.hoverMeterChange = -1;
 	this.hoverStretchR = false;
@@ -61,7 +65,7 @@ SongEditor.prototype.getTickAtPosition = function(x)
 		if (x >= block.x1 &&
 			(b == this.viewBlocks.length - 1 || x <= this.viewBlocks[b + 1].x1))
 		{
-			return Math.round((block.tick + Math.min(block.duration, Math.round((x - block.x1) / this.tickZoom))) / this.tickSnap) * this.tickSnap;
+			return Math.round((block.tick + Math.min(block.duration, Math.ceil((x - block.x1) / this.tickZoom))) / this.tickSnap) * this.tickSnap;
 		}
 	}
 	
@@ -69,31 +73,77 @@ SongEditor.prototype.getTickAtPosition = function(x)
 }
 
 
+SongEditor.prototype.getKeyAtTick = function(tick)
+{
+	for (var b = 0; b < this.viewBlocks.length; b++)
+	{
+		var block = this.viewBlocks[b];
+		
+		if (tick >= block.tick && tick < block.tick + block.duration)
+		{
+			return block.key;
+		}
+	}
+	
+	return new SongDataKeyChange(0, theory.scales[0], 0);
+}
+
+
 SongEditor.prototype.getEarliestSelectedTick = function()
 {
-	// FIXME: Take chords and key/meter changes into consideration.
+	// FIXME: Take key/meter changes into consideration.
 	// TODO: Use binary search.
+	var earliest = 1000000;
 	for (var n = 0; n < this.noteSelections.length; n++)
 	{
 		if (this.noteSelections[n])
-			return this.songData.notes[n].tick;
+		{
+			earliest = this.songData.notes[n].tick;
+			break;
+		}
 	}
 	
-	return 0;
+	for (var n = 0; n < this.chordSelections.length; n++)
+	{
+		if (this.chordSelections[n])
+		{
+			if (this.songData.chords[n].tick < earliest)
+				return this.songData.chords[n].tick;
+			else if (this.songData.chords[n].tick >= earliest)
+				break;
+		}
+	}
+	
+	return earliest;
 }
 
 
 SongEditor.prototype.getLatestSelectedTick = function()
 {
-	// FIXME: Take chords and key/meter changes into consideration.
+	// FIXME: Take key/meter changes into consideration.
 	// TODO: Use binary search.
+	var latest = 0;
 	for (var n = this.noteSelections.length - 1; n >= 0; n--)
 	{
 		if (this.noteSelections[n])
-			return this.songData.notes[n].tick + this.songData.notes[n].duration;
+		{
+			var tick = this.songData.notes[n].tick + this.songData.notes[n].duration;
+			if (tick < latest)
+				latest = tick;
+		}
 	}
 	
-	return 0;
+	for (var n = this.chordSelections.length - 1; n >= 0; n--)
+	{
+		if (this.chordSelections[n])
+		{
+			var tick = this.songData.chords[n].tick + this.songData.chords[n].duration;
+			if (tick < latest)
+				latest = tick;
+		}
+	}
+	
+	return tick;
 }
 
 
@@ -137,6 +187,43 @@ SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 }
 
 
+SongEditor.prototype.getChordDragged = function(chord, dragPosition)
+{
+	var dragTick = this.getTickAtPosition(dragPosition.x);
+	var tickOffset = dragTick - this.getTickAtPosition(this.mouseDragOrigin.x);
+	
+	if (this.mouseDragAction == "move")
+	{
+		return {
+			tick: Math.max(0, chord.tick + tickOffset),
+			duration: chord.duration
+		};
+	}
+	else if (this.mouseDragAction == "stretch")
+	{
+		var x1Proportion = (chord.tick - this.mouseStretchPivotTick) / (this.mouseStretchOriginTick - this.mouseStretchPivotTick);
+		var x2Proportion = (chord.tick + chord.duration - this.mouseStretchPivotTick) / (this.mouseStretchOriginTick - this.mouseStretchPivotTick);
+		var mouseProportion = (dragTick - this.mouseStretchPivotTick) / (this.mouseStretchOriginTick - this.mouseStretchPivotTick);
+		
+		var pivotDist = (this.mouseStretchOriginTick - this.mouseStretchPivotTick);
+		var newX1 = Math.round((this.mouseStretchPivotTick + pivotDist * (x1Proportion * mouseProportion)) / this.tickSnap) * this.tickSnap;
+		var newX2 = Math.round((this.mouseStretchPivotTick + pivotDist * (x2Proportion * mouseProportion)) / this.tickSnap) * this.tickSnap;
+		
+		if (newX2 < newX1)
+		{
+			var temp = newX1;
+			newX1 = newX2;
+			newX2 = temp;
+		}
+		
+		return {
+			tick: Math.max(0, newX1),
+			duration: newX2 - newX1
+		};
+	}
+}
+
+
 SongEditor.prototype.getKeyChangeDragged = function(keyChange, dragPosition)
 {
 	var tickOffset = this.getTickAtPosition(dragPosition.x) - this.getTickAtPosition(this.mouseDragOrigin.x);
@@ -175,11 +262,11 @@ SongEditor.prototype.handleMouseMove = function(ev)
 	// Check what's under the mouse, if it's not down.
 	if (!this.mouseDown)
 	{
-		// Check for notes.
 		for (var b = 0; b < this.viewBlocks.length; b++)
 		{
 			if (isPointInside(mousePos, this.viewBlocks[b]))
 			{	
+				// Check for notes.
 				for (var n = 0; n < this.viewBlocks[b].notes.length; n++)
 				{
 					var note = this.viewBlocks[b].notes[n];
@@ -203,12 +290,41 @@ SongEditor.prototype.handleMouseMove = function(ev)
 						break;
 					}
 				}
+				
+				// Check for chords.
+				if (this.hoverNote < 0)
+				{
+					for (var n = 0; n < this.viewBlocks[b].chords.length; n++)
+					{
+						var chord = this.viewBlocks[b].chords[n];
+						if (isPointInside(mousePos, chord))
+						{
+							this.hoverChord = chord.chordIndex;
+							
+							if (mousePos.x <= chord.resizeHandleL + this.NOTE_STRETCH_MARGIN)
+							{
+								this.canvas.style.cursor = "ew-resize";
+								this.hoverStretchL = true;
+							}
+							else if (mousePos.x >= chord.resizeHandleR - this.NOTE_STRETCH_MARGIN)
+							{
+								this.canvas.style.cursor = "ew-resize";
+								this.hoverStretchR = true;
+							}
+							else
+								this.canvas.style.cursor = "pointer";
+
+							break;
+						}
+					}
+				}
+				
 				break;
 			}
 		}
 		
 		// Check for key changes.
-		if (this.hoverNote < 0)
+		if (this.hoverNote < 0 && this.hoverChord < 0)
 		{
 			for (var n = 0; n < this.viewKeyChanges.length; n++)
 			{
@@ -223,7 +339,7 @@ SongEditor.prototype.handleMouseMove = function(ev)
 		}
 		
 		// Check for meter changes.
-		if (this.hoverNote < 0 && this.hoverKeyChange < 0)
+		if (this.hoverNote < 0 && this.hoverChord < 0 && this.hoverKeyChange < 0)
 		{
 			for (var n = 0; n < this.viewMeterChanges.length; n++)
 			{
@@ -257,10 +373,15 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	this.mouseDragAction = null;
 	this.mouseDragOrigin = mousePos;
 	
+	this.cursorTick = this.getTickAtPosition(mousePos.x);
+	this.showCursor = true;
+	
 	// Start a dragging operation.
 	if (this.hoverNote >= 0)
 	{
+		this.showCursor = false;
 		this.noteSelections[this.hoverNote] = true;
+		
 		if (this.hoverStretchR)
 		{
 			this.mouseDragAction = "stretch";
@@ -276,19 +397,42 @@ SongEditor.prototype.handleMouseDown = function(ev)
 		else
 			this.mouseDragAction = "move";
 	}
+	else if (this.hoverChord >= 0)
+	{
+		this.showCursor = false;
+		this.chordSelections[this.hoverChord] = true;
+		
+		if (this.hoverStretchR)
+		{
+			this.mouseDragAction = "stretch";
+			this.mouseStretchOriginTick = this.songData.chords[this.hoverChord].tick + this.songData.chords[this.hoverChord].duration;
+			this.mouseStretchPivotTick = this.getEarliestSelectedTick();
+		}
+		else if (this.hoverStretchL)
+		{
+			this.mouseDragAction = "stretch";
+			this.mouseStretchOriginTick = this.songData.chords[this.hoverChord].tick;
+			this.mouseStretchPivotTick = this.getLatestSelectedTick();
+		}
+		else
+			this.mouseDragAction = "move";
+	}
 	else if (this.hoverKeyChange >= 0)
 	{
+		this.showCursor = false;
 		this.keyChangeSelections[this.hoverKeyChange] = true;
 		this.mouseDragAction = "move";
 	}
 	else if (this.hoverMeterChange >= 0)
 	{
+		this.showCursor = false;
 		this.meterChangeSelections[this.hoverMeterChange] = true;
 		this.mouseDragAction = "move";
 	}
 	
 	this.mouseDown = true;
 	this.refreshCanvas();
+	this.callOnCursorChanged();
 }
 
 
@@ -309,6 +453,16 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			{
 				selectedNotes.push(this.songData.notes[n]);
 				this.songData.notes.splice(n, 1);
+			}
+		}
+		
+		var selectedChords = [];
+		for (var n = this.chordSelections.length - 1; n >= 0; n--)
+		{
+			if (this.chordSelections[n])
+			{
+				selectedChords.push(this.songData.chords[n]);
+				this.songData.chords.splice(n, 1);
 			}
 		}
 		
@@ -342,6 +496,15 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			this.songData.addNote(newNote);
 		}
 		
+		var newChords = [];
+		for (var n = 0; n < selectedChords.length; n++)
+		{
+			var draggedChord = this.getChordDragged(selectedChords[n], mousePos);
+			var newChord = new SongDataChord(draggedChord.tick, draggedChord.duration, selectedChords[n].chord, selectedChords[n].rootPitch);
+			newChords.push(newChord);
+			this.songData.addChord(newChord);
+		}
+		
 		var newKeyChanges = [];
 		for (var n = 0; n < selectedKeyChanges.length; n++)
 		{
@@ -370,6 +533,15 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			{
 				if (this.songData.notes[n] == newNotes[m])
 					this.noteSelections[n] = true;
+			}
+		}
+		
+		for (var n = 0; n < this.songData.chords.length; n++)
+		{
+			for (var m = 0; m < newChords.length; m++)
+			{
+				if (this.songData.chords[n] == newChords[m])
+					this.chordSelections[n] = true;
 			}
 		}
 		

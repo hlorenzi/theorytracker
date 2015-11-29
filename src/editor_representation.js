@@ -1,16 +1,23 @@
 // Sets up representation objects for the data in the song,
-// which are used to draw the staff and to interact with the mouse.
+// which are used to draw the staff and for interaction with the mouse.
 SongEditor.prototype.refreshRepresentation = function()
 {
+	// Clear representation objects.
 	this.viewBlocks = [];
 	this.viewNotes = [];
 	this.viewChords = [];
 	this.viewKeyChanges = [];
 	this.viewMeterChanges = [];
 	
+	// Clear selection arrays and push a boolean false for each object in the song data,
+	// effectively unselecting everything, while also accomodating added/removed objects.
 	this.noteSelections = [];
 	for (var i = 0; i < this.songData.notes.length; i++)
 		this.noteSelections.push(false);
+	
+	this.chordSelections = [];
+	for (var i = 0; i < this.songData.chords.length; i++)
+		this.chordSelections.push(false);
 	
 	this.keyChangeSelections = [];
 	for (var i = 0; i < this.songData.keyChanges.length; i++)
@@ -20,11 +27,14 @@ SongEditor.prototype.refreshRepresentation = function()
 	for (var i = 0; i < this.songData.meterChanges.length; i++)
 		this.meterChangeSelections.push(false);
 	
+	// Set up some layout constants.
 	var blockY1 = this.MARGIN_TOP + this.HEADER_MARGIN;
-	var blockY2 = this.canvasHeight - this.MARGIN_BOTTOM - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+	var blockY2 = this.canvasHeight - this.MARGIN_BOTTOM;
 	var changeY1 = this.MARGIN_TOP;
 	var chordY2 = this.canvasHeight - this.MARGIN_BOTTOM;
 	
+	// Set up current block drawing position, current tick, and
+	// iterators through the song data.
 	var x = this.MARGIN_LEFT;
 	var tick = 0;
 	var curNote = 0;
@@ -32,6 +42,7 @@ SongEditor.prototype.refreshRepresentation = function()
 	var curKeyChange = 0;
 	var curMeterChange = 0;
 	
+	// Set up the first block.
 	var curBlock = 0;
 	this.viewBlocks.push(
 	{
@@ -40,19 +51,22 @@ SongEditor.prototype.refreshRepresentation = function()
 		key: new SongDataKeyChange(0, theory.scales[0], 0),
 		meter: new SongDataMeterChange(0, 4, 4),
 		notes: [],
+		chords: [],
 		x1: x,
 		y1: blockY1,
 		x2: x,
 		y2: blockY2
 	});
 	
-	var NEXT_IS_NONE = 0;
-	var NEXT_IS_KEYCHANGE = 1;
-	var NEXT_IS_METERCHANGE = 2;
-	
+	// Loop will break after the last block.
 	while (true)
 	{
-		// Find the tick where the current block ends.
+		// Identifiers for whether there's a following key or meter change.
+		var NEXT_IS_NONE = 0;
+		var NEXT_IS_KEYCHANGE = 1;
+		var NEXT_IS_METERCHANGE = 2;
+		
+		// Find the tick where the current block ends due to a key or meter change.
 		var nextChangeTick = this.songData.lastTick;
 		var nextIsWhat = NEXT_IS_NONE;
 		
@@ -76,11 +90,11 @@ SongEditor.prototype.refreshRepresentation = function()
 			}
 		}
 		
-		// Advance draw position until the next tick.
+		// Advance draw position until the block's end tick.
 		x += (nextChangeTick - tick) * this.tickZoom;
 		tick = nextChangeTick;
 		
-		// If there is a key change, add its visualization and advance its iterator.
+		// If there is a key change, add its representation and advance its iterator.
 		var blockX2 = x;
 		
 		if (nextIsWhat == NEXT_IS_KEYCHANGE)
@@ -99,7 +113,7 @@ SongEditor.prototype.refreshRepresentation = function()
 			
 			curKeyChange++;
 		}
-		// Or if there is a meter change, add its visualization and advance its iterator.
+		// Or if there is a meter change, add its representation and advance its iterator.
 		else if (nextIsWhat == NEXT_IS_METERCHANGE)
 		{
 			x += this.METERCHANGE_BAR_WIDTH;
@@ -151,6 +165,25 @@ SongEditor.prototype.refreshRepresentation = function()
 				});
 			}
 			
+			// Add chords' representations.
+			for (var n = 0; n < this.songData.chords.length; n++)
+			{
+				var chord = this.songData.chords[n];
+				var chordPos = this.getChordPosition(block, chord.tick, chord.duration);
+				block.chords.push(
+				{
+					chordIndex: n,
+					tick: chord.tick,
+					duration: chord.duration,
+					resizeHandleL: chordPos.resizeHandleL,
+					resizeHandleR: chordPos.resizeHandleR,
+					x1: chordPos.x1,
+					y1: chordPos.y1,
+					x2: chordPos.x2,
+					y2: chordPos.y2
+				});
+			}
+			
 			// If this is the final block, we can stop now.
 			if (nextIsWhat == NEXT_IS_NONE)
 				break;
@@ -163,6 +196,7 @@ SongEditor.prototype.refreshRepresentation = function()
 				key: block.key,
 				meter: block.meter,
 				notes: [],
+				chords: [],
 				x1: x,
 				y1: blockY1,
 				x2: x,
@@ -175,6 +209,7 @@ SongEditor.prototype.refreshRepresentation = function()
 		// Apply key/meter changes to the next block.
 		if (nextIsWhat == NEXT_IS_KEYCHANGE)
 			this.viewBlocks[curBlock].key = this.songData.keyChanges[curKeyChange - 1];
+		
 		else if (nextIsWhat == NEXT_IS_METERCHANGE)
 			this.viewBlocks[curBlock].meter = this.songData.meterChanges[curMeterChange - 1];
 	}
@@ -190,7 +225,22 @@ SongEditor.prototype.getNotePosition = function(block, row, tick, duration)
 		resizeHandleR: block.x1 + (blockTick + duration) * this.tickZoom,
 		x1: block.x1 + Math.max(0, (blockTick * this.tickZoom) + this.NOTE_MARGIN_HOR),
 		x2: block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom - this.NOTE_MARGIN_HOR),
-		y1: block.y2 - (row + 1) * this.NOTE_HEIGHT + this.NOTE_MARGIN_VER,
-		y2: block.y2 - (row) * this.NOTE_HEIGHT - this.NOTE_MARGIN_VER,
+		y1: block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row + 1) * this.NOTE_HEIGHT + this.NOTE_MARGIN_VER,
+		y2: block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row) * this.NOTE_HEIGHT - this.NOTE_MARGIN_VER
+	};
+}
+
+
+// Returns the bounds of the given chord's representation rectangle.
+SongEditor.prototype.getChordPosition = function(block, tick, duration)
+{
+	var blockTick = tick - block.tick;
+	return {
+		resizeHandleL: block.x1 + blockTick * this.tickZoom,
+		resizeHandleR: block.x1 + (blockTick + duration) * this.tickZoom,
+		x1: block.x1 + Math.max(0, (blockTick * this.tickZoom) + this.NOTE_MARGIN_HOR),
+		x2: block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom - this.NOTE_MARGIN_HOR),
+		y1: block.y2 - this.CHORD_HEIGHT,
+		y2: block.y2
 	};
 }

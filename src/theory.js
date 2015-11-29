@@ -43,10 +43,10 @@ function Theory()
 
 	this.chords =
 	[
-		{ name: "Major",		roman: "I",		pitches: [ C,  E,  G  ] },
-		{ name: "Minor",		roman: "i",		pitches: [ C,  Ds, G  ] },
-		{ name: "Diminished",	roman: "i^o",	pitches: [ C,  Ds, Fs ] },
-		{ name: "Augmented",	roman: "I^+",	pitches: [ C,  E,  Gs ] }
+		{ name: "Major",		roman: "I",		romanSup: "",	romanSub: "",	pitches: [ C,  E,  G  ] },
+		{ name: "Minor",		roman: "i",		romanSup: "",	romanSub: "",	pitches: [ C,  Ds, G  ] },
+		{ name: "Diminished",	roman: "i",		romanSup: "o",	romanSub: "",	pitches: [ C,  Ds, Fs ] },
+		{ name: "Augmented",	roman: "I",		romanSup: "+",	romanSub: "",	pitches: [ C,  E,  Gs ] }
 	];
 	
 
@@ -55,6 +55,14 @@ function Theory()
 		// TODO: Take the scale also into consideration.
 		var notes = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 		return notes[pitch % 12];
+	};
+	
+
+	this.getRomanNumeralForPitch = function(pitch, key)
+	{
+		// TODO: Take the scale also into consideration for naming.
+		var numerals = ["I", "♯I", "II", "♯II", "III", "IV", "♯IV", "V", "♯V", "VI", "♯VI", "VII"];
+		return numerals[(pitch + 12 - key.tonicPitch) % 12];
 	};
 	
 	
@@ -149,4 +157,33 @@ function Theory()
 		
 		return key.scale.degrees[(row + key.scale.degrees.length - degreeOffsetFromC) % key.scale.degrees.length] + key.tonicPitch;
 	};
+	
+	
+	// Returns the first chord in the chord array that fits the given pitches.
+	this.getFirstFittingChordForPitches = function(pitches)
+	{
+		for (var i = 0; i < this.chords.length; i++)
+		{
+			var chord = this.chords[i];
+			
+			if (pitches.length != chord.pitches.length)
+				continue;
+			
+			var offset = pitches[0];
+			var match = true;
+			for (var j = 0; j < chord.pitches.length; j++)
+			{
+				if (chord.pitches[j] != pitches[j] - offset)
+				{
+					match = false;
+					break;
+				}
+			}
+			
+			if (match)
+				return chord;
+		}
+		
+		return null;
+	}
 }

@@ -11,6 +11,9 @@ function SongEditor(canvas, songData)
 	this.canvas.onmousedown = function(ev) { that.handleMouseDown(ev); };
 	this.canvas.onmouseup = function(ev) { that.handleMouseUp(ev); };
 	
+	// Set up callback arrays.
+	this.cursorChangedCallbacks = [];
+	
 	// For each object in the song data, these arrays store a boolean
 	// indicating whether the respective object is currently selected in the editor.
 	this.noteSelections = [];
@@ -32,6 +35,10 @@ function SongEditor(canvas, songData)
 	this.viewKeyChanges = [];
 	this.viewMeterChanges = [];
 	
+	// These control cursor (the vertical blue bar) interaction.
+	this.cursorTick = 0;
+	this.showCursor = true;
+	
 	// These control mouse interaction.
 	this.mouseDown = false;
 	this.mouseDragAction = null;
@@ -42,6 +49,7 @@ function SongEditor(canvas, songData)
 	
 	// These indicate which object the mouse is currently hovering over.
 	this.hoverNote = -1;
+	this.hoverChord = -1;
 	this.hoverKeyChange = -1;
 	this.hoverMeterChange = -1;
 	this.hoverStretchR = false;
@@ -52,7 +60,7 @@ function SongEditor(canvas, songData)
 	this.MARGIN_LEFT = 4;
 	this.MARGIN_RIGHT = 4;
 	this.MARGIN_TOP = 4;
-	this.MARGIN_BOTTOM = 4;
+	this.MARGIN_BOTTOM = 8;
 	this.HEADER_MARGIN = 40;
 	this.NOTE_HEIGHT = 14;
 	this.NOTE_MARGIN_HOR = 0.5;
@@ -60,6 +68,7 @@ function SongEditor(canvas, songData)
 	this.NOTE_STRETCH_MARGIN = 2;
 	this.CHORD_HEIGHT = 60;
 	this.CHORDNOTE_MARGIN = 10;
+	this.CHORD_ORNAMENT_HEIGHT = 5;
 	this.KEYCHANGE_BAR_WIDTH = 20;
 	this.METERCHANGE_BAR_WIDTH = 4;
 	
@@ -72,4 +81,17 @@ SongEditor.prototype.setData = function(songData)
 {
 	this.songData = songData;
 	this.refreshRepresentation();
+}
+
+
+SongEditor.prototype.addOnCursorChanged = function(func)
+{
+	this.cursorChangedCallbacks.push(func);
+}
+
+
+SongEditor.prototype.callOnCursorChanged = function()
+{
+	for (var i = 0; i < this.cursorChangedCallbacks.length; i++)
+		this.cursorChangedCallbacks[i]();
 }

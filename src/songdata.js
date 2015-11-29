@@ -18,11 +18,12 @@ function SongDataNote(tick, duration, pitch)
 }
 
 
-function SongDataChord(tick, duration, chord)
+function SongDataChord(tick, duration, chord, rootPitch)
 {
 	this.tick = tick;
 	this.duration = duration;
 	this.chord = chord;
+	this.rootPitch = rootPitch;
 }
 
 
@@ -76,142 +77,110 @@ SongData.prototype.isValidDuration = function(duration)
 }
 
 
-// Returns whether it is valid for the given note to be added to the data.
-SongData.prototype.canAddNote = function(note)
-{
-	// Check for invalid values.
-	if (!this.isValidTick(note.tick) ||
-		!this.isValidDuration(note.duration))
-		return false;
-	
-	// Check whether the given note collides with any notes already in data.
-	// TODO: Use binary search to avoid iterating through the entire array.
-	for (var i = 0; i < this.notes.length; i++)
-	{
-		var otherNote = this.notes[i];
-		
-		if (otherNote.pitch == note.pitch &&
-			otherNote.tick < note.tick + note.duration &&
-			otherNote.tick + otherNote.duration > note.tick)
-			return false;
-	}
-	
-	return true;
-}
-
-
-// Returns whether it is valid for the given chord to be added to the data.
-SongData.prototype.canAddChord = function(chord)
-{
-	// Check for invalid values.
-	if (!this.isValidTick(chord.tick) ||
-		!this.isValidDuration(chord.duration))
-		return false;
-	
-	// Check whether the given chord collides with any chords already in data.
-	// TODO: Use binary search to avoid iterating through the entire array.
-	for (var i = 0; i < this.chord.length; i++)
-	{
-		var otherChord = this.chord[i];
-		
-		if (otherChord.tick < chord.tick + chord.duration &&
-			otherChord.tick + otherChord.duration > chord.tick)
-			return false;
-	}
-	
-	return true;
-}
-
-
-// Returns whether it is valid for the given key change to be added to the data.
-SongData.prototype.canAddKeyChange = function(keyChange)
-{
-	// Check for invalid values.
-	if (!this.isValidTick(keyChange.tick))
-		return false;
-	
-	// Check whether the given key change coincides with another already in data.
-	// TODO: Use binary search to avoid iterating through the entire array.
-	for (var i = 0; i < this.keyChanges.length; i++)
-	{
-		var otherKeyChange = this.keyChanges[i];
-		
-		if (otherKeyChange.tick == keyChange.tick)
-			return false;
-	}
-	
-	return true;
-}
-
-
-// Returns whether it is valid for the given meter change to be added to the data.
-SongData.prototype.canAddMeterChange = function(meterChange)
-{
-	// Check for invalid values.
-	if (!this.isValidTick(meterChange.tick))
-		return false;
-	
-	// Check whether the given meter change coincides with another already in data.
-	// TODO: Use binary search to avoid iterating through the entire array.
-	for (var i = 0; i < this.meterChanges.length; i++)
-	{
-		var otherMeterChange = this.meterChanges[i];
-		
-		if (otherMeterChange.tick == meterChange.tick)
-			return false;
-	}
-	
-	return true;
-}
-
-
 // Adds the given note to the data, and returns whether it was successful.
 SongData.prototype.addNote = function(note)
 {
-	if (this.canAddNote(note))
+	if (!this.isValidTick(note.tick) || !this.isValidDuration(note.duration))
+		return false;
+	
+	// Clip notes which collide with the new one.
+	// TODO: Split a note into two in case the new one is contained within it.
+	for (var i = this.notes.length - 1; i >= 0; i--)
 	{
-		arrayAddSortedByTick(this.notes, note);
-		return true;
+		var otherNote = this.notes[i];
+		
+		if (otherNote.pitch != note.pitch)
+			continue;
+		
+		if (otherNote.tick >= note.tick && otherNote.tick + otherNote.duration <= note.tick + note.duration)
+		{
+			this.notes.splice(i, 1);
+		}
+		else if (otherNote.tick >= note.tick && otherNote.tick < note.tick + note.duration && otherNote.tick + otherNote.duration > note.tick + note.duration)
+		{
+			var tickEnd = otherNote.tick + otherNote.duration;
+			otherNote.tick = note.tick + note.duration;
+			otherNote.duration = tickEnd - otherNote.tick;
+		}
+		else if (otherNote.tick < note.tick && otherNote.tick + otherNote.duration >= note.tick)
+		{
+			otherNote.duration = note.tick - otherNote.tick;
+		}
 	}
 	
-	return false;
+	arrayAddSortedByTick(this.notes, note);
+	return true;
 }
 
 
 // Adds the given chord to the data, and returns whether it was successful.
 SongData.prototype.addChord = function(chord)
 {
-	if (this.canAddChord(chord))
+	if (!this.isValidTick(chord.tick) || !this.isValidDuration(chord.duration))
+		return false;
+	
+	// Clip chords which collide with the new one.
+	// TODO: Split a chord into two in case the new one is contained within it.
+	for (var i = this.chords.length - 1; i >= 0; i--)
 	{
-		arrayAddSortedByTick(this.chords, chord);
-		return true;
+		var otherChord = this.chords[i];
+		
+		if (otherChord.tick >= chord.tick && otherChord.tick + otherChord.duration <= chord.tick + chord.duration)
+		{
+			this.chords.splice(i, 1);
+		}
+		else if (otherChord.tick >= chord.tick && otherChord.tick < chord.tick + chord.duration && otherChord.tick + otherChord.duration > chord.tick + chord.duration)
+		{
+			var tickEnd = otherChord.tick + otherChord.duration;
+			otherChord.tick = chord.tick + chord.duration;
+			otherChord.duration = tickEnd - otherChord.tick;
+		}
+		else if (otherChord.tick < chord.tick && otherChord.tick + otherChord.duration >= chord.tick)
+		{
+			otherChord.duration = chord.tick - otherChord.tick;
+		}
 	}
 	
-	return false;
+	arrayAddSortedByTick(this.chords, chord);
+	return true;
 }
 
 
 // Adds the given key change to the data, and returns whether it was successful.
 SongData.prototype.addKeyChange = function(keyChange)
 {
-	if (this.canAddKeyChange(keyChange))
+	if (!this.isValidTick(keyChange.tick))
+		return false;
+	
+	// Remove key changes which were at the same tick.
+	for (var i = this.keyChanges.length - 1; i >= 0; i--)
 	{
-		arrayAddSortedByTick(this.keyChanges, keyChange);
-		return true;
+		if (this.keyChanges[i].tick == keyChange.tick)
+		{
+			this.keyChanges.splice(i, 1);
+		}
 	}
 	
-	return false;
+	arrayAddSortedByTick(this.keyChanges, keyChange);
+	return true;
 }
 
 
 // Adds the given meter change to the data, and returns whether it was successful.
 SongData.prototype.addMeterChange = function(meterChange)
 {
-	if (this.canAddMeterChange(meterChange))
+	if (!this.isValidTick(meterChange.tick))
+		return false;
+	
+	// Remove meter changes which were at the same tick.
+	for (var i = this.meterChanges.length - 1; i >= 0; i--)
 	{
-		arrayAddSortedByTick(this.meterChanges, meterChange);
-		return true;
+		if (this.meterChanges[i].tick == meterChange.tick)
+		{
+			this.meterChanges.splice(i, 1);
+		}
 	}
 	
-	return false;
+	arrayAddSortedByTick(this.meterChanges, meterChange);
+	return true;
 }
