@@ -1,6 +1,9 @@
-function Toolbox(div, editor)
+function Toolbox(div, editor, synth)
 {
 	this.div = div;
+	this.playing = false;
+	this.playTimer = null;
+	
 	
 	this.initCSS();
 	
@@ -33,6 +36,91 @@ function Toolbox(div, editor)
 	this.buttonRewind.innerHTML = "&#9664;&#9664; Rewind";
 	this.buttonRewind.className = "toolboxButton";
 	this.mainLayoutCell00.appendChild(this.buttonRewind);
+	
+	
+	// Key Change settings.
+	this.keyChangeSpan = document.createElement("span");
+	this.keyChangeSpan.style.background = "#cccccc";
+	
+	var keyChangeEditingLabelSpan = document.createElement("span");
+	keyChangeEditingLabelSpan.innerHTML = "Edit Key Change";
+	keyChangeEditingLabelSpan.className = "toolboxLabel";
+	this.keyChangeSpan.appendChild(keyChangeEditingLabelSpan);
+	this.keyChangeSpan.appendChild(document.createElement("br"));
+	
+	this.keyChangeTonicSelect = document.createElement("select");
+	this.keyChangeTonicOptions = [];
+	for (var i = 0; i < 12; i++)
+	{
+		this.keyChangeTonicOptions[i] = document.createElement("option");
+		this.keyChangeTonicSelect.appendChild(this.keyChangeTonicOptions[i]);
+	}
+	this.keyChangeSpan.appendChild(this.keyChangeTonicSelect);
+	
+	var keyChangeDividerSpan = document.createElement("span");
+	keyChangeDividerSpan.innerHTML = " ";
+	keyChangeDividerSpan.className = "toolboxText";
+	this.keyChangeSpan.appendChild(keyChangeDividerSpan);
+	
+	this.keyChangeScaleSelect = document.createElement("select");
+	this.keyChangeScaleOptions = [];
+	for (var i = 0; i < theory.scales.length; i++)
+	{
+		this.keyChangeScaleOptions[i] = document.createElement("option");
+		this.keyChangeScaleOptions[i].innerHTML = theory.scales[i].name;
+		this.keyChangeScaleSelect.appendChild(this.keyChangeScaleOptions[i]);
+	}
+	this.keyChangeSpan.appendChild(this.keyChangeScaleSelect);
+	
+	this.buttonKeyChangeListen = document.createElement("button");
+	this.buttonKeyChangeListen.innerHTML = "Listen";
+	this.buttonKeyChangeListen.className = "toolboxButton";
+	this.keyChangeSpan.appendChild(this.buttonKeyChangeListen);
+	
+	this.keyChangeSpan.appendChild(document.createElement("br"));
+	this.keyChangeSpan.appendChild(document.createElement("br"));
+	this.toolsLayoutCell00.appendChild(this.keyChangeSpan);
+	
+	
+	// Meter Change settings.
+	this.meterChangeSpan = document.createElement("span");
+	this.meterChangeSpan.style.background = "#aaddff";
+	
+	var meterChangeEditingLabelSpan = document.createElement("span");
+	meterChangeEditingLabelSpan.innerHTML = "Edit Meter Change";
+	meterChangeEditingLabelSpan.className = "toolboxLabel";
+	this.meterChangeSpan.appendChild(meterChangeEditingLabelSpan);
+	this.meterChangeSpan.appendChild(document.createElement("br"));
+	
+	this.meterChangeNumeratorSelect = document.createElement("select");
+	this.meterChangeNumeratorOptions = [];
+	for (var i = 0; i < 20; i++)
+	{
+		this.meterChangeNumeratorOptions[i] = document.createElement("option");
+		this.meterChangeNumeratorOptions[i].innerHTML = "" + (i + 1);
+		this.meterChangeNumeratorSelect.appendChild(this.meterChangeNumeratorOptions[i]);
+	}
+	this.meterChangeSpan.appendChild(this.meterChangeNumeratorSelect);
+	
+	var meterChangeDividerSpan = document.createElement("span");
+	meterChangeDividerSpan.innerHTML = " / ";
+	meterChangeDividerSpan.className = "toolboxText";
+	this.meterChangeSpan.appendChild(meterChangeDividerSpan);
+	
+	this.meterChangeDenominatorSelect = document.createElement("select");
+	this.meterChangeDenominatorOptions = [];
+	this.meterChangeDenominators = [ 2, 4, 8, 16 ];
+	for (var i = 0; i < this.meterChangeDenominators.length; i++)
+	{
+		this.meterChangeDenominatorOptions[i] = document.createElement("option");
+		this.meterChangeDenominatorOptions[i].innerHTML = "" + this.meterChangeDenominators[i];
+		this.meterChangeDenominatorSelect.appendChild(this.meterChangeDenominatorOptions[i]);
+	}
+	this.meterChangeSpan.appendChild(this.meterChangeDenominatorSelect);
+	
+	this.meterChangeSpan.appendChild(document.createElement("br"));
+	this.meterChangeSpan.appendChild(document.createElement("br"));
+	this.toolsLayoutCell00.appendChild(this.meterChangeSpan);
 	
 	
 	// Editing controls.
@@ -118,84 +206,9 @@ function Toolbox(div, editor)
 	this.toolsLayoutCell00.appendChild(this.chordsSpan);
 	
 	
-	// Key Change settings.
-	this.keyChangeSpan = document.createElement("span");
-	
-	var keyChangeEditingLabelSpan = document.createElement("span");
-	keyChangeEditingLabelSpan.innerHTML = "Editing Key Change";
-	keyChangeEditingLabelSpan.className = "toolboxLabel";
-	this.keyChangeSpan.appendChild(keyChangeEditingLabelSpan);
-	this.keyChangeSpan.appendChild(document.createElement("br"));
-	
-	this.keyChangeTonicSelect = document.createElement("select");
-	this.keyChangeTonicOptions = [];
-	for (var i = 0; i < 12; i++)
-	{
-		this.keyChangeTonicOptions[i] = document.createElement("option");
-		this.keyChangeTonicSelect.appendChild(this.keyChangeTonicOptions[i]);
-	}
-	this.keyChangeSpan.appendChild(this.keyChangeTonicSelect);
-	
-	var keyChangeDividerSpan = document.createElement("span");
-	keyChangeDividerSpan.innerHTML = " ";
-	keyChangeDividerSpan.className = "toolboxText";
-	this.keyChangeSpan.appendChild(keyChangeDividerSpan);
-	
-	this.keyChangeScaleSelect = document.createElement("select");
-	this.keyChangeScaleOptions = [];
-	for (var i = 0; i < theory.scales.length; i++)
-	{
-		this.keyChangeScaleOptions[i] = document.createElement("option");
-		this.keyChangeScaleOptions[i].innerHTML = theory.scales[i].name;
-		this.keyChangeScaleSelect.appendChild(this.keyChangeScaleOptions[i]);
-	}
-	this.keyChangeSpan.appendChild(this.keyChangeScaleSelect);
-	
-	this.keyChangeSpan.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.keyChangeSpan);
-	
-	
-	// Meter Change settings.
-	this.meterChangeSpan = document.createElement("span");
-	
-	var meterChangeEditingLabelSpan = document.createElement("span");
-	meterChangeEditingLabelSpan.innerHTML = "Editing Meter Change";
-	meterChangeEditingLabelSpan.className = "toolboxLabel";
-	this.meterChangeSpan.appendChild(meterChangeEditingLabelSpan);
-	this.meterChangeSpan.appendChild(document.createElement("br"));
-	
-	this.meterChangeNumeratorSelect = document.createElement("select");
-	this.meterChangeNumeratorOptions = [];
-	for (var i = 0; i < 20; i++)
-	{
-		this.meterChangeNumeratorOptions[i] = document.createElement("option");
-		this.meterChangeNumeratorOptions[i].innerHTML = "" + (i + 1);
-		this.meterChangeNumeratorSelect.appendChild(this.meterChangeNumeratorOptions[i]);
-	}
-	this.meterChangeSpan.appendChild(this.meterChangeNumeratorSelect);
-	
-	var meterChangeDividerSpan = document.createElement("span");
-	meterChangeDividerSpan.innerHTML = " / ";
-	meterChangeDividerSpan.className = "toolboxText";
-	this.meterChangeSpan.appendChild(meterChangeDividerSpan);
-	
-	this.meterChangeDenominatorSelect = document.createElement("select");
-	this.meterChangeDenominatorOptions = [];
-	this.meterChangeDenominators = [ 2, 4, 8, 16 ];
-	for (var i = 0; i < this.meterChangeDenominators.length; i++)
-	{
-		this.meterChangeDenominatorOptions[i] = document.createElement("option");
-		this.meterChangeDenominatorOptions[i].innerHTML = "" + this.meterChangeDenominators[i];
-		this.meterChangeDenominatorSelect.appendChild(this.meterChangeDenominatorOptions[i]);
-	}
-	this.meterChangeSpan.appendChild(this.meterChangeDenominatorSelect);
-	
-	this.meterChangeSpan.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.meterChangeSpan);
-	
-	
 	// Set up callbacks.
 	this.editor = editor;
+	this.synth = synth;
 	
 	var that = this;
 	editor.addOnCursorChanged(function() { that.refresh(); });
@@ -206,6 +219,90 @@ function Toolbox(div, editor)
 	this.meterChangeNumeratorSelect.onchange = function() { that.editMeterChange(); };
 	this.meterChangeDenominatorSelect.onchange = function() { that.editMeterChange(); };
 	
+	this.buttonKeyChangeListen.onclick = function()
+	{
+		var keyChange = that.editor.getUniqueKeyChangeSelected();
+		theory.playScaleSample(that.synth, keyChange.scale, keyChange.tonicPitch);
+	}
+	
+	this.buttonAddKeyChange.onclick = function(ev)
+	{
+		if (that.playing)
+			return;
+		
+		ev.preventDefault();
+		var keyChange = new SongDataKeyChange(that.editor.cursorTick, theory.scales[0], theory.C);
+		that.editor.songData.addKeyChange(keyChange);
+		that.editor.unselectAll();
+		that.editor.refreshRepresentation();
+		that.editor.selectKeyChange(keyChange);
+		that.editor.refreshCanvas();
+		that.refresh();
+		that.refreshSelection();
+	};
+	
+	this.buttonAddMeterChange.onclick = function(ev)
+	{
+		if (that.playing)
+			return;
+		
+		ev.preventDefault();
+		var meterChange = new SongDataMeterChange(that.editor.cursorTick, 4, 4);
+		that.editor.songData.addMeterChange(meterChange);
+		that.editor.unselectAll();
+		that.editor.refreshRepresentation();
+		that.editor.selectMeterChange(meterChange);
+		that.editor.refreshCanvas();
+		that.refresh();
+		that.refreshSelection();
+	};
+	
+	this.buttonPlay.onclick = function()
+	{
+		that.playing = !that.playing;
+		that.editor.setInteractionEnabled(!that.playing);
+		that.buttonPlay.innerHTML = (that.playing ? "&#9632; Stop" : "&#9654; Play");
+		
+		that.editor.showCursor = true;
+		that.editor.unselectAll();
+		that.editor.refreshRepresentation();
+		that.editor.refreshCanvas();
+		that.refresh();
+		that.refreshSelection();
+		
+		that.synth.stopAll();
+		if (that.playing)
+		{
+			that.playTimer = setInterval(function() { that.processPlayback(12); }, 1000 / 30);
+		}
+		else
+		{
+			clearInterval(that.playTimer);
+		}
+	}
+	
+	this.buttonRewind.onclick = function()
+	{
+		if (that.playing)
+		{
+			clearInterval(that.playTimer);
+			that.synth.stopAll();
+		}
+		
+		that.playing = false;
+		that.editor.setInteractionEnabled(true);
+		that.buttonPlay.innerHTML = (that.playing ? "&#9632; Stop" : "&#9654; Play");
+		
+		that.editor.cursorTick = 0;
+		that.editor.showCursor = true;
+		that.editor.unselectAll();
+		that.editor.refreshRepresentation();
+		that.editor.refreshCanvas();
+		that.refresh();
+		that.refreshSelection();
+	}
+	
+	this.refreshSelection();
 	this.refresh();
 }
 
@@ -272,11 +369,16 @@ Toolbox.prototype.refresh = function()
 			var thisPitch = pitch;
 			return function(ev)
 			{
+				if (that.playing)
+					return;
+				
 				ev.preventDefault();
-				var note = new SongDataNote(that.editor.cursorTick, 25, thisPitch);
+				theory.playNoteSample(that.synth, thisPitch);
+				var note = new SongDataNote(that.editor.cursorTick, that.editor.WHOLE_NOTE_DURATION / 4, thisPitch);
 				that.editor.songData.addNote(note);
-				that.editor.cursorTick += 25;
+				that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 4;
 				that.editor.showCursor = true;
+				that.editor.unselectAll();
 				that.editor.refreshRepresentation();
 				that.editor.refreshCanvas();
 				that.refresh();
@@ -319,11 +421,16 @@ Toolbox.prototype.refresh = function()
 				var thisPitch = pitch;
 				return function(ev)
 				{
+					if (that.playing)
+						return;
+					
 					ev.preventDefault();
-					var chord = new SongDataChord(that.editor.cursorTick, 50, thisChord, thisPitch);
+					theory.playChordSample(that.synth, thisChord, thisPitch);
+					var chord = new SongDataChord(that.editor.cursorTick, that.editor.WHOLE_NOTE_DURATION / 2, thisChord, thisPitch);
 					that.editor.songData.addChord(chord);
-					that.editor.cursorTick += 50;
+					that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 2;
 					that.editor.showCursor = true;
+					that.editor.unselectAll();
 					that.editor.refreshRepresentation();
 					that.editor.refreshCanvas();
 					that.refresh();
@@ -376,11 +483,16 @@ Toolbox.prototype.refresh = function()
 				var thisPitch = pitch;
 				return function(ev)
 				{
+					if (that.playing)
+						return;
+					
 					ev.preventDefault();
-					var chord = new SongDataChord(that.editor.cursorTick, 50, thisChord, thisPitch);
+					theory.playChordSample(that.synth, thisChord, thisPitch);
+					var chord = new SongDataChord(that.editor.cursorTick, that.editor.WHOLE_NOTE_DURATION / 2, thisChord, thisPitch);
 					that.editor.songData.addChord(chord);
-					that.editor.cursorTick += 50;
+					that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 2;
 					that.editor.showCursor = true;
+					that.editor.unselectAll();
 					that.editor.refreshRepresentation();
 					that.editor.refreshCanvas();
 					that.refresh();
@@ -398,10 +510,10 @@ Toolbox.prototype.refresh = function()
 
 Toolbox.prototype.refreshSelection = function()
 {
-	this.labelKey.style.display = "none";
-	this.changesSpan.style.display = "none";
-	this.notesSpan.style.display = "none";
-	this.chordsSpan.style.display = "none";
+	this.labelKey.style.display = "inline";
+	this.changesSpan.style.display = "inline";
+	this.notesSpan.style.display = "inline";
+	this.chordsSpan.style.display = "inline";
 	this.keyChangeSpan.style.display = "none";
 	this.meterChangeSpan.style.display = "none";
 	
@@ -429,7 +541,7 @@ Toolbox.prototype.refreshSelection = function()
 		
 		this.keyChangeTonicSelect.selectedIndex = keyChange.tonicPitch;
 		
-		this.keyChangeSpan.style.display = "inline";
+		this.keyChangeSpan.style.display = "block";
 		return;
 	}
 	
@@ -443,20 +555,17 @@ Toolbox.prototype.refreshSelection = function()
 		else if (meterChange.denominator == 8) this.meterChangeDenominatorSelect.selectedIndex = 2;
 		else if (meterChange.denominator == 16) this.meterChangeDenominatorSelect.selectedIndex = 3;
 		
-		this.meterChangeSpan.style.display = "inline";
+		this.meterChangeSpan.style.display = "block";
 		return;
 	}
-	
-	
-	this.labelKey.style.display = "inline";
-	this.changesSpan.style.display = "inline";
-	this.notesSpan.style.display = "inline";
-	this.chordsSpan.style.display = "inline";
 }
 
 
 Toolbox.prototype.editKeyChange = function()
 {
+	if (this.playing)
+		return;
+	
 	var keyChange = this.editor.getUniqueKeyChangeSelected();
 	keyChange.scale = theory.scales[this.keyChangeScaleSelect.selectedIndex];
 	keyChange.tonicPitch = this.keyChangeTonicSelect.selectedIndex;
@@ -470,6 +579,9 @@ Toolbox.prototype.editKeyChange = function()
 
 Toolbox.prototype.editMeterChange = function()
 {
+	if (this.playing)
+		return;
+	
 	var meterChange = this.editor.getUniqueMeterChangeSelected();
 	meterChange.numerator = this.meterChangeNumeratorSelect.selectedIndex + 1;
 	meterChange.denominator = this.meterChangeDenominators[this.meterChangeDenominatorSelect.selectedIndex];
@@ -478,4 +590,59 @@ Toolbox.prototype.editMeterChange = function()
 	this.editor.selectMeterChange(meterChange);
 	this.editor.refreshCanvas();
 	this.refresh();
+}
+
+
+Toolbox.prototype.processPlayback = function(deltaTicks)
+{
+	var lastCursorTick = this.editor.cursorTick;
+	this.editor.cursorTick += deltaTicks;
+	this.editor.unselectAll();
+	
+	for (var i = 0; i < this.editor.songData.notes.length; i++)
+	{
+		var note = this.editor.songData.notes[i];
+		if (note.tick >= lastCursorTick && note.tick < this.editor.cursorTick)
+		{
+			this.synth.playNote(note.pitch + 60, note.duration * 2, 1);
+		}
+		
+		if (note.tick + note.duration >= lastCursorTick && note.tick < this.editor.cursorTick)
+		{
+			this.editor.noteSelections[i] = true;
+		}
+	}
+	
+	for (var i = 0; i < this.editor.songData.chords.length; i++)
+	{
+		var chord = this.editor.songData.chords[i];
+		if (chord.tick + chord.duration > lastCursorTick && chord.tick < this.editor.cursorTick)
+		{
+			var halfTick = this.editor.WHOLE_NOTE_DURATION / 2;
+			var quarterTick = halfTick / 2;
+			var eighthTick = quarterTick / 2;
+			
+			var tick1 = (lastCursorTick - chord.tick);
+			var tick2 = (this.editor.cursorTick - chord.tick);
+			
+			if (Math.ceil(tick1 / halfTick) != Math.ceil(tick2 / halfTick))
+			{
+				for (var j = 0; j < chord.chord.pitches.length; j++)
+					this.synth.playNote((chord.chord.pitches[j] + chord.rootPitch) % 12 + 60, quarterTick, 0.75);
+			}
+			else if (Math.ceil(tick1 / quarterTick) != Math.ceil(tick2 / quarterTick))
+			{
+				for (var j = 1; j < chord.chord.pitches.length; j++)
+					this.synth.playNote((chord.chord.pitches[j] + chord.rootPitch) % 12 + 60, eighthTick, 0.5);
+			}
+			else if (Math.ceil(tick1 / eighthTick) != Math.ceil(tick2 / eighthTick))
+			{
+				this.synth.playNote((chord.chord.pitches[0] + chord.rootPitch) % 12 + 60, eighthTick, 0.45);
+			}
+			
+			this.editor.chordSelections[i] = true;
+		}
+	}
+	
+	this.editor.refreshCanvas();
 }

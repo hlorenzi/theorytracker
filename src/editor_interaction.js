@@ -313,6 +313,9 @@ SongEditor.prototype.handleMouseMove = function(ev)
 {
 	ev.preventDefault();
 	var mousePos = transformMousePosition(this.canvas, ev);
+	
+	if (!this.interactionEnabled)
+		return;
 		
 	this.canvas.style.cursor = "default";
 	this.mouseDragCurrent = mousePos;
@@ -426,6 +429,9 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	ev.preventDefault();
 	var mousePos = transformMousePosition(this.canvas, ev);
 	
+	if (!this.interactionEnabled)
+		return;
+	
 	if (!ev.ctrlKey)
 		this.unselectAll();
 	
@@ -443,6 +449,8 @@ SongEditor.prototype.handleMouseDown = function(ev)
 			this.selectedObjects++;
 		
 		this.noteSelections[this.hoverNote] = true;
+		this.cursorTick = this.songData.notes[this.hoverNote].tick;
+		theory.playNoteSample(this.synth, this.songData.notes[this.hoverNote].pitch);
 		
 		if (this.hoverStretchR)
 		{
@@ -466,6 +474,8 @@ SongEditor.prototype.handleMouseDown = function(ev)
 			this.selectedObjects++;
 		
 		this.chordSelections[this.hoverChord] = true;
+		this.cursorTick = this.songData.chords[this.hoverChord].tick;
+		theory.playChordSample(this.synth, this.songData.chords[this.hoverChord].chord, this.songData.chords[this.hoverChord].rootPitch);
 		
 		if (this.hoverStretchR)
 		{
@@ -512,6 +522,9 @@ SongEditor.prototype.handleMouseUp = function(ev)
 {
 	ev.preventDefault();
 	var mousePos = transformMousePosition(this.canvas, ev);
+	
+	if (!this.interactionEnabled)
+		return;
 	
 	// Apply dragged modifications.
 	if (this.mouseDown && this.mouseDragAction != null)
@@ -656,6 +669,9 @@ SongEditor.prototype.handleMouseUp = function(ev)
 
 SongEditor.prototype.handleKeyDown = function(ev)
 {
+	if (!this.interactionEnabled)
+		return;
+	
 	var keyCode = (ev.key || ev.which || ev.keyCode);
 	
 	if (keyCode == 46 || keyCode == 8) // Delete/Backspace

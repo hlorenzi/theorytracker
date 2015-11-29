@@ -3,34 +3,45 @@ function testOnLoad()
 	var song = new SongData();
 	song.addKeyChange(new SongDataKeyChange(0, theory.scales[0], theory.C));
 	song.addMeterChange(new SongDataMeterChange(0, 4, 4));
-	song.addKeyChange(new SongDataKeyChange(100, theory.scales[1], theory.D));
-	song.addMeterChange(new SongDataMeterChange(150, 3, 4));
-	song.addKeyChange(new SongDataKeyChange(200, theory.scales[2], theory.B));
-	song.addKeyChange(new SongDataKeyChange(300, theory.scales[4], theory.F));
+	song.addKeyChange(new SongDataKeyChange(960 * 2, theory.scales[8], theory.C));
+	song.addKeyChange(new SongDataKeyChange(960 * 4, theory.scales[0], theory.C));
 	
-	song.addChord(new SongDataChord(0, 100, theory.chords[0], theory.C));
-	song.addChord(new SongDataChord(100, 50, theory.chords[1], theory.C));
-	song.addChord(new SongDataChord(150, 50, theory.chords[2], theory.C));
-	song.addChord(new SongDataChord(200, 150, theory.chords[3], theory.C));
-	song.addNote(new SongDataNote(0, 300, 12));
-	song.addNote(new SongDataNote(0, 300, 2));
-	song.addNote(new SongDataNote(0, 300, 7));
-	song.addNote(new SongDataNote(325, 25, 0));
-	song.addNote(new SongDataNote(350, 25, 1));
-	song.addNote(new SongDataNote(375, 25, 2));
-	song.addNote(new SongDataNote(400, 25, 3));
-	song.addNote(new SongDataNote(425, 25, 4));
-	song.addNote(new SongDataNote(450, 25, 5));
-	song.addNote(new SongDataNote(475, 25, 6));
-	song.addNote(new SongDataNote(500, 25, 7));
-	song.addNote(new SongDataNote(525, 25, 8));
-	song.addNote(new SongDataNote(550, 25, 9));
-	song.addNote(new SongDataNote(575, 25, 10));
-	song.addNote(new SongDataNote(600, 25, 11));
+	song.addChord(new SongDataChord(960 * 0.0, 960 / 2, theory.chords[0], theory.C));
+	song.addChord(new SongDataChord(960 * 0.5, 960 / 2, theory.chords[0], theory.F));
+	song.addChord(new SongDataChord(960 * 1.0, 960 / 1, theory.chords[0], theory.G));
+	song.addChord(new SongDataChord(960 * 2.0, 960 / 2, theory.chords[0], theory.C));
+	song.addChord(new SongDataChord(960 * 2.5, 960 / 2, theory.chords[1], theory.F));
+	song.addChord(new SongDataChord(960 * 3.0, 960 / 2, theory.chords[6], theory.C));
+	song.addChord(new SongDataChord(960 * 3.5, 960 / 2, theory.chords[4], theory.G));
+	song.addChord(new SongDataChord(960 * 4.0, 960 * 2, theory.chords[0], theory.C));
+	
+	song.addNote(new SongDataNote(0, 960 / 4, theory.C));
+	song.addNote(new SongDataNote(960 / 4, 960 / 16, theory.F));
+	song.addNote(new SongDataNote(960 / 4 + 960 / 16, 960 / 16, theory.E));
+	song.addNote(new SongDataNote(960 / 4 + 960 / 16 * 2, 960 / 4, theory.F));
+	song.addNote(new SongDataNote(960 / 4 * 2 + 960 / 16 * 2, 960 / 4, theory.E));
+	song.addNote(new SongDataNote(960 / 4 * 3 + 960 / 16 * 2, 960 / 8, theory.D));
+	song.addNote(new SongDataNote(960, 960, theory.G));
+	
+	song.addNote(new SongDataNote(960 * 2, 960 / 4, theory.C));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4, 960 / 16, theory.F));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 + 960 / 16, 960 / 16, theory.E));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 + 960 / 16 * 2, 960 / 4, theory.F));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 * 2 + 960 / 16 * 2, 960 / 4, theory.E));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 * 3 + 960 / 16 * 2, 960 / 8, theory.Cs));
+	song.addNote(new SongDataNote(960 * 2 + 960, 960, theory.C));
+	
+	song.addNote(new SongDataNote(960 * 2.5, 960 / 16, theory.Gs));
+	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16, 960 / 16, theory.C + 12));
+	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 2, 960 / 16, theory.Cs + 12));
+	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 3, 960 / 16, theory.E + 12));
+	
+	var synth = new Synth();
+	setInterval(function() { synth.process(12); }, 1000 / 30);
 	
 	var canvas = document.getElementById("editorCanvas");
-	var editor = new SongEditor(canvas, song);
+	var editor = new SongEditor(canvas, song, synth);
 	editor.refreshCanvas();
 	
-	var toolbox = new Toolbox(document.getElementById("toolboxDiv"), editor);
+	var toolbox = new Toolbox(document.getElementById("toolboxDiv"), editor, synth);
 }

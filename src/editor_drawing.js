@@ -133,7 +133,6 @@ SongEditor.prototype.refreshCanvas = function()
 	for (var i = 0; i < this.viewKeyChanges.length; i++)
 	{
 		var keyChange = this.viewKeyChanges[i];
-		var textX = keyChange.x2 + 8;
 		
 		if (this.keyChangeSelections[i])
 		{
@@ -181,13 +180,15 @@ SongEditor.prototype.refreshCanvas = function()
 		}
 		
 		// Draw key name.
+		var textX = keyChange.x2 + 8;
 		this.ctx.font = "14px Tahoma";
 		var songKeyChange = this.songData.keyChanges[keyChange.keyChangeIndex];
 		this.ctx.fillStyle = KEY_BORDER_COLOR;
 		this.ctx.fillText(
 			"" + theory.getNameForPitch(songKeyChange.tonicPitch, songKeyChange.scale) + " " + songKeyChange.scale.name,
 			textX,
-			keyChange.y1);
+			keyChange.y1,
+			this.viewBlocks[keyChange.blockIndex].x2 - keyChange.x1 - 32);
 			
 		// Draw pitches.
 		this.ctx.font = "10px Tahoma";
@@ -213,7 +214,6 @@ SongEditor.prototype.refreshCanvas = function()
 	for (var i = 0; i < this.viewMeterChanges.length; i++)
 	{
 		var meterChange = this.viewMeterChanges[i];
-		var textX = meterChange.x2 + 8;
 		
 		if (this.meterChangeSelections[i])
 		{
@@ -261,12 +261,14 @@ SongEditor.prototype.refreshCanvas = function()
 		}
 		
 		// Draw numbers.
+		var textX = meterChange.x2 + 8;
 		var songMeterChange = this.songData.meterChanges[meterChange.meterChangeIndex];
 		this.ctx.fillStyle = METER_BORDER_COLOR;
 		this.ctx.fillText(
 			"" + songMeterChange.numerator + " / " + songMeterChange.denominator,
 			textX,
-			meterChange.y1);
+			meterChange.y1,
+			this.viewBlocks[meterChange.blockIndex].x2 - meterChange.x1 - 16);
 	}
 	
 	

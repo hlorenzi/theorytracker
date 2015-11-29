@@ -1,4 +1,4 @@
-function SongEditor(canvas, songData)
+function SongEditor(canvas, songData, synth)
 {
 	this.canvas = canvas;
 	this.ctx = canvas.getContext("2d");
@@ -25,10 +25,10 @@ function SongEditor(canvas, songData)
 	this.selectedObjects = 0;
 	
 	// The scaling from ticks to pixels.
-	this.tickZoom = 1;
+	this.tickZoom = 0.1;
 	
 	// The tick grid which the cursor is snapped to. 
-	this.tickSnap = 5;
+	this.tickSnap = 960 / 16;
 	
 	// These arrays store representation objects, which tell things like
 	// the object positioning/layout, and where they can be interacted with the mouse.
@@ -43,6 +43,7 @@ function SongEditor(canvas, songData)
 	this.showCursor = true;
 	
 	// These control mouse interaction.
+	this.interactionEnabled = true;
 	this.mouseDown = false;
 	this.mouseDragAction = null;
 	this.mouseDragCurrent = { x: 0, y: 0 };
@@ -59,7 +60,7 @@ function SongEditor(canvas, songData)
 	this.hoverStretchL = false;
 	
 	// Layout constants.
-	this.WHOLE_NOTE_DURATION = 100;
+	this.WHOLE_NOTE_DURATION = 960;
 	this.MARGIN_LEFT = 4;
 	this.MARGIN_RIGHT = 4;
 	this.MARGIN_TOP = 4;
@@ -75,8 +76,9 @@ function SongEditor(canvas, songData)
 	this.KEYCHANGE_BAR_WIDTH = 20;
 	this.METERCHANGE_BAR_WIDTH = 4;
 	
-	// Finally, set the song data.
+	// Finally, set the song data, and the synth manager.
 	this.setData(songData);
+	this.synth = synth;
 }
 
 
@@ -84,6 +86,12 @@ SongEditor.prototype.setData = function(songData)
 {
 	this.songData = songData;
 	this.refreshRepresentation();
+}
+
+
+SongEditor.prototype.setInteractionEnabled = function(enable)
+{
+	this.interactionEnabled = enable;
 }
 
 

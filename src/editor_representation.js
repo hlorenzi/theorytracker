@@ -210,10 +210,16 @@ SongEditor.prototype.refreshRepresentation = function()
 		
 		// Apply key/meter changes to the next block.
 		if (nextIsWhat == NEXT_IS_KEYCHANGE)
+		{
+			this.viewKeyChanges[this.viewKeyChanges.length - 1].blockIndex = curBlock;
 			this.viewBlocks[curBlock].key = this.songData.keyChanges[curKeyChange - 1];
+		}
 		
 		else if (nextIsWhat == NEXT_IS_METERCHANGE)
+		{
+			this.viewMeterChanges[this.viewMeterChanges.length - 1].blockIndex = curBlock;
 			this.viewBlocks[curBlock].meter = this.songData.meterChanges[curMeterChange - 1];
+		}
 	}
 }
 

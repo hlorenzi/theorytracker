@@ -1,8 +1,8 @@
 function SongData()
 {
 	this.beatsPerMinute = 120;
-	this.ticksPerBeat = 120;
-	this.lastTick = 1000;
+	this.ticksPerBeat = 960;
+	this.lastTick = 9600;
 	this.notes = [];
 	this.chords = [];
 	this.keyChanges = [];

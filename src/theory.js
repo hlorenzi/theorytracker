@@ -34,20 +34,54 @@ function Theory()
 	this.scales =
 	[
 		{ name: "Major",					degrees: [ C,  D,  E,  F,  G,  A,  B  ] },
-		{ name: "Dorian",					degrees: [ C,  D,  Ds, F,  G,  A,  As ] },
-		{ name: "Mixolydian",				degrees: [ C,  D,  E,  F,  G,  A,  As ] },
-		{ name: "Natural Minor",			degrees: [ C,  D,  Ds, F,  G,  Gs, As ] },
-		{ name: "Phrygian Dominant",		degrees: [ C,  Cs, E,  F,  G,  Gs, As ] }
+		{ name: "Dorian",					degrees: null },
+		{ name: "Phrygian",					degrees: null },
+		{ name: "Lydian",					degrees: null },
+		{ name: "Mixolydian",				degrees: null },
+		{ name: "Natural Minor",			degrees: null },
+		{ name: "Locrian",					degrees: null },
+		{ name: "Harmonic Minor",			degrees: [ C,  D,  Ds, F,  G,  Gs, B  ] },
+		{ name: "Double Harmonic",			degrees: [ C,  Cs, E,  F,  G,  Gs, B  ] },
+		{ name: "Lydian ♯2 ♯6",				degrees: null },
+		{ name: "Ultraphrygian",			degrees: null },
+		{ name: "Hungarian Minor",			degrees: null },
+		{ name: "Oriental",					degrees: null },
+		{ name: "Ionian Augmented ♯2",		degrees: null },
+		{ name: "Locrian ♭♭3 ♭♭7",			degrees: null },
+		{ name: "Phrygian Dominant",		degrees: [ C,  Cs, E,  F,  G,  Gs, As ] },
 	];
+	
+	// Generate the other modes of the base scales.
+	for (var i = 0; i < this.scales.length; i++)
+	{
+		if (this.scales[i].degrees == null)
+		{
+			this.scales[i].degrees = [];
+			var offset = this.scales[i - 1].degrees[1];
+			for (var j = 0; j < 7; j++)
+			{
+				this.scales[i].degrees[j] = (this.scales[i - 1].degrees[(j + 1) % 7] + 12 - offset) % 12;
+			}
+		}
+	}
 	
 
 	this.chords =
 	[
-		{ name: "Major",		roman: "X",		romanSup: "",		romanSub: "",		pitches: [ C,  E,  G  ] },
-		{ name: "Minor",		roman: "x",		romanSup: "",		romanSub: "",		pitches: [ C,  Ds, G  ] },
-		{ name: "Diminished",	roman: "x",		romanSup: "o",		romanSub: "",		pitches: [ C,  Ds, Fs ] },
-		{ name: "Augmented",	roman: "X",		romanSup: "+",		romanSub: "",		pitches: [ C,  E,  Gs ] },
-		{ name: "Suspended 2",	roman: "X",		romanSup: "",		romanSub: "sus2",	pitches: [ C,  D,  G  ] }
+		{ name: "Major",					roman: "X",		romanSup: "",		romanSub: "",		pitches: [ C,  E,  G  ] },
+		{ name: "Minor",					roman: "x",		romanSup: "",		romanSub: "",		pitches: [ C,  Ds, G  ] },
+		{ name: "Diminished",				roman: "x",		romanSup: "o",		romanSub: "",		pitches: [ C,  Ds, Fs ] },
+		{ name: "Augmented",				roman: "X",		romanSup: "+",		romanSub: "",		pitches: [ C,  E,  Gs ] },
+		{ name: "Flat Fifth(?)",			roman: "X",		romanSup: "(♭5)",	romanSub: "",		pitches: [ C,  E,  Fs ] },
+		{ name: "?",						roman: "X",		romanSup: "?",		romanSub: "",		pitches: [ C,  D,  Fs ] },
+		{ name: "Dominant Seventh",			roman: "X",		romanSup: "7",		romanSub: "",		pitches: [ C,  E,  G,  As ] },
+		{ name: "Major Seventh",			roman: "X",		romanSup: "M7",		romanSub: "",		pitches: [ C,  E,  G,  B  ] },
+		{ name: "Minor Seventh",			roman: "x",		romanSup: "7",		romanSub: "",		pitches: [ C,  Ds, G,  As ] },
+		{ name: "Minor-Major Seventh",		roman: "X",		romanSup: "m(M7)",	romanSub: "",		pitches: [ C,  Ds, G,  B  ] },
+		{ name: "Diminished Seventh",		roman: "x",		romanSup: "o7",		romanSub: "",		pitches: [ C,  Ds, G,  A  ] },
+		{ name: "Half-Diminished Seventh",	roman: "x",		romanSup: "ø7",		romanSub: "",		pitches: [ C,  Ds, Fs, As ] },
+		{ name: "Augmented Seventh",		roman: "X",		romanSup: "+7",		romanSub: "",		pitches: [ C,  E,  Gs, As ] },
+		{ name: "Augmented Major Seventh",	roman: "X",		romanSup: "+(M7)",	romanSub: "",		pitches: [ C,  E,  Gs, B  ] }
 	];
 	
 
@@ -185,6 +219,36 @@ function Theory()
 				return chord;
 		}
 		
+		console.log("Missing chord data for pitches:");
+		console.log(pitches);
 		return null;
+	}
+	
+	
+	// Plays a sample of the given note.
+	this.playNoteSample = function(synth, pitch)
+	{
+		synth.playNote(pitch + 60, 960 / 8, 1);
+	}
+	
+	
+	// Plays a sample of the given chord.
+	this.playChordSample = function(synth, chord, rootPitch)
+	{
+		for (var k = 0; k < chord.pitches.length; k++)
+		{
+			synth.playNote((rootPitch + chord.pitches[k]) % 12 + 60, 960 / 8, 0.75);
+		}
+	}
+	
+	
+	// Plays a sample of the given scale.
+	this.playScaleSample = function(synth, scale, tonicPitch)
+	{
+		for (var k = 0; k < scale.degrees.length; k++)
+		{
+			synth.playNoteDelayed((tonicPitch + scale.degrees[k]) + 60, k * 5, 960 / 8, 1);
+		}
+		synth.playNoteDelayed((tonicPitch + scale.degrees[0] + 12) + 60, scale.degrees.length * 5, 960 / 8, 1);
 	}
 }
