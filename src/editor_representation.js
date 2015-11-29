@@ -11,6 +11,8 @@ SongEditor.prototype.refreshRepresentation = function()
 	
 	// Clear selection arrays and push a boolean false for each object in the song data,
 	// effectively unselecting everything, while also accomodating added/removed objects.
+	this.selectedObjects = 0;
+	
 	this.noteSelections = [];
 	for (var i = 0; i < this.songData.notes.length; i++)
 		this.noteSelections.push(false);

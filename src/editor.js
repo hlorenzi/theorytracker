@@ -14,6 +14,7 @@ function SongEditor(canvas, songData)
 	
 	// Set up callback arrays.
 	this.cursorChangedCallbacks = [];
+	this.selectionChangedCallbacks = [];
 	
 	// For each object in the song data, these arrays store a boolean
 	// indicating whether the respective object is currently selected in the editor.
@@ -21,6 +22,7 @@ function SongEditor(canvas, songData)
 	this.chordSelections = [];
 	this.keyChangeSelections = [];
 	this.meterChangeSelections = [];
+	this.selectedObjects = 0;
 	
 	// The scaling from ticks to pixels.
 	this.tickZoom = 1;
@@ -91,8 +93,21 @@ SongEditor.prototype.addOnCursorChanged = function(func)
 }
 
 
+SongEditor.prototype.addOnSelectionChanged = function(func)
+{
+	this.selectionChangedCallbacks.push(func);
+}
+
+
 SongEditor.prototype.callOnCursorChanged = function()
 {
 	for (var i = 0; i < this.cursorChangedCallbacks.length; i++)
 		this.cursorChangedCallbacks[i]();
+}
+
+
+SongEditor.prototype.callOnSelectionChanged = function()
+{
+	for (var i = 0; i < this.selectionChangedCallbacks.length; i++)
+		this.selectionChangedCallbacks[i]();
 }

@@ -11,6 +11,65 @@ SongEditor.prototype.unselectAll = function()
 	
 	for (var i = 0; i < this.meterChangeSelections.length; i++)
 		this.meterChangeSelections[i] = false;
+	
+	this.selectedObjects = 0;
+	this.callOnSelectionChanged();
+}
+
+
+SongEditor.prototype.selectKeyChange = function(keyChange)
+{
+	for (var n = 0; n < this.songData.keyChanges.length; n++)
+	{
+		if (this.songData.keyChanges[n] == keyChange)
+		{
+			this.selectedObjects++;
+			this.keyChangeSelections[n] = true;
+		}
+	}
+}
+
+
+SongEditor.prototype.selectMeterChange = function(meterChange)
+{
+	for (var n = 0; n < this.songData.meterChanges.length; n++)
+	{
+		if (this.songData.meterChanges[n] == meterChange)
+		{
+			this.selectedObjects++;
+			this.meterChangeSelections[n] = true;
+		}
+	}
+}
+
+
+SongEditor.prototype.getUniqueKeyChangeSelected = function()
+{
+	if (this.selectedObjects != 1)
+		return null;
+	
+	for (var i = 0; i < this.keyChangeSelections.length; i++)
+	{
+		if (this.keyChangeSelections[i])
+			return this.songData.keyChanges[i];
+	}
+	
+	return null;	
+}
+
+
+SongEditor.prototype.getUniqueMeterChangeSelected = function()
+{
+	if (this.selectedObjects != 1)
+		return null;
+	
+	for (var i = 0; i < this.meterChangeSelections.length; i++)
+	{
+		if (this.meterChangeSelections[i])
+			return this.songData.meterChanges[i];
+	}
+	
+	return null;	
 }
 
 
@@ -380,6 +439,9 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	if (this.hoverNote >= 0)
 	{
 		this.showCursor = false;
+		if (!this.noteSelections[this.hoverNote])
+			this.selectedObjects++;
+		
 		this.noteSelections[this.hoverNote] = true;
 		
 		if (this.hoverStretchR)
@@ -400,6 +462,9 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	else if (this.hoverChord >= 0)
 	{
 		this.showCursor = false;
+		if (!this.chordSelections[this.hoverChord])
+			this.selectedObjects++;
+		
 		this.chordSelections[this.hoverChord] = true;
 		
 		if (this.hoverStretchR)
@@ -419,18 +484,25 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	}
 	else if (this.hoverKeyChange >= 0)
 	{
+		if (!this.keyChangeSelections[this.hoverKeyChange])
+			this.selectedObjects++;
+		
 		this.showCursor = false;
 		this.keyChangeSelections[this.hoverKeyChange] = true;
 		this.mouseDragAction = "move";
 	}
 	else if (this.hoverMeterChange >= 0)
 	{
+		if (!this.meterChangeSelections[this.hoverMeterChange])
+			this.selectedObjects++;
+		
 		this.showCursor = false;
 		this.meterChangeSelections[this.hoverMeterChange] = true;
 		this.mouseDragAction = "move";
 	}
 	
 	this.mouseDown = true;
+	this.callOnSelectionChanged();
 	this.refreshCanvas();
 	this.callOnCursorChanged();
 }
@@ -532,7 +604,10 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			for (var m = 0; m < newNotes.length; m++)
 			{
 				if (this.songData.notes[n] == newNotes[m])
+				{
+					this.selectedObjects++;
 					this.noteSelections[n] = true;
+				}
 			}
 		}
 		
@@ -541,7 +616,10 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			for (var m = 0; m < newChords.length; m++)
 			{
 				if (this.songData.chords[n] == newChords[m])
+				{
+					this.selectedObjects++;
 					this.chordSelections[n] = true;
+				}
 			}
 		}
 		
@@ -550,7 +628,10 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			for (var m = 0; m < newKeyChanges.length; m++)
 			{
 				if (this.songData.keyChanges[n] == newKeyChanges[m])
+				{
+					this.selectedObjects++;
 					this.keyChangeSelections[n] = true;
+				}
 			}
 		}
 		
@@ -559,7 +640,10 @@ SongEditor.prototype.handleMouseUp = function(ev)
 			for (var m = 0; m < newMeterChanges.length; m++)
 			{
 				if (this.songData.meterChanges[n] == newMeterChanges[m])
+				{
+					this.selectedObjects++;
 					this.meterChangeSelections[n] = true;
+				}
 			}
 		}
 	}
@@ -621,5 +705,6 @@ SongEditor.prototype.handleKeyDown = function(ev)
 		this.clearHover();
 		this.refreshRepresentation();
 		this.refreshCanvas();
+		this.callOnSelectionChanged();
 	}
 }
