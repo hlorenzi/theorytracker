@@ -5,11 +5,12 @@ function SongEditor(canvas, songData)
 	this.canvasWidth = parseFloat(canvas.width);
 	this.canvasHeight = parseFloat(canvas.height);
 	
-	// Set up mouse interaction.
+	// Set up mouse/keyboard interaction.
 	var that = this;
 	this.canvas.onmousemove = function(ev) { that.handleMouseMove(ev); };
 	this.canvas.onmousedown = function(ev) { that.handleMouseDown(ev); };
 	this.canvas.onmouseup = function(ev) { that.handleMouseUp(ev); };
+	window.onkeydown = function(ev) { that.handleKeyDown(ev); };
 	
 	// Set up callback arrays.
 	this.cursorChangedCallbacks = [];

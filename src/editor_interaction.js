@@ -568,3 +568,57 @@ SongEditor.prototype.handleMouseUp = function(ev)
 	this.mouseDragAction = null;
 	this.refreshCanvas();
 }
+
+
+SongEditor.prototype.handleKeyDown = function(ev)
+{
+	var keyCode = (ev.key || ev.which || ev.keyCode);
+	
+	if (keyCode == 46) // Delete key
+	{
+		// Remove selected objects from the song data.
+		var selectedNotes = [];
+		for (var n = this.noteSelections.length - 1; n >= 0; n--)
+		{
+			if (this.noteSelections[n])
+			{
+				selectedNotes.push(this.songData.notes[n]);
+				this.songData.notes.splice(n, 1);
+			}
+		}
+		
+		var selectedChords = [];
+		for (var n = this.chordSelections.length - 1; n >= 0; n--)
+		{
+			if (this.chordSelections[n])
+			{
+				selectedChords.push(this.songData.chords[n]);
+				this.songData.chords.splice(n, 1);
+			}
+		}
+		
+		var selectedKeyChanges = [];
+		for (var n = this.keyChangeSelections.length - 1; n >= 0; n--)
+		{
+			if (this.keyChangeSelections[n])
+			{
+				selectedKeyChanges.push(this.songData.keyChanges[n]);
+				this.songData.keyChanges.splice(n, 1);
+			}
+		}
+		
+		var selectedMeterChanges = [];
+		for (var n = this.meterChangeSelections.length - 1; n >= 0; n--)
+		{
+			if (this.meterChangeSelections[n])
+			{
+				selectedMeterChanges.push(this.songData.meterChanges[n]);
+				this.songData.meterChanges.splice(n, 1);
+			}
+		}
+		
+		this.clearHover();
+		this.refreshRepresentation();
+		this.refreshCanvas();
+	}
+}
