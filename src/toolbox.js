@@ -3,6 +3,7 @@ function Toolbox(div, editor, synth)
 	this.div = div;
 	this.playing = false;
 	this.playTimer = null;
+	this.playTimerRefresh = null;
 	
 	
 	this.initCSS();
@@ -37,6 +38,17 @@ function Toolbox(div, editor, synth)
 	this.buttonRewind.className = "toolboxButton";
 	this.mainLayoutCell00.appendChild(this.buttonRewind);
 	
+	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	
+	var inputBPMSpan = document.createElement("span");
+	inputBPMSpan.innerHTML = "Tempo ";
+	inputBPMSpan.className = "toolboxText";
+	this.mainLayoutCell00.appendChild(inputBPMSpan);
+	
+	this.inputBPM = document.createElement("input");
+	this.inputBPM.value = editor.songData.beatsPerMinute;
+	this.inputBPM.style.width = "30px";
+	this.mainLayoutCell00.appendChild(this.inputBPM);
 	
 	// Key Change settings.
 	this.keyChangeSpan = document.createElement("span");
@@ -273,11 +285,13 @@ function Toolbox(div, editor, synth)
 		that.synth.stopAll();
 		if (that.playing)
 		{
-			that.playTimer = setInterval(function() { that.processPlayback(12); }, 1000 / 30);
+			that.playTimer = setInterval(function() { that.processPlayback(); }, 1000 / 60);
+			that.playTimerRefresh = setInterval(function() { that.processPlaybackRefresh(); }, 1000 / 15);
 		}
 		else
 		{
 			clearInterval(that.playTimer);
+			clearInterval(that.playTimerRefresh);
 		}
 	}
 	
@@ -286,6 +300,7 @@ function Toolbox(div, editor, synth)
 		if (that.playing)
 		{
 			clearInterval(that.playTimer);
+			clearInterval(that.playTimerRefresh);
 			that.synth.stopAll();
 		}
 		
@@ -300,6 +315,23 @@ function Toolbox(div, editor, synth)
 		that.editor.refreshCanvas();
 		that.refresh();
 		that.refreshSelection();
+	}
+	
+	this.inputBPM.onchange = function()
+	{
+		var bpm = parseInt(that.inputBPM.value);
+		
+		if (bpm != bpm) bpm = 120; // Test for NaN.
+		if (bpm < 1) bpm = 1;
+		if (bpm > 400) bpm = 400;
+		bpm -= (bpm % 1);
+		
+		that.editor.songData.beatsPerMinute = bpm;
+	}
+	
+	this.inputBPM.onblur = function()
+	{
+		that.inputBPM.value = that.editor.songData.beatsPerMinute;
 	}
 	
 	this.refreshSelection();
@@ -593,23 +625,21 @@ Toolbox.prototype.editMeterChange = function()
 }
 
 
-Toolbox.prototype.processPlayback = function(deltaTicks)
+Toolbox.prototype.processPlayback = function()
 {
+	var bpm = this.editor.songData.beatsPerMinute;
+	var deltaTicks = bpm / 60 / 60 * (960 / 4);
+	
 	var lastCursorTick = this.editor.cursorTick;
 	this.editor.cursorTick += deltaTicks;
-	this.editor.unselectAll();
 	
+	// TODO: Use binary search.
 	for (var i = 0; i < this.editor.songData.notes.length; i++)
 	{
 		var note = this.editor.songData.notes[i];
 		if (note.tick >= lastCursorTick && note.tick < this.editor.cursorTick)
 		{
 			this.synth.playNote(note.pitch + 60, note.duration * 2, 1);
-		}
-		
-		if (note.tick + note.duration >= lastCursorTick && note.tick < this.editor.cursorTick)
-		{
-			this.editor.noteSelections[i] = true;
 		}
 	}
 	
@@ -639,9 +669,30 @@ Toolbox.prototype.processPlayback = function(deltaTicks)
 			{
 				this.synth.playNote((chord.chord.pitches[0] + chord.rootPitch) % 12 + 60, eighthTick, 0.45);
 			}
-			
-			this.editor.chordSelections[i] = true;
 		}
+	}
+}
+
+
+
+
+Toolbox.prototype.processPlaybackRefresh = function()
+{
+	this.editor.unselectAll();
+	
+	// TODO: Use binary search.
+	for (var i = 0; i < this.editor.songData.notes.length; i++)
+	{
+		var note = this.editor.songData.notes[i];
+		if (note.tick + note.duration >= this.editor.cursorTick && note.tick < this.editor.cursorTick)
+			this.editor.noteSelections[i] = true;
+	}
+	
+	for (var i = 0; i < this.editor.songData.chords.length; i++)
+	{
+		var chord = this.editor.songData.chords[i];
+		if (chord.tick + chord.duration > this.editor.cursorTick && chord.tick < this.editor.cursorTick)
+			this.editor.chordSelections[i] = true;
 	}
 	
 	this.editor.refreshCanvas();

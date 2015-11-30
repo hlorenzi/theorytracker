@@ -25,7 +25,7 @@ function SongEditor(canvas, songData, synth)
 	this.selectedObjects = 0;
 	
 	// The scaling from ticks to pixels.
-	this.tickZoom = 0.1;
+	this.tickZoom = 0.15;
 	
 	// The tick grid which the cursor is snapped to. 
 	this.tickSnap = 960 / 16;

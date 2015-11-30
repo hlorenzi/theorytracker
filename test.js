@@ -37,7 +37,7 @@ function testOnLoad()
 	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 3, 960 / 16, theory.E + 12));
 	
 	var synth = new Synth();
-	setInterval(function() { synth.process(12); }, 1000 / 30);
+	setInterval(function() { synth.process(6); }, 1000 / 60);
 	
 	var canvas = document.getElementById("editorCanvas");
 	var editor = new SongEditor(canvas, song, synth);
