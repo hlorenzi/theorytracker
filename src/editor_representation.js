@@ -151,6 +151,10 @@ SongEditor.prototype.refreshRepresentation = function()
 			for (var n = 0; n < this.songData.notes.length; n++)
 			{
 				var note = this.songData.notes[n];
+				
+				if (note.tick + note.duration <= block.tick || note.tick >= block.tick + block.duration)
+					continue;
+				
 				var noteRow = theory.getRowForPitch(note.pitch, block.key);
 				var notePos = this.getNotePosition(block, noteRow, note.tick, note.duration);
 				block.notes.push(
@@ -171,6 +175,10 @@ SongEditor.prototype.refreshRepresentation = function()
 			for (var n = 0; n < this.songData.chords.length; n++)
 			{
 				var chord = this.songData.chords[n];
+				
+				if (chord.tick + chord.duration <= block.tick || chord.tick >= block.tick + block.duration)
+					continue;
+				
 				var chordPos = this.getChordPosition(block, chord.tick, chord.duration);
 				block.chords.push(
 				{
@@ -228,13 +236,16 @@ SongEditor.prototype.refreshRepresentation = function()
 SongEditor.prototype.getNotePosition = function(block, row, tick, duration)
 {
 	var blockTick = tick - block.tick;
+	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+	var firstRow = block.key.scale.degrees.length * 3;
+	var rowY = this.getYForRow(block, row);
 	return {
 		resizeHandleL: block.x1 + blockTick * this.tickZoom,
 		resizeHandleR: block.x1 + (blockTick + duration) * this.tickZoom,
 		x1: block.x1 + Math.max(0, (blockTick * this.tickZoom) + this.NOTE_MARGIN_HOR),
 		x2: block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom - this.NOTE_MARGIN_HOR),
-		y1: block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row + 1) * this.NOTE_HEIGHT + this.NOTE_MARGIN_VER,
-		y2: block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row) * this.NOTE_HEIGHT - this.NOTE_MARGIN_VER
+		y1: rowY - this.NOTE_HEIGHT + this.NOTE_MARGIN_VER,
+		y2: rowY - this.NOTE_MARGIN_VER
 	};
 }
 

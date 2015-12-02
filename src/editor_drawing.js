@@ -12,24 +12,35 @@ SongEditor.prototype.refreshCanvas = function()
 	var CURSOR_COLOR = "#0000ff";
 	var BLOCK_BORDER_COLOR = "#000000";
 	var BLOCK_MEASURE_COLOR = "#dddddd";
-	var BLOCK_MEASURE_COLOR_STRONG = "#bbbbbb";
+	var BLOCK_MEASURE_COLOR_STRONG = "#888888";
 	
 	for (var i = 0; i < this.viewBlocks.length; i++)
 	{
 		var block = this.viewBlocks[i];
+		var visibleRows = this.getFirstAndLastVisibleRowsForBlock(block);
+		var firstVisibleRowY = this.getYForRow(block, visibleRows.first);
+		var lastVisibleRowY = this.getYForRow(block, visibleRows.last);
+		
+		this.ctx.save();
+		this.ctx.beginPath();
+		
+		var clipY1 = Math.max(block.y1, lastVisibleRowY);
+		var clipY2 = Math.min(block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN, firstVisibleRowY);
+		this.ctx.rect(0, clipY1, this.canvasWidth, clipY2 - clipY1);
+		this.ctx.clip();
 		
 		// Draw rows.
-		for (var row = 0; row < 14; row++)
+		for (var row = visibleRows.first; row <= visibleRows.last; row++)
 		{
-			this.ctx.strokeStyle = (theory.getPitchForRow(row, block.key) == block.key.tonicPitch ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
+			this.ctx.strokeStyle = (theory.getPitchForRow(row, block.key) % 12 == block.key.tonicPitch ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
 			this.ctx.lineWidth = 2;
 			this.ctx.beginPath();
-			this.ctx.moveTo(block.x1, block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - row * this.NOTE_HEIGHT);
-			this.ctx.lineTo(block.x2, block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - row * this.NOTE_HEIGHT);
+			this.ctx.moveTo(block.x1, this.getYForRow(block, row));
+			this.ctx.lineTo(block.x2, this.getYForRow(block, row));
 			this.ctx.stroke();
 		}
 		
-		// Draw measures.
+		// Draw note measures.
 		var submeasureCount = 0;
 		for (var n = block.meter.tick - block.tick; n < block.duration; n += this.WHOLE_NOTE_DURATION / block.meter.denominator)
 		{
@@ -40,9 +51,6 @@ SongEditor.prototype.refreshCanvas = function()
 				this.ctx.beginPath();
 				this.ctx.moveTo(block.x1 + n * this.tickZoom, block.y1);
 				this.ctx.lineTo(block.x1 + n * this.tickZoom, block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN);
-				
-				this.ctx.moveTo(block.x1 + n * this.tickZoom, block.y2 - this.CHORD_HEIGHT);
-				this.ctx.lineTo(block.x1 + n * this.tickZoom, block.y2);
 				this.ctx.stroke();
 			}
 			
@@ -55,28 +63,63 @@ SongEditor.prototype.refreshCanvas = function()
 			var noteIndex = block.notes[n].noteIndex;
 			var note = this.songData.notes[noteIndex];
 			
-			if (this.noteSelections[noteIndex] && this.mouseDragAction != null)
-			{
-				var draggedNote = this.getNoteDragged(note, this.mouseDragCurrent);
-				this.drawNote(i, draggedNote.pitch, draggedNote.tick, draggedNote.duration, noteIndex == this.hoverNote, true);
-			}
-			else
+			if (!this.noteSelections[noteIndex] || this.mouseDragAction == null || this.mouseDragAction == "scroll")
 				this.drawNote(i, note.pitch, note.tick, note.duration, noteIndex == this.hoverNote, this.noteSelections[noteIndex]);
 		}
 		
-		// Draw chord.
+		if (this.mouseDragAction != null && this.mouseDragAction != "scroll")
+		{
+			for (var n = 0; n < this.songData.notes.length; n++)
+			{
+				var note = this.songData.notes[n];
+				if (this.noteSelections[n])
+				{
+					var draggedNote = this.getNoteDragged(note, this.mouseDragCurrent);
+					this.drawNote(i, draggedNote.pitch, draggedNote.tick, draggedNote.duration, noteIndex == this.hoverNote, true);
+				}
+			}
+		}
+		
+		this.ctx.restore();
+		
+		// Draw chord measures.
+		var submeasureCount = 0;
+		for (var n = block.meter.tick - block.tick; n < block.duration; n += this.WHOLE_NOTE_DURATION / block.meter.denominator)
+		{
+			if (n >= 0)
+			{
+				this.ctx.strokeStyle = (submeasureCount == 0 ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
+				this.ctx.lineWidth = 2;
+				this.ctx.beginPath();
+				this.ctx.moveTo(block.x1 + n * this.tickZoom, block.y2 - this.CHORD_HEIGHT);
+				this.ctx.lineTo(block.x1 + n * this.tickZoom, block.y2);
+				this.ctx.stroke();
+			}
+			
+			submeasureCount = (submeasureCount + 1) % block.meter.numerator;
+		}
+		
+		// Draw chords.
 		for (var n = 0; n < block.chords.length; n++)
 		{
 			var chordIndex = block.chords[n].chordIndex;
 			var chord = this.songData.chords[chordIndex];
 			
-			if (this.chordSelections[chordIndex] && this.mouseDragAction != null)
-			{
-				var draggedChord = this.getChordDragged(chord, this.mouseDragCurrent);
-				this.drawChord(i, chord, draggedChord.tick, draggedChord.duration, chordIndex == this.hoverChord, true);
-			}
-			else
+			if (!this.chordSelections[chordIndex] || this.mouseDragAction == null || this.mouseDragAction == "scroll")
 				this.drawChord(i, chord, chord.tick, chord.duration, chordIndex == this.hoverChord, this.chordSelections[chordIndex]);
+		}
+		
+		if (this.mouseDragAction != null && this.mouseDragAction != "scroll")
+		{
+			for (var n = 0; n < this.songData.chords.length; n++)
+			{
+				var chord = this.songData.chords[n];
+				if (this.chordSelections[n])
+				{
+					var draggedChord = this.getChordDragged(chord, this.mouseDragCurrent);
+					this.drawChord(i, chord, draggedChord.tick, draggedChord.duration, chordIndex == this.hoverChord, true);
+				}
+			}
 		}
 		
 		// Draw borders.
@@ -97,6 +140,12 @@ SongEditor.prototype.refreshCanvas = function()
 			var cursorX = block.x1 + (this.cursorTick - block.tick) * this.tickZoom;
 			var cursorY1 = block.y1;
 			var cursorY2 = block.y2;
+			
+			if (this.cursorZone == this.CURSOR_ZONE_NOTES)
+				cursorY2 = block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+			
+			else if (this.cursorZone == this.CURSOR_ZONE_CHORDS)
+				cursorY1 = block.y2 - this.CHORD_HEIGHT;
 			
 			this.ctx.beginPath();
 			this.ctx.moveTo(cursorX, cursorY1);
@@ -192,13 +241,23 @@ SongEditor.prototype.refreshCanvas = function()
 			
 		// Draw pitches.
 		this.ctx.font = "10px Tahoma";
-		for (var row = 0; row < 13; row++)
+		
+		var visibleRows = this.getFirstAndLastVisibleRowsForBlock(block);
+		for (var row = visibleRows.first; row < visibleRows.last; row++)
 		{
+			var pitch = theory.getPitchForRow(row, songKeyChange);
+			var y = this.getYForRow(this.viewBlocks[keyChange.blockIndex], row + 1);
+			
 			this.ctx.fillStyle = KEY_PITCH_COLOR;
 			this.ctx.fillText(
-				"" + theory.getNameForPitch(theory.getPitchForRow(row, songKeyChange)),
+				"" + theory.getNameForPitch(pitch),
 				keyChange.x1 + 4,
-				this.canvasHeight - this.MARGIN_BOTTOM - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (row + 1) * this.NOTE_HEIGHT);
+				y);
+				
+			this.ctx.fillText(
+				"" + theory.getOctaveForPitch(pitch),
+				keyChange.x1 + 18,
+				y);
 		}
 	}
 	
@@ -284,6 +343,8 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 	if (tick + duration <= block.tick ||
 		tick >= block.tick + block.duration)
 		return;
+		
+	var scrollY = -this.rowAtCenter * this.NOTE_HEIGHT;
 	
 	var deg = theory.getDegreeForPitch(pitch, block.key);
 	var row = theory.getRowForPitch(pitch, block.key);
@@ -315,9 +376,7 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 	{
 		var nextBlock = this.viewBlocks[blockIndex + 1];
 		var nextRow = theory.getRowForPitch(pitch, nextBlock.key);
-		
-		var nextY1 = nextBlock.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - (nextRow + 1) * this.NOTE_HEIGHT;
-		var nextY2 = nextY1 + this.NOTE_HEIGHT;
+		var nextPos = this.getNotePosition(block, nextRow, tick, duration);
 		
 		var col = theory.getColorForDegree(deg - (deg % 1));
 		
@@ -326,8 +385,8 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 		this.ctx.fillStyle = col;
 		this.ctx.beginPath();
 		this.ctx.moveTo(block.x2, pos.y1);
-		this.ctx.lineTo(nextBlock.x1, nextY1);
-		this.ctx.lineTo(nextBlock.x1, nextY2);
+		this.ctx.lineTo(nextBlock.x1, nextPos.y1);
+		this.ctx.lineTo(nextBlock.x1, nextPos.y2);
 		this.ctx.lineTo(block.x2, pos.y2);
 		this.ctx.fill();
 		this.ctx.restore();
@@ -401,7 +460,7 @@ SongEditor.prototype.drawChord = function(blockIndex, chord, tick, duration, hov
 	
 	this.ctx.restore();
 	
-	// Draw possibly-bent part between blocks.
+	// Draw part between blocks.
 	if (tick + duration > block.tick + block.duration && blockIndex < this.viewBlocks.length - 1)
 	{
 		var nextBlock = this.viewBlocks[blockIndex + 1];
@@ -429,7 +488,7 @@ SongEditor.prototype.drawDegreeColoredRectangle = function(deg, pos)
 	this.ctx.fillStyle = col;
 	this.ctx.fillRect(pos.x1, pos.y1, pos.x2 - pos.x1, pos.y2 - pos.y1);
 	
-	// Draw stripes on fractional scale degrees.
+	// Draw stripes for fractional scale degrees.
 	if ((deg % 1) != 0)
 	{
 		this.ctx.strokeStyle = theory.getColorForDegree((deg - (deg % 1) + 1) % 7);
@@ -444,4 +503,22 @@ SongEditor.prototype.drawDegreeColoredRectangle = function(deg, pos)
 	}
 	
 	this.ctx.restore();
+}
+
+
+SongEditor.prototype.getYForRow = function(block, row)
+{
+	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+	return block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - noteAreaHeight / 2 + (this.rowAtCenter - row) * this.NOTE_HEIGHT;
+}
+
+
+SongEditor.prototype.getFirstAndLastVisibleRowsForBlock = function(block)
+{
+	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+	
+	return {
+		first: Math.max(Math.floor(this.rowAtCenter - noteAreaHeight / 2 / this.NOTE_HEIGHT), theory.getRowForPitch(theory.getMinPitch(), block.key)),
+		last: Math.min(Math.ceil(this.rowAtCenter + noteAreaHeight / 2 / this.NOTE_HEIGHT), theory.getRowForPitch(theory.getMaxPitch(), block.key))
+	};
 }

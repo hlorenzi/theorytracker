@@ -15,26 +15,26 @@ function testOnLoad()
 	song.addChord(new SongDataChord(960 * 3.5, 960 / 2, theory.chords[4], theory.G));
 	song.addChord(new SongDataChord(960 * 4.0, 960 * 2, theory.chords[0], theory.C));
 	
-	song.addNote(new SongDataNote(0, 960 / 4, theory.C));
-	song.addNote(new SongDataNote(960 / 4, 960 / 16, theory.F));
-	song.addNote(new SongDataNote(960 / 4 + 960 / 16, 960 / 16, theory.E));
-	song.addNote(new SongDataNote(960 / 4 + 960 / 16 * 2, 960 / 4, theory.F));
-	song.addNote(new SongDataNote(960 / 4 * 2 + 960 / 16 * 2, 960 / 4, theory.E));
-	song.addNote(new SongDataNote(960 / 4 * 3 + 960 / 16 * 2, 960 / 8, theory.D));
-	song.addNote(new SongDataNote(960, 960, theory.G));
+	song.addNote(new SongDataNote(0, 960 / 4, theory.C + 60));
+	song.addNote(new SongDataNote(960 / 4, 960 / 16, theory.F + 60));
+	song.addNote(new SongDataNote(960 / 4 + 960 / 16, 960 / 16, theory.E + 60));
+	song.addNote(new SongDataNote(960 / 4 + 960 / 16 * 2, 960 / 4, theory.F + 60));
+	song.addNote(new SongDataNote(960 / 4 * 2 + 960 / 16 * 2, 960 / 4, theory.E + 60));
+	song.addNote(new SongDataNote(960 / 4 * 3 + 960 / 16 * 2, 960 / 8, theory.D + 60));
+	song.addNote(new SongDataNote(960, 960, theory.G + 60));
 	
-	song.addNote(new SongDataNote(960 * 2, 960 / 4, theory.C));
-	song.addNote(new SongDataNote(960 * 2 + 960 / 4, 960 / 16, theory.F));
-	song.addNote(new SongDataNote(960 * 2 + 960 / 4 + 960 / 16, 960 / 16, theory.E));
-	song.addNote(new SongDataNote(960 * 2 + 960 / 4 + 960 / 16 * 2, 960 / 4, theory.F));
-	song.addNote(new SongDataNote(960 * 2 + 960 / 4 * 2 + 960 / 16 * 2, 960 / 4, theory.E));
-	song.addNote(new SongDataNote(960 * 2 + 960 / 4 * 3 + 960 / 16 * 2, 960 / 8, theory.Cs));
-	song.addNote(new SongDataNote(960 * 2 + 960, 960, theory.C));
+	song.addNote(new SongDataNote(960 * 2, 960 / 4, theory.C + 60));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4, 960 / 16, theory.F + 60));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 + 960 / 16, 960 / 16, theory.E + 60));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 + 960 / 16 * 2, 960 / 4, theory.F + 60));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 * 2 + 960 / 16 * 2, 960 / 4, theory.E + 60));
+	song.addNote(new SongDataNote(960 * 2 + 960 / 4 * 3 + 960 / 16 * 2, 960 / 8, theory.Cs + 60));
+	song.addNote(new SongDataNote(960 * 2 + 960, 960, theory.C + 60));
 	
-	song.addNote(new SongDataNote(960 * 2.5, 960 / 16, theory.Gs));
-	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16, 960 / 16, theory.C + 12));
-	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 2, 960 / 16, theory.Cs + 12));
-	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 3, 960 / 16, theory.E + 12));
+	song.addNote(new SongDataNote(960 * 2.5, 960 / 16, theory.Gs + 60));
+	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16, 960 / 16, theory.C + 60 + 12));
+	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 2, 960 / 16, theory.Cs + 60 + 12));
+	song.addNote(new SongDataNote(960 * 2.5 + 960 / 16 * 3, 960 / 16, theory.E + 60 + 12));
 	
 	var synth = new Synth();
 	setInterval(function() { synth.process(6); }, 1000 / 60);

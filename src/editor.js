@@ -38,9 +38,17 @@ function SongEditor(canvas, songData, synth)
 	this.viewKeyChanges = [];
 	this.viewMeterChanges = [];
 	
+	// These control scrolling.
+	this.rowAtCenter = 8 * 5;
+	
 	// These control cursor (the vertical blue bar) interaction.
+	this.CURSOR_ZONE_ALL = 0;
+	this.CURSOR_ZONE_NOTES = 1;
+	this.CURSOR_ZONE_CHORDS = 2;
+	
 	this.cursorTick = 0;
 	this.showCursor = true;
+	this.cursorZone = this.CURSOR_ZONE_ALL;
 	
 	// These control mouse interaction.
 	this.interactionEnabled = true;
@@ -73,7 +81,7 @@ function SongEditor(canvas, songData, synth)
 	this.CHORD_HEIGHT = 60;
 	this.CHORDNOTE_MARGIN = 10;
 	this.CHORD_ORNAMENT_HEIGHT = 5;
-	this.KEYCHANGE_BAR_WIDTH = 20;
+	this.KEYCHANGE_BAR_WIDTH = 27;
 	this.METERCHANGE_BAR_WIDTH = 4;
 	
 	// Finally, set the song data, and the synth manager.

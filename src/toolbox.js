@@ -277,6 +277,7 @@ function Toolbox(div, editor, synth)
 		
 		that.editor.showCursor = true;
 		that.editor.unselectAll();
+		that.editor.clearHover();
 		that.editor.refreshRepresentation();
 		that.editor.refreshCanvas();
 		that.refresh();
@@ -285,6 +286,7 @@ function Toolbox(div, editor, synth)
 		that.synth.stopAll();
 		if (that.playing)
 		{
+			that.editor.cursorZone = that.editor.CURSOR_ZONE_ALL;
 			that.playTimer = setInterval(function() { that.processPlayback(); }, 1000 / 60);
 			that.playTimerRefresh = setInterval(function() { that.processPlaybackRefresh(); }, 1000 / 15);
 		}
@@ -410,12 +412,13 @@ Toolbox.prototype.refresh = function()
 				that.editor.songData.addNote(note);
 				that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 4;
 				that.editor.showCursor = true;
+				that.editor.cursorZone = that.editor.CURSOR_ZONE_NOTES;
 				that.editor.unselectAll();
 				that.editor.refreshRepresentation();
 				that.editor.refreshCanvas();
 				that.refresh();
 			}
-		}(pitch);
+		}(pitch + 60);
 	}
 	
 	var chordCategory = this.chordSelect.selectedIndex;
@@ -462,6 +465,7 @@ Toolbox.prototype.refresh = function()
 					that.editor.songData.addChord(chord);
 					that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 2;
 					that.editor.showCursor = true;
+					that.editor.cursorZone = that.editor.CURSOR_ZONE_CHORDS;
 					that.editor.unselectAll();
 					that.editor.refreshRepresentation();
 					that.editor.refreshCanvas();
@@ -524,6 +528,7 @@ Toolbox.prototype.refresh = function()
 					that.editor.songData.addChord(chord);
 					that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 2;
 					that.editor.showCursor = true;
+					that.editor.cursorZone = that.editor.CURSOR_ZONE_CHORDS;
 					that.editor.unselectAll();
 					that.editor.refreshRepresentation();
 					that.editor.refreshCanvas();
@@ -639,7 +644,7 @@ Toolbox.prototype.processPlayback = function()
 		var note = this.editor.songData.notes[i];
 		if (note.tick >= lastCursorTick && note.tick < this.editor.cursorTick)
 		{
-			this.synth.playNote(note.pitch + 60, note.duration * 2, 1);
+			this.synth.playNote(note.pitch, note.duration * 2, 1);
 		}
 	}
 	

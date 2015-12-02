@@ -84,6 +84,18 @@ function Theory()
 		{ name: "Augmented Major Seventh",	roman: "X",		romanSup: "+(M7)",	romanSub: "",		pitches: [ C,  E,  Gs, B  ] }
 	];
 	
+	
+	this.getMinPitch = function()
+	{
+		return 60 - 12 * 3;
+	}
+	
+	
+	this.getMaxPitch = function()
+	{
+		return 60 + 12 * 3;
+	}
+	
 
 	this.getNameForPitch = function(pitch, scale)
 	{
@@ -98,6 +110,18 @@ function Theory()
 		// TODO: Take the scale also into consideration for naming.
 		var numerals = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
 		return numerals[(pitch + 12 - key.tonicPitch) % 12];
+	};
+	
+
+	this.getOctaveForPitch = function(pitch)
+	{
+		return Math.floor(pitch / 12);
+	};
+	
+
+	this.getOctaveForDegree = function(degree, key)
+	{
+		return Math.floor(degree / key.scale.degrees.length);
 	};
 	
 	
@@ -148,6 +172,7 @@ function Theory()
 	// indicates that the pitch falls between scale degrees.
 	this.getRowForPitch = function(pitch, key)
 	{
+		var pitchOctave = theory.getOctaveForPitch(pitch);
 		var pitchInOctave = ((pitch + 12 - key.tonicPitch) % 12);
 		var pitchDegree = key.scale.degrees.length - 0.5;
 		
@@ -190,7 +215,7 @@ function Theory()
 			key.tonicPitch = originalTonicPitch;
 		}
 		
-		return key.scale.degrees[(row + key.scale.degrees.length - degreeOffsetFromC) % key.scale.degrees.length] + key.tonicPitch;
+		return key.scale.degrees[(row + key.scale.degrees.length * 3 - degreeOffsetFromC) % key.scale.degrees.length] + key.tonicPitch + Math.floor((row - degreeOffsetFromC) / key.scale.degrees.length) * 12;
 	};
 	
 	
@@ -228,7 +253,7 @@ function Theory()
 	// Plays a sample of the given note.
 	this.playNoteSample = function(synth, pitch)
 	{
-		synth.playNote(pitch + 60, 960 / 8, 1);
+		synth.playNote(pitch, 960 / 8, 1);
 	}
 	
 	
@@ -247,8 +272,8 @@ function Theory()
 	{
 		for (var k = 0; k < scale.degrees.length; k++)
 		{
-			synth.playNoteDelayed((tonicPitch + scale.degrees[k]) + 60, k * 5, 960 / 8, 1);
+			synth.playNoteDelayed((tonicPitch + scale.degrees[k]) + 60, k * 60, 960 / 8, 1);
 		}
-		synth.playNoteDelayed((tonicPitch + scale.degrees[0] + 12) + 60, scale.degrees.length * 5, 960 / 8, 1);
+		synth.playNoteDelayed((tonicPitch + scale.degrees[0] + 12) + 60, scale.degrees.length * 60, 960 / 8, 1);
 	}
 }

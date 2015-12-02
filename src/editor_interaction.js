@@ -132,6 +132,21 @@ SongEditor.prototype.getTickAtPosition = function(x)
 }
 
 
+SongEditor.prototype.getZoneAtPosition = function(y)
+{
+	if (y >= this.MARGIN_TOP + this.HEADER_MARGIN &&
+		y <= this.canvasHeight - this.MARGIN_BOTTOM - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN)
+		return this.CURSOR_ZONE_NOTES;
+	
+	else if (y >= this.canvasHeight - this.MARGIN_BOTTOM - this.CHORD_HEIGHT &&
+		y <= this.canvasHeight - this.MARGIN_BOTTOM)
+		return this.CURSOR_ZONE_CHORDS;
+		
+	else
+		return this.CURSOR_ZONE_ALL;
+}
+
+
 SongEditor.prototype.getKeyAtTick = function(tick)
 {
 	for (var b = 0; b < this.viewBlocks.length; b++)
@@ -179,7 +194,7 @@ SongEditor.prototype.getEarliestSelectedTick = function()
 
 SongEditor.prototype.getLatestSelectedTick = function()
 {
-	// FIXME: Take key/meter changes into consideration.
+	// TODO: Take key/meter changes into consideration.
 	// TODO: Use binary search.
 	var latest = 0;
 	for (var n = this.noteSelections.length - 1; n >= 0; n--)
@@ -414,13 +429,30 @@ SongEditor.prototype.handleMouseMove = function(ev)
 				}
 			}					
 		}
+		
+		this.refreshCanvas();
 	}
-	else if (this.mouseDragAction == "move")
-		this.canvas.style.cursor = "move";
-	else if (this.mouseDragAction == "stretch")
-		this.canvas.style.cursor = "ew-resize";
 	
-	this.refreshCanvas();
+	else if (this.mouseDragAction == "move")
+	{
+		this.canvas.style.cursor = "move";
+		this.refreshCanvas();
+	}
+	
+	else if (this.mouseDragAction == "stretch")
+	{
+		this.canvas.style.cursor = "ew-resize";
+		this.refreshCanvas();
+	}
+	
+	else if (this.mouseDragAction == "scroll")
+	{
+		var rowOffset = (mousePos.y - this.mouseDragOrigin.y) / this.NOTE_HEIGHT;
+		this.rowAtCenter += rowOffset;
+		this.mouseDragOrigin.y = mousePos.y;
+		this.refreshRepresentation();
+		this.refreshCanvas();
+	}
 }
 
 
@@ -439,6 +471,7 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	this.mouseDragOrigin = mousePos;
 	
 	this.cursorTick = this.getTickAtPosition(mousePos.x);
+	this.cursorZone = this.getZoneAtPosition(mousePos.y);
 	this.showCursor = true;
 	
 	// Start a dragging operation.
@@ -510,6 +543,11 @@ SongEditor.prototype.handleMouseDown = function(ev)
 		this.meterChangeSelections[this.hoverMeterChange] = true;
 		this.mouseDragAction = "move";
 	}
+	else
+	{
+		this.mouseDragAction = "scroll";
+		this.clearHover();
+	}
 	
 	this.mouseDown = true;
 	this.callOnSelectionChanged();
@@ -527,7 +565,7 @@ SongEditor.prototype.handleMouseUp = function(ev)
 		return;
 	
 	// Apply dragged modifications.
-	if (this.mouseDown && this.mouseDragAction != null)
+	if (this.mouseDown && this.mouseDragAction != null && this.mouseDragAction != "scroll")
 	{
 		// Store modified objects in a local array and
 		// remove them from the song data.
