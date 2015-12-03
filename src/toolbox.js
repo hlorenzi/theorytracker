@@ -275,6 +275,7 @@ function Toolbox(div, editor, synth)
 		that.editor.setInteractionEnabled(!that.playing);
 		that.buttonPlay.innerHTML = (that.playing ? "&#9632; Stop" : "&#9654; Play");
 		
+		that.editor.cursorTick = Math.floor(that.editor.cursorTick / that.editor.tickSnap) * that.editor.tickSnap;
 		that.editor.showCursor = true;
 		that.editor.unselectAll();
 		that.editor.clearHover();
@@ -651,7 +652,8 @@ Toolbox.prototype.processPlayback = function()
 	for (var i = 0; i < this.editor.songData.chords.length; i++)
 	{
 		var chord = this.editor.songData.chords[i];
-		if (chord.tick + chord.duration > lastCursorTick && chord.tick < this.editor.cursorTick)
+		if (chord.tick + chord.duration > lastCursorTick && chord.tick < this.editor.cursorTick &&
+			!(chord.tick + chord.duration > lastCursorTick && chord.tick + chord.duration < this.editor.cursorTick))
 		{
 			var halfTick = this.editor.WHOLE_NOTE_DURATION / 2;
 			var quarterTick = halfTick / 2;

@@ -221,6 +221,18 @@ SongEditor.prototype.getLatestSelectedTick = function()
 }
 
 
+SongEditor.prototype.getFirstAndLastScrollableRows = function()
+{
+	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+	
+	// FIXME: Hardcoded values.
+	return {
+		first: Math.floor(7 * 9 - noteAreaHeight / 2 / this.NOTE_HEIGHT),
+		last: Math.ceil(7 * 2 + noteAreaHeight / 2 / this.NOTE_HEIGHT)
+	};
+}
+
+
 SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 {
 	var dragTick = this.getTickAtPosition(dragPosition.x);
@@ -232,7 +244,7 @@ SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 		return {
 			tick: Math.max(0, note.tick + tickOffset),
 			duration: note.duration,
-			pitch: note.pitch + pitchOffset
+			pitch: Math.max(theory.getMinPitch(), Math.min(theory.getMaxPitch(), note.pitch + pitchOffset))
 		};
 	}
 	else if (this.mouseDragAction == "stretch")
@@ -449,6 +461,8 @@ SongEditor.prototype.handleMouseMove = function(ev)
 	{
 		var rowOffset = (mousePos.y - this.mouseDragOrigin.y) / this.NOTE_HEIGHT;
 		this.rowAtCenter += rowOffset;
+		var rowLimits = this.getFirstAndLastScrollableRows();
+		this.rowAtCenter = Math.min(rowLimits.first, Math.max(rowLimits.last, this.rowAtCenter));
 		this.mouseDragOrigin.y = mousePos.y;
 		this.refreshRepresentation();
 		this.refreshCanvas();
@@ -712,7 +726,7 @@ SongEditor.prototype.handleKeyDown = function(ev)
 	
 	var keyCode = (ev.key || ev.which || ev.keyCode);
 	
-	if (keyCode == 46 || keyCode == 8) // Delete/Backspace
+	if (keyCode == 46 || (keyCode == 8 && this.selectedObjects > 0)) // Delete/Backspace
 	{
 		// Remove selected objects from the song data.
 		var selectedNotes = [];
@@ -760,5 +774,98 @@ SongEditor.prototype.handleKeyDown = function(ev)
 		this.refreshRepresentation();
 		this.refreshCanvas();
 		this.callOnSelectionChanged();
+	}
+	
+	else if (keyCode == 8 && this.selectedObjects == 0) // Backspace
+	{
+		var lastTickToConsider = 0;
+		var considerNotes = (this.cursorZone == this.CURSOR_ZONE_ALL || this.cursorZone == this.CURSOR_ZONE_NOTES);
+		var considerChords = (this.cursorZone == this.CURSOR_ZONE_ALL || this.cursorZone == this.CURSOR_ZONE_CHORDS);
+		
+		if (considerNotes)
+		{
+			for (var i = 0; i < this.songData.notes.length; i++)
+			{
+				var note = this.songData.notes[i];
+				if (note.tick + note.duration > lastTickToConsider)
+					lastTickToConsider = Math.min(note.tick + note.duration, this.cursorTick);
+			}
+		}
+		
+		if (considerChords)
+		{
+			for (var i = 0; i < this.songData.chords.length; i++)
+			{
+				var chord = this.songData.chords[i];
+				if (chord.tick + chord.duration > lastTickToConsider)
+					lastTickToConsider = Math.min(chord.tick + chord.duration, this.cursorTick);
+			}
+		}
+		
+		if (lastTickToConsider != this.cursorTick)
+		{
+			this.cursorTick = Math.max(0, lastTickToConsider);
+		
+			this.clearHover();
+			this.refreshCanvas();
+			this.callOnCursorChanged();
+			return;
+		}
+		
+		var deleteBeginTick = 0;
+		
+		if (considerNotes)
+		{
+			for (var i = 0; i < this.songData.notes.length; i++)
+			{
+				var note = this.songData.notes[i];
+				if (note.tick + note.duration > lastTickToConsider)
+					continue;
+				
+				if (note.tick + note.duration == lastTickToConsider &&
+					note.tick > deleteBeginTick)
+				{
+					deleteBeginTick = note.tick;
+				}
+				else if (note.tick + note.duration != lastTickToConsider &&
+					note.tick + note.duration > deleteBeginTick)
+				{
+					deleteBeginTick = note.tick + note.duration;
+				}
+			}
+		}
+		
+		if (considerChords)
+		{
+			for (var i = 0; i < this.songData.chords.length; i++)
+			{
+				var chord = this.songData.chords[i];
+				if (chord.tick + chord.duration > lastTickToConsider)
+					continue;
+				
+				if (chord.tick + chord.duration == lastTickToConsider &&
+					chord.tick > deleteBeginTick)
+				{
+					deleteBeginTick = chord.tick;
+				}
+				else if (chord.tick + chord.duration != lastTickToConsider &&
+					chord.tick + chord.duration > deleteBeginTick)
+				{
+					deleteBeginTick = chord.tick + chord.duration;
+				}
+			}
+		}
+		
+		if (considerNotes)
+			this.songData.removeNotesByTickRange(deleteBeginTick, lastTickToConsider, null);
+		
+		if (considerChords)
+			this.songData.removeChordsByTickRange(deleteBeginTick, lastTickToConsider);
+		
+		this.cursorTick = Math.max(0, deleteBeginTick);
+		this.clearHover();
+		this.refreshRepresentation();
+		this.refreshCanvas();
+		this.callOnCursorChanged();
 	}
 }

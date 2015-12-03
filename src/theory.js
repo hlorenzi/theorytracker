@@ -87,13 +87,13 @@ function Theory()
 	
 	this.getMinPitch = function()
 	{
-		return 60 - 12 * 3;
+		return 60 - 12 * 2;
 	}
 	
 	
 	this.getMaxPitch = function()
 	{
-		return 60 + 12 * 3;
+		return 60 + 12 * 3 - 1;
 	}
 	
 

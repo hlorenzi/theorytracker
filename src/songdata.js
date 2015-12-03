@@ -77,37 +77,20 @@ SongData.prototype.isValidDuration = function(duration)
 }
 
 
+// Returns whether the given pitch value is valid.
+SongData.prototype.isValidPitch = function(pitch)
+{
+	return (pitch >= theory.getMinPitch() && pitch <= theory.getMaxPitch())
+}
+
+
 // Adds the given note to the data, and returns whether it was successful.
 SongData.prototype.addNote = function(note)
 {
-	if (!this.isValidTick(note.tick) || !this.isValidDuration(note.duration))
+	if (!this.isValidTick(note.tick) || !this.isValidDuration(note.duration) || !this.isValidPitch(note.pitch))
 		return false;
 	
-	// Clip notes which collide with the new one.
-	// TODO: Split a note into two in case the new one is contained within it.
-	for (var i = this.notes.length - 1; i >= 0; i--)
-	{
-		var otherNote = this.notes[i];
-		
-		if (otherNote.pitch != note.pitch)
-			continue;
-		
-		if (otherNote.tick >= note.tick && otherNote.tick + otherNote.duration <= note.tick + note.duration)
-		{
-			this.notes.splice(i, 1);
-		}
-		else if (otherNote.tick >= note.tick && otherNote.tick < note.tick + note.duration && otherNote.tick + otherNote.duration > note.tick + note.duration)
-		{
-			var tickEnd = otherNote.tick + otherNote.duration;
-			otherNote.tick = note.tick + note.duration;
-			otherNote.duration = tickEnd - otherNote.tick;
-		}
-		else if (otherNote.tick < note.tick && otherNote.tick + otherNote.duration >= note.tick)
-		{
-			otherNote.duration = note.tick - otherNote.tick;
-		}
-	}
-	
+	this.removeNotesByTickRange(note.tick, note.tick + note.duration, note.pitch);
 	arrayAddSortedByTick(this.notes, note);
 	return true;
 }
@@ -119,28 +102,7 @@ SongData.prototype.addChord = function(chord)
 	if (!this.isValidTick(chord.tick) || !this.isValidDuration(chord.duration))
 		return false;
 	
-	// Clip chords which collide with the new one.
-	// TODO: Split a chord into two in case the new one is contained within it.
-	for (var i = this.chords.length - 1; i >= 0; i--)
-	{
-		var otherChord = this.chords[i];
-		
-		if (otherChord.tick >= chord.tick && otherChord.tick + otherChord.duration <= chord.tick + chord.duration)
-		{
-			this.chords.splice(i, 1);
-		}
-		else if (otherChord.tick >= chord.tick && otherChord.tick < chord.tick + chord.duration && otherChord.tick + otherChord.duration > chord.tick + chord.duration)
-		{
-			var tickEnd = otherChord.tick + otherChord.duration;
-			otherChord.tick = chord.tick + chord.duration;
-			otherChord.duration = tickEnd - otherChord.tick;
-		}
-		else if (otherChord.tick < chord.tick && otherChord.tick + otherChord.duration >= chord.tick)
-		{
-			otherChord.duration = chord.tick - otherChord.tick;
-		}
-	}
-	
+	this.removeChordsByTickRange(chord.tick, chord.tick + chord.duration);	
 	arrayAddSortedByTick(this.chords, chord);
 	return true;
 }
@@ -183,4 +145,55 @@ SongData.prototype.addMeterChange = function(meterChange)
 	
 	arrayAddSortedByTick(this.meterChanges, meterChange);
 	return true;
+}
+
+
+SongData.prototype.removeNotesByTickRange = function(tickBegin, tickEnd, pitch)
+{
+	for (var i = this.notes.length - 1; i >= 0; i--)
+	{
+		var otherNote = this.notes[i];
+		
+		if (pitch != null && otherNote.pitch != pitch)
+			continue;
+		
+		if (otherNote.tick >= tickBegin && otherNote.tick + otherNote.duration <= tickEnd)
+		{
+			this.notes.splice(i, 1);
+		}
+		else if (otherNote.tick >= tickBegin && otherNote.tick < tickEnd && otherNote.tick + otherNote.duration > tickEnd)
+		{
+			var otherNoteEndTick = otherNote.tick + otherNote.duration;
+			otherNote.tick = tickEnd;
+			otherNote.duration = otherNoteEndTick - otherNote.tick;
+		}
+		else if (otherNote.tick < tickBegin && otherNote.tick + otherNote.duration >= tickBegin)
+		{
+			otherNote.duration = tickBegin - otherNote.tick;
+		}
+	}
+}
+
+
+SongData.prototype.removeChordsByTickRange = function(tickBegin, tickEnd)
+{
+	for (var i = this.chords.length - 1; i >= 0; i--)
+	{
+		var otherChord = this.chords[i];
+		
+		if (otherChord.tick >= tickBegin && otherChord.tick + otherChord.duration <= tickEnd)
+		{
+			this.chords.splice(i, 1);
+		}
+		else if (otherChord.tick >= tickBegin && otherChord.tick < tickEnd && otherChord.tick + otherChord.duration > tickEnd)
+		{
+			var otherNoteEndTick = otherChord.tick + otherChord.duration;
+			otherChord.tick = tickEnd;
+			otherChord.duration = otherNoteEndTick - otherChord.tick;
+		}
+		else if (otherChord.tick < tickBegin && otherChord.tick + otherChord.duration >= tickBegin)
+		{
+			otherChord.duration = tickBegin - otherChord.tick;
+		}
+	}
 }

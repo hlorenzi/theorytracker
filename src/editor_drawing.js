@@ -19,7 +19,7 @@ SongEditor.prototype.refreshCanvas = function()
 		var block = this.viewBlocks[i];
 		var visibleRows = this.getFirstAndLastVisibleRowsForBlock(block);
 		var firstVisibleRowY = this.getYForRow(block, visibleRows.first);
-		var lastVisibleRowY = this.getYForRow(block, visibleRows.last);
+		var lastVisibleRowY = this.getYForRow(block, visibleRows.last + 1);
 		
 		this.ctx.save();
 		this.ctx.beginPath();
@@ -30,7 +30,7 @@ SongEditor.prototype.refreshCanvas = function()
 		this.ctx.clip();
 		
 		// Draw rows.
-		for (var row = visibleRows.first; row <= visibleRows.last; row++)
+		for (var row = visibleRows.first; row <= visibleRows.last + 1; row++)
 		{
 			this.ctx.strokeStyle = (theory.getPitchForRow(row, block.key) % 12 == block.key.tonicPitch ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
 			this.ctx.lineWidth = 2;
@@ -243,7 +243,7 @@ SongEditor.prototype.refreshCanvas = function()
 		this.ctx.font = "10px Tahoma";
 		
 		var visibleRows = this.getFirstAndLastVisibleRowsForBlock(block);
-		for (var row = visibleRows.first; row < visibleRows.last; row++)
+		for (var row = visibleRows.first; row <= visibleRows.last; row++)
 		{
 			var pitch = theory.getPitchForRow(row, songKeyChange);
 			var y = this.getYForRow(this.viewBlocks[keyChange.blockIndex], row + 1);
