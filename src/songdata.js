@@ -1,12 +1,6 @@
 function SongData()
 {
-	this.beatsPerMinute = 120;
-	this.ticksPerBeat = 960;
-	this.lastTick = 9600;
-	this.notes = [];
-	this.chords = [];
-	this.keyChanges = [];
-	this.meterChanges = [];
+	this.clear();
 }
 
 
@@ -61,11 +55,27 @@ function arrayAddSortedByTick(arr, obj)
 }
 
 
+// Clears song data.
+SongData.prototype.clear = function()
+{
+	this.beatsPerMinute = 120;
+	this.ticksPerBeat = 960;
+	this.lastTick = 9600;
+	this.notes = [];
+	this.chords = [];
+	this.keyChanges = [];
+	this.meterChanges = [];
+	
+	this.addKeyChange(new SongDataKeyChange(0, theory.scales[0], theory.C));
+	this.addMeterChange(new SongDataMeterChange(0, 4, 4));
+}
+
+
 // Returns whether the given tick value is valid.
 SongData.prototype.isValidTick = function(tick)
 {
 	// Arbitrary upper limit.
-	return (tick >= 0 && tick < 1000000);
+	return (tick >= 0 && tick < 1000000 && (tick % 1) == 0);
 }
 
 
@@ -73,14 +83,14 @@ SongData.prototype.isValidTick = function(tick)
 SongData.prototype.isValidDuration = function(duration)
 {
 	// Arbitrary upper limit.
-	return (duration > 0 && duration < 10000);
+	return (duration > 0 && duration < 10000 && (duration % 1) == 0);
 }
 
 
 // Returns whether the given pitch value is valid.
 SongData.prototype.isValidPitch = function(pitch)
 {
-	return (pitch >= theory.getMinPitch() && pitch <= theory.getMaxPitch())
+	return (pitch >= theory.getMinPitch() && pitch <= theory.getMaxPitch() && (pitch % 1) == 0)
 }
 
 
@@ -90,6 +100,7 @@ SongData.prototype.addNote = function(note)
 	if (!this.isValidTick(note.tick) || !this.isValidDuration(note.duration) || !this.isValidPitch(note.pitch))
 		return false;
 	
+	// Clip notes which were at the same range.
 	this.removeNotesByTickRange(note.tick, note.tick + note.duration, note.pitch);
 	arrayAddSortedByTick(this.notes, note);
 	return true;
@@ -102,6 +113,7 @@ SongData.prototype.addChord = function(chord)
 	if (!this.isValidTick(chord.tick) || !this.isValidDuration(chord.duration))
 		return false;
 	
+	// Clip chords which were at the same range.
 	this.removeChordsByTickRange(chord.tick, chord.tick + chord.duration);	
 	arrayAddSortedByTick(this.chords, chord);
 	return true;
@@ -148,6 +160,8 @@ SongData.prototype.addMeterChange = function(meterChange)
 }
 
 
+// Remove or truncate notes that fall between tickBegin and tickEnd, optionally only if
+// their pitches match the given pitch. Pass null for pitch to not consider pitches.
 SongData.prototype.removeNotesByTickRange = function(tickBegin, tickEnd, pitch)
 {
 	for (var i = this.notes.length - 1; i >= 0; i--)
@@ -175,6 +189,7 @@ SongData.prototype.removeNotesByTickRange = function(tickBegin, tickEnd, pitch)
 }
 
 
+// Remove or truncate chords that fall between tickBegin and tickEnd.
 SongData.prototype.removeChordsByTickRange = function(tickBegin, tickEnd)
 {
 	for (var i = this.chords.length - 1; i >= 0; i--)
@@ -195,5 +210,114 @@ SongData.prototype.removeChordsByTickRange = function(tickBegin, tickEnd)
 		{
 			otherChord.duration = tickBegin - otherChord.tick;
 		}
+	}
+}
+
+
+// Returns a JSON string containing the song data.
+SongData.prototype.save = function()
+{
+	var noteIndex = 0;
+	var chordIndex = 0;
+	var keyChangeIndex = 0;
+	var meterChangeIndex = 0;
+	
+	var json = "{\n";
+	
+	json += "  \"bpm\": " + this.beatsPerMinute + ",\n";
+	json += "  \"notes\": [\n";
+	
+	for (var i = 0; i < this.notes.length; i++)
+	{
+		json += "    ";
+		json += "[ " + this.notes[i].tick + ", ";
+		json += this.notes[i].duration + ", ";
+		json += this.notes[i].pitch + " ]";
+		
+		if (i < this.notes.length - 1)
+			json += ",";
+		
+		json += "\n";
+	}
+	
+	json += "  ],\n  \"chords\": [\n";
+	
+	for (var i = 0; i < this.chords.length; i++)
+	{
+		json += "    ";
+		json += "[ " + this.chords[i].tick + ", ";
+		json += this.chords[i].duration + ", ";
+		json += this.chords[i].rootPitch + ", ";
+		json += "{ \"chordId\": " + theory.getIdForChord(this.chords[i].chord) + " } ]";
+		
+		if (i < this.chords.length - 1)
+			json += ",";
+		
+		json += "\n";
+	}
+	
+	json += "  ],\n  \"keyChanges\": [\n";
+	
+	for (var i = 0; i < this.keyChanges.length; i++)
+	{
+		json += "    ";
+		json += "[ " + this.keyChanges[i].tick + ", ";
+		json += this.keyChanges[i].tonicPitch + ", ";
+		json += theory.getIdForScale(this.keyChanges[i].scale) + " ]";
+		
+		if (i < this.keyChanges.length - 1)
+			json += ",";
+		
+		json += "\n";
+	}
+	
+	json += "  ],\n  \"meterChanges\": [\n";
+	
+	for (var i = 0; i < this.meterChanges.length; i++)
+	{
+		json += "    ";
+		json += "[ " + this.meterChanges[i].tick + ", ";
+		json += this.meterChanges[i].numerator + ", ";
+		json += this.meterChanges[i].denominator + " ]";
+		
+		if (i < this.meterChanges.length - 1)
+			json += ",";
+		
+		json += "\n";
+	}
+	
+	json += "  ]\n}";
+	
+	return json;
+}
+
+
+// Loads the song data contained in the given string.
+// Will throw an exception on error.
+SongData.prototype.load = function(jsonStr)
+{
+	this.clear();
+	
+	var song = JSON.parse(jsonStr);
+	this.beatsPerMinute = song.bpm;
+	
+	for (var i = 0; i < song.notes.length; i++)
+	{
+		this.addNote(new SongDataNote(song.notes[i][0], song.notes[i][1], song.notes[i][2]));
+	}
+	
+	for (var i = 0; i < song.chords.length; i++)
+	{
+		this.addChord(new SongDataChord(song.chords[i][0], song.chords[i][1], theory.getChordForId(song.chords[i][3].chordId), song.chords[i][2]));
+	}
+	
+	for (var i = 0; i < song.keyChanges.length; i++)
+	{
+		this.addKeyChange(new SongDataKeyChange(song.keyChanges[i][0], theory.getScaleForId(song.keyChanges[i][2]), song.keyChanges[i][1]));
+	}
+	
+	for (var i = 0; i < song.meterChanges.length; i++)
+	{
+		this.addMeterChange(new SongDataMeterChange(song.meterChanges[i][0], song.meterChanges[i][1], song.meterChanges[i][2]));
 	}
 }

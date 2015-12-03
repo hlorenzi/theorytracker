@@ -112,6 +112,30 @@ function Theory()
 		return numerals[(pitch + 12 - key.tonicPitch) % 12];
 	};
 	
+	
+	this.getIdForChord = function(chord)
+	{
+		return this.chords.indexOf(chord);
+	}
+	
+	
+	this.getChordForId = function(id)
+	{
+		return this.chords[id];
+	}
+	
+	
+	this.getIdForScale = function(scale)
+	{
+		return this.scales.indexOf(scale);
+	}
+	
+	
+	this.getScaleForId = function(id)
+	{
+		return this.scales[id];
+	}
+	
 
 	this.getOctaveForPitch = function(pitch)
 	{

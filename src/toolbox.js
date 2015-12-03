@@ -26,7 +26,7 @@ function Toolbox(div, editor, synth)
 	this.mainLayoutCell01.appendChild(this.toolsLayout);
 	
 	
-	// Playback controls.
+	// Playback controls and global song settings.
 	this.buttonPlay = document.createElement("button");
 	this.buttonPlay.innerHTML = "&#9654; Play";
 	this.buttonPlay.className = "toolboxButton";
@@ -49,6 +49,26 @@ function Toolbox(div, editor, synth)
 	this.inputBPM.value = editor.songData.beatsPerMinute;
 	this.inputBPM.style.width = "30px";
 	this.mainLayoutCell00.appendChild(this.inputBPM);
+	
+	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	
+	this.buttonSave = document.createElement("button");
+	this.buttonSave.innerHTML = "Generate JSON";
+	this.buttonSave.className = "toolboxButton";
+	this.mainLayoutCell00.appendChild(this.buttonSave);
+	
+	this.buttonLoad = document.createElement("button");
+	this.buttonLoad.innerHTML = "Load JSON";
+	this.buttonLoad.className = "toolboxButton";
+	this.mainLayoutCell00.appendChild(this.buttonLoad);
+	
+	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	
+	this.inputSave = document.createElement("textarea");
+	this.inputSave.style.width = "200px";
+	this.inputSave.style.height = "100px";
+	this.mainLayoutCell00.appendChild(this.inputSave);
 	
 	// Key Change settings.
 	this.keyChangeSpan = document.createElement("span");
@@ -335,6 +355,37 @@ function Toolbox(div, editor, synth)
 	this.inputBPM.onblur = function()
 	{
 		that.inputBPM.value = that.editor.songData.beatsPerMinute;
+	}
+	
+	this.buttonSave.onclick = function()
+	{
+		that.inputSave.value = that.editor.songData.save();
+	}
+	
+	this.buttonLoad.onclick = function()
+	{
+		if (window.confirm("Overwrite the current song?"))
+		{
+			try
+			{
+				that.editor.songData.load(that.inputSave.value);
+			}
+			catch (err)
+			{
+				window.alert("There was an error with the input:\n\n" + err)
+				that.editor.songData.clear();
+			}
+			
+			that.editor.cursorTick = 0;
+			that.editor.showCursor = true;
+			that.editor.cursorZone = that.editor.CURSOR_ZONE_ALL;
+			that.editor.unselectAll();
+			that.editor.clearHover();
+			that.editor.refreshRepresentation();
+			that.editor.refreshCanvas();
+			that.refresh();
+			that.refreshSelection();
+		}
 	}
 	
 	this.refreshSelection();
