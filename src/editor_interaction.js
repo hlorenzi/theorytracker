@@ -728,6 +728,8 @@ SongEditor.prototype.handleKeyDown = function(ev)
 	
 	if (keyCode == 46 || (keyCode == 8 && this.selectedObjects > 0)) // Delete/Backspace
 	{
+		ev.preventDefault();
+		
 		// Remove selected objects from the song data.
 		var selectedNotes = [];
 		for (var n = this.noteSelections.length - 1; n >= 0; n--)
@@ -778,6 +780,8 @@ SongEditor.prototype.handleKeyDown = function(ev)
 	
 	else if (keyCode == 8 && this.selectedObjects == 0) // Backspace
 	{
+		ev.preventDefault();
+		
 		var lastTickToConsider = 0;
 		var considerNotes = (this.cursorZone == this.CURSOR_ZONE_ALL || this.cursorZone == this.CURSOR_ZONE_NOTES);
 		var considerChords = (this.cursorZone == this.CURSOR_ZONE_ALL || this.cursorZone == this.CURSOR_ZONE_CHORDS);
