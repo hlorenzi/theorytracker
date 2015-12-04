@@ -9,76 +9,65 @@ function Toolbox(div, editor, synth)
 	this.initCSS();
 	
 	
-	// Create elements.
-	this.mainLayout = document.createElement("table");
-	this.mainLayout.style.margin = "auto";
-	this.mainLayoutRow0 = document.createElement("tr"); this.mainLayout.appendChild(this.mainLayoutRow0);
-	this.mainLayoutCell00 = document.createElement("td"); this.mainLayoutRow0.appendChild(this.mainLayoutCell00);
-	this.mainLayoutCell01 = document.createElement("td"); this.mainLayoutRow0.appendChild(this.mainLayoutCell01);
-	this.div.appendChild(this.mainLayout);
-	
-	this.toolsLayout = document.createElement("table");
-	this.toolsLayout.style.margin = "auto";
-	this.toolsLayoutRow0 = document.createElement("tr"); this.toolsLayout.appendChild(this.toolsLayoutRow0);
-	this.toolsLayoutCell00 = document.createElement("td"); this.toolsLayoutRow0.appendChild(this.toolsLayoutCell00);
-	this.toolsLayoutRow1 = document.createElement("tr"); this.toolsLayout.appendChild(this.toolsLayoutRow1);
-	this.toolsLayoutCell10 = document.createElement("td"); this.toolsLayoutRow1.appendChild(this.toolsLayoutCell10);
-	this.mainLayoutCell01.appendChild(this.toolsLayout);
-	
+	// Main table layout. Working with divs is so terrible...
+	this.mainLayout = this.createTable(this.div, 2, 1);
 	
 	// Playback controls and global song settings.
 	this.buttonPlay = document.createElement("button");
 	this.buttonPlay.innerHTML = "&#9654; Play";
 	this.buttonPlay.className = "toolboxButton";
 	this.buttonPlay.style.fontSize = "20px";
-	this.mainLayoutCell00.appendChild(this.buttonPlay);
+	this.mainLayout.cells[0][0].appendChild(this.buttonPlay);
 	
 	this.buttonRewind = document.createElement("button");
 	this.buttonRewind.innerHTML = "&#9664;&#9664; Rewind";
 	this.buttonRewind.className = "toolboxButton";
-	this.mainLayoutCell00.appendChild(this.buttonRewind);
+	this.mainLayout.cells[0][0].appendChild(this.buttonRewind);
 	
-	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	this.mainLayout.cells[0][0].appendChild(document.createElement("br"));
 	
 	var inputBPMSpan = document.createElement("span");
 	inputBPMSpan.innerHTML = "Tempo ";
 	inputBPMSpan.className = "toolboxText";
-	this.mainLayoutCell00.appendChild(inputBPMSpan);
+	this.mainLayout.cells[0][0].appendChild(inputBPMSpan);
 	
 	this.inputBPM = document.createElement("input");
 	this.inputBPM.value = editor.songData.beatsPerMinute;
 	this.inputBPM.style.width = "30px";
-	this.mainLayoutCell00.appendChild(this.inputBPM);
+	this.mainLayout.cells[0][0].appendChild(this.inputBPM);
 	
-	this.mainLayoutCell00.appendChild(document.createElement("br"));
-	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	this.mainLayout.cells[0][0].appendChild(document.createElement("br"));
+	this.mainLayout.cells[0][0].appendChild(document.createElement("br"));
 	
 	this.buttonSave = document.createElement("button");
 	this.buttonSave.innerHTML = "Generate JSON";
 	this.buttonSave.className = "toolboxButton";
-	this.mainLayoutCell00.appendChild(this.buttonSave);
+	this.mainLayout.cells[0][0].appendChild(this.buttonSave);
 	
 	this.buttonLoad = document.createElement("button");
 	this.buttonLoad.innerHTML = "Load JSON";
 	this.buttonLoad.className = "toolboxButton";
-	this.mainLayoutCell00.appendChild(this.buttonLoad);
+	this.mainLayout.cells[0][0].appendChild(this.buttonLoad);
 	
-	this.mainLayoutCell00.appendChild(document.createElement("br"));
+	this.mainLayout.cells[0][0].appendChild(document.createElement("br"));
 	
 	this.inputSave = document.createElement("textarea");
 	this.inputSave.style.width = "200px";
 	this.inputSave.style.height = "100px";
-	this.mainLayoutCell00.appendChild(this.inputSave);
+	this.mainLayout.cells[0][0].appendChild(this.inputSave);
+	
+	// Key/Meter table layout.
+	this.keyMeterLayout = this.createTable(this.mainLayout.cells[0][1], 2, 1);
 	
 	// Key Change settings.
-	this.keyChangeSpan = document.createElement("span");
-	this.keyChangeSpan.style.background = "#cccccc";
+	this.keyMeterLayout.cells[0][0].style.background = "#cccccc";
+	this.keyMeterLayout.cells[0][0].style.padding = "10px";
 	
 	var keyChangeEditingLabelSpan = document.createElement("span");
-	keyChangeEditingLabelSpan.innerHTML = "Edit Key Change";
+	keyChangeEditingLabelSpan.innerHTML = "Key";
 	keyChangeEditingLabelSpan.className = "toolboxLabel";
-	this.keyChangeSpan.appendChild(keyChangeEditingLabelSpan);
-	this.keyChangeSpan.appendChild(document.createElement("br"));
+	this.keyMeterLayout.cells[0][0].appendChild(keyChangeEditingLabelSpan);
+	this.keyMeterLayout.cells[0][0].appendChild(document.createElement("br"));
 	
 	this.keyChangeTonicSelect = document.createElement("select");
 	this.keyChangeTonicOptions = [];
@@ -87,12 +76,12 @@ function Toolbox(div, editor, synth)
 		this.keyChangeTonicOptions[i] = document.createElement("option");
 		this.keyChangeTonicSelect.appendChild(this.keyChangeTonicOptions[i]);
 	}
-	this.keyChangeSpan.appendChild(this.keyChangeTonicSelect);
+	this.keyMeterLayout.cells[0][0].appendChild(this.keyChangeTonicSelect);
 	
 	var keyChangeDividerSpan = document.createElement("span");
 	keyChangeDividerSpan.innerHTML = " ";
 	keyChangeDividerSpan.className = "toolboxText";
-	this.keyChangeSpan.appendChild(keyChangeDividerSpan);
+	this.keyMeterLayout.cells[0][0].appendChild(keyChangeDividerSpan);
 	
 	this.keyChangeScaleSelect = document.createElement("select");
 	this.keyChangeScaleOptions = [];
@@ -102,27 +91,30 @@ function Toolbox(div, editor, synth)
 		this.keyChangeScaleOptions[i].innerHTML = theory.scales[i].name;
 		this.keyChangeScaleSelect.appendChild(this.keyChangeScaleOptions[i]);
 	}
-	this.keyChangeSpan.appendChild(this.keyChangeScaleSelect);
+	this.keyMeterLayout.cells[0][0].appendChild(this.keyChangeScaleSelect);
 	
 	this.buttonKeyChangeListen = document.createElement("button");
 	this.buttonKeyChangeListen.innerHTML = "Listen";
 	this.buttonKeyChangeListen.className = "toolboxButton";
-	this.keyChangeSpan.appendChild(this.buttonKeyChangeListen);
+	this.keyMeterLayout.cells[0][0].appendChild(this.buttonKeyChangeListen);
 	
-	this.keyChangeSpan.appendChild(document.createElement("br"));
-	this.keyChangeSpan.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.keyChangeSpan);
+	this.keyMeterLayout.cells[0][0].appendChild(document.createElement("br"));
+	
+	this.buttonAddKeyChange = document.createElement("button");
+	this.buttonAddKeyChange.innerHTML = "Add Key Change";
+	this.buttonAddKeyChange.className = "toolboxButton";
+	this.keyMeterLayout.cells[0][0].appendChild(this.buttonAddKeyChange);
 	
 	
 	// Meter Change settings.
-	this.meterChangeSpan = document.createElement("span");
-	this.meterChangeSpan.style.background = "#aaddff";
+	this.keyMeterLayout.cells[0][1].style.background = "#aaddff";
+	this.keyMeterLayout.cells[0][1].style.padding = "10px";
 	
 	var meterChangeEditingLabelSpan = document.createElement("span");
-	meterChangeEditingLabelSpan.innerHTML = "Edit Meter Change";
+	meterChangeEditingLabelSpan.innerHTML = "Meter";
 	meterChangeEditingLabelSpan.className = "toolboxLabel";
-	this.meterChangeSpan.appendChild(meterChangeEditingLabelSpan);
-	this.meterChangeSpan.appendChild(document.createElement("br"));
+	this.keyMeterLayout.cells[0][1].appendChild(meterChangeEditingLabelSpan);
+	this.keyMeterLayout.cells[0][1].appendChild(document.createElement("br"));
 	
 	this.meterChangeNumeratorSelect = document.createElement("select");
 	this.meterChangeNumeratorOptions = [];
@@ -132,12 +124,12 @@ function Toolbox(div, editor, synth)
 		this.meterChangeNumeratorOptions[i].innerHTML = "" + (i + 1);
 		this.meterChangeNumeratorSelect.appendChild(this.meterChangeNumeratorOptions[i]);
 	}
-	this.meterChangeSpan.appendChild(this.meterChangeNumeratorSelect);
+	this.keyMeterLayout.cells[0][1].appendChild(this.meterChangeNumeratorSelect);
 	
 	var meterChangeDividerSpan = document.createElement("span");
 	meterChangeDividerSpan.innerHTML = " / ";
 	meterChangeDividerSpan.className = "toolboxText";
-	this.meterChangeSpan.appendChild(meterChangeDividerSpan);
+	this.keyMeterLayout.cells[0][1].appendChild(meterChangeDividerSpan);
 	
 	this.meterChangeDenominatorSelect = document.createElement("select");
 	this.meterChangeDenominatorOptions = [];
@@ -148,36 +140,14 @@ function Toolbox(div, editor, synth)
 		this.meterChangeDenominatorOptions[i].innerHTML = "" + this.meterChangeDenominators[i];
 		this.meterChangeDenominatorSelect.appendChild(this.meterChangeDenominatorOptions[i]);
 	}
-	this.meterChangeSpan.appendChild(this.meterChangeDenominatorSelect);
+	this.keyMeterLayout.cells[0][1].appendChild(this.meterChangeDenominatorSelect);
 	
-	this.meterChangeSpan.appendChild(document.createElement("br"));
-	this.meterChangeSpan.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.meterChangeSpan);
-	
-	
-	// Editing controls.
-	this.labelKey = document.createElement("span");
-	this.labelKey.className = "toolboxLabel";
-	this.labelKey.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.labelKey);
-	
-	
-	// Add Key/Meter Changes buttons.
-	this.changesSpan = document.createElement("span");
-	
-	this.buttonAddKeyChange = document.createElement("button");
-	this.buttonAddKeyChange.innerHTML = "Add Key Change";
-	this.buttonAddKeyChange.className = "toolboxButton";
-	this.changesSpan.appendChild(this.buttonAddKeyChange);
+	this.keyMeterLayout.cells[0][1].appendChild(document.createElement("br"));
 	
 	this.buttonAddMeterChange = document.createElement("button");
 	this.buttonAddMeterChange.innerHTML = "Add Meter Change";
 	this.buttonAddMeterChange.className = "toolboxButton";
-	this.changesSpan.appendChild(this.buttonAddMeterChange);
-	
-	this.changesSpan.appendChild(document.createElement("br"));
-	this.changesSpan.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.changesSpan);
+	this.keyMeterLayout.cells[0][1].appendChild(this.buttonAddMeterChange);
 	
 	
 	// Note buttons.
@@ -193,7 +163,7 @@ function Toolbox(div, editor, synth)
 	
 	this.notesSpan.appendChild(document.createElement("br"));
 	this.notesSpan.appendChild(document.createElement("br"));
-	this.toolsLayoutCell00.appendChild(this.notesSpan);
+	this.mainLayout.cells[0][1].appendChild(this.notesSpan);
 	
 	
 	// Chord buttons.
@@ -235,7 +205,7 @@ function Toolbox(div, editor, synth)
 			this.chordsSpan.appendChild(document.createElement("br"));
 	}
 	
-	this.toolsLayoutCell00.appendChild(this.chordsSpan);
+	this.mainLayout.cells[0][1].appendChild(this.chordsSpan);
 	
 	
 	// Set up callbacks.
@@ -244,7 +214,7 @@ function Toolbox(div, editor, synth)
 	
 	var that = this;
 	editor.addOnCursorChanged(function() { that.refresh(); });
-	editor.addOnSelectionChanged(function() { that.refreshSelection(); });
+	editor.addOnSelectionChanged(function() { that.refresh(); });
 	this.chordSelect.onchange = function() { that.refresh(); };
 	this.keyChangeTonicSelect.onchange = function() { that.editKeyChange(); };
 	this.keyChangeScaleSelect.onchange = function() { that.editKeyChange(); };
@@ -270,7 +240,6 @@ function Toolbox(div, editor, synth)
 		that.editor.selectKeyChange(keyChange);
 		that.editor.refreshCanvas();
 		that.refresh();
-		that.refreshSelection();
 	};
 	
 	this.buttonAddMeterChange.onclick = function(ev)
@@ -286,7 +255,6 @@ function Toolbox(div, editor, synth)
 		that.editor.selectMeterChange(meterChange);
 		that.editor.refreshCanvas();
 		that.refresh();
-		that.refreshSelection();
 	};
 	
 	this.buttonPlay.onclick = function()
@@ -302,7 +270,6 @@ function Toolbox(div, editor, synth)
 		that.editor.refreshRepresentation();
 		that.editor.refreshCanvas();
 		that.refresh();
-		that.refreshSelection();
 		
 		that.synth.stopAll();
 		if (that.playing)
@@ -337,7 +304,6 @@ function Toolbox(div, editor, synth)
 		that.editor.refreshRepresentation();
 		that.editor.refreshCanvas();
 		that.refresh();
-		that.refreshSelection();
 	}
 	
 	this.inputBPM.onchange = function()
@@ -384,11 +350,9 @@ function Toolbox(div, editor, synth)
 			that.editor.refreshRepresentation();
 			that.editor.refreshCanvas();
 			that.refresh();
-			that.refreshSelection();
 		}
 	}
 	
-	this.refreshSelection();
 	this.refresh();
 }
 
@@ -423,19 +387,95 @@ Toolbox.prototype.initCSS = function()
 }
 
 
+Toolbox.prototype.createTable = function(parent, columns, rows)
+{
+	var table = {};
+	table.root = document.createElement("table");
+	table.root.style.margin = "auto";
+	
+	table.rows = [];
+	table.cells = [];
+	
+	for (var j = 0; j < rows; j++)
+	{
+		table.cells[j] = [];
+		
+		table.rows[j] = document.createElement("tr");
+		table.root.appendChild(table.rows[j]);
+		
+		for (var i = 0; i < columns; i++)
+		{
+			table.cells[j][i] = document.createElement("td");
+			table.rows[j].appendChild(table.cells[j][i]);
+		}
+	}
+	
+	parent.appendChild(table.root);
+	return table;
+}
+
+
 Toolbox.prototype.refresh = function()
 {
-	var key = this.editor.getKeyAtTick(this.editor.cursorTick);
+	if (this.playing)
+		return;
 	
-	this.labelKey.innerHTML = "Key of " + theory.getNameForPitch(key.tonicPitch, key.scale) + " " + key.scale.name;
-	this.labelKey.appendChild(document.createElement("br"));
+	
+	this.keyMeterLayout.cells[0][0].style.visibility = "hidden";
+	this.keyMeterLayout.cells[0][1].style.visibility = "hidden";
+	
+	
+	// Refresh key change tool.
+	var keyChange = this.editor.getKeyAtTick(this.editor.cursorTick);
+	if (keyChange != null)
+	{
+		var scaleIndex = 0;
+		for (var i = 0; i < theory.scales.length; i++)
+		{
+			if (keyChange.scale == theory.scales[i])
+			{
+				scaleIndex = i;
+				break;
+			}
+		}
+		
+		this.keyChangeScaleSelect.selectedIndex = scaleIndex;
+		
+		for (var i = 0; i < 12; i++)
+		{
+			var pitch = i;
+			this.keyChangeTonicOptions[i].innerHTML = theory.getNameForPitch(pitch, keyChange);
+		}
+		
+		this.keyChangeTonicSelect.selectedIndex = keyChange.tonicPitch;
+		this.keyMeterLayout.cells[0][0].style.visibility = "visible";
+	}
+	
+	
+	// Refresh meter change tool.
+	var meterChange = this.editor.getMeterAtTick(this.editor.cursorTick);
+	if (meterChange != null)
+	{
+		this.meterChangeNumeratorSelect.selectedIndex = meterChange.numerator - 1;
+		if (meterChange.denominator == 2) this.meterChangeDenominatorSelect.selectedIndex = 0;
+		else if (meterChange.denominator == 4) this.meterChangeDenominatorSelect.selectedIndex = 1;
+		else if (meterChange.denominator == 8) this.meterChangeDenominatorSelect.selectedIndex = 2;
+		else if (meterChange.denominator == 16) this.meterChangeDenominatorSelect.selectedIndex = 3;
+		
+		this.keyMeterLayout.cells[0][1].style.visibility = "visible";
+	}
+	
+	
+	// Refresh note tools.
+	if (keyChange == null)
+		keyChange = new SongDataKeyChange(0, theory.scales[0], theory.C);
 	
 	for (var i = 0; i < 12; i++)
 	{
-		var pitch = (i + key.tonicPitch) % 12;
-		this.buttonNotes[i].innerHTML = theory.getNameForPitch(pitch, key.scale);
+		var pitch = (i + keyChange.tonicPitch) % 12;
+		this.buttonNotes[i].innerHTML = theory.getNameForPitch(pitch, keyChange.scale);
 		
-		var degree = theory.getDegreeForPitch(pitch, key);
+		var degree = theory.getDegreeForPitch(pitch, keyChange);
 		
 		if ((degree % 1) == 0)
 		{
@@ -473,25 +513,28 @@ Toolbox.prototype.refresh = function()
 		}(pitch + 60);
 	}
 	
+	
+	// Refresh chord tools.
 	var chordCategory = this.chordSelect.selectedIndex;
 		
+	// "In Key" category.
 	if (chordCategory == 0)
 	{
 		for (var i = 0; i < 7; i++)
 		{
-			var pitch1 = key.tonicPitch + key.scale.degrees[i];
+			var pitch1 = keyChange.tonicPitch + keyChange.scale.degrees[i];
 			
-			var pitch2 = key.tonicPitch + key.scale.degrees[(i + 2) % key.scale.degrees.length];
-			if ((i + 2) >= key.scale.degrees.length)
+			var pitch2 = keyChange.tonicPitch + keyChange.scale.degrees[(i + 2) % keyChange.scale.degrees.length];
+			if ((i + 2) >= keyChange.scale.degrees.length)
 				pitch2 += 12;
 			
-			var pitch3 = key.tonicPitch + key.scale.degrees[(i + 4) % key.scale.degrees.length];
-			if ((i + 4) >= key.scale.degrees.length)
+			var pitch3 = keyChange.tonicPitch + keyChange.scale.degrees[(i + 4) % keyChange.scale.degrees.length];
+			if ((i + 4) >= keyChange.scale.degrees.length)
 				pitch3 += 12;
 			
 			var color = theory.getColorForDegree(i);
 			var chord = theory.getFirstFittingChordForPitches([pitch1, pitch2, pitch3]);
-			var numeral = theory.getRomanNumeralForPitch(pitch1, key);
+			var numeral = theory.getRomanNumeralForPitch(pitch1, keyChange);
 			
 			var romanText = chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 			romanText += "<sup>" + chord.romanSup + "</sup>";
@@ -529,6 +572,8 @@ Toolbox.prototype.refresh = function()
 		for (var i = 7; i < 12; i++)
 			this.buttonChords[i].style.display = "none";
 	}
+	
+	// Other chord categories.
 	else
 	{	
 		var inKeyIndex = 0;
@@ -536,8 +581,8 @@ Toolbox.prototype.refresh = function()
 		
 		for (var i = 0; i < 12; i++)
 		{
-			var rootPitch = (key.tonicPitch + i) % 12;
-			var degree = theory.getDegreeForPitch(rootPitch, key);
+			var rootPitch = (keyChange.tonicPitch + i) % 12;
+			var degree = theory.getDegreeForPitch(rootPitch, keyChange);
 			
 			var index = inKeyIndex;
 			if ((degree % 1) != 0)
@@ -545,7 +590,7 @@ Toolbox.prototype.refresh = function()
 			
 			var color = theory.getColorForDegree(degree);
 			var chord = theory.chords[chordCategory - 1];
-			var numeral = theory.getRomanNumeralForPitch(rootPitch, key);
+			var numeral = theory.getRomanNumeralForPitch(rootPitch, keyChange);
 			
 			var romanText = chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 			romanText += "<sup>" + chord.romanSup + "</sup>";
@@ -597,65 +642,15 @@ Toolbox.prototype.refresh = function()
 }
 
 
-Toolbox.prototype.refreshSelection = function()
-{
-	this.labelKey.style.display = "inline";
-	this.changesSpan.style.display = "inline";
-	this.notesSpan.style.display = "inline";
-	this.chordsSpan.style.display = "inline";
-	this.keyChangeSpan.style.display = "none";
-	this.meterChangeSpan.style.display = "none";
-	
-	
-	var keyChange = this.editor.getUniqueKeyChangeSelected();
-	if (keyChange != null)
-	{
-		var scaleIndex = 0;
-		for (var i = 0; i < theory.scales.length; i++)
-		{
-			if (keyChange.scale == theory.scales[i])
-			{
-				scaleIndex = i;
-				break;
-			}
-		}
-		
-		this.keyChangeScaleSelect.selectedIndex = scaleIndex;
-		
-		for (var i = 0; i < 12; i++)
-		{
-			var pitch = i;
-			this.keyChangeTonicOptions[i].innerHTML = theory.getNameForPitch(pitch, keyChange);
-		}
-		
-		this.keyChangeTonicSelect.selectedIndex = keyChange.tonicPitch;
-		
-		this.keyChangeSpan.style.display = "block";
-		return;
-	}
-	
-	
-	var meterChange = this.editor.getUniqueMeterChangeSelected();
-	if (meterChange != null)
-	{
-		this.meterChangeNumeratorSelect.selectedIndex = meterChange.numerator - 1;
-		if (meterChange.denominator == 2) this.meterChangeDenominatorSelect.selectedIndex = 0;
-		else if (meterChange.denominator == 4) this.meterChangeDenominatorSelect.selectedIndex = 1;
-		else if (meterChange.denominator == 8) this.meterChangeDenominatorSelect.selectedIndex = 2;
-		else if (meterChange.denominator == 16) this.meterChangeDenominatorSelect.selectedIndex = 3;
-		
-		this.meterChangeSpan.style.display = "block";
-		return;
-	}
-}
-
-
 Toolbox.prototype.editKeyChange = function()
 {
 	if (this.playing)
 		return;
 	
-	var keyChange = this.editor.getUniqueKeyChangeSelected();
+	var keyChange = this.editor.getKeyAtTick(this.editor.cursorTick);
+	if (keyChange == null)
+		return;
+	
 	keyChange.scale = theory.scales[this.keyChangeScaleSelect.selectedIndex];
 	keyChange.tonicPitch = this.keyChangeTonicSelect.selectedIndex;
 	
@@ -671,7 +666,10 @@ Toolbox.prototype.editMeterChange = function()
 	if (this.playing)
 		return;
 	
-	var meterChange = this.editor.getUniqueMeterChangeSelected();
+	var meterChange = this.editor.getMeterAtTick(this.editor.cursorTick);
+	if (meterChange == null)
+		return;
+	
 	meterChange.numerator = this.meterChangeNumeratorSelect.selectedIndex + 1;
 	meterChange.denominator = this.meterChangeDenominators[this.meterChangeDenominatorSelect.selectedIndex];
 	

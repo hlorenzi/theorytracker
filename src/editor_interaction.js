@@ -147,19 +147,37 @@ SongEditor.prototype.getZoneAtPosition = function(y)
 }
 
 
-SongEditor.prototype.getKeyAtTick = function(tick)
+SongEditor.prototype.getBlockIndexAtTick = function(tick)
 {
 	for (var b = 0; b < this.viewBlocks.length; b++)
 	{
 		var block = this.viewBlocks[b];
 		
 		if (tick >= block.tick && tick < block.tick + block.duration)
-		{
-			return block.key;
-		}
+			return b;
 	}
 	
-	return new SongDataKeyChange(0, theory.scales[0], 0);
+	return -1;
+}
+
+
+SongEditor.prototype.getKeyAtTick = function(tick)
+{
+	var blockIndex = this.getBlockIndexAtTick(tick);
+	if (blockIndex >= 0)
+		return this.viewBlocks[blockIndex].key;
+	
+	return null;
+}
+
+
+SongEditor.prototype.getMeterAtTick = function(tick)
+{
+	var blockIndex = this.getBlockIndexAtTick(tick);
+	if (blockIndex >= 0)
+		return this.viewBlocks[blockIndex].meter;
+	
+	return null;
 }
 
 
