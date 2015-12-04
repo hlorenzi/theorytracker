@@ -17,6 +17,12 @@ SongEditor.prototype.refreshCanvas = function()
 	for (var i = 0; i < this.viewBlocks.length; i++)
 	{
 		var block = this.viewBlocks[i];
+		
+		// Don't draw bars out of the screen (with margin for between-block note parts).
+		if (block.x1 > this.canvasWidth ||
+			block.x2 < -this.KEYCHANGE_BAR_WIDTH)
+			continue;
+		
 		var visibleRows = this.getFirstAndLastVisibleRowsForBlock(block);
 		var firstVisibleRowY = this.getYForRow(block, visibleRows.first);
 		var lastVisibleRowY = this.getYForRow(block, visibleRows.last + 1);
@@ -126,9 +132,8 @@ SongEditor.prototype.refreshCanvas = function()
 		this.ctx.strokeStyle = BLOCK_BORDER_COLOR;
 		this.ctx.lineWidth = 2;
 		
-		var x2 = Math.min(block.x2, this.canvasWidth - this.MARGIN_LEFT);
-		this.ctx.strokeRect(block.x1, block.y1, x2 - block.x1, block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - block.y1);
-		this.ctx.strokeRect(block.x1, block.y2 - this.CHORD_HEIGHT, x2 - block.x1, this.CHORD_HEIGHT);
+		this.ctx.strokeRect(block.x1, block.y1, block.x2 - block.x1, block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN - block.y1);
+		this.ctx.strokeRect(block.x1, block.y2 - this.CHORD_HEIGHT, block.x2 - block.x1, this.CHORD_HEIGHT);
 		
 		// Draw cursor.
 		if (this.showCursor && this.cursorTick >= block.tick && this.cursorTick < block.tick + block.duration)
@@ -329,6 +334,20 @@ SongEditor.prototype.refreshCanvas = function()
 			meterChange.y1,
 			this.viewBlocks[meterChange.blockIndex].x2 - meterChange.x1 - 16);
 	}
+	
+	
+	// Draw side fade-outs.
+	var leftFadeGradient = this.ctx.createLinearGradient(0, 0, this.MARGIN_LEFT, 0);
+	leftFadeGradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+	leftFadeGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+	this.ctx.fillStyle = leftFadeGradient;
+	this.ctx.fillRect(0, 0, this.MARGIN_LEFT, this.canvasHeight);
+	
+	var rightFadeGradient = this.ctx.createLinearGradient(this.canvasWidth - this.MARGIN_RIGHT, 0, this.canvasWidth, 0);
+	rightFadeGradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+	rightFadeGradient.addColorStop(1, "rgba(255, 255, 255, 1)");
+	this.ctx.fillStyle = rightFadeGradient;
+	this.ctx.fillRect(this.canvasWidth - this.MARGIN_RIGHT, 0, this.MARGIN_RIGHT, this.canvasHeight);
 	
 	
 	this.ctx.restore();

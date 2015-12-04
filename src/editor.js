@@ -40,6 +40,7 @@ function SongEditor(canvas, songData, synth)
 	
 	// These control scrolling.
 	this.rowAtCenter = 8 * 5;
+	this.xAtLeft = 0;
 	
 	// These control cursor (the vertical blue bar) interaction.
 	this.CURSOR_ZONE_ALL = 0;
@@ -69,8 +70,8 @@ function SongEditor(canvas, songData, synth)
 	
 	// Layout constants.
 	this.WHOLE_NOTE_DURATION = 960;
-	this.MARGIN_LEFT = 4;
-	this.MARGIN_RIGHT = 4;
+	this.MARGIN_LEFT = 16;
+	this.MARGIN_RIGHT = 16;
 	this.MARGIN_TOP = 4;
 	this.MARGIN_BOTTOM = 8;
 	this.HEADER_MARGIN = 40;

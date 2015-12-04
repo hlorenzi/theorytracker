@@ -464,6 +464,12 @@ SongEditor.prototype.handleMouseMove = function(ev)
 		var rowLimits = this.getFirstAndLastScrollableRows();
 		this.rowAtCenter = Math.min(rowLimits.first, Math.max(rowLimits.last, this.rowAtCenter));
 		this.mouseDragOrigin.y = mousePos.y;
+		
+		var xOffset = (this.mouseDragOrigin.x - mousePos.x);
+		this.xAtLeft += xOffset;
+		this.xAtLeft = Math.max(0, Math.min(this.viewBlocks[this.viewBlocks.length - 1].x2 + this.canvasWidth / 2, this.xAtLeft));
+		this.mouseDragOrigin.x = mousePos.x;
+		
 		this.refreshRepresentation();
 		this.refreshCanvas();
 	}

@@ -37,7 +37,7 @@ SongEditor.prototype.refreshRepresentation = function()
 	
 	// Set up current block drawing position, current tick, and
 	// iterators through the song data.
-	var x = this.MARGIN_LEFT;
+	var x = this.MARGIN_LEFT - this.xAtLeft;
 	var tick = 0;
 	var curNote = 0;
 	var curChord = 0;
