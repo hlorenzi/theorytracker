@@ -223,7 +223,7 @@ function Toolbox(div, editor, synth)
 	
 	this.buttonKeyChangeListen.onclick = function()
 	{
-		var keyChange = that.editor.getUniqueKeyChangeSelected();
+		var keyChange = that.editor.getKeyAtTick(that.editor.cursorTick);
 		theory.playScaleSample(that.synth, keyChange.scale, keyChange.tonicPitch);
 	}
 	
