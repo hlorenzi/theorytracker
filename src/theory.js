@@ -30,58 +30,81 @@ function Theory()
 	this.As = As;
 	this.B  = B;
 		
-		
+	
+	// Scale without pitches will be generated below.
 	this.scales =
 	[
-		{ name: "Major",					degrees: [ C,  D,  E,  F,  G,  A,  B  ] },
-		{ name: "Dorian",					degrees: null },
-		{ name: "Phrygian",					degrees: null },
-		{ name: "Lydian",					degrees: null },
-		{ name: "Mixolydian",				degrees: null },
-		{ name: "Natural Minor",			degrees: null },
-		{ name: "Locrian",					degrees: null },
-		{ name: "Harmonic Minor",			degrees: [ C,  D,  Ds, F,  G,  Gs, B  ] },
-		{ name: "Double Harmonic",			degrees: [ C,  Cs, E,  F,  G,  Gs, B  ] },
-		{ name: "Lydian ♯2 ♯6",				degrees: null },
-		{ name: "Ultraphrygian",			degrees: null },
-		{ name: "Hungarian Minor",			degrees: null },
-		{ name: "Oriental",					degrees: null },
-		{ name: "Ionian Augmented ♯2",		degrees: null },
-		{ name: "Locrian ♭♭3 ♭♭7",			degrees: null },
-		{ name: "Phrygian Dominant",		degrees: [ C,  Cs, E,  F,  G,  Gs, As ] },
+		{ name: "Major", pitches: [ C,  D,  E,  F,  G,  A,  B  ] },
+		{ name: "Dorian" },
+		{ name: "Phrygian" },
+		{ name: "Lydian" },
+		{ name: "Mixolydian" },
+		{ name: "Natural Minor" },
+		{ name: "Locrian" },
+		
+		{ name: "Harmonic Minor", pitches: [ C,  D,  Ds, F,  G,  Gs, B  ] },
+		
+		{ name: "Double Harmonic", pitches: [ C,  Cs, E,  F,  G,  Gs, B  ] },
+		{ name: "Lydian ♯2 ♯6" },
+		{ name: "Ultraphrygian" },
+		{ name: "Hungarian Minor" },
+		{ name: "Oriental" },
+		{ name: "Ionian Augmented ♯2" },
+		{ name: "Locrian ♭♭3 ♭♭7" },
+		
+		{ name: "Phrygian Dominant", pitches: [ C,  Cs, E,  F,  G,  Gs, As ] },
 	];
 	
-	// Generate the other modes of the base scales.
+	// Generate the other modes of the non-null scales.
 	for (var i = 0; i < this.scales.length; i++)
 	{
-		if (this.scales[i].degrees == null)
+		if (!this.scales[i].hasOwnProperty("pitches"))
 		{
-			this.scales[i].degrees = [];
-			var offset = this.scales[i - 1].degrees[1];
+			this.scales[i].pitches = [];
+			var offset = this.scales[i - 1].pitches[1];
 			for (var j = 0; j < 7; j++)
 			{
-				this.scales[i].degrees[j] = (this.scales[i - 1].degrees[(j + 1) % 7] + 12 - offset) % 12;
+				this.scales[i].pitches[j] = (this.scales[i - 1].pitches[(j + 1) % 7] + 12 - offset) % 12;
 			}
+		}
+	}
+	
+	// Generate the mapping from pitch to scale degree.
+	for (var i = 0; i < this.scales.length; i++)
+	{
+		this.scales[i].pitchToDegreeMap = [];
+		
+		var curPitch = 0;		
+		for (var j = 0; j < 7; j++)
+		{
+			while (curPitch < this.scales[i].pitches[j])
+			{
+				this.scales[i].pitchToDegreeMap.push(j - 0.5);
+				curPitch++;
+			}
+			
+			this.scales[i].pitchToDegreeMap.push(j);
+			curPitch++;
 		}
 	}
 	
 
 	this.chords =
 	[
-		{ name: "Major",					roman: "X",		romanSup: "",		romanSub: "",		pitches: [ C,  E,  G  ] },
-		{ name: "Minor",					roman: "x",		romanSup: "",		romanSub: "",		pitches: [ C,  Ds, G  ] },
-		{ name: "Diminished",				roman: "x",		romanSup: "o",		romanSub: "",		pitches: [ C,  Ds, Fs ] },
-		{ name: "Augmented",				roman: "X",		romanSup: "+",		romanSub: "",		pitches: [ C,  E,  Gs ] },
-		{ name: "Flat Fifth(?)",			roman: "X",		romanSup: "(♭5)",	romanSub: "",		pitches: [ C,  E,  Fs ] },
-		{ name: "?",						roman: "X",		romanSup: "?",		romanSub: "",		pitches: [ C,  D,  Fs ] },
-		{ name: "Dominant Seventh",			roman: "X",		romanSup: "7",		romanSub: "",		pitches: [ C,  E,  G,  As ] },
-		{ name: "Major Seventh",			roman: "X",		romanSup: "M7",		romanSub: "",		pitches: [ C,  E,  G,  B  ] },
-		{ name: "Minor Seventh",			roman: "x",		romanSup: "7",		romanSub: "",		pitches: [ C,  Ds, G,  As ] },
-		{ name: "Minor-Major Seventh",		roman: "X",		romanSup: "m(M7)",	romanSub: "",		pitches: [ C,  Ds, G,  B  ] },
-		{ name: "Diminished Seventh",		roman: "x",		romanSup: "o7",		romanSub: "",		pitches: [ C,  Ds, G,  A  ] },
-		{ name: "Half-Diminished Seventh",	roman: "x",		romanSup: "ø7",		romanSub: "",		pitches: [ C,  Ds, Fs, As ] },
-		{ name: "Augmented Seventh",		roman: "X",		romanSup: "+7",		romanSub: "",		pitches: [ C,  E,  Gs, As ] },
-		{ name: "Augmented Major Seventh",	roman: "X",		romanSup: "+(M7)",	romanSub: "",		pitches: [ C,  E,  Gs, B  ] }
+		{ name: "Major",                    roman: "X",     romanSup: "",       romanSub: "",       pitches: [ C,  E,  G  ] },
+		{ name: "Minor",                    roman: "x",     romanSup: "",       romanSub: "",       pitches: [ C,  Ds, G  ] },
+		{ name: "Diminished",               roman: "x",     romanSup: "o",      romanSub: "",       pitches: [ C,  Ds, Fs ] },
+		{ name: "Augmented",                roman: "X",     romanSup: "+",      romanSub: "",       pitches: [ C,  E,  Gs ] },
+		{ name: "Flat Fifth(?)",            roman: "X",     romanSup: "(♭5)",   romanSub: "",       pitches: [ C,  E,  Fs ] },
+		{ name: "?",                        roman: "X",     romanSup: "?",      romanSub: "",       pitches: [ C,  D,  Fs ] },
+		{ name: "Dominant Seventh",         roman: "X",     romanSup: "7",      romanSub: "",       pitches: [ C,  E,  G,  As ] },
+		{ name: "Major Seventh",            roman: "X",     romanSup: "M7",     romanSub: "",       pitches: [ C,  E,  G,  B  ] },
+		{ name: "Minor Seventh",            roman: "x",     romanSup: "7",      romanSub: "",       pitches: [ C,  Ds, G,  As ] },
+		{ name: "Minor-Major Seventh",      roman: "X",     romanSup: "m(M7)",  romanSub: "",       pitches: [ C,  Ds, G,  B  ] },
+		{ name: "Diminished Seventh",       roman: "x",     romanSup: "o7",     romanSub: "",       pitches: [ C,  Ds, G,  A  ] },
+		{ name: "Half-Diminished Seventh",  roman: "x",     romanSup: "ø7",     romanSub: "",       pitches: [ C,  Ds, Fs, As ] },
+		{ name: "Augmented Seventh",        roman: "X",     romanSup: "+7",     romanSub: "",       pitches: [ C,  E,  Gs, As ] },
+		{ name: "Augmented Major Seventh",  roman: "X",     romanSup: "+(M7)",  romanSub: "",       pitches: [ C,  E,  Gs, B  ] }
 	];
 	
 	
@@ -97,7 +120,7 @@ function Theory()
 	}
 	
 
-	this.getNameForPitch = function(pitch, scale)
+	this.getNameForPitch = function(pitch, scale, tonicPitch)
 	{
 		// TODO: Take the scale also into consideration.
 		var notes = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
@@ -105,11 +128,11 @@ function Theory()
 	};
 	
 
-	this.getRomanNumeralForPitch = function(pitch, key)
+	this.getRomanNumeralForPitch = function(pitch, scale, tonicPitch)
 	{
 		// TODO: Take the scale also into consideration for naming.
 		var numerals = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
-		return numerals[(pitch + 12 - key.tonicPitch) % 12];
+		return numerals[(pitch + 12 - tonicPitch) % 12];
 	};
 	
 	
@@ -143,24 +166,25 @@ function Theory()
 	};
 	
 
-	this.getOctaveForDegree = function(degree, key)
+	this.getOctaveForDegree = function(degree)
 	{
-		return Math.floor(degree / key.scale.degrees.length);
+		return Math.floor(degree / 7);
 	};
 	
 	
+	var colors =
+	[
+		"#ff0000",
+		"#ffb014",
+		"#efe600",
+		"#00d300",
+		"#4800ff",
+		"#b800e5",
+		"#ff00cb"
+	];
+	
 	this.getColorForDegree = function(degree)
 	{
-		var colors =
-		[
-			"#ff0000",
-			"#ffb014",
-			"#efe600",
-			"#00d300",
-			"#4800ff",
-			"#b800e5",
-			"#ff00cb"
-		];
 		return colors[degree];
 	};
 	
@@ -168,78 +192,39 @@ function Theory()
 	// Returns the scale degree of the given pitch, according to the given key.
 	// May return fractional values, which indicates that the pitch falls
 	// between scale degrees.
-	this.getDegreeForPitch = function(pitch, key)
+	this.getDegreeForPitch = function(pitch, scale, tonicPitch)
 	{
-		var pitchInOctave = ((pitch + 12 - key.tonicPitch) % 12);
-		var pitchDegree = key.scale.degrees.length - 0.5;
-		
-		for (var i = 0; i < key.scale.degrees.length; i++)
-		{
-			if (key.scale.degrees[i] == pitchInOctave)
-			{
-				pitchDegree = i;
-				break;
-			}
-			else if (key.scale.degrees[i] > pitchInOctave)
-			{
-				pitchDegree = i - 0.5;
-				break;
-			}
-		}
-		
-		return pitchDegree;
+		return scale.pitchToDegreeMap[(pitch + 12 - tonicPitch) % 12];
 	};
 
 
 	// Returns the row index where a note of the given pitch would be placed,
 	// according to the given key. May return fractional values, which
 	// indicates that the pitch falls between scale degrees.
-	this.getRowForPitch = function(pitch, key)
+	this.getRowForPitch = function(pitch, scale, tonicPitch)
 	{
-		var pitchOctave = theory.getOctaveForPitch(pitch);
-		var pitchInOctave = ((pitch + 12 - key.tonicPitch) % 12);
-		var pitchDegree = key.scale.degrees.length - 0.5;
+		var pitchOctave = theory.getOctaveForPitch(pitch - tonicPitch);
+		var pitchDegree = theory.getDegreeForPitch(pitch, scale, tonicPitch);
 		
-		var degreeOffsetFromC = 0;
-		if (key.tonicPitch != 0)
-		{
-			var originalTonicPitch = key.tonicPitch;
-			key.tonicPitch = 0;
-			degreeOffsetFromC = Math.floor(this.getRowForPitch(originalTonicPitch, key));
-			key.tonicPitch = originalTonicPitch;
-		}
+		var offset = 0;
+		if (tonicPitch != 0)
+			offset = Math.floor(this.getRowForPitch(tonicPitch, scale, 0));
 		
-		for (var i = 0; i < key.scale.degrees.length; i++)
-		{
-			if (key.scale.degrees[i] == pitchInOctave)
-			{
-				pitchDegree = i;
-				break;
-			}
-			else if (key.scale.degrees[i] > pitchInOctave)
-			{
-				pitchDegree = i - 0.5;
-				break;
-			}
-		}
 		
-		return pitchDegree + degreeOffsetFromC + (Math.floor((pitch - key.tonicPitch) / 12) * key.scale.degrees.length);
+		return pitchDegree + offset + pitchOctave * 7;
 	};
 
 
 	// Returns the pitch of the given row index, according to the given key.
-	this.getPitchForRow = function(row, key)
+	this.getPitchForRow = function(row, scale, tonicPitch)
 	{
-		var degreeOffsetFromC = 0;
-		if (key.tonicPitch != 0)
-		{
-			var originalTonicPitch = key.tonicPitch;
-			key.tonicPitch = 0;
-			degreeOffsetFromC = Math.floor(this.getRowForPitch(originalTonicPitch, key));
-			key.tonicPitch = originalTonicPitch;
-		}
+		var rowOctave = Math.floor(row / 7);
 		
-		return key.scale.degrees[(row + key.scale.degrees.length * 3 - degreeOffsetFromC) % key.scale.degrees.length] + key.tonicPitch + Math.floor((row - degreeOffsetFromC) / key.scale.degrees.length) * 12;
+		var offset = 0;
+		if (tonicPitch != 0)
+			offset = Math.floor(theory.getRowForPitch(tonicPitch, scale, 0));
+		
+		return scale.pitches[Math.floor(row + 7 - offset) % 7] + tonicPitch + Math.floor((row - offset) / 7) * 12;
 	};
 	
 	

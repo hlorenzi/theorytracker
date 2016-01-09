@@ -38,7 +38,7 @@ SongEditor.prototype.refreshCanvas = function()
 		// Draw rows.
 		for (var row = visibleRows.first; row <= visibleRows.last + 1; row++)
 		{
-			this.ctx.strokeStyle = (theory.getPitchForRow(row, block.key) % 12 == block.key.tonicPitch ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
+			this.ctx.strokeStyle = (theory.getPitchForRow(row, block.key.scale, block.key.tonicPitch) % 12 == block.key.tonicPitch ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
 			this.ctx.lineWidth = 2;
 			this.ctx.beginPath();
 			this.ctx.moveTo(block.x1, this.getYForRow(block, row));
@@ -239,7 +239,7 @@ SongEditor.prototype.refreshCanvas = function()
 		var songKeyChange = this.songData.keyChanges[keyChange.keyChangeIndex];
 		this.ctx.fillStyle = KEY_BORDER_COLOR;
 		this.ctx.fillText(
-			"" + theory.getNameForPitch(songKeyChange.tonicPitch, songKeyChange.scale) + " " + songKeyChange.scale.name,
+			"" + theory.getNameForPitch(songKeyChange.tonicPitch, songKeyChange.scale, songKeyChange.tonicPitch) + " " + songKeyChange.scale.name,
 			textX,
 			keyChange.y1,
 			this.viewBlocks[keyChange.blockIndex].x2 - keyChange.x1 - 32);
@@ -250,12 +250,12 @@ SongEditor.prototype.refreshCanvas = function()
 		var visibleRows = this.getFirstAndLastVisibleRowsForBlock(block);
 		for (var row = visibleRows.first; row <= visibleRows.last; row++)
 		{
-			var pitch = theory.getPitchForRow(row, songKeyChange);
+			var pitch = theory.getPitchForRow(row, songKeyChange.scale, songKeyChange.tonicPitch);
 			var y = this.getYForRow(this.viewBlocks[keyChange.blockIndex], row + 1);
 			
 			this.ctx.fillStyle = KEY_PITCH_COLOR;
 			this.ctx.fillText(
-				"" + theory.getNameForPitch(pitch),
+				"" + theory.getNameForPitch(pitch, songKeyChange.scale, songKeyChange.tonicPitch),
 				keyChange.x1 + 4,
 				y);
 				
@@ -365,8 +365,8 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 		
 	var scrollY = -this.rowAtCenter * this.NOTE_HEIGHT;
 	
-	var deg = theory.getDegreeForPitch(pitch, block.key);
-	var row = theory.getRowForPitch(pitch, block.key);
+	var deg = theory.getDegreeForPitch(pitch, block.key.scale, block.key.tonicPitch);
+	var row = theory.getRowForPitch(pitch, block.key.scale, block.key.tonicPitch);
 	var pos = this.getNotePosition(block, row, tick, duration);
 	
 	this.drawDegreeColoredRectangle(deg, pos);
@@ -394,7 +394,7 @@ SongEditor.prototype.drawNote = function(blockIndex, pitch, tick, duration, hove
 	if (tick + duration > block.tick + block.duration && blockIndex < this.viewBlocks.length - 1)
 	{
 		var nextBlock = this.viewBlocks[blockIndex + 1];
-		var nextRow = theory.getRowForPitch(pitch, nextBlock.key);
+		var nextRow = theory.getRowForPitch(pitch, nextBlock.key.scale, nextBlock.key.tonicPitch);
 		var nextPos = this.getNotePosition(block, nextRow, tick, duration);
 		
 		var col = theory.getColorForDegree(deg - (deg % 1));
@@ -422,14 +422,14 @@ SongEditor.prototype.drawChord = function(blockIndex, chord, tick, duration, hov
 		tick >= block.tick + block.duration)
 		return;
 	
-	var deg = theory.getDegreeForPitch(chord.rootPitch, block.key);
+	var deg = theory.getDegreeForPitch(chord.rootPitch, block.key.scale, block.key.tonicPitch);
 	var pos = this.getChordPosition(block, tick, duration);
 	
 	this.drawDegreeColoredRectangle(deg, { x1: pos.x1, y1: pos.y1, x2: pos.x2, y2: pos.y1 + this.CHORD_ORNAMENT_HEIGHT });
 	this.drawDegreeColoredRectangle(deg, { x1: pos.x1, y1: pos.y2 - this.CHORD_ORNAMENT_HEIGHT, x2: pos.x2, y2: pos.y2 });
 	
 	// Draw roman symbol.
-	var numeral = theory.getRomanNumeralForPitch(chord.rootPitch, block.key);
+	var numeral = theory.getRomanNumeralForPitch(chord.rootPitch, block.key.scale, block.key.tonicPitch);
 	var romanText = chord.chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 	
 	this.ctx.fillStyle = "#000000";
@@ -537,7 +537,7 @@ SongEditor.prototype.getFirstAndLastVisibleRowsForBlock = function(block)
 	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
 	
 	return {
-		first: Math.max(Math.floor(this.rowAtCenter - noteAreaHeight / 2 / this.NOTE_HEIGHT), theory.getRowForPitch(theory.getMinPitch(), block.key)),
-		last: Math.min(Math.ceil(this.rowAtCenter + noteAreaHeight / 2 / this.NOTE_HEIGHT), theory.getRowForPitch(theory.getMaxPitch(), block.key))
+		first: Math.max(Math.floor(this.rowAtCenter - noteAreaHeight / 2 / this.NOTE_HEIGHT), 7 * 3),
+		last: Math.min(Math.ceil(this.rowAtCenter + noteAreaHeight / 2 / this.NOTE_HEIGHT), 7 * 8 - 1)
 	};
 }

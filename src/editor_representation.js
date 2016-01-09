@@ -155,7 +155,7 @@ SongEditor.prototype.refreshRepresentation = function()
 				if (note.tick + note.duration <= block.tick || note.tick >= block.tick + block.duration)
 					continue;
 				
-				var noteRow = theory.getRowForPitch(note.pitch, block.key);
+				var noteRow = theory.getRowForPitch(note.pitch, block.key.scale, block.key.tonicPitch);
 				var notePos = this.getNotePosition(block, noteRow, note.tick, note.duration);
 				block.notes.push(
 				{
@@ -237,7 +237,7 @@ SongEditor.prototype.getNotePosition = function(block, row, tick, duration)
 {
 	var blockTick = tick - block.tick;
 	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
-	var firstRow = block.key.scale.degrees.length * 3;
+	var firstRow = 7 * 3;
 	var rowY = this.getYForRow(block, row);
 	return {
 		resizeHandleL: block.x1 + blockTick * this.tickZoom,

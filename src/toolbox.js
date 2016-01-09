@@ -444,7 +444,7 @@ Toolbox.prototype.refresh = function()
 		for (var i = 0; i < 12; i++)
 		{
 			var pitch = i;
-			this.keyChangeTonicOptions[i].innerHTML = theory.getNameForPitch(pitch, keyChange);
+			this.keyChangeTonicOptions[i].innerHTML = theory.getNameForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
 		}
 		
 		this.keyChangeTonicSelect.selectedIndex = keyChange.tonicPitch;
@@ -473,9 +473,9 @@ Toolbox.prototype.refresh = function()
 	for (var i = 0; i < 12; i++)
 	{
 		var pitch = (i + keyChange.tonicPitch) % 12;
-		this.buttonNotes[i].innerHTML = theory.getNameForPitch(pitch, keyChange.scale);
+		this.buttonNotes[i].innerHTML = theory.getNameForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
 		
-		var degree = theory.getDegreeForPitch(pitch, keyChange);
+		var degree = theory.getDegreeForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
 		
 		if ((degree % 1) == 0)
 		{
@@ -522,19 +522,19 @@ Toolbox.prototype.refresh = function()
 	{
 		for (var i = 0; i < 7; i++)
 		{
-			var pitch1 = keyChange.tonicPitch + keyChange.scale.degrees[i];
+			var pitch1 = keyChange.tonicPitch + keyChange.scale.pitches[i];
 			
-			var pitch2 = keyChange.tonicPitch + keyChange.scale.degrees[(i + 2) % keyChange.scale.degrees.length];
-			if ((i + 2) >= keyChange.scale.degrees.length)
+			var pitch2 = keyChange.tonicPitch + keyChange.scale.pitches[(i + 2) % 7];
+			if ((i + 2) >= 7)
 				pitch2 += 12;
 			
-			var pitch3 = keyChange.tonicPitch + keyChange.scale.degrees[(i + 4) % keyChange.scale.degrees.length];
-			if ((i + 4) >= keyChange.scale.degrees.length)
+			var pitch3 = keyChange.tonicPitch + keyChange.scale.pitches[(i + 4) % 7];
+			if ((i + 4) >= 7)
 				pitch3 += 12;
 			
 			var color = theory.getColorForDegree(i);
 			var chord = theory.getFirstFittingChordForPitches([pitch1, pitch2, pitch3]);
-			var numeral = theory.getRomanNumeralForPitch(pitch1, keyChange);
+			var numeral = theory.getRomanNumeralForPitch(pitch1, keyChange.scale, keyChange.tonicPitch);
 			
 			var romanText = chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 			romanText += "<sup>" + chord.romanSup + "</sup>";
@@ -582,7 +582,7 @@ Toolbox.prototype.refresh = function()
 		for (var i = 0; i < 12; i++)
 		{
 			var rootPitch = (keyChange.tonicPitch + i) % 12;
-			var degree = theory.getDegreeForPitch(rootPitch, keyChange);
+			var degree = theory.getDegreeForPitch(rootPitch, keyChange.scale, keyChange.tonicPitch);
 			
 			var index = inKeyIndex;
 			if ((degree % 1) != 0)
@@ -590,7 +590,7 @@ Toolbox.prototype.refresh = function()
 			
 			var color = theory.getColorForDegree(degree);
 			var chord = theory.chords[chordCategory - 1];
-			var numeral = theory.getRomanNumeralForPitch(rootPitch, keyChange);
+			var numeral = theory.getRomanNumeralForPitch(rootPitch, keyChange.scale, keyChange.tonicPitch);
 			
 			var romanText = chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 			romanText += "<sup>" + chord.romanSup + "</sup>";
