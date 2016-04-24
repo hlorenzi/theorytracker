@@ -71,6 +71,7 @@ function SongEditor(canvas, theory, synth, songData)
 	this.MARGIN_BOTTOM = 8;
 	this.SECTION_SEPARATION = 10;
 	this.HEADER_HEIGHT = 40;
+	this.HEADER_LINE_HEIGHT = 16;
 	this.NOTE_HEIGHT = 14;
 	this.NOTE_MARGIN_HOR = 0.5;
 	this.NOTE_MARGIN_VER = 0.5;

@@ -20,10 +20,10 @@ SongEditor.prototype.handleMouseMove = function(ev)
 	// Check what's under the mouse, if it's not down.
 	if (!this.mouseDown)
 	{
-		for (var r = 0; r < this.viewRegions.length; r++)
+		var regionIndex = this.getRegionAtPosition(mousePos);
+		if (regionIndex != -1)
 		{
-			var region = this.viewRegions[r];
-			
+			var region = this.viewRegions[regionIndex];
 			if (isPointInside(mousePos, region))
 			{
 				// Check for notes.
@@ -55,21 +55,23 @@ SongEditor.prototype.handleMouseMove = function(ev)
 				}
 				
 				// Check for chords.
-				/*if (this.hoverNote < 0)
+				if (this.hoverNote < 0)
 				{
-					for (var n = 0; n < this.viewBlocks[b].chords.length; n++)
+					for (var n = 0; n < region.chords.length; n++)
 					{
-						var chord = this.viewBlocks[b].chords[n];
-						if (isPointInside(mousePos, chord))
+						var chord = this.songData.chords[region.chords[n]];
+						var chordPos = this.getChordPosition(region, chord.tick, chord.duration);
+						
+						if (isPointInside(mousePos, chordPos))
 						{
-							this.hoverChord = chord.chordIndex;
+							this.hoverChord = region.chords[n];
 							
-							if (mousePos.x <= chord.resizeHandleL + this.NOTE_STRETCH_MARGIN)
+							if (mousePos.x <= chordPos.x1 + this.NOTE_STRETCH_MARGIN)
 							{
 								this.canvas.style.cursor = "ew-resize";
 								this.hoverStretchL = true;
 							}
-							else if (mousePos.x >= chord.resizeHandleR - this.NOTE_STRETCH_MARGIN)
+							else if (mousePos.x >= chordPos.x2 - this.NOTE_STRETCH_MARGIN)
 							{
 								this.canvas.style.cursor = "ew-resize";
 								this.hoverStretchR = true;
@@ -80,41 +82,43 @@ SongEditor.prototype.handleMouseMove = function(ev)
 							break;
 						}
 					}
-				}*/
-				
-				break;
+				}
+			}
+			
+			// Check for key changes.
+			if (this.hoverNote < 0 && this.hoverChord < 0)
+			{
+				for (var n = 0; n < region.keyChanges.length; n++)
+				{
+					var keyChange = this.songData.keyChanges[region.keyChanges[n]];
+					var keyChangePos = this.getKeyChangePosition(region, keyChange.tick);
+					
+					if (isPointInside(mousePos, keyChangePos))
+					{
+						this.hoverKeyChange = region.keyChanges[n];
+						this.canvas.style.cursor = "pointer";
+						break;
+					}
+				}					
+			}
+			
+			// Check for meter changes.
+			if (this.hoverNote < 0 && this.hoverChord < 0 && this.hoverKeyChange < 0)
+			{
+				for (var n = 0; n < region.meterChanges.length; n++)
+				{
+					var meterChange = this.songData.meterChanges[region.meterChanges[n]];
+					var meterChangePos = this.getMeterChangePosition(region, meterChange.tick);
+					
+					if (isPointInside(mousePos, meterChangePos))
+					{
+						this.hoverMeterChange = region.meterChanges[n];
+						this.canvas.style.cursor = "pointer";
+						break;
+					}
+				}					
 			}
 		}
-		
-		// Check for key changes.
-		/*if (this.hoverNote < 0 && this.hoverChord < 0)
-		{
-			for (var n = 0; n < this.viewKeyChanges.length; n++)
-			{
-				var keyChange = this.viewKeyChanges[n];
-				if (isPointInside(mousePos, keyChange))
-				{
-					this.hoverKeyChange = keyChange.keyChangeIndex;
-					this.canvas.style.cursor = "ew-resize";
-					break;
-				}
-			}					
-		}
-		
-		// Check for meter changes.
-		if (this.hoverNote < 0 && this.hoverChord < 0 && this.hoverKeyChange < 0)
-		{
-			for (var n = 0; n < this.viewMeterChanges.length; n++)
-			{
-				var meterChange = this.viewMeterChanges[n];
-				if (isPointInside(mousePos, meterChange))
-				{
-					this.hoverMeterChange = meterChange.meterChangeIndex;
-					this.canvas.style.cursor = "ew-resize";
-					break;
-				}
-			}					
-		}*/
 		
 		this.refreshCanvas();
 	}
@@ -202,7 +206,7 @@ SongEditor.prototype.handleMouseDown = function(ev)
 		
 		this.chordSelections[this.hoverChord] = true;
 		this.cursorTick = this.songData.chords[this.hoverChord].tick;
-		theory.playChordSample(this.synth, this.songData.chords[this.hoverChord].chord, this.songData.chords[this.hoverChord].rootPitch);
+		this.theory.playChordSample(this.synth, this.songData.chords[this.hoverChord].chord, this.songData.chords[this.hoverChord].rootPitch);
 		
 		if (this.hoverStretchR)
 		{

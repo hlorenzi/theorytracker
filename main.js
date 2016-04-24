@@ -10,6 +10,10 @@ function testOnLoad()
 	song.addMeterChange(new SongDataMeterChange(960 * 2, 3, 4));
 	song.addSectionBreak(new SongSectionBreak(960 * 1.5));
 	
+	song.addChord(new SongDataChord(960 * 0.0, 960 / 2, theory.chords[0], theory.C));
+	song.addChord(new SongDataChord(960 * 0.5, 960 / 2, theory.chords[0], theory.F));
+	song.addChord(new SongDataChord(960 * 1.0, 960 / 1, theory.chords[0], theory.G));
+	
 	song.addNote(new SongDataNote(0, 960 / 4, theory.C + 60));
 	song.addNote(new SongDataNote(960 / 4, 960 / 16, theory.D + 60));
 	song.addNote(new SongDataNote(960 / 4 + 960 / 16, 960 / 16, theory.E + 60));

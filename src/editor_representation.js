@@ -27,8 +27,20 @@ SongEditor.prototype.refreshRepresentation = function()
 	
 	// Iterate through song sections.
 	var currentY = this.MARGIN_TOP;
-	var currentKeyChangeIndex = 0;
-	var currentMeterChangeIndex = 0;
+	var currentKeyChangeIndex = -1;
+	var currentMeterChangeIndex = -1;
+	
+	if (this.songData.keyChanges.length > 0 &&
+		this.songData.keyChanges[0].tick == 0)
+		currentKeyChangeIndex = 0;
+	
+	if (this.songData.meterChanges.length > 0 &&
+		this.songData.meterChanges[0].tick == 0)
+		currentMeterChangeIndex = 0;
+		
+	var DEFAULT_KEY = new SongDataKeyChange(-1, this.theory.scales[0], this.theory.C);
+	var DEFAULT_METER = new SongDataMeterChange(-1, 4, 4);
+	
 	for (var i = 0; i < this.songData.sectionBreaks.length + 1; i++)
 	{
 		var sectionTickRange = this.songData.getSectionTickRange(i);
@@ -63,10 +75,10 @@ SongEditor.prototype.refreshRepresentation = function()
 			}
 			
 			var regionEndTick = Math.min(nextKeyChangeTick, nextMeterChangeTick);
-			var keyChange = this.songData.keyChanges[currentKeyChangeIndex];
-			var meterChange = this.songData.meterChanges[currentMeterChangeIndex];
+			var key = (currentKeyChangeIndex >= 0 ? this.songData.keyChanges[currentKeyChangeIndex] : DEFAULT_KEY);
+			var meter = (currentMeterChangeIndex >= 0 ? this.songData.meterChanges[currentMeterChangeIndex] : DEFAULT_METER);
 			
-			// Find lowest and highest pitch in the section.
+			// Find lowest and highest pitch in section.
 			var notes = [];
 			for (var n = 0; n < this.songData.notes.length; n++)
 			{
@@ -75,12 +87,33 @@ SongEditor.prototype.refreshRepresentation = function()
 				if (note.tick < sectionTickRange.end &&
 					note.tick + note.duration >= sectionTickRange.start)
 				{
-					var noteRow = this.theory.getRowForPitch(note.pitch, keyChange.scale, keyChange.tonicPitch);
+					var noteRow = this.theory.getRowForPitch(note.pitch, key.scale, key.tonicPitch);
 					lowestNoteRow = Math.min(lowestNoteRow, Math.floor(noteRow));
 					highestNoteRow = Math.max(highestNoteRow, Math.ceil(noteRow) + 1);
 					notes.push(n);
 				}
 			}
+			
+			// Find chords in section.
+			var chords = [];
+			for (var n = 0; n < this.songData.chords.length; n++)
+			{
+				var chord = this.songData.chords[n];
+				
+				if (chord.tick < sectionTickRange.end &&
+					chord.tick + chord.duration >= sectionTickRange.start)
+				{
+					chords.push(n);
+				}
+			}
+			
+			var keyChanges = [];
+			if (key.tick == currentRegionStart)
+				keyChanges.push(currentKeyChangeIndex);
+			
+			var meterChanges = [];
+			if (meter.tick == currentRegionStart)
+				meterChanges.push(currentMeterChangeIndex);
 			
 			// Add region to list.
 			var region = {
@@ -90,11 +123,12 @@ SongEditor.prototype.refreshRepresentation = function()
 				y1: 0,
 				x2: this.MARGIN_LEFT + (regionEndTick - sectionTickRange.start) * this.tickZoom,
 				y2: 0,
-				showKeyChange: this.songData.keyChanges[currentKeyChangeIndex].tick == currentRegionStart,
-				showMeterChange: this.songData.meterChanges[currentMeterChangeIndex].tick == currentRegionStart,
-				key: this.songData.keyChanges[currentKeyChangeIndex],
-				meter: this.songData.meterChanges[currentMeterChangeIndex],
-				notes: notes
+				key: key,
+				meter: meter,
+				notes: notes,
+				chords: chords,
+				keyChanges: keyChanges,
+				meterChanges: meterChanges
 			};
 			
 			regions.push(region);
@@ -148,5 +182,47 @@ SongEditor.prototype.getNotePosition = function(region, row, tick, duration)
 		y1: y1,
 		x2: x1 + duration * this.tickZoom,
 		y2: y1 + this.NOTE_HEIGHT
+	};
+}
+
+
+SongEditor.prototype.getChordPosition = function(region, tick, duration)
+{
+	var x1 = region.x1 + (tick - region.tick) * this.tickZoom;
+	var y1 = region.y2 - this.CHORD_HEIGHT;
+	
+	return {
+		x1: x1,
+		y1: y1,
+		x2: x1 + duration * this.tickZoom,
+		y2: y1 + this.CHORD_HEIGHT
+	};
+}
+
+
+SongEditor.prototype.getKeyChangePosition = function(region, tick)
+{
+	var x1 = region.x1 + (tick - region.tick) * this.tickZoom;
+	var y1 = region.y1;
+	
+	return {
+		x1: x1,
+		y1: y1,
+		x2: region.x2,
+		y2: y1 + this.HEADER_LINE_HEIGHT
+	};
+}
+
+
+SongEditor.prototype.getMeterChangePosition = function(region, tick)
+{
+	var x1 = region.x1 + (tick - region.tick) * this.tickZoom;
+	var y1 = region.y1 + this.HEADER_LINE_HEIGHT;
+	
+	return {
+		x1: x1,
+		y1: y1,
+		x2: region.x2,
+		y2: y1 + this.HEADER_LINE_HEIGHT
 	};
 }

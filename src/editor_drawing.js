@@ -1,5 +1,8 @@
 SongEditor.prototype.refreshCanvas = function()
 {
+	this.canvasWidth = parseFloat(this.canvas.width);
+	this.canvasHeight = parseFloat(this.canvas.height);
+	
 	this.ctx.save();
 	
 	
@@ -14,8 +17,6 @@ SongEditor.prototype.refreshCanvas = function()
 	var NOTE_LINE_COLOR = "#dddddd";
 	var MEASURE_COLOR = "#dddddd";
 	var MEASURE_COLOR_STRONG = "#888888";
-	var KEY_CHANGE_COLOR = "#aaaaaa";
-	var METER_CHANGE_COLOR = "#88aaaa";
 	
 	this.ctx.save();
 	this.ctx.beginPath();
@@ -49,8 +50,8 @@ SongEditor.prototype.refreshCanvas = function()
 		for (var n = 1; n < region.highestNoteRow - region.lowestNoteRow; n++)
 		{
 			var y = region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - n * this.NOTE_HEIGHT;
-			this.ctx.moveTo(region.x1, y);
-			this.ctx.lineTo(region.x2, y);
+			this.ctx.moveTo(region.x1 + 1, y);
+			this.ctx.lineTo(region.x2 - 1, y);
 		}
 		this.ctx.stroke();
 	
@@ -64,21 +65,29 @@ SongEditor.prototype.refreshCanvas = function()
 				this.ctx.beginPath();
 					this.ctx.moveTo(
 						region.x1 + n * this.tickZoom,
-						region.y1 + this.HEADER_HEIGHT);
+						region.y1 + this.HEADER_HEIGHT + 1);
 					this.ctx.lineTo(
 						region.x1 + n * this.tickZoom,
-						region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION);
+						region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - 1);
 					this.ctx.moveTo(
 						region.x1 + n * this.tickZoom,
-						region.y2 - this.CHORD_HEIGHT);
+						region.y2 - this.CHORD_HEIGHT + 1);
 					this.ctx.lineTo(
 						region.x1 + n * this.tickZoom,
-						region.y2);
+						region.y2 - 1);
 				this.ctx.stroke();
 			}
 			
 			beatCount = (beatCount + 1) % region.meter.numerator;
 		}
+		
+		this.ctx.save();
+		this.ctx.rect(
+			region.x1,
+			region.y1 + this.HEADER_HEIGHT,
+			region.x2 - region.x1,
+			(region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION) - (region.y1 + this.HEADER_HEIGHT));
+		this.ctx.clip();
 		
 		// Draw notes.
 		for (var n = 0; n < region.notes.length; n++)
@@ -104,139 +113,98 @@ SongEditor.prototype.refreshCanvas = function()
 			}
 		}
 		
-		// Draw key change.
-		if (region.showKeyChange)
-		{
-			this.ctx.strokeStyle = KEY_CHANGE_COLOR;
-			this.ctx.beginPath();
-				this.ctx.moveTo(region.x1, region.y1);
-				this.ctx.lineTo(region.x1, region.y2);
-			this.ctx.stroke();
-			
-			this.ctx.font = "14px Tahoma";
-			this.ctx.fillStyle = KEY_CHANGE_COLOR;
-			this.ctx.fillText(
-				this.theory.getNameForPitch(region.key.tonicPitch, region.key.scale, region.key.tonicPitch) + " " + region.key.scale.name,
-				region.x1 + 8,
-				region.y1 + 12);
-		}
-		
-		// Draw meter change.
-		if (region.showMeterChange)
-		{
-			this.ctx.strokeStyle = METER_CHANGE_COLOR;
-			this.ctx.beginPath();
-				this.ctx.moveTo(region.x1, region.y1 + 20);
-				this.ctx.lineTo(region.x1, region.y2);
-			this.ctx.stroke();
-			
-			this.ctx.font = "14px Tahoma";
-			this.ctx.fillStyle = METER_CHANGE_COLOR;
-			this.ctx.fillText(
-				"" + region.meter.numerator + " / " + region.meter.denominator,
-				region.x1 + 8,
-				region.y1 + 32);
-		}
-	}
-	
-		/*// Draw note measures.
-		var submeasureCount = 0;
-		for (var n = block.meter.tick - block.tick; n < block.duration; n += this.WHOLE_NOTE_DURATION / block.meter.denominator)
-		{
-			if (n >= 0)
-			{
-				this.ctx.strokeStyle = (submeasureCount == 0 ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
-				this.ctx.lineWidth = 2;
-				this.ctx.beginPath();
-				this.ctx.moveTo(block.x1 + n * this.tickZoom, block.y1);
-				this.ctx.lineTo(block.x1 + n * this.tickZoom, block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN);
-				this.ctx.stroke();
-			}
-			
-			submeasureCount = (submeasureCount + 1) % block.meter.numerator;
-		}
-		
-		// Draw notes.
-		for (var n = 0; n < block.notes.length; n++)
-		{
-			var noteIndex = block.notes[n].noteIndex;
-			var note = this.songData.notes[noteIndex];
-			
-			if (!this.noteSelections[noteIndex] || this.mouseDragAction == null || this.mouseDragAction == "scroll")
-				this.drawNote(i, note.pitch, note.tick, note.duration, noteIndex == this.hoverNote, this.noteSelections[noteIndex]);
-		}
-		
-		if (this.mouseDragAction != null && this.mouseDragAction != "scroll")
-		{
-			for (var n = 0; n < this.songData.notes.length; n++)
-			{
-				var note = this.songData.notes[n];
-				if (this.noteSelections[n])
-				{
-					var draggedNote = this.getNoteDragged(note, this.mouseDragCurrent);
-					this.drawNote(i, draggedNote.pitch, draggedNote.tick, draggedNote.duration, noteIndex == this.hoverNote, true);
-				}
-			}
-		}
-		
 		this.ctx.restore();
 		
-		// Draw chord measures.
-		var submeasureCount = 0;
-		for (var n = block.meter.tick - block.tick; n < block.duration; n += this.WHOLE_NOTE_DURATION / block.meter.denominator)
-		{
-			if (n >= 0)
-			{
-				this.ctx.strokeStyle = (submeasureCount == 0 ? BLOCK_MEASURE_COLOR_STRONG : BLOCK_MEASURE_COLOR);
-				this.ctx.lineWidth = 2;
-				this.ctx.beginPath();
-				this.ctx.moveTo(block.x1 + n * this.tickZoom, block.y2 - this.CHORD_HEIGHT);
-				this.ctx.lineTo(block.x1 + n * this.tickZoom, block.y2);
-				this.ctx.stroke();
-			}
-			
-			submeasureCount = (submeasureCount + 1) % block.meter.numerator;
-		}
-		
 		// Draw chords.
-		for (var n = 0; n < block.chords.length; n++)
+		for (var n = 0; n < region.chords.length; n++)
 		{
-			var chordIndex = block.chords[n].chordIndex;
+			var chordIndex = region.chords[n];
 			var chord = this.songData.chords[chordIndex];
 			
 			if (!this.chordSelections[chordIndex] || this.mouseDragAction == null || this.mouseDragAction == "scroll")
-				this.drawChord(i, chord, chord.tick, chord.duration, chordIndex == this.hoverChord, this.chordSelections[chordIndex]);
+				this.drawChord(region, chord, chord.tick, chord.duration, chordIndex == this.hoverChord, this.chordSelections[chordIndex]);
 		}
 		
+		// Draw dragged chords.
 		if (this.mouseDragAction != null && this.mouseDragAction != "scroll")
 		{
 			for (var n = 0; n < this.songData.chords.length; n++)
 			{
+				if (!this.chordSelections[n])
+					continue;
+				
 				var chord = this.songData.chords[n];
-				if (this.chordSelections[n])
-				{
-					var draggedChord = this.getChordDragged(chord, this.mouseDragCurrent);
-					this.drawChord(i, chord, draggedChord.tick, draggedChord.duration, chordIndex == this.hoverChord, true);
-				}
+				var chordDragged = this.getChordDragged(chord, this.mouseDragCurrent);
+				this.drawChord(region, chord, chordDragged.tick, chordDragged.duration, chordIndex == this.hoverChord, true);
+			}
+		}
+		
+		// Draw key change.
+		for (var n = 0; n < region.keyChanges.length; n++)
+		{
+			var keyChangeIndex = region.keyChanges[n];
+			var keyChange = this.songData.keyChanges[keyChangeIndex];
+			
+			if (!this.keyChangeSelections[keyChangeIndex] || this.mouseDragAction == null || this.mouseDragAction == "scroll")
+				this.drawKeyChange(region, keyChange, keyChange.tick, keyChangeIndex == this.hoverKeyChange, this.keyChangeSelections[keyChangeIndex]);
+		}
+		
+		// Draw dragged key changes.
+		if (this.mouseDragAction != null && this.mouseDragAction != "scroll")
+		{
+			for (var n = 0; n < this.songData.keyChanges.length; n++)
+			{
+				if (!this.keyChangeSelections[n])
+					continue;
+				
+				var keyChange = this.songData.keyChanges[n];
+				var keyChangeDragged = this.getKeyChangeDragged(keyChange, this.mouseDragCurrent);
+				
+				this.drawKeyChange(region, keyChange, keyChangeDragged.tick, keyChangeIndex == this.hoverKeyChange, true);
+			}
+		}
+		
+		// Draw meter change.
+		for (var n = 0; n < region.meterChanges.length; n++)
+		{
+			var meterChangeIndex = region.meterChanges[n];
+			var meterChange = this.songData.meterChanges[meterChangeIndex];
+			
+			if (!this.meterChangeSelections[meterChangeIndex] || this.mouseDragAction == null || this.mouseDragAction == "scroll")
+				this.drawMeterChange(region, meterChange, meterChange.tick, meterChangeIndex == this.hoverMeterChange, this.meterChangeSelections[meterChangeIndex]);
+		}
+		
+		// Draw dragged meter changes.
+		if (this.mouseDragAction != null && this.mouseDragAction != "scroll")
+		{
+			for (var n = 0; n < this.songData.meterChanges.length; n++)
+			{
+				if (!this.meterChangeSelections[n])
+					continue;
+				
+				var meterChange = this.songData.meterChanges[n];
+				var meterChangeDragged = this.getMeterChangeDragged(meterChange, this.mouseDragCurrent);
+				
+				this.drawMeterChange(region, meterChange, meterChangeDragged.tick, meterChangeIndex == this.hoverMeterChange, true);
 			}
 		}
 		
 		// Draw cursor.
-		if (this.showCursor && this.cursorTick >= block.tick && this.cursorTick < block.tick + block.duration)
+		if (this.showCursor && this.cursorTick >= region.tick && this.cursorTick <= region.tick + region.duration)
 		{
 			this.ctx.strokeStyle = CURSOR_COLOR;
 			this.ctx.fillStyle = CURSOR_COLOR;
 			this.ctx.lineWidth = 2;
 			
-			var cursorX = block.x1 + (this.cursorTick - block.tick) * this.tickZoom;
-			var cursorY1 = block.y1;
-			var cursorY2 = block.y2;
+			var cursorX = region.x1 + (this.cursorTick - region.tick) * this.tickZoom;
+			var cursorY1 = region.y1 + this.HEADER_HEIGHT;
+			var cursorY2 = region.y2;
 			
 			if (this.cursorZone == this.CURSOR_ZONE_NOTES)
-				cursorY2 = block.y2 - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
+				cursorY2 = region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION;
 			
 			else if (this.cursorZone == this.CURSOR_ZONE_CHORDS)
-				cursorY1 = block.y2 - this.CHORD_HEIGHT;
+				cursorY1 = region.y2 - this.CHORD_HEIGHT;
 			
 			this.ctx.beginPath();
 			this.ctx.moveTo(cursorX, cursorY1);
@@ -256,7 +224,8 @@ SongEditor.prototype.refreshCanvas = function()
 			this.ctx.lineTo(cursorX + 6, cursorY2 + 6);
 			this.ctx.lineTo(cursorX, cursorY2);
 			this.ctx.fill();
-		}*/
+		}
+	}
 	
 	// Draw side fade-outs.
 	var leftFadeGradient = this.ctx.createLinearGradient(0, 0, this.MARGIN_LEFT, 0);
@@ -292,7 +261,7 @@ SongEditor.prototype.drawNote = function(region, pitch, tick, duration, hovering
 	
 	var pos = this.getNotePosition(region, row, clippedStartTick, clippedDuration);
 	
-	this.drawDegreeColoredRectangle(deg, pos.x1, pos.y1, pos.x2, pos.y2);
+	this.drawDegreeColoredRectangle(deg, pos.x1 + this.NOTE_MARGIN_HOR, pos.y1, pos.x2 - this.NOTE_MARGIN_HOR, pos.y2);
 	
 	// Draw highlights.
 	this.ctx.save();
@@ -315,23 +284,25 @@ SongEditor.prototype.drawNote = function(region, pitch, tick, duration, hovering
 }
 
 
-SongEditor.prototype.drawChord = function(blockIndex, chord, tick, duration, hovering, selected)
+SongEditor.prototype.drawChord = function(region, chord, tick, duration, hovering, selected)
 {
-	var block = this.viewBlocks[blockIndex];
-	
-	// Check if the note is inside the block.
-	if (tick + duration <= block.tick ||
-		tick >= block.tick + block.duration)
+	// Check if the chord is inside the region.
+	if (tick + duration <= region.tick ||
+		tick >= region.tick + region.duration)
 		return;
 	
-	var deg = theory.getDegreeForPitch(chord.rootPitch, block.key.scale, block.key.tonicPitch);
-	var pos = this.getChordPosition(block, tick, duration);
+	var clippedStartTick = Math.max(tick, region.tick);
+	var clippedEndTick = Math.min(tick + duration, region.tick + region.duration);
+	var clippedDuration = clippedEndTick - clippedStartTick;
 	
-	this.drawDegreeColoredRectangle(deg, { x1: pos.x1, y1: pos.y1, x2: pos.x2, y2: pos.y1 + this.CHORD_ORNAMENT_HEIGHT });
-	this.drawDegreeColoredRectangle(deg, { x1: pos.x1, y1: pos.y2 - this.CHORD_ORNAMENT_HEIGHT, x2: pos.x2, y2: pos.y2 });
+	var deg = this.theory.getDegreeForPitch(chord.rootPitch, region.key.scale, region.key.tonicPitch);
+	var pos = this.getChordPosition(region, clippedStartTick, clippedDuration);
+	
+	this.drawDegreeColoredRectangle(deg, pos.x1 + this.NOTE_MARGIN_HOR, pos.y1, pos.x2 - this.NOTE_MARGIN_HOR, pos.y1 + this.CHORD_ORNAMENT_HEIGHT);
+	this.drawDegreeColoredRectangle(deg, pos.x1 + this.NOTE_MARGIN_HOR, pos.y2 - this.CHORD_ORNAMENT_HEIGHT, pos.x2 - this.NOTE_MARGIN_HOR, pos.y2);
 	
 	// Draw roman symbol.
-	var numeral = theory.getRomanNumeralForPitch(chord.rootPitch, block.key.scale, block.key.tonicPitch);
+	var numeral = this.theory.getRomanNumeralForPitch(chord.rootPitch, region.key.scale, region.key.tonicPitch);
 	var romanText = chord.chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 	
 	this.ctx.fillStyle = "#000000";
@@ -380,20 +351,98 @@ SongEditor.prototype.drawChord = function(blockIndex, chord, tick, duration, hov
 	}
 	
 	this.ctx.restore();
-	
-	// Draw part between blocks.
-	if (tick + duration > block.tick + block.duration && blockIndex < this.viewBlocks.length - 1)
-	{
-		var nextBlock = this.viewBlocks[blockIndex + 1];
-		var col = theory.getColorForDegree(deg - (deg % 1));
+}
+
+
+SongEditor.prototype.drawKeyChange = function(region, keyChange, tick, hovering, selected)
+{
+	// Check if the key change is inside the region.
+	if (tick < region.tick ||
+		tick >= region.tick + region.duration)
+		return;
 		
+	var COLOR = "#aaaaaa";
+	
+	var x = region.x1 + (tick - region.tick) * this.tickZoom;
+	
+	this.ctx.strokeStyle = COLOR;
+	this.ctx.beginPath();
+		this.ctx.moveTo(x, region.y1);
+		this.ctx.lineTo(x, region.y2);
+	this.ctx.stroke();
+	
+	if (selected)
+	{
 		this.ctx.save();
-		this.ctx.globalAlpha = 0.5;
-		this.ctx.fillStyle = col;
-		this.drawDegreeColoredRectangle(deg, { x1: block.x2, y1: pos.y1, x2: nextBlock.x1, y2: pos.y1 + this.CHORD_ORNAMENT_HEIGHT } );
-		this.drawDegreeColoredRectangle(deg, { x1: block.x2, y1: pos.y2 - this.CHORD_ORNAMENT_HEIGHT, x2: nextBlock.x1, y2: pos.y2 });
+		this.ctx.globalAlpha = 0.6;
+		this.ctx.fillStyle = COLOR;
+		this.ctx.fillRect(x, region.y1, region.x2 - x, this.HEADER_LINE_HEIGHT);
 		this.ctx.restore();
 	}
+	else if (hovering)
+	{
+		this.ctx.save();
+		this.ctx.globalAlpha = 0.2;
+		this.ctx.fillStyle = COLOR;
+		this.ctx.fillRect(x, region.y1, region.x2 - x, this.HEADER_LINE_HEIGHT);
+		this.ctx.restore();
+	}
+	
+	this.ctx.font = "14px Tahoma";
+	this.ctx.textAlign = "left";
+	this.ctx.textBaseline = "middle";
+	this.ctx.fillStyle = COLOR;
+	this.ctx.fillText(
+		this.theory.getNameForPitch(keyChange.tonicPitch, keyChange.scale, keyChange.tonicPitch) + " " + keyChange.scale.name,
+		x + 8,
+		region.y1 + 8,
+		region.x2 - x - 16);
+}
+
+
+SongEditor.prototype.drawMeterChange = function(region, meterChange, tick, hovering, selected)
+{
+	// Check if the meter change is inside the region.
+	if (tick < region.tick ||
+		tick >= region.tick + region.duration)
+		return;
+		
+	var COLOR = "#88aaaa";
+	
+	var x = region.x1 + (tick - region.tick) * this.tickZoom;
+	
+	this.ctx.strokeStyle = COLOR;
+	this.ctx.beginPath();
+		this.ctx.moveTo(x, region.y1 + this.HEADER_LINE_HEIGHT);
+		this.ctx.lineTo(x, region.y2);
+	this.ctx.stroke();
+	
+	if (selected)
+	{
+		this.ctx.save();
+		this.ctx.globalAlpha = 0.6;
+		this.ctx.fillStyle = COLOR;
+		this.ctx.fillRect(x, region.y1 + this.HEADER_LINE_HEIGHT, region.x2 - x, this.HEADER_LINE_HEIGHT);
+		this.ctx.restore();
+	}
+	else if (hovering)
+	{
+		this.ctx.save();
+		this.ctx.globalAlpha = 0.2;
+		this.ctx.fillStyle = COLOR;
+		this.ctx.fillRect(x, region.y1 + this.HEADER_LINE_HEIGHT, region.x2 - x, this.HEADER_LINE_HEIGHT);
+		this.ctx.restore();
+	}
+	
+	this.ctx.font = "14px Tahoma";
+	this.ctx.textAlign = "left";
+	this.ctx.textBaseline = "middle";
+	this.ctx.fillStyle = COLOR;
+	this.ctx.fillText(
+		"" + meterChange.numerator + " / " + meterChange.denominator,
+		x + 8,
+		region.y1 + 24,
+		region.x2 - x - 16);
 }
 
 

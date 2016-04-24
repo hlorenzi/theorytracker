@@ -140,7 +140,7 @@ SongEditor.prototype.getZoneAtPosition = function(pos)
 		return this.CURSOR_ZONE_ALL;
 	
 	var region = this.viewRegions[regionIndex];
-	if (pos.y >= region.y1 + this.HEADER_MARGIN &&
+	if (pos.y >= region.y1 + this.HEADER_HEIGHT &&
 		pos.y <= region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION)
 		return this.CURSOR_ZONE_NOTES;
 	
@@ -274,7 +274,7 @@ SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 	if (this.mouseDragAction == "move")
 	{
 		return {
-			tick: Math.max(0, note.tick + tickOffset),
+			tick: Math.max(0, Math.min(this.songData.endTick - note.duration, note.tick + tickOffset)),
 			duration: note.duration,
 			pitch: Math.max(this.theory.getMinPitch(), Math.min(this.theory.getMaxPitch(), note.pitch + pitchOffset))
 		};
@@ -307,13 +307,13 @@ SongEditor.prototype.getNoteDragged = function(note, dragPosition)
 
 SongEditor.prototype.getChordDragged = function(chord, dragPosition)
 {
-	var dragTick = this.getTickAtPosition(dragPosition.x);
-	var tickOffset = dragTick - this.getTickAtPosition(this.mouseDragOrigin.x);
+	var dragTick = this.getTickAtPosition(dragPosition);
+	var tickOffset = dragTick - this.getTickAtPosition(this.mouseDragOrigin);
 	
 	if (this.mouseDragAction == "move")
 	{
 		return {
-			tick: Math.max(0, chord.tick + tickOffset),
+			tick: Math.max(0, Math.min(this.songData.endTick - chord.duration, chord.tick + tickOffset)),
 			duration: chord.duration
 		};
 	}
@@ -344,10 +344,10 @@ SongEditor.prototype.getChordDragged = function(chord, dragPosition)
 
 SongEditor.prototype.getKeyChangeDragged = function(keyChange, dragPosition)
 {
-	var tickOffset = this.getTickAtPosition(dragPosition.x) - this.getTickAtPosition(this.mouseDragOrigin.x);
+	var tickOffset = this.getTickAtPosition(dragPosition) - this.getTickAtPosition(this.mouseDragOrigin);
 	
 	if (this.mouseDragAction == "move")
-		return { tick: keyChange.tick + tickOffset };
+		return { tick: Math.max(0, Math.min(this.songData.endTick, keyChange.tick + tickOffset)) };
 	
 	// TODO: Should move proportionally, like notes.
 	else if (this.mouseDragAction == "stretch")
@@ -357,10 +357,10 @@ SongEditor.prototype.getKeyChangeDragged = function(keyChange, dragPosition)
 
 SongEditor.prototype.getMeterChangeDragged = function(meterChange, dragPosition)
 {
-	var tickOffset = this.getTickAtPosition(dragPosition.x) - this.getTickAtPosition(this.mouseDragOrigin.x);
+	var tickOffset = this.getTickAtPosition(dragPosition) - this.getTickAtPosition(this.mouseDragOrigin);
 	
 	if (this.mouseDragAction == "move")
-		return { tick: meterChange.tick + tickOffset };
+		return { tick: Math.max(0, Math.min(this.songData.endTick, meterChange.tick + tickOffset)) };
 	
 	// TODO: Should move proportionally, like notes.
 	else if (this.mouseDragAction == "stretch")
