@@ -3,11 +3,7 @@
 SongEditor.prototype.refreshRepresentation = function()
 {
 	// Clear representation objects.
-	this.viewBlocks = [];
-	this.viewNotes = [];
-	this.viewChords = [];
-	this.viewKeyChanges = [];
-	this.viewMeterChanges = [];
+	this.viewRegions = [];
 	
 	// Clear selection arrays and push a boolean false for each object in the song data,
 	// effectively unselecting everything, while also accomodating added/removed objects.
@@ -29,237 +25,128 @@ SongEditor.prototype.refreshRepresentation = function()
 	for (var i = 0; i < this.songData.meterChanges.length; i++)
 		this.meterChangeSelections.push(false);
 	
-	// Set up some layout constants.
-	var blockY1 = this.MARGIN_TOP + this.HEADER_MARGIN;
-	var blockY2 = this.canvasHeight - this.MARGIN_BOTTOM;
-	var changeY1 = this.MARGIN_TOP;
-	var chordY2 = this.canvasHeight - this.MARGIN_BOTTOM;
-	
-	// Set up current block drawing position, current tick, and
-	// iterators through the song data.
-	var x = this.MARGIN_LEFT - this.xAtLeft;
-	var tick = 0;
-	var curNote = 0;
-	var curChord = 0;
-	var curKeyChange = 0;
-	var curMeterChange = 0;
-	
-	// Set up the first block.
-	var curBlock = 0;
-	this.viewBlocks.push(
+	// Iterate through song sections.
+	var currentY = this.MARGIN_TOP;
+	var currentKeyChangeIndex = 0;
+	var currentMeterChangeIndex = 0;
+	for (var i = 0; i < this.songData.sectionBreaks.length + 1; i++)
 	{
-		tick: 0,
-		duration: 0,
-		key: new SongDataKeyChange(0, theory.scales[0], 0),
-		meter: new SongDataMeterChange(0, 4, 4),
-		notes: [],
-		chords: [],
-		x1: x,
-		y1: blockY1,
-		x2: x,
-		y2: blockY2
-	});
-	
-	// Loop will break after the last block.
-	while (true)
-	{
-		// Identifiers for whether there's a following key or meter change.
-		var NEXT_IS_NONE = 0;
-		var NEXT_IS_KEYCHANGE = 1;
-		var NEXT_IS_METERCHANGE = 2;
+		var sectionTickRange = this.songData.getSectionTickRange(i);
+		var sectionDuration = sectionTickRange.end - sectionTickRange.start;
 		
-		// Find the tick where the current block ends due to a key or meter change.
-		var nextChangeTick = this.songData.lastTick;
-		var nextIsWhat = NEXT_IS_NONE;
+		var lowestNoteRow = 7 * 5;
+		var highestNoteRow = 7 * 6;
 		
-		if (curKeyChange < this.songData.keyChanges.length)
+		// Create regions with non-changing key and meter.
+		var regions = [];
+		var currentRegionStart = sectionTickRange.start;
+		while (currentRegionStart < sectionTickRange.end)
 		{
-			var nextKeyChange = this.songData.keyChanges[curKeyChange]
-			if (nextKeyChange.tick < nextChangeTick)
+			// Find next key change tick and next meter change tick.
+			var nextKeyChangeTick = sectionTickRange.end;
+			var nextMeterChangeTick = sectionTickRange.end;
+			var willChangeKey = false;
+			var willChangeMeter = false;
+			
+			if (currentKeyChangeIndex + 1 < this.songData.keyChanges.length &&
+				this.songData.keyChanges[currentKeyChangeIndex + 1].tick < nextKeyChangeTick)
 			{
-				nextChangeTick = nextKeyChange.tick;
-				nextIsWhat = NEXT_IS_KEYCHANGE;
+				nextKeyChangeTick = this.songData.keyChanges[currentKeyChangeIndex + 1].tick;
+				willChangeKey = true;
 			}
-		}
-		
-		if (curMeterChange < this.songData.meterChanges.length)
-		{
-			var nextMeterChange = this.songData.meterChanges[curMeterChange]
-			if (nextMeterChange.tick < nextChangeTick)
+			
+			if (currentMeterChangeIndex + 1 < this.songData.meterChanges.length &&
+				this.songData.meterChanges[currentMeterChangeIndex + 1].tick < nextMeterChangeTick)
 			{
-				nextChangeTick = nextMeterChange.tick;
-				nextIsWhat = NEXT_IS_METERCHANGE;
+				nextMeterChangeTick = this.songData.meterChanges[currentMeterChangeIndex + 1].tick;
+				willChangeMeter = true;
 			}
-		}
-		
-		// Advance draw position until the block's end tick.
-		x += (nextChangeTick - tick) * this.tickZoom;
-		tick = nextChangeTick;
-		
-		// If there is a key change, add its representation and advance its iterator.
-		var blockX2 = x;
-		
-		if (nextIsWhat == NEXT_IS_KEYCHANGE)
-		{
-			x += this.KEYCHANGE_BAR_WIDTH;
 			
-			this.viewKeyChanges.push(
-			{
-				keyChangeIndex: curKeyChange,
-				tick: nextChangeTick,
-				x1: blockX2,
-				y1: changeY1,
-				x2: x,
-				y2: chordY2
-			});
+			var regionEndTick = Math.min(nextKeyChangeTick, nextMeterChangeTick);
+			var keyChange = this.songData.keyChanges[currentKeyChangeIndex];
+			var meterChange = this.songData.meterChanges[currentMeterChangeIndex];
 			
-			curKeyChange++;
-		}
-		// Or if there is a meter change, add its representation and advance its iterator.
-		else if (nextIsWhat == NEXT_IS_METERCHANGE)
-		{
-			x += this.METERCHANGE_BAR_WIDTH;
-			
-			this.viewMeterChanges.push(
-			{
-				meterChangeIndex: curMeterChange,
-				tick: nextChangeTick,
-				x1: blockX2,
-				y1: changeY1 + 20,
-				x2: x,
-				y2: chordY2
-			});
-			
-			curMeterChange++;
-		}
-		
-		// Then finish off the current block of notes.
-		// If its duration would be zero, ignore it for now but prepare it for the next iteration.  
-		var block = this.viewBlocks[curBlock];
-		
-		if (nextChangeTick == block.tick)
-		{
-			block.x1 = x;
-			block.x2 = x;
-		}
-		else
-		{
-			block.duration = nextChangeTick - block.tick;
-			block.x2 = blockX2;
-			
-			// Add notes' representations.
+			// Find lowest and highest pitch in the section.
+			var notes = [];
 			for (var n = 0; n < this.songData.notes.length; n++)
 			{
 				var note = this.songData.notes[n];
 				
-				if (note.tick + note.duration <= block.tick || note.tick >= block.tick + block.duration)
-					continue;
-				
-				var noteRow = theory.getRowForPitch(note.pitch, block.key.scale, block.key.tonicPitch);
-				var notePos = this.getNotePosition(block, noteRow, note.tick, note.duration);
-				block.notes.push(
+				if (note.tick < sectionTickRange.end &&
+					note.tick + note.duration >= sectionTickRange.start)
 				{
-					noteIndex: n,
-					tick: note.tick,
-					duration: note.duration,
-					resizeHandleL: notePos.resizeHandleL,
-					resizeHandleR: notePos.resizeHandleR,
-					x1: notePos.x1,
-					y1: notePos.y1,
-					x2: notePos.x2,
-					y2: notePos.y2
-				});
+					var noteRow = this.theory.getRowForPitch(note.pitch, keyChange.scale, keyChange.tonicPitch);
+					lowestNoteRow = Math.min(lowestNoteRow, Math.floor(noteRow));
+					highestNoteRow = Math.max(highestNoteRow, Math.ceil(noteRow) + 1);
+					notes.push(n);
+				}
 			}
 			
-			// Add chords' representations.
-			for (var n = 0; n < this.songData.chords.length; n++)
+			// Add region to list.
+			var region = {
+				tick: currentRegionStart,
+				duration: regionEndTick - currentRegionStart,
+				x1: this.MARGIN_LEFT + (currentRegionStart - sectionTickRange.start) * this.tickZoom,
+				y1: 0,
+				x2: this.MARGIN_LEFT + (regionEndTick - sectionTickRange.start) * this.tickZoom,
+				y2: 0,
+				showKeyChange: this.songData.keyChanges[currentKeyChangeIndex].tick == currentRegionStart,
+				showMeterChange: this.songData.meterChanges[currentMeterChangeIndex].tick == currentRegionStart,
+				key: this.songData.keyChanges[currentKeyChangeIndex],
+				meter: this.songData.meterChanges[currentMeterChangeIndex],
+				notes: notes
+			};
+			
+			regions.push(region);
+			this.viewRegions.push(region);
+			
+			currentRegionStart = regionEndTick;
+			
+			if (nextKeyChangeTick == nextMeterChangeTick && willChangeKey && willChangeMeter)
 			{
-				var chord = this.songData.chords[n];
-				
-				if (chord.tick + chord.duration <= block.tick || chord.tick >= block.tick + block.duration)
-					continue;
-				
-				var chordPos = this.getChordPosition(block, chord.tick, chord.duration);
-				block.chords.push(
-				{
-					chordIndex: n,
-					tick: chord.tick,
-					duration: chord.duration,
-					resizeHandleL: chordPos.resizeHandleL,
-					resizeHandleR: chordPos.resizeHandleR,
-					x1: chordPos.x1,
-					y1: chordPos.y1,
-					x2: chordPos.x2,
-					y2: chordPos.y2
-				});
+				currentKeyChangeIndex++;
+				currentMeterChangeIndex++;
 			}
-			
-			// If this is the final block, we can stop now.
-			if (nextIsWhat == NEXT_IS_NONE)
-				break;
-			
-			// Or else, add a new block for the next iteration.
-			this.viewBlocks.push(
+			else if (nextKeyChangeTick < nextMeterChangeTick && willChangeKey)
 			{
-				tick: tick,
-				duration: 0,
-				key: block.key,
-				meter: block.meter,
-				notes: [],
-				chords: [],
-				x1: x,
-				y1: blockY1,
-				x2: x,
-				y2: blockY2
-			});
+				currentKeyChangeIndex++;
+			}
+			else if (nextMeterChangeTick < nextKeyChangeTick && willChangeMeter)
+			{
+				currentMeterChangeIndex++;
+			}
+		}
+		
+		// Add the section representation.
+		var sectionHeight =
+			this.HEADER_HEIGHT +
+			(highestNoteRow - lowestNoteRow) * this.NOTE_HEIGHT +
+			this.CHORD_NOTE_SEPARATION + this.CHORD_HEIGHT;
 			
-			curBlock++;
+		for (var r = 0; r < regions.length; r++)
+		{
+			regions[r].lowestNoteRow = lowestNoteRow;
+			regions[r].highestNoteRow = highestNoteRow;
+			regions[r].y1 = currentY;
+			regions[r].y2 = currentY + sectionHeight;
 		}
 		
-		// Apply key/meter changes to the next block.
-		if (nextIsWhat == NEXT_IS_KEYCHANGE)
-		{
-			this.viewKeyChanges[this.viewKeyChanges.length - 1].blockIndex = curBlock;
-			this.viewBlocks[curBlock].key = this.songData.keyChanges[curKeyChange - 1];
-		}
-		
-		else if (nextIsWhat == NEXT_IS_METERCHANGE)
-		{
-			this.viewMeterChanges[this.viewMeterChanges.length - 1].blockIndex = curBlock;
-			this.viewBlocks[curBlock].meter = this.songData.meterChanges[curMeterChange - 1];
-		}
+		currentY += sectionHeight + this.SECTION_SEPARATION;
 	}
+	
+	this.canvas.height = currentY;
 }
 
 
-// Returns the bounds of the given row's note's representation rectangle.
-SongEditor.prototype.getNotePosition = function(block, row, tick, duration)
+SongEditor.prototype.getNotePosition = function(region, row, tick, duration)
 {
-	var blockTick = tick - block.tick;
-	var noteAreaHeight = this.canvasHeight - this.MARGIN_TOP - this.HEADER_MARGIN - this.CHORD_HEIGHT - this.CHORDNOTE_MARGIN;
-	var firstRow = 7 * 3;
-	var rowY = this.getYForRow(block, row);
+	var x1 = region.x1 + (tick - region.tick) * this.tickZoom;
+	var y1 = region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - (row - region.lowestNoteRow + 1) * this.NOTE_HEIGHT;
+	
 	return {
-		resizeHandleL: block.x1 + blockTick * this.tickZoom,
-		resizeHandleR: block.x1 + (blockTick + duration) * this.tickZoom,
-		x1: block.x1 + Math.max(0, (blockTick * this.tickZoom) + this.NOTE_MARGIN_HOR),
-		x2: block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom - this.NOTE_MARGIN_HOR),
-		y1: rowY - this.NOTE_HEIGHT + this.NOTE_MARGIN_VER,
-		y2: rowY - this.NOTE_MARGIN_VER
-	};
-}
-
-
-// Returns the bounds of the given chord's representation rectangle.
-SongEditor.prototype.getChordPosition = function(block, tick, duration)
-{
-	var blockTick = tick - block.tick;
-	return {
-		resizeHandleL: block.x1 + blockTick * this.tickZoom,
-		resizeHandleR: block.x1 + (blockTick + duration) * this.tickZoom,
-		x1: block.x1 + Math.max(0, (blockTick * this.tickZoom) + this.NOTE_MARGIN_HOR),
-		x2: block.x1 + Math.min(block.x2 - block.x1, (blockTick + duration) * this.tickZoom - this.NOTE_MARGIN_HOR),
-		y1: block.y2 - this.CHORD_HEIGHT,
-		y2: block.y2
+		x1: x1,
+		y1: y1,
+		x2: x1 + duration * this.tickZoom,
+		y2: y1 + this.NOTE_HEIGHT
 	};
 }

@@ -1,5 +1,6 @@
-function SongData()
+function SongData(theory)
 {
+	this.theory = theory;
 	this.clear();
 }
 
@@ -9,6 +10,8 @@ function SongDataNote(tick, duration, pitch)
 	this.tick = tick;
 	this.duration = duration;
 	this.pitch = pitch;
+	this.startSection = -1;
+	this.endSection = -1;
 }
 
 
@@ -18,6 +21,8 @@ function SongDataChord(tick, duration, chord, rootPitch)
 	this.duration = duration;
 	this.chord = chord;
 	this.rootPitch = rootPitch;
+	this.startSection = -1;
+	this.endSection = -1;
 }
 
 
@@ -26,6 +31,7 @@ function SongDataKeyChange(tick, scale, tonicPitch)
 	this.tick = tick;
 	this.scale = scale;
 	this.tonicPitch = tonicPitch;
+	this.section = -1;
 }
 
 
@@ -34,6 +40,13 @@ function SongDataMeterChange(tick, numerator, denominator)
 	this.tick = tick;
 	this.numerator = numerator;
 	this.denominator = denominator;
+	this.section = -1;
+}
+
+
+function SongSectionBreak(tick)
+{
+	this.tick = tick;
 }
 
 
@@ -59,14 +72,15 @@ function arrayAddSortedByTick(arr, obj)
 SongData.prototype.clear = function()
 {
 	this.beatsPerMinute = 120;
-	this.ticksPerBeat = 960;
-	this.lastTick = 9600;
+	this.ticksPerWholeNote = 960;
+	this.endTick = this.ticksPerWholeNote * 4;
 	this.notes = [];
 	this.chords = [];
 	this.keyChanges = [];
 	this.meterChanges = [];
+	this.sectionBreaks = [];
 	
-	this.addKeyChange(new SongDataKeyChange(0, theory.scales[0], theory.C));
+	this.addKeyChange(new SongDataKeyChange(0, this.theory.scales[0], this.theory.C));
 	this.addMeterChange(new SongDataMeterChange(0, 4, 4));
 }
 
@@ -90,7 +104,7 @@ SongData.prototype.isValidDuration = function(duration)
 // Returns whether the given pitch value is valid.
 SongData.prototype.isValidPitch = function(pitch)
 {
-	return (pitch >= theory.getMinPitch() && pitch <= theory.getMaxPitch() && (pitch % 1) == 0)
+	return (pitch >= this.theory.getMinPitch() && pitch <= this.theory.getMaxPitch() && (pitch % 1) == 0)
 }
 
 
@@ -160,6 +174,26 @@ SongData.prototype.addMeterChange = function(meterChange)
 }
 
 
+// Adds a section break to the data, and returns whether it was successful.
+SongData.prototype.addSectionBreak = function(sectionBreak)
+{
+	if (!this.isValidTick(sectionBreak.tick) || sectionBreak.tick == 0 || sectionBreak.tick == this.endTick)
+		return false;
+	
+	// Remove meter changes which were at the same tick.
+	for (var i = this.sectionBreaks.length - 1; i >= 0; i--)
+	{
+		if (this.sectionBreaks[i].tick == sectionBreak.tick)
+		{
+			this.sectionBreaks.splice(i, 1);
+		}
+	}
+	
+	arrayAddSortedByTick(this.sectionBreaks, sectionBreak);
+	return true;
+}
+
+
 // Remove or truncate notes that fall between tickBegin and tickEnd, optionally only if
 // their pitches match the given pitch. Pass null for pitch to not consider pitches.
 SongData.prototype.removeNotesByTickRange = function(tickBegin, tickEnd, pitch)
@@ -211,6 +245,21 @@ SongData.prototype.removeChordsByTickRange = function(tickBegin, tickEnd)
 			otherChord.duration = tickBegin - otherChord.tick;
 		}
 	}
+}
+
+
+// Gets the start and end ticks for the given section index.
+SongData.prototype.getSectionTickRange = function(sectionIndex)
+{
+	var startTick = 0;
+	if (sectionIndex - 1 >= 0)
+		startTick = this.sectionBreaks[sectionIndex - 1].tick;
+	
+	var endTick = this.endTick;
+	if (sectionIndex < this.sectionBreaks.length)
+		endTick = this.sectionBreaks[sectionIndex].tick;
+
+	return { start: startTick, end: endTick };
 }
 
 

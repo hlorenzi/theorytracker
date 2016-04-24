@@ -1,8 +1,7 @@
-var theory = new Theory();
-
-
 function Theory()
 {
+	var that = this;
+	
 	var C  = 0;
 	var Cs = 1;
 	var D  = 2;
@@ -203,8 +202,8 @@ function Theory()
 	// indicates that the pitch falls between scale degrees.
 	this.getRowForPitch = function(pitch, scale, tonicPitch)
 	{
-		var pitchOctave = theory.getOctaveForPitch(pitch - tonicPitch);
-		var pitchDegree = theory.getDegreeForPitch(pitch, scale, tonicPitch);
+		var pitchOctave = that.getOctaveForPitch(pitch - tonicPitch);
+		var pitchDegree = that.getDegreeForPitch(pitch, scale, tonicPitch);
 		
 		var offset = 0;
 		if (tonicPitch != 0)
@@ -222,7 +221,7 @@ function Theory()
 		
 		var offset = 0;
 		if (tonicPitch != 0)
-			offset = Math.floor(theory.getRowForPitch(tonicPitch, scale, 0));
+			offset = Math.floor(that.getRowForPitch(tonicPitch, scale, 0));
 		
 		return scale.pitches[Math.floor(row + 7 - offset) % 7] + tonicPitch + Math.floor((row - offset) / 7) * 12;
 	};

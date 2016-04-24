@@ -1,4 +1,4 @@
-function SongEditor(canvas, songData, synth)
+function SongEditor(canvas, theory, synth, songData)
 {
 	this.canvas = canvas;
 	this.ctx = canvas.getContext("2d");
@@ -30,13 +30,9 @@ function SongEditor(canvas, songData, synth)
 	// The tick grid which the cursor is snapped to. 
 	this.tickSnap = 960 / 16;
 	
-	// These arrays store representation objects, which tell things like
+	// This stores sections' representation objects, which tell things like
 	// the object positioning/layout, and where they can be interacted with the mouse.
-	this.viewBlocks = [];
-	this.viewNotes = [];
-	this.viewChords = [];
-	this.viewKeyChanges = [];
-	this.viewMeterChanges = [];
+	this.viewRegions = [];
 	
 	// These control scrolling.
 	this.rowAtCenter = 8 * 5;
@@ -69,25 +65,24 @@ function SongEditor(canvas, songData, synth)
 	this.hoverStretchL = false;
 	
 	// Layout constants.
-	this.WHOLE_NOTE_DURATION = 960;
 	this.MARGIN_LEFT = 16;
 	this.MARGIN_RIGHT = 16;
 	this.MARGIN_TOP = 4;
 	this.MARGIN_BOTTOM = 8;
-	this.HEADER_MARGIN = 40;
+	this.SECTION_SEPARATION = 10;
+	this.HEADER_HEIGHT = 40;
 	this.NOTE_HEIGHT = 14;
 	this.NOTE_MARGIN_HOR = 0.5;
 	this.NOTE_MARGIN_VER = 0.5;
 	this.NOTE_STRETCH_MARGIN = 2;
 	this.CHORD_HEIGHT = 60;
-	this.CHORDNOTE_MARGIN = 10;
+	this.CHORD_NOTE_SEPARATION = 10;
 	this.CHORD_ORNAMENT_HEIGHT = 5;
-	this.KEYCHANGE_BAR_WIDTH = 27;
-	this.METERCHANGE_BAR_WIDTH = 4;
 	
-	// Finally, set the song data, and the synth manager.
-	this.setData(songData);
+	// Finally, set the song data, and external dependencies.
+	this.theory = theory;
 	this.synth = synth;
+	this.setData(songData);
 }
 
 
