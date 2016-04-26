@@ -73,5 +73,5 @@ function testOnLoad()
 	var editor = new SongEditor(canvas, theory, synth, song);
 	editor.refreshCanvas();
 	mainEditor = editor;
-	//var toolbox = new Toolbox(document.getElementById("toolboxDiv"), editor, synth);
+	var toolbox = new Toolbox(document.getElementById("toolboxDiv"), editor, theory, synth);
 }

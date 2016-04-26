@@ -160,14 +160,14 @@ SongEditor.prototype.getZoneAtPosition = function(pos)
 }
 
 
-SongEditor.prototype.getBlockIndexAtTick = function(tick)
+SongEditor.prototype.getRegionAtTick = function(tick)
 {
-	for (var b = 0; b < this.viewBlocks.length; b++)
+	for (var r = 0; r < this.viewRegions.length; r++)
 	{
-		var block = this.viewBlocks[b];
+		var region = this.viewRegions[r];
 		
-		if (tick >= block.tick && tick < block.tick + block.duration)
-			return b;
+		if (tick >= region.tick && tick < region.tick + region.duration)
+			return r;
 	}
 	
 	return -1;
@@ -176,9 +176,9 @@ SongEditor.prototype.getBlockIndexAtTick = function(tick)
 
 SongEditor.prototype.getKeyAtTick = function(tick)
 {
-	var blockIndex = this.getBlockIndexAtTick(tick);
-	if (blockIndex >= 0)
-		return this.viewBlocks[blockIndex].key;
+	var index = this.getRegionAtTick(tick);
+	if (index >= 0)
+		return this.viewRegions[index].key;
 	
 	return null;
 }
@@ -186,9 +186,9 @@ SongEditor.prototype.getKeyAtTick = function(tick)
 
 SongEditor.prototype.getMeterAtTick = function(tick)
 {
-	var blockIndex = this.getBlockIndexAtTick(tick);
-	if (blockIndex >= 0)
-		return this.viewBlocks[blockIndex].meter;
+	var index = this.getRegionAtTick(tick);
+	if (index >= 0)
+		return this.viewRegions[index].meter;
 	
 	return null;
 }

@@ -34,22 +34,22 @@ function Theory()
 	this.scales =
 	[
 		{ name: "Major", pitches: [ C,  D,  E,  F,  G,  A,  B  ] },
-		{ name: "Dorian" },
-		{ name: "Phrygian" },
-		{ name: "Lydian" },
-		{ name: "Mixolydian" },
-		{ name: "Natural Minor" },
-		{ name: "Locrian" },
+		{ name: "Dorian", pitches: [] },
+		{ name: "Phrygian", pitches: [] },
+		{ name: "Lydian", pitches: [] },
+		{ name: "Mixolydian", pitches: [] },
+		{ name: "Natural Minor", pitches: [] },
+		{ name: "Locrian", pitches: [] },
 		
 		{ name: "Harmonic Minor", pitches: [ C,  D,  Ds, F,  G,  Gs, B  ] },
 		
 		{ name: "Double Harmonic", pitches: [ C,  Cs, E,  F,  G,  Gs, B  ] },
-		{ name: "Lydian ♯2 ♯6" },
-		{ name: "Ultraphrygian" },
-		{ name: "Hungarian Minor" },
-		{ name: "Oriental" },
-		{ name: "Ionian Augmented ♯2" },
-		{ name: "Locrian ♭♭3 ♭♭7" },
+		{ name: "Lydian ♯2 ♯6", pitches: [] },
+		{ name: "Ultraphrygian", pitches: [] },
+		{ name: "Hungarian Minor", pitches: [] },
+		{ name: "Oriental", pitches: [] },
+		{ name: "Ionian Augmented ♯2", pitches: [] },
+		{ name: "Locrian ♭♭3 ♭♭7", pitches: [] },
 		
 		{ name: "Phrygian Dominant", pitches: [ C,  Cs, E,  F,  G,  Gs, As ] },
 	];
@@ -57,9 +57,8 @@ function Theory()
 	// Generate the other modes of the non-null scales.
 	for (var i = 0; i < this.scales.length; i++)
 	{
-		if (!this.scales[i].hasOwnProperty("pitches"))
+		if (this.scales[i].pitches.length == 0)
 		{
-			this.scales[i].pitches = [];
 			var offset = this.scales[i - 1].pitches[1];
 			for (var j = 0; j < 7; j++)
 			{
@@ -278,10 +277,10 @@ function Theory()
 	// Plays a sample of the given scale.
 	this.playScaleSample = function(synth, scale, tonicPitch)
 	{
-		for (var k = 0; k < scale.degrees.length; k++)
+		for (var k = 0; k < scale.pitches.length; k++)
 		{
-			synth.playNoteDelayed((tonicPitch + scale.degrees[k]) + 60, k * 60, 960 / 8, 1);
+			synth.playNoteDelayed((tonicPitch + scale.pitches[k]) + 60, k * 60, 960 / 8, 1);
 		}
-		synth.playNoteDelayed((tonicPitch + scale.degrees[0] + 12) + 60, scale.degrees.length * 60, 960 / 8, 1);
+		synth.playNoteDelayed((tonicPitch + scale.pitches[0] + 12) + 60, scale.pitches.length * 60, 960 / 8, 1);
 	}
 }

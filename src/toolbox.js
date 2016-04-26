@@ -1,5 +1,9 @@
-function Toolbox(div, editor, synth)
+function Toolbox(div, editor, theory, synth)
 {
+	this.editor = editor;
+	this.theory = theory;
+	this.synth = synth;
+	
 	this.div = div;
 	this.playing = false;
 	this.playTimer = null;
@@ -101,7 +105,7 @@ function Toolbox(div, editor, synth)
 	this.keyMeterLayout.cells[0][0].appendChild(document.createElement("br"));
 	
 	this.buttonAddKeyChange = document.createElement("button");
-	this.buttonAddKeyChange.innerHTML = "Add Key Change";
+	this.buttonAddKeyChange.innerHTML = "Insert Key Change";
 	this.buttonAddKeyChange.className = "toolboxButton";
 	this.keyMeterLayout.cells[0][0].appendChild(this.buttonAddKeyChange);
 	
@@ -145,7 +149,7 @@ function Toolbox(div, editor, synth)
 	this.keyMeterLayout.cells[0][1].appendChild(document.createElement("br"));
 	
 	this.buttonAddMeterChange = document.createElement("button");
-	this.buttonAddMeterChange.innerHTML = "Add Meter Change";
+	this.buttonAddMeterChange.innerHTML = "Insert Meter Change";
 	this.buttonAddMeterChange.className = "toolboxButton";
 	this.keyMeterLayout.cells[0][1].appendChild(this.buttonAddMeterChange);
 	
@@ -209,9 +213,6 @@ function Toolbox(div, editor, synth)
 	
 	
 	// Set up callbacks.
-	this.editor = editor;
-	this.synth = synth;
-	
 	var that = this;
 	editor.addOnCursorChanged(function() { that.refresh(); });
 	editor.addOnSelectionChanged(function() { that.refresh(); });
@@ -224,7 +225,7 @@ function Toolbox(div, editor, synth)
 	this.buttonKeyChangeListen.onclick = function()
 	{
 		var keyChange = that.editor.getKeyAtTick(that.editor.cursorTick);
-		theory.playScaleSample(that.synth, keyChange.scale, keyChange.tonicPitch);
+		that.theory.playScaleSample(that.synth, keyChange.scale, keyChange.tonicPitch);
 	}
 	
 	this.buttonAddKeyChange.onclick = function(ev)
@@ -430,9 +431,9 @@ Toolbox.prototype.refresh = function()
 	if (keyChange != null)
 	{
 		var scaleIndex = 0;
-		for (var i = 0; i < theory.scales.length; i++)
+		for (var i = 0; i < this.theory.scales.length; i++)
 		{
-			if (keyChange.scale == theory.scales[i])
+			if (keyChange.scale == this.theory.scales[i])
 			{
 				scaleIndex = i;
 				break;
@@ -444,7 +445,7 @@ Toolbox.prototype.refresh = function()
 		for (var i = 0; i < 12; i++)
 		{
 			var pitch = i;
-			this.keyChangeTonicOptions[i].innerHTML = theory.getNameForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
+			this.keyChangeTonicOptions[i].innerHTML = this.theory.getNameForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
 		}
 		
 		this.keyChangeTonicSelect.selectedIndex = keyChange.tonicPitch;
@@ -468,18 +469,18 @@ Toolbox.prototype.refresh = function()
 	
 	// Refresh note tools.
 	if (keyChange == null)
-		keyChange = new SongDataKeyChange(0, theory.scales[0], theory.C);
+		keyChange = new SongDataKeyChange(0, this.theory.scales[0], this.theory.C);
 	
 	for (var i = 0; i < 12; i++)
 	{
 		var pitch = (i + keyChange.tonicPitch) % 12;
-		this.buttonNotes[i].innerHTML = theory.getNameForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
+		this.buttonNotes[i].innerHTML = this.theory.getNameForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
 		
-		var degree = theory.getDegreeForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
+		var degree = this.theory.getDegreeForPitch(pitch, keyChange.scale, keyChange.tonicPitch);
 		
 		if ((degree % 1) == 0)
 		{
-			var color = theory.getColorForDegree(degree);
+			var color = this.theory.getColorForDegree(degree);
 			this.buttonNotes[i].style.background = color;
 			this.buttonNotes[i].style.color = "#000000";
 		}
@@ -499,10 +500,10 @@ Toolbox.prototype.refresh = function()
 					return;
 				
 				ev.preventDefault();
-				theory.playNoteSample(that.synth, thisPitch);
-				var note = new SongDataNote(that.editor.cursorTick, that.editor.WHOLE_NOTE_DURATION / 4, thisPitch);
+				that.theory.playNoteSample(that.synth, thisPitch);
+				var note = new SongDataNote(that.editor.cursorTick, that.editor.songData.ticksPerWholeNote / 4, thisPitch);
 				that.editor.songData.addNote(note);
-				that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 4;
+				that.editor.cursorTick += that.editor.songData.ticksPerWholeNote / 4;
 				that.editor.showCursor = true;
 				that.editor.cursorZone = that.editor.CURSOR_ZONE_NOTES;
 				that.editor.unselectAll();
@@ -532,9 +533,9 @@ Toolbox.prototype.refresh = function()
 			if ((i + 4) >= 7)
 				pitch3 += 12;
 			
-			var color = theory.getColorForDegree(i);
-			var chord = theory.getFirstFittingChordForPitches([pitch1, pitch2, pitch3]);
-			var numeral = theory.getRomanNumeralForPitch(pitch1, keyChange.scale, keyChange.tonicPitch);
+			var color = this.theory.getColorForDegree(i);
+			var chord = this.theory.getFirstFittingChordForPitches([pitch1, pitch2, pitch3]);
+			var numeral = this.theory.getRomanNumeralForPitch(pitch1, keyChange.scale, keyChange.tonicPitch);
 			
 			var romanText = chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 			romanText += "<sup>" + chord.romanSup + "</sup>";
@@ -555,10 +556,10 @@ Toolbox.prototype.refresh = function()
 						return;
 					
 					ev.preventDefault();
-					theory.playChordSample(that.synth, thisChord, thisPitch);
-					var chord = new SongDataChord(that.editor.cursorTick, that.editor.WHOLE_NOTE_DURATION / 2, thisChord, thisPitch);
+					that.theory.playChordSample(that.synth, thisChord, thisPitch);
+					var chord = new SongDataChord(that.editor.cursorTick, that.editor.songData.ticksPerWholeNote / 2, thisChord, thisPitch);
 					that.editor.songData.addChord(chord);
-					that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 2;
+					that.editor.cursorTick += that.editor.songData.ticksPerWholeNote / 2;
 					that.editor.showCursor = true;
 					that.editor.cursorZone = that.editor.CURSOR_ZONE_CHORDS;
 					that.editor.unselectAll();
@@ -582,15 +583,15 @@ Toolbox.prototype.refresh = function()
 		for (var i = 0; i < 12; i++)
 		{
 			var rootPitch = (keyChange.tonicPitch + i) % 12;
-			var degree = theory.getDegreeForPitch(rootPitch, keyChange.scale, keyChange.tonicPitch);
+			var degree = this.theory.getDegreeForPitch(rootPitch, keyChange.scale, keyChange.tonicPitch);
 			
 			var index = inKeyIndex;
 			if ((degree % 1) != 0)
 				index = outOfKeyIndex;
 			
-			var color = theory.getColorForDegree(degree);
-			var chord = theory.chords[chordCategory - 1];
-			var numeral = theory.getRomanNumeralForPitch(rootPitch, keyChange.scale, keyChange.tonicPitch);
+			var color = this.theory.getColorForDegree(degree);
+			var chord = this.theory.chords[chordCategory - 1];
+			var numeral = this.theory.getRomanNumeralForPitch(rootPitch, keyChange.scale, keyChange.tonicPitch);
 			
 			var romanText = chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
 			romanText += "<sup>" + chord.romanSup + "</sup>";
@@ -620,10 +621,10 @@ Toolbox.prototype.refresh = function()
 						return;
 					
 					ev.preventDefault();
-					theory.playChordSample(that.synth, thisChord, thisPitch);
-					var chord = new SongDataChord(that.editor.cursorTick, that.editor.WHOLE_NOTE_DURATION / 2, thisChord, thisPitch);
+					that.theory.playChordSample(that.synth, thisChord, thisPitch);
+					var chord = new SongDataChord(that.editor.cursorTick, that.editor.songData.ticksPerWholeNote / 2, thisChord, thisPitch);
 					that.editor.songData.addChord(chord);
-					that.editor.cursorTick += that.editor.WHOLE_NOTE_DURATION / 2;
+					that.editor.cursorTick += that.editor.songData.ticksPerWholeNote / 2;
 					that.editor.showCursor = true;
 					that.editor.cursorZone = that.editor.CURSOR_ZONE_CHORDS;
 					that.editor.unselectAll();
@@ -651,7 +652,7 @@ Toolbox.prototype.editKeyChange = function()
 	if (keyChange == null)
 		return;
 	
-	keyChange.scale = theory.scales[this.keyChangeScaleSelect.selectedIndex];
+	keyChange.scale = this.theory.scales[this.keyChangeScaleSelect.selectedIndex];
 	keyChange.tonicPitch = this.keyChangeTonicSelect.selectedIndex;
 	
 	this.editor.refreshRepresentation();
@@ -683,7 +684,7 @@ Toolbox.prototype.editMeterChange = function()
 Toolbox.prototype.processPlayback = function()
 {
 	var bpm = this.editor.songData.beatsPerMinute;
-	var deltaTicks = bpm / 60 / 60 * (960 / 4);
+	var deltaTicks = bpm / 60 / 60 * (this.editor.songData.ticksPerWholeNote / 4);
 	
 	var lastCursorTick = this.editor.cursorTick;
 	this.editor.cursorTick += deltaTicks;
@@ -704,7 +705,7 @@ Toolbox.prototype.processPlayback = function()
 		if (chord.tick + chord.duration > lastCursorTick && chord.tick < this.editor.cursorTick &&
 			!(chord.tick + chord.duration > lastCursorTick && chord.tick + chord.duration < this.editor.cursorTick))
 		{
-			var halfTick = this.editor.WHOLE_NOTE_DURATION / 2;
+			var halfTick = this.editor.songData.ticksPerWholeNote / 2;
 			var quarterTick = halfTick / 2;
 			var eighthTick = quarterTick / 2;
 			
