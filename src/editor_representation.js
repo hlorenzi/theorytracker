@@ -117,23 +117,36 @@ SongEditor.prototype.refreshRepresentation = function()
 			
 			// Add region to list.
 			var region = {
+				section: i,
+				sectionTick: sectionTickRange.start,
+				sectionDuration: sectionDuration,
 				tick: currentRegionStart,
 				duration: regionEndTick - currentRegionStart,
 				x1: this.MARGIN_LEFT + (currentRegionStart - sectionTickRange.start) * this.tickZoom,
 				y1: 0,
 				x2: this.MARGIN_LEFT + (regionEndTick - sectionTickRange.start) * this.tickZoom,
 				y2: 0,
+				
+				interactBBox: {
+					x1: this.MARGIN_LEFT + (currentRegionStart - sectionTickRange.start) * this.tickZoom,
+					y1: 0,
+					x2: this.MARGIN_LEFT + (regionEndTick - sectionTickRange.start) * this.tickZoom,
+					y2: 0,
+				},
+				
 				key: key,
 				meter: meter,
 				notes: notes,
 				chords: chords,
 				keyChanges: keyChanges,
-				meterChanges: meterChanges
+				meterChanges: meterChanges,
+				sectionKnob: false
 			};
 			
 			regions.push(region);
 			this.viewRegions.push(region);
 			
+			// Prepare for the next region.
 			currentRegionStart = regionEndTick;
 			
 			if (nextKeyChangeTick == nextMeterChangeTick && willChangeKey && willChangeMeter)
@@ -151,7 +164,7 @@ SongEditor.prototype.refreshRepresentation = function()
 			}
 		}
 		
-		// Add the section representation.
+		// Prepare for the next section.
 		var sectionHeight =
 			this.HEADER_HEIGHT +
 			(highestNoteRow - lowestNoteRow) * this.NOTE_HEIGHT +
@@ -163,6 +176,18 @@ SongEditor.prototype.refreshRepresentation = function()
 			regions[r].highestNoteRow = highestNoteRow;
 			regions[r].y1 = currentY;
 			regions[r].y2 = currentY + sectionHeight;
+			
+			regions[r].interactBBox.y1 = currentY;
+			regions[r].interactBBox.y2 = currentY + sectionHeight + this.SECTION_SEPARATION;
+			
+			if (r == 0)
+				regions[r].interactBBox.x1 = 0;
+			
+			if (r == regions.length - 1)
+			{
+				regions[r].sectionKnob = true;
+				regions[r].interactBBox.x2 = this.canvasWidth;
+			}
 		}
 		
 		currentY += sectionHeight + this.SECTION_SEPARATION;
@@ -224,5 +249,19 @@ SongEditor.prototype.getMeterChangePosition = function(region, tick)
 		y1: y1,
 		x2: region.x2,
 		y2: y1 + this.HEADER_LINE_HEIGHT
+	};
+}
+
+
+SongEditor.prototype.getSectionKnobPosition = function(region)
+{
+	var x1 = region.x1 + (region.duration) * this.tickZoom - 12;
+	var y1 = region.y1;
+	
+	return {
+		x1: x1,
+		y1: y1,
+		x2: x1 + 24,
+		y2: y1 + this.HEADER_HEIGHT
 	};
 }

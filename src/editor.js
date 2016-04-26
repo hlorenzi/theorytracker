@@ -55,12 +55,14 @@ function SongEditor(canvas, theory, synth, songData)
 	this.mouseDragOrigin = { x: 0, y: 0 };
 	this.mouseStretchPivotTick = 0;
 	this.mouseStretchOriginTick = 0;
+	this.mouseDraggedSectionKnob = -1;
 	
 	// These indicate which object the mouse is currently hovering over.
 	this.hoverNote = -1;
 	this.hoverChord = -1;
 	this.hoverKeyChange = -1;
 	this.hoverMeterChange = -1;
+	this.hoverSectionKnob = -1;
 	this.hoverStretchR = false;
 	this.hoverStretchL = false;
 	

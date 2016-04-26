@@ -24,45 +24,59 @@ SongEditor.prototype.handleMouseMove = function(ev)
 		if (regionIndex != -1)
 		{
 			var region = this.viewRegions[regionIndex];
-			if (isPointInside(mousePos, region))
+			if (isPointInside(mousePos, region.interactBBox))
 			{
-				// Check for notes.
-				for (var n = 0; n < region.notes.length; n++)
+				// Check for the section knob.
+				if (region.sectionKnob)
 				{
-					var note = this.songData.notes[region.notes[n]];
-					var noteRow = this.theory.getRowForPitch(note.pitch, region.key.scale, region.key.tonicPitch);
-					var notePos = this.getNotePosition(region, noteRow, note.tick, note.duration);
-					
-					if (isPointInside(mousePos, notePos))
+					var knobPos = this.getSectionKnobPosition(region);
+					if (isPointInside(mousePos, knobPos))
 					{
-						this.hoverNote = region.notes[n];
+						this.canvas.style.cursor = "ew-resize";
+						this.hoverSectionKnob = region.section;
+					}
+				}
+				
+				// Check for notes.
+				if (this.hoverSectionKnob < 0)
+				{
+					for (var n = 0; n < region.notes.length; n++)
+					{
+						var note = this.songData.notes[region.notes[n]];
+						var noteRow = this.theory.getRowForPitch(note.pitch, region.key.scale, region.key.tonicPitch);
+						var notePos = this.getNotePosition(region, noteRow, note.tick, note.duration);
 						
-						if (mousePos.x <= notePos.x1 + this.NOTE_STRETCH_MARGIN)
+						if (isPointInside(mousePos, notePos) && isPointInside(mousePos, region))
 						{
-							this.canvas.style.cursor = "ew-resize";
-							this.hoverStretchL = true;
-						}
-						else if (mousePos.x >= notePos.x2 - this.NOTE_STRETCH_MARGIN)
-						{
-							this.canvas.style.cursor = "ew-resize";
-							this.hoverStretchR = true;
-						}
-						else
-							this.canvas.style.cursor = "pointer";
+							this.hoverNote = region.notes[n];
+							
+							if (mousePos.x <= notePos.x1 + this.NOTE_STRETCH_MARGIN)
+							{
+								this.canvas.style.cursor = "ew-resize";
+								this.hoverStretchL = true;
+							}
+							else if (mousePos.x >= notePos.x2 - this.NOTE_STRETCH_MARGIN)
+							{
+								this.canvas.style.cursor = "ew-resize";
+								this.hoverStretchR = true;
+							}
+							else
+								this.canvas.style.cursor = "pointer";
 
-						break;
+							break;
+						}
 					}
 				}
 				
 				// Check for chords.
-				if (this.hoverNote < 0)
+				if (this.hoverSectionKnob < 0 && this.hoverNote < 0)
 				{
 					for (var n = 0; n < region.chords.length; n++)
 					{
 						var chord = this.songData.chords[region.chords[n]];
 						var chordPos = this.getChordPosition(region, chord.tick, chord.duration);
 						
-						if (isPointInside(mousePos, chordPos))
+						if (isPointInside(mousePos, chordPos) && isPointInside(mousePos, region))
 						{
 							this.hoverChord = region.chords[n];
 							
@@ -86,7 +100,7 @@ SongEditor.prototype.handleMouseMove = function(ev)
 			}
 			
 			// Check for key changes.
-			if (this.hoverNote < 0 && this.hoverChord < 0)
+			if (this.hoverSectionKnob < 0 && this.hoverNote < 0 && this.hoverChord < 0)
 			{
 				for (var n = 0; n < region.keyChanges.length; n++)
 				{
@@ -103,7 +117,7 @@ SongEditor.prototype.handleMouseMove = function(ev)
 			}
 			
 			// Check for meter changes.
-			if (this.hoverNote < 0 && this.hoverChord < 0 && this.hoverKeyChange < 0)
+			if (this.hoverSectionKnob < 0 && this.hoverNote < 0 && this.hoverChord < 0 && this.hoverKeyChange < 0)
 			{
 				for (var n = 0; n < region.meterChanges.length; n++)
 				{
@@ -130,6 +144,12 @@ SongEditor.prototype.handleMouseMove = function(ev)
 	}
 	
 	else if (this.mouseDragAction == "stretch")
+	{
+		this.canvas.style.cursor = "ew-resize";
+		this.refreshCanvas();
+	}
+	
+	else if (this.mouseDragAction == "stretch-section")
 	{
 		this.canvas.style.cursor = "ew-resize";
 		this.refreshCanvas();
@@ -173,7 +193,14 @@ SongEditor.prototype.handleMouseDown = function(ev)
 	this.showCursor = true;
 	
 	// Start a dragging operation.
-	if (this.hoverNote >= 0)
+	if (this.hoverSectionKnob >= 0)
+	{
+		this.unselectAll();
+		this.showCursor = false;
+		this.mouseDragAction = "stretch-section";
+		this.mouseDraggedSectionKnob = this.hoverSectionKnob;
+	}
+	else if (this.hoverNote >= 0)
 	{
 		this.showCursor = false;
 		if (!this.noteSelections[this.hoverNote])
@@ -262,8 +289,36 @@ SongEditor.prototype.handleMouseUp = function(ev)
 	if (!this.interactionEnabled)
 		return;
 	
+	// Apply dragged section knob.
+	if (this.mouseDown && this.mouseDragAction == "stretch-section")
+	{
+		var regionStretched = null;
+		for (var r = 0; r < this.viewRegions.length; r++)
+		{
+			var region = this.viewRegions[r];
+			if (region.section == this.mouseDraggedSectionKnob && region.sectionKnob)
+			{
+				regionStretched = region;
+				break;
+			}
+		}
+		
+		var draggedKnobTick = this.getSectionKnobDraggedTick(regionStretched, mousePos);
+		
+		if (draggedKnobTick > region.tick + region.duration)
+		{
+			this.songData.insertWhitespace(region.tick + region.duration, draggedKnobTick - region.tick - region.duration);
+			this.refreshRepresentation();
+		}
+		else if (draggedKnobTick < region.tick + region.duration)
+		{
+			this.songData.remove(draggedKnobTick, region.tick + region.duration - draggedKnobTick);
+			this.refreshRepresentation();
+		}
+	}
+	
 	// Apply dragged modifications.
-	if (this.mouseDown && this.mouseDragAction != null && this.mouseDragAction != "scroll")
+	else if (this.mouseDown && this.mouseDragAction != null && this.mouseDragAction != "scroll")
 	{
 		// Store modified objects in a local array and
 		// remove them from the song data.

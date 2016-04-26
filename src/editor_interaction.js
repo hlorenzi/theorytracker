@@ -81,6 +81,7 @@ SongEditor.prototype.clearHover = function()
 	this.hoverMeterChange = -1;
 	this.hoverStretchR = false;
 	this.hoverStretchL = false;
+	this.hoverSectionKnob = -1;
 }
 
 
@@ -114,7 +115,7 @@ SongEditor.prototype.getRegionAtPosition = function(pos)
 	{
 		var region = this.viewRegions[r];
 		
-		if (isPointInside(pos, region))
+		if (isPointInside(pos, region.interactBBox))
 			return r;
 	}
 	
@@ -130,6 +131,12 @@ SongEditor.prototype.getTickAtPosition = function(pos)
 	
 	var region = this.viewRegions[regionIndex];
 	return Math.round((region.tick + Math.min(region.duration, Math.ceil((pos.x - region.x1) / this.tickZoom))) / this.tickSnap) * this.tickSnap;
+}
+
+
+SongEditor.prototype.getTickAtPositionAtRegion = function(region, pos)
+{
+	return Math.round((region.tick + Math.ceil((pos.x - region.x1) / this.tickZoom)) / this.tickSnap) * this.tickSnap;
 }
 
 
@@ -365,4 +372,12 @@ SongEditor.prototype.getMeterChangeDragged = function(meterChange, dragPosition)
 	// TODO: Should move proportionally, like notes.
 	else if (this.mouseDragAction == "stretch")
 		return { tick: meterChange.tick };
+}
+
+
+SongEditor.prototype.getSectionKnobDraggedTick = function(region, dragPosition)
+{
+	var tickOffset = this.getTickAtPositionAtRegion(region, dragPosition) - this.getTickAtPosition(this.mouseDragOrigin);
+	
+	return Math.max(region.sectionTick, region.sectionTick + region.sectionDuration + tickOffset);
 }

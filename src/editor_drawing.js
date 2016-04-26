@@ -25,61 +25,18 @@ SongEditor.prototype.refreshCanvas = function()
 	{
 		var region = this.viewRegions[r];
 		
-		// Draw region boundaries.
-		this.ctx.strokeStyle = SECTION_BORDER_COLOR;
-		this.ctx.lineWidth = 2;
-		this.ctx.beginPath();
-		
-			this.ctx.strokeRect(
-				region.x1,
-				region.y1 + this.HEADER_HEIGHT,
-				region.x2 - region.x1,
-				(region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION) - (region.y1 + this.HEADER_HEIGHT));
-			
-			this.ctx.strokeRect(
-				region.x1,
-				region.y2 - this.CHORD_HEIGHT,
-				region.x2 - region.x1,
-				this.CHORD_HEIGHT);
-			
-		this.ctx.stroke();
-		
-		// Draw note lines.
-		this.ctx.strokeStyle = NOTE_LINE_COLOR;
-		this.ctx.beginPath();
-		for (var n = 1; n < region.highestNoteRow - region.lowestNoteRow; n++)
+		// Draw section-stretched or regular region.
+		if (this.mouseDragAction == "stretch-section" && this.mouseDraggedSectionKnob == region.section)
 		{
-			var y = region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - n * this.NOTE_HEIGHT;
-			this.ctx.moveTo(region.x1 + 1, y);
-			this.ctx.lineTo(region.x2 - 1, y);
-		}
-		this.ctx.stroke();
-	
-		// Draw beat lines.
-		var beatCount = 0;
-		for (var n = region.meter.tick - region.tick; n < region.duration; n += this.songData.ticksPerWholeNote / region.meter.denominator)
-		{
-			if (n != 0)
-			{
-				this.ctx.strokeStyle = (beatCount == 0 ? MEASURE_COLOR_STRONG : MEASURE_COLOR);
-				this.ctx.beginPath();
-					this.ctx.moveTo(
-						region.x1 + n * this.tickZoom,
-						region.y1 + this.HEADER_HEIGHT + 1);
-					this.ctx.lineTo(
-						region.x1 + n * this.tickZoom,
-						region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - 1);
-					this.ctx.moveTo(
-						region.x1 + n * this.tickZoom,
-						region.y2 - this.CHORD_HEIGHT + 1);
-					this.ctx.lineTo(
-						region.x1 + n * this.tickZoom,
-						region.y2 - 1);
-				this.ctx.stroke();
-			}
+			var knobDraggedTick = this.getSectionKnobDraggedTick(region, this.mouseDragCurrent);
 			
-			beatCount = (beatCount + 1) % region.meter.numerator;
+			if (region.sectionKnob && knobDraggedTick > region.tick + region.duration)
+				this.drawRegion(region, region.tick, knobDraggedTick - region.tick);
+			else
+				this.drawRegion(region, region.tick, region.duration, false);
 		}
+		else
+			this.drawRegion(region, region.tick, region.duration, false);
 		
 		this.ctx.save();
 		this.ctx.rect(
@@ -188,6 +145,18 @@ SongEditor.prototype.refreshCanvas = function()
 				this.drawMeterChange(region, meterChange, meterChangeDragged.tick, meterChangeIndex == this.hoverMeterChange, true);
 			}
 		}
+		
+		// Draw section knob and section deletion.
+		if (this.mouseDragAction == "stretch-section" && this.mouseDraggedSectionKnob == region.section)
+		{
+			var knobDraggedTick = this.getSectionKnobDraggedTick(region, this.mouseDragCurrent);
+			this.drawSectionKnob(region, knobDraggedTick, region.section == this.hoverSectionKnob, true, false);
+			
+			if (knobDraggedTick < region.tick + region.duration)
+				this.drawSectionDeletion(region, knobDraggedTick, region.tick + region.duration - knobDraggedTick);
+		}
+		else if (region.sectionKnob)
+			this.drawSectionKnob(region, region.tick + region.duration, region.section == this.hoverSectionKnob, false, true);
 		
 		// Draw cursor.
 		if (this.showCursor && this.cursorTick >= region.tick && this.cursorTick <= region.tick + region.duration)
@@ -366,6 +335,8 @@ SongEditor.prototype.drawKeyChange = function(region, keyChange, tick, hovering,
 	var x = region.x1 + (tick - region.tick) * this.tickZoom;
 	
 	this.ctx.strokeStyle = COLOR;
+	this.ctx.lineWidth = 2;
+	
 	this.ctx.beginPath();
 		this.ctx.moveTo(x, region.y1);
 		this.ctx.lineTo(x, region.y2);
@@ -412,6 +383,7 @@ SongEditor.prototype.drawMeterChange = function(region, meterChange, tick, hover
 	var x = region.x1 + (tick - region.tick) * this.tickZoom;
 	
 	this.ctx.strokeStyle = COLOR;
+	this.ctx.lineWidth = 2;
 	this.ctx.beginPath();
 		this.ctx.moveTo(x, region.y1 + this.HEADER_LINE_HEIGHT);
 		this.ctx.lineTo(x, region.y2);
@@ -443,6 +415,128 @@ SongEditor.prototype.drawMeterChange = function(region, meterChange, tick, hover
 		x + 8,
 		region.y1 + 24,
 		region.x2 - x - 16);
+}
+
+
+SongEditor.prototype.drawSectionKnob = function(region, tick, hovering, selected, clipOutside)
+{
+	// Check if the knob is inside the region.
+	if (clipOutside &&
+		(tick < region.tick ||
+		tick > region.tick + region.duration))
+		return;
+		
+	var COLOR = "#000000";
+	var COLOR_HOVER = "#88ddff";
+	var COLOR_SELECTED = "#4488ff";
+	
+	var x = region.x1 + (tick - region.tick) * this.tickZoom;
+	
+	this.ctx.strokeStyle = (selected ? COLOR_SELECTED : hovering ? COLOR_HOVER : COLOR);
+	this.ctx.fillStyle = (selected ? COLOR_SELECTED : hovering ? COLOR_HOVER : COLOR);
+	this.ctx.lineWidth = 2;
+	
+	this.ctx.beginPath();
+		this.ctx.moveTo(x, region.y1 + this.HEADER_HEIGHT - 12);
+		this.ctx.lineTo(x, region.y2);
+	this.ctx.stroke();
+	
+	this.ctx.beginPath();
+		this.ctx.arc(x, region.y1 + this.HEADER_HEIGHT - 12, 6, 0, Math.PI * 2);
+	this.ctx.fill();
+}
+
+
+SongEditor.prototype.drawSectionDeletion = function(region, tick, duration)
+{
+	// Check if the knob is inside the region.
+	if (tick + duration < region.tick ||
+		tick >= region.tick + region.duration)
+		return;
+		
+	var COLOR = "#ffffff";
+	
+	var clippedStart = Math.max(region.tick, tick);
+	var clippedEnd = Math.min(region.tick + region.duration, tick + duration);
+	
+	var x1 = region.x1 + (clippedStart - region.tick) * this.tickZoom;
+	var x2 = region.x1 + (clippedEnd - region.tick) * this.tickZoom;
+	
+	this.ctx.save();
+	this.ctx.fillStyle = COLOR;
+	this.ctx.globalAlpha = 0.8;
+	
+	this.ctx.fillRect(x1 + 1, region.y1 + this.HEADER_HEIGHT - 1, x2 - x1, region.y2 - region.y1 - this.HEADER_HEIGHT + 2);
+	
+	this.ctx.restore();
+}
+
+
+SongEditor.prototype.drawRegion = function(region, tick, duration, asSectionStretch)
+{
+	var SECTION_BORDER_COLOR = "#000000";
+	var NOTE_LINE_COLOR = "#dddddd";
+	var MEASURE_COLOR = "#dddddd";
+	var MEASURE_COLOR_STRONG = "#888888";
+	
+	var x1 = region.x1 + (tick - region.tick) * this.tickZoom;
+	var x2 = region.x1 + (tick + duration - region.tick) * this.tickZoom;
+	
+	// Draw region boundaries.
+	this.ctx.strokeStyle = SECTION_BORDER_COLOR;
+	this.ctx.lineWidth = 2;
+	this.ctx.beginPath();
+	
+		this.ctx.strokeRect(
+			x1,
+			region.y1 + this.HEADER_HEIGHT,
+			x2 - x1,
+			(region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION) - (region.y1 + this.HEADER_HEIGHT));
+		
+		this.ctx.strokeRect(
+			x1,
+			region.y2 - this.CHORD_HEIGHT,
+			x2 - x1,
+			this.CHORD_HEIGHT);
+		
+	this.ctx.stroke();
+	
+	// Draw note lines.
+	this.ctx.strokeStyle = NOTE_LINE_COLOR;
+	this.ctx.beginPath();
+	for (var n = 1; n < region.highestNoteRow - region.lowestNoteRow; n++)
+	{
+		var y = region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - n * this.NOTE_HEIGHT;
+		this.ctx.moveTo(x1 + 1, y);
+		this.ctx.lineTo(x2 - 1, y);
+	}
+	this.ctx.stroke();
+
+	// Draw beat lines.
+	var beatCount = 0;
+	for (var n = region.meter.tick - tick; n < duration; n += this.songData.ticksPerWholeNote / region.meter.denominator)
+	{
+		if (n > 0)
+		{
+			this.ctx.strokeStyle = (beatCount == 0 ? MEASURE_COLOR_STRONG : MEASURE_COLOR);
+			this.ctx.beginPath();
+				this.ctx.moveTo(
+					x1 + n * this.tickZoom,
+					region.y1 + this.HEADER_HEIGHT + 1);
+				this.ctx.lineTo(
+					x1 + n * this.tickZoom,
+					region.y2 - this.CHORD_HEIGHT - this.CHORD_NOTE_SEPARATION - 1);
+				this.ctx.moveTo(
+					x1 + n * this.tickZoom,
+					region.y2 - this.CHORD_HEIGHT + 1);
+				this.ctx.lineTo(
+					x1 + n * this.tickZoom,
+					region.y2 - 1);
+			this.ctx.stroke();
+		}
+		
+		beatCount = (beatCount + 1) % region.meter.numerator;
+	}
 }
 
 

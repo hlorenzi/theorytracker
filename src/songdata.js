@@ -10,8 +10,6 @@ function SongDataNote(tick, duration, pitch)
 	this.tick = tick;
 	this.duration = duration;
 	this.pitch = pitch;
-	this.startSection = -1;
-	this.endSection = -1;
 }
 
 
@@ -21,8 +19,6 @@ function SongDataChord(tick, duration, chord, rootPitch)
 	this.duration = duration;
 	this.chord = chord;
 	this.rootPitch = rootPitch;
-	this.startSection = -1;
-	this.endSection = -1;
 }
 
 
@@ -31,7 +27,6 @@ function SongDataKeyChange(tick, scale, tonicPitch)
 	this.tick = tick;
 	this.scale = scale;
 	this.tonicPitch = tonicPitch;
-	this.section = -1;
 }
 
 
@@ -40,7 +35,6 @@ function SongDataMeterChange(tick, numerator, denominator)
 	this.tick = tick;
 	this.numerator = numerator;
 	this.denominator = denominator;
-	this.section = -1;
 }
 
 
@@ -245,6 +239,182 @@ SongData.prototype.removeChordsByTickRange = function(tickBegin, tickEnd)
 			otherChord.duration = tickBegin - otherChord.tick;
 		}
 	}
+}
+
+
+// Remove key changes that fall in the range ]tickBegin, tickEnd[.
+SongData.prototype.removeKeyChangesByTickRange = function(tickBegin, tickEnd)
+{
+	for (var i = this.keyChanges.length - 1; i >= 0; i--)
+	{
+		var keyChange = this.keyChanges[i];
+		
+		if (keyChange.tick > tickBegin && keyChange.tick < tickEnd)
+			this.keyChanges.splice(i, 1);
+	}
+}
+
+
+// Remove meter changes that fall in the range ]tickBegin, tickEnd[.
+SongData.prototype.removeMeterChangesByTickRange = function(tickBegin, tickEnd)
+{
+	for (var i = this.meterChanges.length - 1; i >= 0; i--)
+	{
+		var meterChange = this.meterChanges[i];
+		
+		if (meterChange.tick > tickBegin && meterChange.tick < tickEnd)
+			this.meterChanges.splice(i, 1);
+	}
+}
+
+
+// Split the given note in two, at the given tick.
+SongData.prototype.splitNote = function(noteIndex, tick)
+{
+	var note = this.notes[noteIndex];
+	
+	if (tick <= note.tick || tick >= note.tick + note.duration)
+		return;
+	
+	var noteClone = new SongDataNote(note.tick, note.duration, note.pitch);
+	
+	noteClone.tick = tick;
+	noteClone.duration = note.tick + note.duration - tick;
+	note.duration = tick - note.tick;
+	
+	this.notes.splice(noteIndex + 1, 0, noteClone);
+}
+
+
+// Split the given chord in two, at the given tick.
+SongData.prototype.splitChord = function(chordIndex, tick)
+{
+	var chord = this.chords[chordIndex];
+	
+	if (tick <= chord.tick || tick >= chord.tick + chord.duration)
+		return;
+	
+	var chordClone = new SongDataChord(chord.tick, chord.duration, chord.chord, chord.rootPitch);
+	
+	chordClone.tick = tick;
+	chordClone.duration = chord.tick + chord.duration - tick;
+	chord.duration = tick - chord.tick;
+	
+	this.chords.splice(chordIndex + 1, 0, chordClone);
+}
+
+
+// Inserts whitespace at the given tick, for the given duration,
+// pushing forward any following elements, and returns whether successful.
+SongData.prototype.insertWhitespace = function(tick, duration)
+{
+	if (!this.isValidTick(tick) || !this.isValidTick(tick + duration))
+		return false;
+	
+	// Split any notes at the insertion tick.
+	for (var i = this.notes.length - 1; i >= 0; i--)
+		this.splitNote(i, tick);
+	
+	// Split any chords at the insertion tick.
+	for (var i = this.chords.length - 1; i >= 0; i--)
+		this.splitChord(i, tick);
+	
+	// Displace end tick.
+	this.endTick += duration;
+	
+	// Displace following notes.
+	for (var i = this.notes.length - 1; i >= 0; i--)
+	{
+		if (this.notes[i].tick >= tick)
+			this.notes[i].tick += duration;
+	}
+	
+	// Displace following chords.
+	for (var i = this.chords.length - 1; i >= 0; i--)
+	{
+		if (this.chords[i].tick >= tick)
+			this.chords[i].tick += duration;
+	}
+	
+	// Displace following key changes.
+	for (var i = this.keyChanges.length - 1; i >= 0; i--)
+	{
+		if (this.keyChanges[i].tick >= tick)
+			this.keyChanges[i].tick += duration;
+	}
+	
+	// Displace following meter changes.
+	for (var i = this.meterChanges.length - 1; i >= 0; i--)
+	{
+		if (this.meterChanges[i].tick >= tick)
+			this.meterChanges[i].tick += duration;
+	}
+	
+	// Displace following section breaks.
+	for (var i = this.sectionBreaks.length - 1; i >= 0; i--)
+	{
+		if (this.sectionBreaks[i].tick >= tick)
+			this.sectionBreaks[i].tick += duration;
+	}
+	
+	return true;
+}
+
+
+// Removes the region starting at the given tick, lasting the given duration,
+// removing any contained elements, and returns whether successful.
+SongData.prototype.remove = function(tick, duration)
+{
+	if (!this.isValidTick(tick) || !this.isValidTick(tick + duration))
+		return false;
+	
+	// Remove any elements at the region.
+	this.removeNotesByTickRange(tick, tick + duration, null);
+	this.removeChordsByTickRange(tick, tick + duration);
+	this.removeKeyChangesByTickRange(tick, tick + duration);
+	this.removeMeterChangesByTickRange(tick, tick + duration);
+	
+	// TODO: Must sanitize elements after displacement.
+	
+	// Displace end tick.
+	this.endTick -= duration;
+	
+	// Displace following notes.
+	for (var i = this.notes.length - 1; i >= 0; i--)
+	{
+		if (this.notes[i].tick > tick)
+			this.notes[i].tick -= duration;
+	}
+	
+	// Displace following chords.
+	for (var i = this.chords.length - 1; i >= 0; i--)
+	{
+		if (this.chords[i].tick > tick)
+			this.chords[i].tick -= duration;
+	}
+	
+	// Displace following key changes.
+	for (var i = this.keyChanges.length - 1; i >= 0; i--)
+	{
+		if (this.keyChanges[i].tick > tick)
+			this.keyChanges[i].tick -= duration;
+	}
+	
+	// Displace following meter changes.
+	for (var i = this.meterChanges.length - 1; i >= 0; i--)
+	{
+		if (this.meterChanges[i].tick > tick)
+			this.meterChanges[i].tick -= duration;
+	}
+	
+	// Displace following section breaks.
+	for (var i = this.sectionBreaks.length - 1; i >= 0; i--)
+	{
+		if (this.sectionBreaks[i].tick > tick)
+			this.sectionBreaks[i].tick -= duration;
+	}
+	
+	return true;
 }
 
 
