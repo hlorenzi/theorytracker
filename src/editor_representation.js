@@ -26,6 +26,7 @@ SongEditor.prototype.refreshRepresentation = function()
 		this.meterChangeSelections.push(false);
 	
 	// Iterate through song sections.
+	var maxX = this.MARGIN_LEFT;
 	var currentY = this.MARGIN_TOP;
 	var currentKeyChangeIndex = -1;
 	var currentMeterChangeIndex = -1;
@@ -143,6 +144,8 @@ SongEditor.prototype.refreshRepresentation = function()
 				sectionKnob: false
 			};
 			
+			maxX = Math.max(maxX, region.x2 + this.MARGIN_RIGHT);
+			
 			regions.push(region);
 			this.viewRegions.push(region);
 			
@@ -193,6 +196,7 @@ SongEditor.prototype.refreshRepresentation = function()
 		currentY += sectionHeight + this.SECTION_SEPARATION;
 	}
 	
+	this.canvas.width = maxX + 400;
 	this.canvas.height = currentY;
 }
 

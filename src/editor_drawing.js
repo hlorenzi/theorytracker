@@ -196,20 +196,6 @@ SongEditor.prototype.refreshCanvas = function()
 		}
 	}
 	
-	// Draw side fade-outs.
-	var leftFadeGradient = this.ctx.createLinearGradient(0, 0, this.MARGIN_LEFT, 0);
-	leftFadeGradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-	leftFadeGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-	this.ctx.fillStyle = leftFadeGradient;
-	this.ctx.fillRect(0, 0, this.MARGIN_LEFT, this.canvasHeight);
-	
-	var rightFadeGradient = this.ctx.createLinearGradient(this.canvasWidth - this.MARGIN_RIGHT, 0, this.canvasWidth, 0);
-	rightFadeGradient.addColorStop(0, "rgba(255, 255, 255, 0)");
-	rightFadeGradient.addColorStop(1, "rgba(255, 255, 255, 1)");
-	this.ctx.fillStyle = rightFadeGradient;
-	this.ctx.fillRect(this.canvasWidth - this.MARGIN_RIGHT, 0, this.MARGIN_RIGHT, this.canvasHeight);
-	
-	
 	this.ctx.restore();
 }
 

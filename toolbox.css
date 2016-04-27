@@ -1,0 +1,111 @@
+.toolboxHeader
+{
+	font-family: tahoma;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.toolboxLabel
+{
+	font-family: tahoma;
+	font-size: 12px;
+}
+
+.toolboxButton
+{
+	margin: 2px;
+	border: 2px solid #aaaaaa;
+	background: #ffffff;
+	font-family: tahoma;
+	font-size: 12px;
+	outline: none;
+}
+
+.toolboxButton:hover
+{
+	border-color: #cccccc;
+	cursor: pointer;
+}
+
+.toolboxButton:active
+{
+	border-color: #aaaaaa;
+	background: #eeeeee;
+}
+
+.toolboxNoteButton
+{
+	width: 20px;
+	height: 30px;
+	margin: 2px;
+	padding: 0px;
+	border: none;
+	text-align: center;
+	font-family: tahoma;
+	font-size: 12px;
+	outline: none;
+}
+
+.toolboxNoteButton:hover
+{
+	cursor: pointer;
+	border: 1px solid #ffffff;
+}
+
+.toolboxNoteButton:active
+{
+	border: 2px solid #ffffff;
+}
+
+.toolboxChordButton
+{
+	width: 50px;
+	height: 38px;
+	margin: 2px;
+	padding: 0px;
+	border-style: solid;
+	border-width: 3px 0 3px 0;
+	background: #eeeeee;
+	text-align: center;
+	font-family: tahoma;
+	font-size: 18px;
+	outline: none;
+	overflow: hidden;
+}
+
+.toolboxChordButton:hover
+{
+	cursor: pointer;
+	background: #f8f8f8;
+}
+
+.toolboxChordButton:active
+{
+	background: #f0f0f0;
+}
+
+.toolboxChordKindButton
+{
+	border: 2px solid #ffffff;
+	background: #ffffff;
+	font-family: tahoma;
+	font-size: 12px;
+	outline: none;
+	min-width: 30px;
+}
+
+.toolboxChordKindButton:hover
+{
+	background: #eeeeee;
+	cursor: pointer;
+}
+
+.toolboxChordKindButton:active
+{
+	background: #cccccc;
+}
+
+.toolboxPalette
+{
+	overflow-y: scroll;
+}
