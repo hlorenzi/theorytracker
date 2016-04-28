@@ -31,27 +31,30 @@ function Theory()
 		
 	
 	// Scale without pitches will be generated below.
+	this.scaleGroups =
+		[ "Modes of Major", "Modes of Double Harmonic", "Modes of Phrygian Dominant" ];
+	
 	this.scales =
 	[
-		{ name: "Major", pitches: [ C,  D,  E,  F,  G,  A,  B  ] },
-		{ name: "Dorian", pitches: [] },
-		{ name: "Phrygian", pitches: [] },
-		{ name: "Lydian", pitches: [] },
-		{ name: "Mixolydian", pitches: [] },
-		{ name: "Natural Minor", pitches: [] },
-		{ name: "Locrian", pitches: [] },
+		{ name: "Major", group: 0, pitches: [ C,  D,  E,  F,  G,  A,  B  ] },
+		{ name: "Dorian", group: 0, pitches: [] },
+		{ name: "Phrygian", group: 0, pitches: [] },
+		{ name: "Lydian", group: 0, pitches: [] },
+		{ name: "Mixolydian", group: 0, pitches: [] },
+		{ name: "Natural Minor", group: 0, pitches: [] },
+		{ name: "Locrian", group: 0, pitches: [] },
 		
-		{ name: "Harmonic Minor", pitches: [ C,  D,  Ds, F,  G,  Gs, B  ] },
+		{ name: "Harmonic Minor", group: 0, pitches: [ C,  D,  Ds, F,  G,  Gs, B  ] },
 		
-		{ name: "Double Harmonic", pitches: [ C,  Cs, E,  F,  G,  Gs, B  ] },
-		{ name: "Lydian ♯2 ♯6", pitches: [] },
-		{ name: "Ultraphrygian", pitches: [] },
-		{ name: "Hungarian Minor", pitches: [] },
-		{ name: "Oriental", pitches: [] },
-		{ name: "Ionian Augmented ♯2", pitches: [] },
-		{ name: "Locrian ♭♭3 ♭♭7", pitches: [] },
+		{ name: "Double Harmonic", group: 1, pitches: [ C,  Cs, E,  F,  G,  Gs, B  ] },
+		{ name: "Lydian ♯2 ♯6", group: 1, pitches: [] },
+		{ name: "Ultraphrygian", group: 1, pitches: [] },
+		{ name: "Hungarian Minor", group: 1, pitches: [] },
+		{ name: "Oriental", group: 1, pitches: [] },
+		{ name: "Ionian Augmented ♯2", group: 1, pitches: [] },
+		{ name: "Locrian ♭♭3 ♭♭7", group: 1, pitches: [] },
 		
-		{ name: "Phrygian Dominant", pitches: [ C,  Cs, E,  F,  G,  Gs, As ] },
+		{ name: "Phrygian Dominant", group: 2, pitches: [ C,  Cs, E,  F,  G,  Gs, As ] },
 	];
 	
 	// Generate the other modes of the non-null scales.
@@ -72,7 +75,7 @@ function Theory()
 	{
 		this.scales[i].pitchToDegreeMap = [];
 		
-		var curPitch = 0;		
+		var curPitch = 0;
 		for (var j = 0; j < 7; j++)
 		{
 			while (curPitch < this.scales[i].pitches[j])
@@ -84,25 +87,39 @@ function Theory()
 			this.scales[i].pitchToDegreeMap.push(j);
 			curPitch++;
 		}
+		
+		while (curPitch < 12)
+		{
+			this.scales[i].pitchToDegreeMap.push(6.5);
+			curPitch++;
+		}
 	}
 	
 
 	this.chords =
 	[
-		{ name: "Major",                    roman: "X",     romanSup: "",       romanSub: "",       pitches: [ C,  E,  G  ] },
-		{ name: "Minor",                    roman: "x",     romanSup: "",       romanSub: "",       pitches: [ C,  Ds, G  ] },
-		{ name: "Diminished",               roman: "x",     romanSup: "o",      romanSub: "",       pitches: [ C,  Ds, Fs ] },
-		{ name: "Augmented",                roman: "X",     romanSup: "+",      romanSub: "",       pitches: [ C,  E,  Gs ] },
-		{ name: "Flat Fifth(?)",            roman: "X",     romanSup: "(♭5)",   romanSub: "",       pitches: [ C,  E,  Fs ] },
-		{ name: "?",                        roman: "X",     romanSup: "?",      romanSub: "",       pitches: [ C,  D,  Fs ] },
-		{ name: "Dominant Seventh",         roman: "X",     romanSup: "7",      romanSub: "",       pitches: [ C,  E,  G,  As ] },
-		{ name: "Major Seventh",            roman: "X",     romanSup: "M7",     romanSub: "",       pitches: [ C,  E,  G,  B  ] },
-		{ name: "Minor Seventh",            roman: "x",     romanSup: "7",      romanSub: "",       pitches: [ C,  Ds, G,  As ] },
-		{ name: "Minor-Major Seventh",      roman: "X",     romanSup: "m(M7)",  romanSub: "",       pitches: [ C,  Ds, G,  B  ] },
-		{ name: "Diminished Seventh",       roman: "x",     romanSup: "o7",     romanSub: "",       pitches: [ C,  Ds, G,  A  ] },
-		{ name: "Half-Diminished Seventh",  roman: "x",     romanSup: "ø7",     romanSub: "",       pitches: [ C,  Ds, Fs, As ] },
-		{ name: "Augmented Seventh",        roman: "X",     romanSup: "+7",     romanSub: "",       pitches: [ C,  E,  Gs, As ] },
-		{ name: "Augmented Major Seventh",  roman: "X",     romanSup: "+(M7)",  romanSub: "",       pitches: [ C,  E,  Gs, B  ] }
+		{ name: "Major",                    uppercase: true,     symbolSup: "",       symbolSub: "",       pitches: [ C,  E,  G  ] },
+		{ name: "Minor",                    uppercase: false,    symbolSup: "",       symbolSub: "",       pitches: [ C,  Ds, G  ] },
+		{ name: "Diminished",               uppercase: false,    symbolSup: "o",      symbolSub: "",       pitches: [ C,  Ds, Fs ] },
+		{ name: "Augmented",                uppercase: true,     symbolSup: "+",      symbolSub: "",       pitches: [ C,  E,  Gs ] },
+		{ name: "Flat Fifth(?)",            uppercase: true,     symbolSup: "(♭5)",   symbolSub: "",       pitches: [ C,  E,  Fs ] },
+		{ name: "?",                        uppercase: true,     symbolSup: "?",      symbolSub: "",       pitches: [ C,  D,  Fs ] },
+		{ name: "Dominant Seventh",         uppercase: true,     symbolSup: "7",      symbolSub: "",       pitches: [ C,  E,  G,  As ] },
+		{ name: "Major Seventh",            uppercase: true,     symbolSup: "M7",     symbolSub: "",       pitches: [ C,  E,  G,  B  ] },
+		{ name: "Minor Seventh",            uppercase: false,    symbolSup: "7",      symbolSub: "",       pitches: [ C,  Ds, G,  As ] },
+		{ name: "Minor-Major Seventh",      uppercase: true,     symbolSup: "m(M7)",  symbolSub: "",       pitches: [ C,  Ds, G,  B  ] },
+		{ name: "Diminished Seventh",       uppercase: false,    symbolSup: "o7",     symbolSub: "",       pitches: [ C,  Ds, G,  A  ] },
+		{ name: "Half-Diminished Seventh",  uppercase: false,    symbolSup: "ø7",     symbolSub: "",       pitches: [ C,  Ds, Fs, As ] },
+		{ name: "Augmented Seventh",        uppercase: true,     symbolSup: "+7",     symbolSub: "",       pitches: [ C,  E,  Gs, As ] },
+		{ name: "Augmented Major Seventh",  uppercase: true,     symbolSup: "+(M7)",  symbolSub: "",       pitches: [ C,  E,  Gs, B  ] }
+	];
+	
+	
+	this.chordEmbelishments =
+	[
+		{ name: "Suspended Second",		symbol: "sus2" },
+		{ name: "Suspended Fourth",		symbol: "sus4" },
+		{ name: "Added Ninth",			symbol: "add9" }
 	];
 	
 	
@@ -208,7 +225,6 @@ function Theory()
 		if (tonicPitch != 0)
 			offset = Math.floor(this.getRowForPitch(tonicPitch, scale, 0));
 		
-		
 		return pitchDegree + offset + pitchOctave * 7;
 	};
 
@@ -226,8 +242,48 @@ function Theory()
 	};
 	
 	
-	// Returns the first chord in the chord array that fits the given pitches.
-	this.getFirstFittingChordForPitches = function(pitches)
+	// Returns a new chord altered by the given embelishments.
+	this.getEmbelishedChord = function(chordIndex, embelishmentIndices)
+	{
+		var newChord = {
+			name: this.chords[chordIndex].name,
+			uppercase: this.chords[chordIndex].uppercase,
+			symbolSup: this.chords[chordIndex].symbolSup,
+			symbolSub: this.chords[chordIndex].symbolSub,
+			pitches: this.chords[chordIndex].pitches.slice(0)
+		};
+		
+		var hasSus2 = (embelishmentIndices.indexOf(0) >= 0);
+		var hasSus4 = (embelishmentIndices.indexOf(1) >= 0);
+		var hasAdd9 = (embelishmentIndices.indexOf(2) >= 0);
+		
+		if (hasAdd9)
+		{
+			newChord.pitches.splice(1, 0, D);
+			newChord.symbolSup += "(add9)";
+		}
+		else if (hasSus2 && hasSus4)
+		{
+			newChord.pitches.splice(1, 1, D, F);
+			newChord.symbolSub += "sus24";
+		}
+		else if (hasSus2)
+		{
+			newChord.pitches[1] = D;
+			newChord.symbolSub += "sus2";
+		}
+		else if (hasSus4)
+		{
+			newChord.pitches[1] = F;
+			newChord.symbolSub += "sus4";
+		}
+		
+		return newChord;
+	}
+	
+	
+	// Returns the first chord index in the chord array that fits the given pitches.
+	this.getFirstFittingChordIndexForPitches = function(pitches)
 	{
 		for (var i = 0; i < this.chords.length; i++)
 		{
@@ -248,7 +304,7 @@ function Theory()
 			}
 			
 			if (match)
-				return chord;
+				return i;
 		}
 		
 		console.log("Missing chord data for pitches:");

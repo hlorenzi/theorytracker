@@ -258,15 +258,15 @@ SongEditor.prototype.drawChord = function(region, chord, tick, duration, hoverin
 	
 	// Draw roman symbol.
 	var numeral = this.theory.getRomanNumeralForPitch(chord.rootPitch, region.key.scale, region.key.tonicPitch);
-	var romanText = chord.chord.roman.replace("X", numeral).replace("x", numeral.toLowerCase());
+	var romanText = (chord.chord.uppercase ? numeral : numeral.toLowerCase());
 	
 	this.ctx.fillStyle = "#000000";
 	this.ctx.textAlign = "center";
 	this.ctx.textBaseline = "middle";
 	
 	this.ctx.font = "20px Tahoma";
-	var supTextWidth = this.ctx.measureText(chord.chord.romanSup).width;
-	var subTextWidth = this.ctx.measureText(chord.chord.romanSub).width;
+	var supTextWidth = this.ctx.measureText(chord.chord.symbolSup).width;
+	var subTextWidth = this.ctx.measureText(chord.chord.symbolSub).width;
 	
 	this.ctx.font = "30px Tahoma";
 	var mainTextWidth = this.ctx.measureText(romanText).width;
@@ -285,8 +285,8 @@ SongEditor.prototype.drawChord = function(region, chord, tick, duration, hoverin
 	this.ctx.fillText(romanText, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth / 2, (pos.y1 + pos.y2) / 2, maxTextWidth - supTextWidth - subTextWidth);
 	
 	this.ctx.font = "20px Tahoma";
-	this.ctx.fillText(chord.chord.romanSup, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth + supTextWidth / 2, (pos.y1 + pos.y2) / 2 - 10, maxTextWidth - mainTextWidth - subTextWidth);
-	this.ctx.fillText(chord.chord.romanSub, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth + supTextWidth + subTextWidth / 2, (pos.y1 + pos.y2) / 2 + 10, maxTextWidth - mainTextWidth - supTextWidth);
+	this.ctx.fillText(chord.chord.symbolSup, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth + supTextWidth / 2, (pos.y1 + pos.y2) / 2 - 10, maxTextWidth - mainTextWidth - subTextWidth);
+	this.ctx.fillText(chord.chord.symbolSub, (pos.x1 + pos.x2) / 2 - totalTextWidth / 2 + mainTextWidth + supTextWidth + subTextWidth / 2, (pos.y1 + pos.y2) / 2 + 10, maxTextWidth - mainTextWidth - supTextWidth);
 	
 	// Draw highlights.
 	this.ctx.save();

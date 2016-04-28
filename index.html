@@ -15,9 +15,9 @@
 				<div style="display:flex; flex-direction:column;">
 				
 					<div id="toolboxGeneralDiv" style="padding:5px; margin:5px;">
-						<button class="toolboxButton" style="font-size:20px; width:100%;">&#9654; Play</button>
+						<button id="toolboxPlayButton" class="toolboxButton" style="font-size:20px; width:100%;">&#9654; Play</button>
 						<br>
-						<button class="toolboxButton" style="width:100%;">&#9664;&#9664; Rewind</button>
+						<button id="toolboxRewindButton" class="toolboxButton" style="width:100%;">&#9664;&#9664; Rewind</button>
 						<br>
 						<span class="toolboxLabel">Tempo
 							<input style="width:30px;" value="120"></input>
@@ -25,23 +25,23 @@
 					</div>
 					
 					<div id="toolboxKeyDiv" style="background-color:#cccccc; padding:5px; margin:5px;">
-						<span class="toolboxHeader">Key</span>
+						<span class="toolboxHeader">Current Key</span>
 						<br>
 						<select id="toolboxKeyTonicSelect"></select>
 						<select id="toolboxKeyScaleSelect"></select>
-						<button class="toolboxButton">Listen</button>
+						<button id="toolboxKeyListenButton" class="toolboxButton">Listen</button>
 						<br>
-						<button class="toolboxButton">Insert Key Change</button>
+						<button id="toolboxKeyInsertButton" class="toolboxButton">Insert Key Change</button>
 					</div>
 					
 					<div id="toolboxMeterDiv" style="background-color:#aaddff; padding:5px; margin:5px;">
-						<span class="toolboxHeader">Meter</span>
+						<span class="toolboxHeader">Current Meter</span>
 						<br>
 						<select id="toolboxMeterNumeratorSelect"></select>
 						<span class="toolboxLabel"> / </span>
 						<select id="toolboxMeterDenominatorSelect"></select>
 						<br>
-						<button class="toolboxButton">Insert Meter Change</button>
+						<button id="toolboxMeterInsertButton" class="toolboxButton">Insert Meter Change</button>
 					</div>
 					
 					<div id="toolboxNotesDiv" style="padding:5px; margin:5px;">
@@ -61,20 +61,25 @@
 					</div>
 					
 					<div id="toolboxChordsDiv" style="padding:5px; margin:5px;">
-						<div id="toolboxChordKindsDiv"></div>
-						<button id="toolboxChord0" class="toolboxChordButton"
-						></button><button id="toolboxChord1" class="toolboxChordButton"
-						></button><button id="toolboxChord2" class="toolboxChordButton"
-						></button><button id="toolboxChord3" class="toolboxChordButton"
-						></button><br><button id="toolboxChord4" class="toolboxChordButton"
-						></button><button id="toolboxChord5" class="toolboxChordButton"
-						></button><button id="toolboxChord6" class="toolboxChordButton"
-						></button><br><button id="toolboxChord7" class="toolboxChordButton"
-						></button><button id="toolboxChord8" class="toolboxChordButton"
-						></button><button id="toolboxChord9" class="toolboxChordButton"
-						></button><button id="toolboxChord10" class="toolboxChordButton"
-						></button><button id="toolboxChord11" class="toolboxChordButton"
-						></button>
+						<div style="display:flex;">
+							<div id="toolboxChordKindsDiv" style="flex:1 1 auto;"></div>
+							<div id="toolboxChordEmbelishDiv" style="flex:1 1 auto; text-align:left;"></div>
+						</div>
+						<div style="">
+							<button id="toolboxChord0" class="toolboxChordButton"
+							></button><button id="toolboxChord1" class="toolboxChordButton"
+							></button><button id="toolboxChord2" class="toolboxChordButton"
+							></button><button id="toolboxChord3" class="toolboxChordButton"
+							></button><button id="toolboxChord4" class="toolboxChordButton"
+							></button><button id="toolboxChord5" class="toolboxChordButton"
+							></button><button id="toolboxChord6" class="toolboxChordButton"
+							></button><br><button id="toolboxChord7" class="toolboxChordButton"
+							></button><button id="toolboxChord8" class="toolboxChordButton"
+							></button><button id="toolboxChord9" class="toolboxChordButton"
+							></button><button id="toolboxChord10" class="toolboxChordButton"
+							></button><button id="toolboxChord11" class="toolboxChordButton"
+							></button>
+						</div>
 					</div>
 					
 				</div>
