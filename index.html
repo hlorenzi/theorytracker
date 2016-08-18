@@ -5,102 +5,25 @@
 	<head>
 		<title>Music Analysis</title>
 		<meta charset="UTF-8"/>
-		<link rel="stylesheet" type="text/css" href="toolbox.css">
 	</head>
 	
-	<body onLoad="testOnLoad();">
-		<div style="display:flex; width:100%; height:100%;">
-		
-			<div id="toolboxDiv" style="flex:0 0 auto; text-align:center; height:100%;">
-				<div style="display:flex; flex-direction:column;">
-				
-					<div id="toolboxGeneralDiv" style="padding:5px; margin:5px;">
-						<button id="toolboxPlayButton" class="toolboxButton" style="font-size:20px; width:100%;">&#9654; Play</button>
-						<br>
-						<button id="toolboxRewindButton" class="toolboxButton" style="width:100%;">&#9664;&#9664; Rewind</button>
-						<br>
-						<span class="toolboxLabel">Tempo
-							<input style="width:30px;" value="120"></input>
-						</span>
-					</div>
-					
-					<div id="toolboxKeyDiv" style="background-color:#cccccc; padding:5px; margin:5px;">
-						<span class="toolboxHeader">Current Key</span>
-						<br>
-						<select id="toolboxKeyTonicSelect"></select>
-						<select id="toolboxKeyScaleSelect"></select>
-						<button id="toolboxKeyListenButton" class="toolboxButton">Listen</button>
-						<br>
-						<button id="toolboxKeyInsertButton" class="toolboxButton">Insert Key Change</button>
-					</div>
-					
-					<div id="toolboxMeterDiv" style="background-color:#aaddff; padding:5px; margin:5px;">
-						<span class="toolboxHeader">Current Meter</span>
-						<br>
-						<select id="toolboxMeterNumeratorSelect"></select>
-						<span class="toolboxLabel"> / </span>
-						<select id="toolboxMeterDenominatorSelect"></select>
-						<br>
-						<button id="toolboxMeterInsertButton" class="toolboxButton">Insert Meter Change</button>
-					</div>
-					
-					<div id="toolboxNotesDiv" style="padding:5px; margin:5px;">
-						<button id="toolboxNote0" class="toolboxNoteButton"
-						></button><button id="toolboxNote1" class="toolboxNoteButton"
-						></button><button id="toolboxNote2" class="toolboxNoteButton"
-						></button><button id="toolboxNote3" class="toolboxNoteButton"
-						></button><button id="toolboxNote4" class="toolboxNoteButton"
-						></button><button id="toolboxNote5" class="toolboxNoteButton"
-						></button><button id="toolboxNote6" class="toolboxNoteButton"
-						></button><button id="toolboxNote7" class="toolboxNoteButton"
-						></button><button id="toolboxNote8" class="toolboxNoteButton"
-						></button><button id="toolboxNote9" class="toolboxNoteButton"
-						></button><button id="toolboxNote10" class="toolboxNoteButton"
-						></button><button id="toolboxNote11" class="toolboxNoteButton"
-						></button>
-					</div>
-					
-					<div id="toolboxChordsDiv" style="padding:5px; margin:5px;">
-						<div style="display:flex;">
-							<div id="toolboxChordKindsDiv" style="flex:1 1 auto;"></div>
-							<div id="toolboxChordEmbelishDiv" style="flex:1 1 auto; text-align:left;"></div>
-						</div>
-						<div style="">
-							<button id="toolboxChord0" class="toolboxChordButton"
-							></button><button id="toolboxChord1" class="toolboxChordButton"
-							></button><button id="toolboxChord2" class="toolboxChordButton"
-							></button><button id="toolboxChord3" class="toolboxChordButton"
-							></button><button id="toolboxChord4" class="toolboxChordButton"
-							></button><button id="toolboxChord5" class="toolboxChordButton"
-							></button><button id="toolboxChord6" class="toolboxChordButton"
-							></button><br><button id="toolboxChord7" class="toolboxChordButton"
-							></button><button id="toolboxChord8" class="toolboxChordButton"
-							></button><button id="toolboxChord9" class="toolboxChordButton"
-							></button><button id="toolboxChord10" class="toolboxChordButton"
-							></button><button id="toolboxChord11" class="toolboxChordButton"
-							></button>
-						</div>
-					</div>
-					
-				</div>
-			</div>
-			
-			<div id="editorDiv" style="flex:1 1 auto; overflow:scroll; height:100%;">
-				<canvas id="editorCanvas" width="1000" height="400"></canvas>
-			</div>
-			
+	<body onLoad="main();" style="width:95%; margin:5;">
+		<div id="divTimeline" style="width:95%;">
+			<canvas id="canvasTimeline" width="1000" height="400"></canvas>
 		</div>
 	</body>
 
 	<script src="main.js"></script>
-	<script src="src/songdata.js"></script>
-	<script src="src/theory.js"></script>
-	<script src="src/editor.js"></script>
-	<script src="src/editor_representation.js"></script>
-	<script src="src/editor_event_handling.js"></script>
-	<script src="src/editor_interaction.js"></script>
-	<script src="src/editor_drawing.js"></script>
-	<script src="src/toolbox.js"></script>
-	<script src="src/synth.js"></script>
+	<script src="src/song/note.js"></script>
+	<script src="src/song/meter.js"></script>
+	<script src="src/song/song.js"></script>
+	<script src="src/timeline/timeline.js"></script>
+	<script src="src/timeline/track_notes.js"></script>
+	<script src="src/util/callback.js"></script>
+	<script src="src/util/dom.js"></script>
+	<script src="src/util/map_by_time.js"></script>
+	<script src="src/util/map_by_timerange.js"></script>
+	<script src="src/util/pitch.js"></script>
+	<script src="src/util/timerange.js"></script>
 	
 </html>
