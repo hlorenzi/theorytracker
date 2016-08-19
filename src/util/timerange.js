@@ -18,6 +18,25 @@ TimeRange.prototype.merge = function(other)
 }
 
 
+TimeRange.prototype.getClippedParts = function(clipRange)
+{
+	var parts = [];
+	
+	if (!this.overlapsRange(clipRange))
+		parts.push(this.clone());
+	else
+	{
+		if (clipRange.start > this.start)
+			parts.push(new TimeRange(this.start, clipRange.start));
+		
+		if (clipRange.end < this.end)
+			parts.push(new TimeRange(clipRange.end, this.end));
+	}
+	
+	return parts;
+}
+
+
 TimeRange.prototype.duration = function()
 {
 	return this.end - this.start;
@@ -32,5 +51,5 @@ TimeRange.prototype.overlapsTime = function(time)
 
 TimeRange.prototype.overlapsRange = function(other)
 {
-	return this.start < other.end && this.end >= other.start;
+	return this.start < other.end && this.end > other.start;
 }

@@ -16,16 +16,18 @@ function Timeline(canvas)
 	this.canvasHeight = 0;
 	
 	// Set up mouse/keyboard interaction.
-	this.canvas.onmousemove = function(ev) { that.handleMouseMove(ev); };
 	this.canvas.onmousedown = function(ev) { that.handleMouseDown(ev); };
-	this.canvas.onmouseup   = function(ev) { that.handleMouseUp(ev);   };
+	window.onmousemove      = function(ev) { that.handleMouseMove(ev); };
+	window.onmouseup        = function(ev) { that.handleMouseUp(ev);   };
 	//window.onkeydown        = function(ev) { that.handleKeyDown(ev);   };
 	
 	this.mouseDown          = false;
 	this.mouseDownPos       = null;
+	this.mouseDownTrack     = null;
 	this.mouseAction        = this.INTERACT_NONE;
 	this.mouseMoveDeltaTime = 0;
 	this.mouseMovePitch     = 0;
+	this.mouseMoveScrollY   = 0;
 	
 	this.hoverElement     = null;
 	this.hoverRegion      = null;
@@ -42,7 +44,7 @@ function Timeline(canvas)
 	this.scrollTime          = 0;
 	this.timeSnap            = 960 / 16;
 	this.timeToPixelsScaling = 100 / 960;
-	this.noteHeight          = 5;
+	this.noteHeight          = 10;
 	
 	this.redrawDirtyTimeMin = -1;
 	this.redrawDirtyTimeMax = -1;
@@ -102,10 +104,14 @@ Timeline.prototype.handleMouseDown = function(ev)
 	else
 		this.mouseAction = this.INTERACT_NONE;
 	
+	var trackIndex = this.getTrackIndexAtY(mousePos.y);
+	this.mouseDownTrack = (trackIndex == -1 ? null : this.tracks[trackIndex]); 
+	
 	this.mouseDown           = true;
 	this.mouseDownPos        = mousePos;
 	this.mouseMoveDeltaTime  = 0;
 	this.mouseMoveDeltaPitch = 0;
+	this.mouseMoveScrollY    = 0;
 	this.redraw();
 }
 
@@ -125,6 +131,13 @@ Timeline.prototype.handleMouseMove = function(ev)
 		var mouseTimeDelta  = (mousePos.x - this.mouseDownPos.x) / this.timeToPixelsScaling;
 		var mousePitchDelta = Math.round((this.mouseDownPos.y - mousePos.y) / this.noteHeight);
 		
+		// Handle scrolling.
+		if (this.mouseAction == this.INTERACT_NONE)
+		{
+			this.mouseMoveScrollY = (mousePos.y - this.mouseDownPos.y);
+			this.markDirtyAll();
+		}
+			
 		if (this.selectedElements.length != 0)
 		{
 			// Handle time displacement.
@@ -194,12 +207,10 @@ Timeline.prototype.handleMouseMove = function(ev)
 		this.hoverElement = null;
 		this.hoverRegion  = null;
 		
-		for (var i = 0; i < this.tracks.length; i++)
+		var trackIndex = this.getTrackIndexAtY(mousePos.y);
+		if (trackIndex != -1)
 		{
-			var track = this.tracks[i];
-			
-			if (mousePos.y < track.y || mousePos.y >= track.y + track.height)
-				continue;
+			var track = this.tracks[trackIndex];
 			
 			track.elements.enumerateOverlappingTime(mouseTime, function (index, elem)
 			{
@@ -209,8 +220,8 @@ Timeline.prototype.handleMouseMove = function(ev)
 					
 					if (mousePos.x >= region.x &&
 						mousePos.x <= region.x + region.width &&
-						mousePos.y >= region.y + track.y &&
-						mousePos.y <= region.y + region.height + track.y)
+						mousePos.y >= region.y + track.y + track.scrollY &&
+						mousePos.y <= region.y + region.height + track.y + track.scrollY)
 					{
 						that.hoverElement = elem;
 						that.hoverRegion  = region;
@@ -248,17 +259,26 @@ Timeline.prototype.handleMouseUp = function(ev)
 	// Handle releasing the mouse after dragging.
 	if (this.mouseDown)
 	{
-		this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
-		
-		for (var i = 0; i < this.selectedElements.length; i++)
-			this.selectedElements[i].modify(this.selectedElements[i]);
-		
-		this.song.applyModifications();
-		this.markDirtyAllSelectedElements(0);
+		if (this.mouseAction == this.INTERACT_NONE)
+		{
+			if (this.mouseDownTrack != null)
+				this.mouseDownTrack.handleScroll();
+		}
+		else
+		{
+			this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
+			
+			for (var i = 0; i < this.selectedElements.length; i++)
+				this.selectedElements[i].modify(this.selectedElements[i]);
+			
+			this.song.applyModifications();
+			this.markDirtyAllSelectedElements(0);
+		}
 	}
 	
-	this.mouseDown   = false;
-	this.mouseAction = this.INTERACT_NONE;
+	this.mouseDown      = false;
+	this.mouseAction    = this.INTERACT_NONE;
+	this.mouseDownTrack = null;
 	this.redraw();
 }
 
@@ -331,6 +351,20 @@ Timeline.prototype.select = function(elem)
 }
 
 
+Timeline.prototype.getTrackIndexAtY = function(y)
+{
+	for (var i = 0; i < this.tracks.length; i++)
+	{
+		var track = this.tracks[i];
+		
+		if (y >= track.y && y < track.y + track.height)
+			return i;
+	}
+	
+	return -1;
+}
+
+
 Timeline.prototype.relayout = function()
 {
 	this.canvasWidth  = parseFloat(this.canvas.width);
@@ -346,11 +380,13 @@ Timeline.prototype.relayout = function()
 
 Timeline.prototype.redraw = function()
 {
+	// Return early if nothing dirty.
 	if (this.redrawDirtyTimeMin == -1 || this.redrawDirtyTimeMax == -1)
 		return;
 	
 	this.ctx.save();
 	
+	// Restrict drawing to dirty region.
 	this.ctx.beginPath();
 	this.ctx.rect(
 		this.redrawDirtyTimeMin * this.timeToPixelsScaling + 1,

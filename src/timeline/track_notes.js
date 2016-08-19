@@ -10,7 +10,7 @@ function TrackNotes(timeline)
 	this.y      = 0;
 	this.height = 0;
 	
-	this.scrollMidiPitch = 0;
+	this.scrollY = 0;
 	
 	this.elements = new MapByTimeRange();
 }
@@ -42,12 +42,21 @@ TrackNotes.prototype.onNoteModified = function(id)
 {
 	var elem = this.elements.get(id);
 	this.elementRefresh(elem);
+	this.elements.refresh(id);
 }
 
 
 TrackNotes.prototype.onNoteRemoved = function(id)
 {
+	this.timeline.markDirtyElement(this.elements.get(id));
 	this.elements.remove(id);
+}
+
+
+TrackNotes.prototype.handleScroll = function(elem)
+{
+	this.scrollY = this.getModifiedScrollY();
+	this.timeline.markDirtyAll();
 }
 
 
@@ -107,12 +116,13 @@ TrackNotes.prototype.relayout = function()
 
 TrackNotes.prototype.redraw = function(time1, time2)
 {
-	var that       = this;
-	var ctx        = this.timeline.ctx;
-	var toPixels   = this.timeline.timeToPixelsScaling;
-	var noteHeight = this.timeline.noteHeight;
-	var minPitch   = this.timeline.song.MIN_VALID_MIDI_PITCH;
-	var maxPitch   = this.timeline.song.MAX_VALID_MIDI_PITCH;
+	var that        = this;
+	var ctx         = this.timeline.ctx;
+	var toPixels    = this.timeline.timeToPixelsScaling;
+	var noteHeight  = this.timeline.noteHeight;
+	var minPitch    = this.timeline.song.MIN_VALID_MIDI_PITCH;
+	var maxPitch    = this.timeline.song.MAX_VALID_MIDI_PITCH;
+	var scrollY     = this.getModifiedScrollY();
 	
 	var xMin = time1 * toPixels;
 	var xMax = Math.min(time2, this.timeline.song.length) * toPixels;
@@ -124,6 +134,9 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	ctx.clip();
 	
 	ctx.translate(0.5, 0.5);
+	
+	ctx.save();
+	ctx.translate(0, scrollY);
 	
 	// Draw pitch rows.
 	ctx.fillStyle = "#e4e4e4";
@@ -142,6 +155,8 @@ TrackNotes.prototype.redraw = function(time1, time2)
 		that.drawNote(elem);
 	});
 	
+	ctx.restore();
+	
 	// Draw borders.
 	ctx.strokeStyle = "#000000";
 	ctx.strokeRect(0, 0, this.timeline.song.length * toPixels, this.height);
@@ -150,13 +165,36 @@ TrackNotes.prototype.redraw = function(time1, time2)
 }
 
 
+TrackNotes.prototype.getModifiedScrollY = function()
+{
+	var noteHeight  = this.timeline.noteHeight;
+	var minPitch    = this.timeline.song.MIN_VALID_MIDI_PITCH;
+	var maxPitch    = this.timeline.song.MAX_VALID_MIDI_PITCH;
+	
+	var scrollY = this.scrollY;
+	
+	if (this.timeline.mouseDownTrack == this &&
+		this.timeline.mouseAction == this.timeline.INTERACT_NONE)
+	{
+		scrollY += this.timeline.mouseMoveScrollY;
+		scrollY =
+			Math.max(0,
+			Math.min((maxPitch - minPitch) * noteHeight - this.height,
+			scrollY));
+	}
+	
+	return scrollY;
+}
+
+
 TrackNotes.prototype.drawNote = function(elem)
 {
-	var ctx        = this.timeline.ctx;
-	var toPixels   = this.timeline.timeToPixelsScaling;
-	var noteHeight = this.timeline.noteHeight;
-	var minPitch   = this.timeline.song.MIN_VALID_MIDI_PITCH;
-	var note       = this.timeline.song.noteGet(elem.id);
+	var ctx         = this.timeline.ctx;
+	var toPixels    = this.timeline.timeToPixelsScaling;
+	var noteHeight  = this.timeline.noteHeight;
+	var minPitch    = this.timeline.song.MIN_VALID_MIDI_PITCH;
+	var note        = this.timeline.song.noteGet(elem.id);
+	var scrollY     = this.getModifiedScrollY();
 	
 	var start    = note.timeRange.start;
 	var duration = note.timeRange.duration();
@@ -179,7 +217,12 @@ TrackNotes.prototype.drawNote = function(elem)
 	
 	var x = 0.5 + Math.floor(start * toPixels);
 	var y = 0.5 + this.height - noteHeight * (pitch - minPitch);
-	var w = Math.floor(duration * toPixels);
+	var w = Math.floor(duration * toPixels - 1);
+	
+	y =
+		Math.max(-scrollY + 3,
+		Math.min(this.height - scrollY + noteHeight - 2,
+		y));
 	
 	ctx.fillRect(x, y - noteHeight, w, noteHeight - 1);
 		
@@ -188,6 +231,6 @@ TrackNotes.prototype.drawNote = function(elem)
 		ctx.fillStyle = "#ffffff"
 		ctx.globalAlpha = 0.5;
 		
-		ctx.fillRect(x, y - noteHeight + 1, w, noteHeight - 1 - 2);
+		ctx.fillRect(x, y - noteHeight + 2, w, noteHeight - 1 - 4);
 	}
 }

@@ -62,21 +62,61 @@ Song.prototype.raiseAllRemoved = function()
 
 Song.prototype.applyModifications = function()
 {
-	var that = this;
-	
 	for (var i = 0; i < this.notesModified.length; i++)
-		this.eventNoteModified.call(function (fn) { fn(that.notesModified[i]); });
+	{
+		var modif = this.notesModified[i];
+		this._noteSet(modif.id, modif.note, true);
+	}
 	
 	this.notesModified = [];
+}
+
+
+Song.prototype._clipNotes = function(note)
+{
+	// Check for overlapping notes and clip them.
+	for (var i = 0; i < this.notesById.length; i++)
+	{
+		var otherNote = this.notesById[i];
+		if (otherNote == null)
+			continue;
+		
+		if (otherNote.pitch.midiPitch != note.pitch.midiPitch)
+			continue;
+		
+		if (!otherNote.timeRange.overlapsRange(note.timeRange))
+			continue;
+		
+		this.noteRemove(i);
+		
+		var parts = otherNote.timeRange.getClippedParts(note.timeRange);
+		for (var p = 0; p < parts.length; p++)
+		{
+			var clippedNote = otherNote.clone();
+			clippedNote.timeRange = parts[p];
+			this.noteAdd(clippedNote);
+		}
+	}
+}
+
+
+Song.prototype._noteSet = function(id, note, asModification)
+{
+	this._clipNotes(note);
+	this.notesById[id] = note;
+	
+	if (asModification)
+		this.eventNoteModified.call(function (fn) { fn(id); });
+	else
+		this.eventNoteAdded   .call(function (fn) { fn(id); });
 }
 
 
 Song.prototype.noteAdd = function(note)
 {
 	var id = this.notesById.length;
-	this.notesById[id] = note;
+	this._noteSet(id, note, false);
 	
-	this.eventNoteAdded.call(function (fn) { fn(id); });
 	return id;
 }
 
@@ -90,8 +130,8 @@ Song.prototype.noteRemove = function(id)
 
 Song.prototype.noteModify = function(id, note)
 {
-	this.notesById[id] = note;
-	this.notesModified.push(id);
+	this.notesById[id] = null;
+	this.notesModified.push({ id: id, note: note });
 }
 
 

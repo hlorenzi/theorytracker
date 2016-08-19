@@ -23,10 +23,21 @@ MapByTimeRange.prototype.get = function(id)
 }
 
 
+MapByTimeRange.prototype.refresh = function(id)
+{
+	// Do nothing for this unoptimized implementation.
+}
+
+
 MapByTimeRange.prototype.enumerateAll = function(callback)
 {
 	for (var i = 0; i < this.items.length; i++)
+	{
+		if (this.items[i] == null)
+			continue;
+		
 		callback(i, this.items[i]);
+	}
 }
 
 
@@ -34,6 +45,9 @@ MapByTimeRange.prototype.enumerateOverlappingTime = function(time, callback)
 {
 	for (var i = 0; i < this.items.length; i++)
 	{
+		if (this.items[i] == null)
+			continue;
+		
 		if (this.items[i].timeRange.overlapsTime(time))
 			callback(i, this.items[i]);
 	}
@@ -44,6 +58,9 @@ MapByTimeRange.prototype.enumerateOverlappingRange = function(timeRange, callbac
 {
 	for (var i = 0; i < this.items.length; i++)
 	{
+		if (this.items[i] == null)
+			continue;
+		
 		if (timeRange.overlapsRange(this.items[i].timeRange))
 			callback(i, this.items[i]);
 	}
@@ -54,6 +71,9 @@ MapByTimeRange.prototype.enumerateOverlappingRangeOrSelected = function(timeRang
 {
 	for (var i = 0; i < this.items.length; i++)
 	{
+		if (this.items[i] == null)
+			continue;
+		
 		if (this.items[i].selected || timeRange.overlapsRange(this.items[i].timeRange))
 			callback(i, this.items[i]);
 	}
