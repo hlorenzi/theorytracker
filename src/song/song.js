@@ -6,16 +6,17 @@ function Song()
 	this.MIN_VALID_MIDI_PITCH = 3 * 12;
 	this.MAX_VALID_MIDI_PITCH = 8 * 12;
 	
-	this.notesById  = [];
-	this.metersById = [];
+	this.notesById     = [];
+	this.notesModified = [];
+	this.metersById    = [];
 	
-	this.eventNoteAdded   = new Callback();
-	this.eventNoteChanged = new Callback();
-	this.eventNoteRemoved = new Callback();
+	this.eventNoteAdded    = new Callback();
+	this.eventNoteModified = new Callback();
+	this.eventNoteRemoved  = new Callback();
 	
-	this.eventMeterAdded   = new Callback();
-	this.eventMeterChanged = new Callback();
-	this.eventMeterRemoved = new Callback();
+	this.eventMeterAdded    = new Callback();
+	this.eventMeterModified = new Callback();
+	this.eventMeterRemoved  = new Callback();
 	
 	this.sanitize();
 }
@@ -59,6 +60,17 @@ Song.prototype.raiseAllRemoved = function()
 }
 
 
+Song.prototype.applyModifications = function()
+{
+	var that = this;
+	
+	for (var i = 0; i < this.notesModified.length; i++)
+		this.eventNoteModified.call(function (fn) { fn(that.notesModified[i]); });
+	
+	this.notesModified = [];
+}
+
+
 Song.prototype.noteAdd = function(note)
 {
 	var id = this.notesById.length;
@@ -73,6 +85,13 @@ Song.prototype.noteRemove = function(id)
 {
 	this.eventNoteRemoved.call(function (fn) { fn(id); });
 	this.notesById[id] = null;
+}
+
+
+Song.prototype.noteModify = function(id, note)
+{
+	this.notesById[id] = note;
+	this.notesModified.push(id);
 }
 
 

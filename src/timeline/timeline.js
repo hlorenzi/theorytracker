@@ -21,11 +21,11 @@ function Timeline(canvas)
 	this.canvas.onmouseup   = function(ev) { that.handleMouseUp(ev);   };
 	//window.onkeydown        = function(ev) { that.handleKeyDown(ev);   };
 	
-	this.mouseDown      = false;
-	this.mouseDownPos   = null;
-	this.mouseAction    = this.INTERACT_NONE;
-	this.mouseMoveTime  = 0;
-	this.mouseMovePitch = 0;
+	this.mouseDown          = false;
+	this.mouseDownPos       = null;
+	this.mouseAction        = this.INTERACT_NONE;
+	this.mouseMoveDeltaTime = 0;
+	this.mouseMovePitch     = 0;
 	
 	this.hoverElement     = null;
 	this.hoverRegion      = null;
@@ -34,14 +34,15 @@ function Timeline(canvas)
 	// Set up song and song events.
 	this.song = null;
 	
-	this.eventNoteAdded   = new Callback();
-	this.eventNoteChanged = new Callback();
-	this.eventNoteRemoved = new Callback();
+	this.eventNoteAdded    = new Callback();
+	this.eventNoteModified = new Callback();
+	this.eventNoteRemoved  = new Callback();
 	
 	// Set up display metrics.
-	this.scrollTime = 0;
+	this.scrollTime          = 0;
+	this.timeSnap            = 960 / 16;
 	this.timeToPixelsScaling = 100 / 960;
-	this.noteHeight = 10;
+	this.noteHeight          = 5;
 	
 	this.redrawDirtyTimeMin = -1;
 	this.redrawDirtyTimeMax = -1;
@@ -65,9 +66,9 @@ Timeline.prototype.setSong = function(song)
 	
 	if (this.song != null) {
 		var that = this;
-		this.song.eventNoteAdded  .add(function (id) { that.eventNoteAdded  .call(function (fn) { fn(id); }); });
-		this.song.eventNoteChanged.add(function (id) { that.eventNoteChanged.call(function (fn) { fn(id); }); });
-		this.song.eventNoteRemoved.add(function (id) { that.eventNoteRemoved.call(function (fn) { fn(id); }); });
+		this.song.eventNoteAdded   .add(function (id) { that.eventNoteAdded   .call(function (fn) { fn(id); }); });
+		this.song.eventNoteModified.add(function (id) { that.eventNoteModified.call(function (fn) { fn(id); }); });
+		this.song.eventNoteRemoved .add(function (id) { that.eventNoteRemoved .call(function (fn) { fn(id); }); });
 		this.song.raiseAllAdded();
 		this.markDirtyAll();
 	}
@@ -83,22 +84,28 @@ Timeline.prototype.handleMouseDown = function(ev)
 	var ctrl     = ev.ctrlKey;
 	var mousePos = mouseToClient(this.canvas, ev);
 	
+	// Handle multi-selection with Ctrl.
 	if (!ctrl && (this.hoverElement == null || !this.hoverElement.selected))
 		this.unselectAll();
 	
 	if (this.hoverElement != null)
 	{
-		this.select(this.hoverElement);
+		// Handle selection of element under mouse.
+		if (!this.hoverElement.selected)
+			this.select(this.hoverElement);
+		
 		this.unselectAllOfDifferentKind(this.hoverElement.interactKind);
 		
 		this.mouseAction = this.hoverElement.interactKind;
+		this.markDirtyAllSelectedElements(0);
 	}
 	else
 		this.mouseAction = this.INTERACT_NONE;
 	
-	this.mouseDown     = true;
-	this.mouseDownPos  = mousePos;
-	this.mouseMoveTime = 0;
+	this.mouseDown           = true;
+	this.mouseDownPos        = mousePos;
+	this.mouseMoveDeltaTime  = 0;
+	this.mouseMoveDeltaPitch = 0;
 	this.redraw();
 }
 
@@ -110,40 +117,75 @@ Timeline.prototype.handleMouseMove = function(ev)
 	ev.preventDefault();
 	
 	var mousePos  = mouseToClient(this.canvas, ev);
-	var mouseTime = mousePos.x / this.timeToPixelsScaling;
+	var mouseTime = snap(mousePos.x / this.timeToPixelsScaling, this.timeSnap);
 	
+	// Handle dragging with the mouse.
 	if (this.mouseDown)
 	{
-		var mouseTimeDelta = (mousePos.x - this.mouseDownPos.x) / this.timeToPixelsScaling;
+		var mouseTimeDelta  = (mousePos.x - this.mouseDownPos.x) / this.timeToPixelsScaling;
+		var mousePitchDelta = Math.round((this.mouseDownPos.y - mousePos.y) / this.noteHeight);
 		
 		if (this.selectedElements.length != 0)
 		{
+			// Handle time displacement.
 			if ((this.mouseAction & this.INTERACT_MOVE_TIME) != 0)
 			{
-				var allEncompasingTimeRange         = this.selectedElements[0].timeRange.clone();
+				// Get merged time ranges of all selected elements.
 				var allEncompasingInteractTimeRange = this.selectedElements[0].interactTimeRange.clone();
 				
 				for (var i = 1; i < this.selectedElements.length; i++)
-				{
-					allEncompasingTimeRange        .merge(this.selectedElements[i].timeRange);
 					allEncompasingInteractTimeRange.merge(this.selectedElements[i].interactTimeRange);
-				}
 				
-				this.markDirty(
-					allEncompasingTimeRange.start + this.mouseMoveTime,
-					allEncompasingTimeRange.end   + this.mouseMoveTime);
+				// Mark elements' previous positions as dirty,
+				// to redraw over when they move away.
+				this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
 				
-				this.mouseMoveTime = 
+				// Calculate displacement,
+				// ensuring that elements cannot fall out of bounds.
+				this.mouseMoveDeltaTime = 
 					Math.max(-allEncompasingInteractTimeRange.start,
 					Math.min(this.song.length - allEncompasingInteractTimeRange.end,
 					mouseTimeDelta));
 					
-				this.markDirty(
-					allEncompasingTimeRange.start + this.mouseMoveTime,
-					allEncompasingTimeRange.end   + this.mouseMoveTime);
+				this.mouseMoveDeltaTime = snap(this.mouseMoveDeltaTime, this.timeSnap);
+					
+				// Mark elements' new positions as dirty,
+				// to redraw them at wherever they move to.
+				this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
+			}
+			// If not displacing time, mark elements as dirty in their current positions.
+			else
+				this.markDirtyAllSelectedElements(0);
+			
+			// Handle pitch displacement.
+			if ((this.mouseAction & this.INTERACT_MOVE_PITCH) != 0)
+			{
+				// Get the pitch range of all selected elements.
+				var pitchMin = this.selectedElements[0].interactPitch.clone();
+				var pitchMax = this.selectedElements[0].interactPitch.clone();
+				
+				for (var i = 1; i < this.selectedElements.length; i++)
+				{
+					var pitch = this.selectedElements[i].interactPitch.midiPitch;
+					
+					if (pitch < pitchMin.midiPitch)
+						pitchMin = new Pitch(pitch);
+					
+					if (pitch > pitchMax.midiPitch)
+						pitchMax = new Pitch(pitch);
+				}
+				
+				// Calculate displacement,
+				// ensuring that pitches cannot fall out of bounds.
+				this.mouseMoveDeltaPitch = 
+					Math.max(this.song.MIN_VALID_MIDI_PITCH - pitchMin.midiPitch,
+					Math.min(this.song.MAX_VALID_MIDI_PITCH - 1 - pitchMax.midiPitch,
+					mousePitchDelta));
 			}
 		}
 	}
+	
+	// If mouse is not down, just handle hovering.
 	else
 	{
 		if (this.hoverElement != null)
@@ -203,6 +245,18 @@ Timeline.prototype.handleMouseUp = function(ev)
 	
 	var mousePos = mouseToClient(this.canvas, ev);
 	
+	// Handle releasing the mouse after dragging.
+	if (this.mouseDown)
+	{
+		this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
+		
+		for (var i = 0; i < this.selectedElements.length; i++)
+			this.selectedElements[i].modify(this.selectedElements[i]);
+		
+		this.song.applyModifications();
+		this.markDirtyAllSelectedElements(0);
+	}
+	
 	this.mouseDown   = false;
 	this.mouseAction = this.INTERACT_NONE;
 	this.redraw();
@@ -229,6 +283,17 @@ Timeline.prototype.markDirty = function(timeStart, timeEnd)
 Timeline.prototype.markDirtyElement = function(elem)
 {
 	this.markDirty(elem.timeRange.start, elem.timeRange.end);
+}
+
+
+Timeline.prototype.markDirtyAllSelectedElements = function(timeDelta)
+{
+	for (var i = 0; i < this.selectedElements.length; i++)
+	{
+		this.markDirty(
+			this.selectedElements[i].timeRange.start + timeDelta,
+			this.selectedElements[i].timeRange.end   + timeDelta);
+	}
 }
 
 
