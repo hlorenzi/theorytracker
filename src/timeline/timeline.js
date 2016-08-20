@@ -8,6 +8,11 @@ function Timeline(canvas)
 	this.INTERACT_MOVE_PITCH   = 0x2;
 	this.INTERACT_STRETCH_TIME = 0x4;
 	
+	this.TIME_PER_WHOLE_NOTE   = 960;
+	this.MAX_VALID_LENGTH      = 960 * 1024;
+	this.MIN_VALID_MIDI_PITCH  = 3 * 12;
+	this.MAX_VALID_MIDI_PITCH  = 8 * 12 - 1;
+	
 	// Get canvas context.
 	this.canvas = canvas;
 	this.ctx    = canvas.getContext("2d");
@@ -33,23 +38,17 @@ function Timeline(canvas)
 	this.hoverRegion      = null;
 	this.selectedElements = [];
 	
-	// Set up song and song events.
-	this.song = null;
-	
-	this.eventNoteAdded    = new Callback();
-	this.eventNoteModified = new Callback();
-	this.eventNoteRemoved  = new Callback();
-	
 	// Set up display metrics.
 	this.scrollTime          = 0;
 	this.timeSnap            = 960 / 16;
 	this.timeToPixelsScaling = 100 / 960;
-	this.noteHeight          = 10;
+	this.noteHeight          = 12;
 	
 	this.redrawDirtyTimeMin = -1;
 	this.redrawDirtyTimeMax = -1;
 	
 	// Set up tracks.
+	this.length     = 0;
 	this.trackNotes = new TrackNotes(this);
 	
 	this.tracks = [];
@@ -61,19 +60,12 @@ Timeline.prototype.setSong = function(song)
 {
 	this.unselectAll();
 	
-	if (this.song != null)
-		this.song.raiseAllRemoved();
+	this.length = song.length;
 	
-	this.song = song;
+	for (var i = 0; i < this.tracks.length; i++)
+		this.tracks[i].setSong(song);
 	
-	if (this.song != null) {
-		var that = this;
-		this.song.eventNoteAdded   .add(function (id) { that.eventNoteAdded   .call(function (fn) { fn(id); }); });
-		this.song.eventNoteModified.add(function (id) { that.eventNoteModified.call(function (fn) { fn(id); }); });
-		this.song.eventNoteRemoved .add(function (id) { that.eventNoteRemoved .call(function (fn) { fn(id); }); });
-		this.song.raiseAllAdded();
-		this.markDirtyAll();
-	}
+	this.markDirtyAll();
 }
 
 
@@ -157,7 +149,7 @@ Timeline.prototype.handleMouseMove = function(ev)
 				// ensuring that elements cannot fall out of bounds.
 				this.mouseMoveDeltaTime = 
 					Math.max(-allEncompasingInteractTimeRange.start,
-					Math.min(this.song.length - allEncompasingInteractTimeRange.end,
+					Math.min(this.length - allEncompasingInteractTimeRange.end,
 					mouseTimeDelta));
 					
 				this.mouseMoveDeltaTime = snap(this.mouseMoveDeltaTime, this.timeSnap);
@@ -191,8 +183,8 @@ Timeline.prototype.handleMouseMove = function(ev)
 				// Calculate displacement,
 				// ensuring that pitches cannot fall out of bounds.
 				this.mouseMoveDeltaPitch = 
-					Math.max(this.song.MIN_VALID_MIDI_PITCH - pitchMin.midiPitch,
-					Math.min(this.song.MAX_VALID_MIDI_PITCH - 1 - pitchMax.midiPitch,
+					Math.max(this.MIN_VALID_MIDI_PITCH - pitchMin.midiPitch,
+					Math.min(this.MAX_VALID_MIDI_PITCH - 1 - pitchMax.midiPitch,
 					mousePitchDelta));
 			}
 		}
@@ -212,7 +204,7 @@ Timeline.prototype.handleMouseMove = function(ev)
 		{
 			var track = this.tracks[trackIndex];
 			
-			track.elements.enumerateOverlappingTime(mouseTime, function (index, elem)
+			track.elements.enumerateOverlappingTime(mouseTime, function (elem)
 			{
 				for (var e = 0; e < elem.regions.length; e++)
 				{
@@ -269,9 +261,11 @@ Timeline.prototype.handleMouseUp = function(ev)
 			this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
 			
 			for (var i = 0; i < this.selectedElements.length; i++)
-				this.selectedElements[i].modify(this.selectedElements[i]);
+				this.selectedElements[i].modify();
 			
-			this.song.applyModifications();
+			for (var i = 0; i < this.tracks.length; i++)
+				this.tracks[i].applyModifications();
+			
 			this.markDirtyAllSelectedElements(0);
 		}
 	}
@@ -286,7 +280,7 @@ Timeline.prototype.handleMouseUp = function(ev)
 Timeline.prototype.markDirtyAll = function()
 {
 	this.redrawDirtyTimeMin = -100;
-	this.redrawDirtyTimeMax = this.song.length + 100;
+	this.redrawDirtyTimeMax = this.length + 100;
 }
 
 
@@ -321,7 +315,7 @@ Timeline.prototype.unselectAll = function()
 {
 	for (var i = 0; i < this.selectedElements.length; i++)
 	{
-		this.selectedElements[i].selected = false;
+		this.selectedElements[i].unselect();
 		this.markDirtyElement(this.selectedElements[i]);
 	}
 	
@@ -335,7 +329,7 @@ Timeline.prototype.unselectAllOfDifferentKind = function(kind)
 	{
 		if ((this.selectedElements[i].interactKind & kind) == 0)
 		{
-			this.selectedElements[i].selected = false;
+			this.selectedElements[i].unselect();
 			this.markDirtyElement(this.selectedElements[i]);
 			this.selectedElements[i].splice(i, 1);
 		}
@@ -345,7 +339,7 @@ Timeline.prototype.unselectAllOfDifferentKind = function(kind)
 
 Timeline.prototype.select = function(elem)
 {
-	elem.selected = true;
+	elem.select();
 	this.selectedElements.push(elem);
 	this.markDirtyElement(elem);
 }

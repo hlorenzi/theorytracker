@@ -2,80 +2,131 @@ function TrackNotes(timeline)
 {
 	this.timeline = timeline;
 	
-	var that = this;
-	this.timeline.eventNoteAdded   .add(function (id) { that.onNoteAdded   (id); });
-	this.timeline.eventNoteModified.add(function (id) { that.onNoteModified(id); });
-	this.timeline.eventNoteRemoved .add(function (id) { that.onNoteRemoved (id); });
-	
-	this.y      = 0;
-	this.height = 0;
-	
+	this.y       = 0;
+	this.height  = 0;
 	this.scrollY = 0;
 	
-	this.elements = new MapByTimeRange();
+	this.elements = new ListByTimeRange();
+	
+	this.selectedElements = [];
+	this.modifiedElements = [];
 }
 
 
-TrackNotes.prototype.onNoteAdded = function(id)
+TrackNotes.prototype = new Track();
+
+
+TrackNotes.prototype.setSong = function(song)
 {
-	var that = this;
+	this.elements.clear();
+	this.selectedElements = [];
 	
-	var elem = {
-		id:        id,
-		selected:  false,
-		timeRange: null,
-		
-		modify: function(elem) { that.elementModify(elem); },
-		
-		regions:           [],
-		interactKind:      this.timeline.INTERACT_MOVE_TIME | this.timeline.INTERACT_MOVE_PITCH,
-		interactTimeRange: null,
-		interactPitch:     null
-	};
+	for (var i = 0; i < song.notes.length; i++)
+	{
+		this._clipNotes(song.notes[i].timeRange, song.notes[i].pitch);
+		this._noteAdd(song.notes[i]);
+	}
+}
+
+
+TrackNotes.prototype._noteAdd = function(note)
+{
+	var elem = new Element();
+	elem.track = this;
+	elem.note  = note.clone();
 	
 	this.elementRefresh(elem);
-	this.elements.add(id, elem);
+	this.elements.add(elem);
+	this.timeline.markDirtyElement(elem);
 }
 
 
-TrackNotes.prototype.onNoteModified = function(id)
+TrackNotes.prototype._clipNotes = function(timeRange, pitch)
 {
-	var elem = this.elements.get(id);
-	this.elementRefresh(elem);
-	this.elements.refresh(id);
+	// Check for overlapping notes and clip them.
+	var overlapping = [];
+	
+	this.elements.enumerateOverlappingRange(timeRange, function (elem)
+	{
+		if (elem.note.pitch.midiPitch == pitch.midiPitch)
+			overlapping.push(elem);
+	});
+	
+	for (var i = 0; i < overlapping.length; i++)
+		this.elements.remove(overlapping[i]);
+	
+	for (var i = 0; i < overlapping.length; i++)
+	{
+		var elem = overlapping[i];
+		
+		var parts = elem.note.timeRange.getClippedParts(timeRange);
+		for (var p = 0; p < parts.length; p++)
+		{
+			var clippedNote = elem.note.clone();
+			clippedNote.timeRange = parts[p];
+			this._noteAdd(clippedNote);
+		}
+	}
 }
 
 
-TrackNotes.prototype.onNoteRemoved = function(id)
-{
-	this.timeline.markDirtyElement(this.elements.get(id));
-	this.elements.remove(id);
-}
-
-
-TrackNotes.prototype.handleScroll = function(elem)
+TrackNotes.prototype.handleScroll = function()
 {
 	this.scrollY = this.getModifiedScrollY();
 	this.timeline.markDirtyAll();
 }
 
 
+TrackNotes.prototype.applyModifications = function()
+{
+	for (var i = 0; i < this.modifiedElements.length; i++)
+	{
+		var elem = this.modifiedElements[i];
+		this._clipNotes(elem.note.timeRange, elem.note.pitch);
+	}
+		
+	for (var i = 0; i < this.modifiedElements.length; i++)
+	{
+		var elem = this.modifiedElements[i];
+		
+		this.elementRefresh(elem);
+		this.elements.add(elem);
+		this.timeline.markDirtyElement(elem);
+	}
+	
+	this.modifiedElements = [];
+}
+
+
+TrackNotes.prototype.elementSelect = function(elem)
+{
+	elem.selected = true;
+	this.selectedElements.push(elem);
+}
+
+
+TrackNotes.prototype.elementUnselect = function(elem)
+{
+	elem.selected = false;
+	
+	var index = this.selectedElements.indexOf(elem);
+	
+	if (index != -1)
+		this.selectedElements.splice(index, 1);
+}
+
+
 TrackNotes.prototype.elementModify = function(elem)
 {
-	var note = this.timeline.song.noteGet(elem.id);
+	this.elements.remove(elem);
 	
-	var start    = note.timeRange.start;
-	var duration = note.timeRange.duration();
-	var pitch    = note.pitch.midiPitch;
+	var modifiedElem = this.getModifiedElement(elem);
 	
-	if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
-		start += this.timeline.mouseMoveDeltaTime;
-
-	if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_PITCH) != 0)
-		pitch += this.timeline.mouseMoveDeltaPitch;
+	elem.note = new Note(
+		new TimeRange(modifiedElem.start, modifiedElem.start + modifiedElem.duration),
+		new Pitch(modifiedElem.pitch));
 	
-	this.timeline.song.noteModify(elem.id,
-		new Note(new TimeRange(start, start + duration), new Pitch(pitch)));
+	this.modifiedElements.push(elem);
 }
 
 
@@ -83,20 +134,19 @@ TrackNotes.prototype.elementRefresh = function(elem)
 {
 	var toPixels   = this.timeline.timeToPixelsScaling;
 	var noteHeight = this.timeline.noteHeight;
-	var minPitch   = this.timeline.song.MIN_VALID_MIDI_PITCH;
+	var minPitch   = this.timeline.MIN_VALID_MIDI_PITCH;
 	
-	var note = this.timeline.song.noteGet(elem.id);
-	
-	elem.timeRange         = note.timeRange.clone();
-	elem.interactTimeRange = note.timeRange.clone();
-	elem.interactPitch     = note.pitch.clone();
+	elem.timeRange         = elem.note.timeRange.clone();
+	elem.interactKind      = this.timeline.INTERACT_MOVE_TIME | this.timeline.INTERACT_MOVE_PITCH;
+	elem.interactTimeRange = elem.note.timeRange.clone();
+	elem.interactPitch     = elem.note.pitch.clone();
 	
 	elem.regions = [
 		{
 			kind:   this.timeline.INTERACT_MOVE_TIME | this.timeline.INTERACT_MOVE_PITCH,
-			x:      note.timeRange.start * toPixels,
-			y:      this.height - noteHeight * (note.pitch.midiPitch - minPitch) - noteHeight,
-			width:  note.timeRange.duration() * toPixels,
+			x:      elem.note.timeRange.start * toPixels,
+			y:      this.height - noteHeight * (elem.note.pitch.midiPitch - minPitch) - noteHeight,
+			width:  elem.note.timeRange.duration() * toPixels,
 			height: noteHeight - 1
 		}
 	];
@@ -107,10 +157,8 @@ TrackNotes.prototype.relayout = function()
 {
 	var that = this;
 	
-	this.elements.enumerateAll(function (index, elem)
-	{
-		that.elementRefresh(elem);
-	});
+	this.elements.enumerateAll(function (elem)
+		{ that.elementRefresh(elem); });
 }
 
 
@@ -120,12 +168,12 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	var ctx         = this.timeline.ctx;
 	var toPixels    = this.timeline.timeToPixelsScaling;
 	var noteHeight  = this.timeline.noteHeight;
-	var minPitch    = this.timeline.song.MIN_VALID_MIDI_PITCH;
-	var maxPitch    = this.timeline.song.MAX_VALID_MIDI_PITCH;
+	var minPitch    = this.timeline.MIN_VALID_MIDI_PITCH;
+	var maxPitch    = this.timeline.MAX_VALID_MIDI_PITCH;
 	var scrollY     = this.getModifiedScrollY();
 	
 	var xMin = time1 * toPixels;
-	var xMax = Math.min(time2, this.timeline.song.length) * toPixels;
+	var xMax = Math.min(time2, this.timeline.length) * toPixels;
 	
 	ctx.save();
 	
@@ -150,26 +198,50 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	}
 	
 	// Draw notes.
-	this.elements.enumerateOverlappingRangeOrSelected(new TimeRange(time1, time2), function (index, elem)
-	{
-		that.drawNote(elem);
-	});
+	this.elements.enumerateOverlappingRange(new TimeRange(time1, time2), function (elem)
+		{ that.drawNote(elem); });
+	
+	for (var i = 0; i < this.selectedElements.length; i++)
+		this.drawNote(this.selectedElements[i]);
 	
 	ctx.restore();
 	
 	// Draw borders.
 	ctx.strokeStyle = "#000000";
-	ctx.strokeRect(0, 0, this.timeline.song.length * toPixels, this.height);
+	ctx.strokeRect(0, 0, this.timeline.length * toPixels, this.height);
 	
 	ctx.restore();
+}
+
+
+TrackNotes.prototype.getModifiedElement = function(elem)
+{
+	var start    = elem.note.timeRange.start;
+	var duration = elem.note.timeRange.duration();
+	var pitch    = elem.note.pitch.midiPitch;
+	
+	if (elem.selected)
+	{
+		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
+			start += this.timeline.mouseMoveDeltaTime;
+	
+		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_PITCH) != 0)
+			pitch += this.timeline.mouseMoveDeltaPitch;
+	}
+	
+	return {
+		start:    start,
+		duration: duration,
+		pitch:    pitch
+	};
 }
 
 
 TrackNotes.prototype.getModifiedScrollY = function()
 {
 	var noteHeight  = this.timeline.noteHeight;
-	var minPitch    = this.timeline.song.MIN_VALID_MIDI_PITCH;
-	var maxPitch    = this.timeline.song.MAX_VALID_MIDI_PITCH;
+	var minPitch    = this.timeline.MIN_VALID_MIDI_PITCH;
+	var maxPitch    = this.timeline.MAX_VALID_MIDI_PITCH;
 	
 	var scrollY = this.scrollY;
 	
@@ -189,25 +261,12 @@ TrackNotes.prototype.getModifiedScrollY = function()
 
 TrackNotes.prototype.drawNote = function(elem)
 {
-	var ctx         = this.timeline.ctx;
-	var toPixels    = this.timeline.timeToPixelsScaling;
-	var noteHeight  = this.timeline.noteHeight;
-	var minPitch    = this.timeline.song.MIN_VALID_MIDI_PITCH;
-	var note        = this.timeline.song.noteGet(elem.id);
-	var scrollY     = this.getModifiedScrollY();
-	
-	var start    = note.timeRange.start;
-	var duration = note.timeRange.duration();
-	var pitch    = note.pitch.midiPitch;
-	
-	if (elem.selected)
-	{
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
-			start += this.timeline.mouseMoveDeltaTime;
-	
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_PITCH) != 0)
-			pitch += this.timeline.mouseMoveDeltaPitch;
-	}
+	var ctx          = this.timeline.ctx;
+	var toPixels     = this.timeline.timeToPixelsScaling;
+	var noteHeight   = this.timeline.noteHeight;
+	var minPitch     = this.timeline.MIN_VALID_MIDI_PITCH;
+	var scrollY      = this.getModifiedScrollY();
+	var modifiedElem = this.getModifiedElement(elem);
 	
 	ctx.globalAlpha = 1;
 	if (elem == this.timeline.hoverElement || (elem.selected && this.timeline.mouseDown))
@@ -215,9 +274,9 @@ TrackNotes.prototype.drawNote = function(elem)
 	else
 		ctx.fillStyle = "#ff0000";
 	
-	var x = 0.5 + Math.floor(start * toPixels);
-	var y = 0.5 + this.height - noteHeight * (pitch - minPitch);
-	var w = Math.floor(duration * toPixels - 1);
+	var x = 0.5 + Math.floor(modifiedElem.start * toPixels);
+	var y = 0.5 + this.height - noteHeight * (modifiedElem.pitch - minPitch);
+	var w = Math.floor(modifiedElem.duration * toPixels - 1);
 	
 	y =
 		Math.max(-scrollY + 3,
