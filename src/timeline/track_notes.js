@@ -98,24 +98,6 @@ TrackNotes.prototype.applyModifications = function()
 }
 
 
-TrackNotes.prototype.elementSelect = function(elem)
-{
-	elem.selected = true;
-	this.selectedElements.push(elem);
-}
-
-
-TrackNotes.prototype.elementUnselect = function(elem)
-{
-	elem.selected = false;
-	
-	var index = this.selectedElements.indexOf(elem);
-	
-	if (index != -1)
-		this.selectedElements.splice(index, 1);
-}
-
-
 TrackNotes.prototype.elementModify = function(elem)
 {
 	this.elements.remove(elem);
@@ -172,13 +154,14 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	var maxPitch    = this.timeline.MAX_VALID_MIDI_PITCH;
 	var scrollY     = this.getModifiedScrollY();
 	
-	var xMin = time1 * toPixels;
-	var xMax = Math.min(time2, this.timeline.length) * toPixels;
+	var xMin = Math.floor(time1 * toPixels);
+	var xLen = Math.floor(this.timeline.length * toPixels);
+	var xMax = Math.floor(time2 * toPixels);
 	
 	ctx.save();
 	
 	ctx.beginPath();
-	ctx.rect(xMin, 0, xMax - xMin + 1, this.height + 1);
+	ctx.rect(xMin - 10, 0, xMax - xMin + 20, this.height + 1);
 	ctx.clip();
 	
 	ctx.translate(0.5, 0.5);
@@ -187,13 +170,20 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	ctx.translate(0, scrollY);
 	
 	// Draw pitch rows.
-	ctx.fillStyle = "#e4e4e4";
 	for (var i = minPitch; i <= maxPitch; i++)
 	{
+		ctx.fillStyle = "#cccccc";
+		ctx.fillRect(
+			xLen,
+			this.height - noteHeight * (i - minPitch),
+			xMax - xLen,
+			noteHeight - 0.5);
+			
+		ctx.fillStyle = "#e4e4e4";
 		ctx.fillRect(
 			xMin,
 			this.height - noteHeight * (i - minPitch),
-			xMax - xMin,
+			xLen - xMin,
 			noteHeight - 0.5);
 	}
 	
@@ -208,7 +198,19 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	
 	// Draw borders.
 	ctx.strokeStyle = "#000000";
-	ctx.strokeRect(0, 0, this.timeline.length * toPixels, this.height);
+	ctx.beginPath();
+		ctx.moveTo(xMin, 0);
+		ctx.lineTo(xMax, 0);
+		
+		ctx.moveTo(xMin, this.height);
+		ctx.lineTo(xMax, this.height);
+		
+		ctx.moveTo(0, 0);
+		ctx.lineTo(0, this.height);
+		
+		ctx.moveTo(xLen, 0);
+		ctx.lineTo(xLen, this.height);
+	ctx.stroke();
 	
 	ctx.restore();
 }
