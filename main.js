@@ -8,6 +8,8 @@ function main()
 	canvas.width = div.clientWidth;
 	
 	var song = new Song();
+	song.meterAdd(new Meter(0, 4, 4));
+	song.meterAdd(new Meter(720, 3, 4));
 	song.noteAdd(new Note(new TimeRange(  0, 960), new Pitch(3 * 12 + 0)));
 	song.noteAdd(new Note(new TimeRange(  0, 240), new Pitch(3 * 12 + 1)));
 	song.noteAdd(new Note(new TimeRange(240, 480), new Pitch(3 * 12 + 2)));

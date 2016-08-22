@@ -6,12 +6,6 @@ function Song()
 }
 
 
-Song.prototype.sanitize = function()
-{
-	this.meterAdd(new Meter(0, 4, 4));
-}
-
-
 Song.prototype.setLength = function(length)
 {
 	this.length = length;

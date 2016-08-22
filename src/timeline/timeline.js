@@ -12,6 +12,7 @@ function Timeline(canvas)
 	this.MAX_VALID_LENGTH      = 960 * 1024;
 	this.MIN_VALID_MIDI_PITCH  = 3 * 12;
 	this.MAX_VALID_MIDI_PITCH  = 8 * 12 - 1;
+	this.OFFSET_X              = 10;
 	this.REDRAW_TIME_MARGIN    = 50;
 
 	// Get canvas context.
@@ -55,10 +56,12 @@ function Timeline(canvas)
 	// Set up tracks.
 	this.length     = 0;
 	this.trackLength = new TrackLength(this);
+	this.trackMeters = new TrackMeters(this);
 	this.trackNotes  = new TrackNotes(this);
 
 	this.tracks = [];
 	this.tracks.push(this.trackLength);
+	this.tracks.push(this.trackMeters);
 	this.tracks.push(this.trackNotes);
 }
 
@@ -81,8 +84,8 @@ Timeline.prototype.mouseToClient = function(ev)
 	var rect = this.canvas.getBoundingClientRect();
 	
 	return {
-		x:         ev.clientX - rect.left,
-		xScrolled: ev.clientX - rect.left + this.scrollTime * this.timeToPixelsScaling,
+		x:         ev.clientX - rect.left - this.OFFSET_X,
+		xScrolled: ev.clientX - rect.left - this.OFFSET_X + this.scrollTime * this.timeToPixelsScaling,
 		y:         ev.clientY - rect.top
 	};
 }
@@ -152,7 +155,7 @@ Timeline.prototype.handleMouseMove = function(ev)
 				Math.min(this.length - 960,
 				this.mouseDownScrollTime + scrollTimeDelta));
 			
-			this.firstTimeVisible = this.scrollTime;
+			this.firstTimeVisible = this.scrollTime - this.OFFSET_X / this.timeToPixelsScaling;
 			this.lastTimeVisible  = this.scrollTime + this.canvasWidth / this.timeToPixelsScaling;
 		
 			this.mouseMoveScrollY = (mousePos.y - this.mouseDownPos.y);
@@ -412,15 +415,18 @@ Timeline.prototype.relayout = function()
 	this.trackLength.y      = 5;
 	this.trackLength.height = 20;
 
-	this.trackNotes.y      = 30;
-	this.trackNotes.height = this.canvasHeight - 35;
+	this.trackMeters.y      = 25;
+	this.trackMeters.height = 20;
+
+	this.trackNotes.y      = 50;
+	this.trackNotes.height = this.canvasHeight - 55;
 	
 	this.lastTrackBottomY  = this.trackNotes.y + this.trackNotes.height;
 
 	for (var i = 0; i < this.tracks.length; i++)
 		this.tracks[i].relayout();
 	
-	this.firstTimeVisible = this.scrollTime;
+	this.firstTimeVisible = this.scrollTime - this.OFFSET_X / this.timeToPixelsScaling;
 	this.lastTimeVisible  = this.scrollTime + this.canvasWidth / this.timeToPixelsScaling;
 	
 	this.markDirtyAll();
@@ -434,7 +440,9 @@ Timeline.prototype.redraw = function()
 		return;
 
 	this.ctx.save();
-	this.ctx.translate(Math.floor(-this.scrollTime * this.timeToPixelsScaling), 0);
+	this.ctx.translate(
+		Math.floor(this.OFFSET_X - this.scrollTime * this.timeToPixelsScaling),
+		0);
 
 	// Restrict drawing to dirty region.
 	this.ctx.beginPath();

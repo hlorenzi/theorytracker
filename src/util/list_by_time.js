@@ -18,6 +18,7 @@ ListByTime.prototype.clear = function()
 ListByTime.prototype.add = function(item)
 {
 	this.items.push(item);
+	this.items.sort(function (a,b) { return a.time - b.time; });
 }
 
 
@@ -55,9 +56,36 @@ ListByTime.prototype.enumerateOverlappingRange = function(timeRange, callback)
 }
 
 
-ListByTime.prototype.getActiveAtTime = function(time)
+ListByTime.prototype.enumerateAffectingRange = function(timeRange, callback)
 {
-	var item         = null;
+	var lastIndex = this.getIndexAffectingTime(timeRange.start);
+	
+	for (var i = lastIndex + 1; i < this.items.length; i++)
+	{
+		if (this.items[i] == null)
+			continue;
+		
+		if (this.items[i].time >= timeRange.end)
+			break;
+		
+		if (lastIndex == -1)
+			callback(null, timeRange.start, this.items[i].time);
+		else
+			callback(this.items[lastIndex], this.items[lastIndex].time, this.items[i].time);
+		
+		lastIndex = i;
+	}
+	
+	if (lastIndex == -1)
+		callback(null, timeRange.start, timeRange.end);
+	else
+		callback(this.items[lastIndex], this.items[lastIndex].time, timeRange.end);
+}
+
+
+ListByTime.prototype.getIndexAffectingTime = function(time)
+{
+	var index        = -1;
 	var minTimeSoFar = -1;
 	
 	for (var i = 0; i < this.items.length; i++)
@@ -69,10 +97,23 @@ ListByTime.prototype.getActiveAtTime = function(time)
 		
 		if (minTimeSoFar == -1 || (itemTime < minTimeSoFar && itemTime >= time))
 		{
-			item = this.items[i];
+			index = i;
 			minTimeSoFar = itemTime;
 		}
 	}
 	
-	return item;
+	if (minTimeSoFar != -1 && minTimeSoFar > time)
+		return -1;
+	
+	return index;
+}
+
+
+ListByTime.prototype.getItemAffectingTime = function(time)
+{
+	var index = this.getIndexAffectingTime(time);
+	if (index == -1)
+		return null;
+	else
+		return this.items[index];
 }

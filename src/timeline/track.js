@@ -1,6 +1,13 @@
 function Track()
 {
-
+	this.y       = 0;
+	this.height  = 0;
+	this.scrollY = 0;
+	
+	this.elements = null;
+	
+	this.selectedElements = [];
+	this.modifiedElements = [];
 }
 
 Track.prototype.setSong = function(song) { }

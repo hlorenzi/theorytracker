@@ -1,13 +1,7 @@
 function TrackLength(timeline)
 {
 	this.timeline = timeline;
-
-	this.y       = 0;
-	this.height  = 0;
-	this.scrollY = 0;
-
-	this.elements         = new ListByTimeRange();
-	this.selectedElements = [];
+	this.elements = new ListByTimeRange();
 
 	this.LENGTH_KNOB_WIDTH = 10;
 	this.lengthKnob = null;
@@ -39,6 +33,8 @@ TrackLength.prototype.elementModify = function(elem)
 	elem.length = modifiedElem.length;
 	this.timeline.length = modifiedElem.length;
 	
+	// FIXME: Clip elements of all tracks to the new length.
+	
 	this.elementRefresh(elem);
 	this.elements.add(elem);
 	
@@ -50,11 +46,12 @@ TrackLength.prototype.elementRefresh = function(elem)
 {
 	var toPixels = this.timeline.timeToPixelsScaling;
 
-	elem.length       = this.timeline.length;
-	elem.interactKind = this.timeline.INTERACT_MOVE_TIME;
-	elem.timeRange    = new TimeRange(
+	elem.timeRange = new TimeRange(
 		elem.length - this.LENGTH_KNOB_WIDTH / 2 / toPixels,
 		elem.length + this.LENGTH_KNOB_WIDTH / 2 / toPixels);
+		
+	elem.length       = this.timeline.length;
+	elem.interactKind = this.timeline.INTERACT_MOVE_TIME;
 
 	elem.regions = [
 		{
@@ -79,14 +76,15 @@ TrackLength.prototype.relayout = function()
 
 TrackLength.prototype.redraw = function(time1, time2)
 {
-	var ctx         = this.timeline.ctx;
-	var toPixels    = this.timeline.timeToPixelsScaling;
+	var that     = this;
+	var ctx      = this.timeline.ctx;
+	var toPixels = this.timeline.timeToPixelsScaling;
 
 	ctx.save();
 
 	ctx.translate(0.5, 0.5);
 
-	// Draw markers.
+	// Draw track line.
 	ctx.strokeStyle = "#444444";
 	ctx.beginPath();
 		ctx.moveTo(0, this.height / 2);
@@ -98,16 +96,24 @@ TrackLength.prototype.redraw = function(time1, time2)
 		ctx.moveTo(this.timeline.length * toPixels,          this.height / 2);
 		ctx.lineTo(this.timeline.lastTimeVisible * toPixels, this.height / 2);
 	ctx.stroke();
-	
-	ctx.fillStyle = "#ffffff";
-	ctx.globalAlpha = 0.5;
-	ctx.fillRect(
-		Math.min(this.timeline.length, this.lengthKnob.length) * toPixels,
-		this.height,
-		Math.abs(this.timeline.length - this.lengthKnob.length) * toPixels,
-		this.timeline.lastTrackBottomY - (this.y + this.height));
-	ctx.globalAlpha = 1;
 
+	// Draw beat markers.
+	this.timeline.trackMeters.enumerateBeatsAtRange(new TimeRange(time1, time2), function (time, isStrong)
+	{
+		var x = Math.floor(time * toPixels);
+		var h = (isStrong ? 4 : 2);
+		
+		if (x > that.timeline.length)
+			ctx.strokeStyle = "#aaaaaa";
+		else
+			ctx.strokeStyle = "#444444";
+		
+		ctx.beginPath();
+			ctx.moveTo(x, that.height / 2 - h);
+			ctx.lineTo(x, that.height / 2 + h);
+		ctx.stroke();
+	});
+	
 	// Draw length knob.
 	this.drawLengthKnob(this.lengthKnob);
 
@@ -124,6 +130,11 @@ TrackLength.prototype.getModifiedLengthKnob = function(elem)
 		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
 			length += this.timeline.mouseMoveDeltaTime;
 	}
+	
+	length =
+		Math.max(0,
+		Math.min(this.timeline.MAX_VALID_LENGTH,
+		length));
 
 	return {
 		length: length
@@ -154,10 +165,24 @@ TrackLength.prototype.drawLengthKnob = function(elem)
 		Math.floor(x - this.LENGTH_KNOB_WIDTH / 2) - 0.5,
 		0.5,
 		this.LENGTH_KNOB_WIDTH,
-		this.height);
+		this.height - 1);
 		
 	ctx.beginPath();
 		ctx.moveTo(x, this.height / 2);
 		ctx.lineTo(x, this.timeline.lastTrackBottomY - this.y);
 	ctx.stroke();
+	
+	// Draw create/delete overlay.
+	if (modifiedKnob.length < this.timeline.length)
+		ctx.fillStyle = "#ff0000";
+	else
+		ctx.fillStyle = "#0000ff";
+	
+	ctx.globalAlpha = 0.1;
+	ctx.fillRect(
+		Math.min(this.timeline.length, modifiedKnob.length) * toPixels,
+		this.height / 2,
+		Math.abs(this.timeline.length - modifiedKnob.length) * toPixels,
+		this.timeline.lastTrackBottomY - this.height / 2 - this.y);
+	ctx.globalAlpha = 1;
 }

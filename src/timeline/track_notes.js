@@ -1,15 +1,7 @@
 function TrackNotes(timeline)
 {
 	this.timeline = timeline;
-	
-	this.y       = 0;
-	this.height  = 0;
-	this.scrollY = 0;
-	
 	this.elements = new ListByTimeRange();
-	
-	this.selectedElements = [];
-	this.modifiedElements = [];
 }
 
 
@@ -154,7 +146,7 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	var maxPitch    = this.timeline.MAX_VALID_MIDI_PITCH;
 	var scrollY     = this.getModifiedScrollY();
 	
-	var xMin = Math.floor(time1 * toPixels);
+	var xMin = Math.floor(Math.max(0, time1) * toPixels);
 	var xLen = Math.floor(this.timeline.length * toPixels);
 	var xMax = Math.floor(time2 * toPixels);
 	
@@ -186,6 +178,26 @@ TrackNotes.prototype.redraw = function(time1, time2)
 			xLen - xMin,
 			noteHeight - 0.5);
 	}
+	
+	// Draw beat lines.
+	ctx.strokeStyle = "#ffffff";
+	ctx.beginPath();
+	this.timeline.trackMeters.enumerateBeatsAtRange(new TimeRange(time1, time2), function (time, isStrong)
+	{
+		var x = Math.floor(time * toPixels);
+		
+		ctx.moveTo(x, that.height - noteHeight * (maxPitch - minPitch));
+		ctx.lineTo(x, that.height);
+		
+		if (isStrong)
+		{
+			ctx.moveTo(x - 1, that.height - noteHeight * (maxPitch - minPitch));
+			ctx.lineTo(x - 1, that.height);
+			ctx.moveTo(x + 1, that.height - noteHeight * (maxPitch - minPitch));
+			ctx.lineTo(x + 1, that.height);
+		}
+	});
+	ctx.stroke();
 	
 	// Draw notes.
 	this.elements.enumerateOverlappingRange(new TimeRange(time1, time2), function (elem)
