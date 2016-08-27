@@ -71,7 +71,7 @@ ListByTime.prototype.enumerateAffectingRange = function(timeRange, callback)
 		if (lastIndex == -1)
 			callback(null, timeRange.start, this.items[i].time);
 		else
-			callback(this.items[lastIndex], this.items[lastIndex].time, this.items[i].time);
+			callback(this.items[lastIndex], Math.max(timeRange.start, this.items[lastIndex].time), this.items[i].time);
 		
 		lastIndex = i;
 	}
@@ -79,15 +79,12 @@ ListByTime.prototype.enumerateAffectingRange = function(timeRange, callback)
 	if (lastIndex == -1)
 		callback(null, timeRange.start, timeRange.end);
 	else
-		callback(this.items[lastIndex], this.items[lastIndex].time, timeRange.end);
+		callback(this.items[lastIndex], Math.max(timeRange.start, this.items[lastIndex].time), timeRange.end);
 }
 
 
 ListByTime.prototype.getIndexAffectingTime = function(time)
 {
-	var index        = -1;
-	var minTimeSoFar = -1;
-	
 	for (var i = 0; i < this.items.length; i++)
 	{
 		if (this.items[i] == null)
@@ -95,17 +92,11 @@ ListByTime.prototype.getIndexAffectingTime = function(time)
 		
 		var itemTime = this.items[i].time;
 		
-		if (minTimeSoFar == -1 || (itemTime < minTimeSoFar && itemTime >= time))
-		{
-			index = i;
-			minTimeSoFar = itemTime;
-		}
+		if (itemTime > time)
+			return i - 1;
 	}
 	
-	if (minTimeSoFar != -1 && minTimeSoFar > time)
-		return -1;
-	
-	return index;
+	return this.items.length - 1;
 }
 
 

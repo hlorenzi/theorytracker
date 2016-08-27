@@ -170,19 +170,19 @@ TrackNotes.prototype.redraw = function(time1, time2)
 			
 			switch (degree)
 			{
-				case 0:  ctx.fillStyle = "#ffcccc"; break;
-				case 1:  ctx.fillStyle = "#ffeecc"; break;
-				case 2:  ctx.fillStyle = "#ffffcc"; break;
-				case 3:  ctx.fillStyle = "#cceecc"; break;
-				case 4:  ctx.fillStyle = "#ccccff"; break;
-				case 5:  ctx.fillStyle = "#eeccff"; break;
-				case 6:  ctx.fillStyle = "#ffccff"; break;
+				case 0:  ctx.fillStyle = "#ffdddd"; break;
+				case 1:  ctx.fillStyle = "#ffeedd"; break;
+				case 2:  ctx.fillStyle = "#ffffdd"; break;
+				case 3:  ctx.fillStyle = "#ddeedd"; break;
+				case 4:  ctx.fillStyle = "#ddddff"; break;
+				case 5:  ctx.fillStyle = "#eeddff"; break;
+				case 6:  ctx.fillStyle = "#ffddff"; break;
 				default: ctx.fillStyle = "#e4e4e4"; break;
 			}
 			
 			ctx.fillRect(
 				start * toPixels,
-				that.height - noteHeight * (i - minPitch),
+				that.height - noteHeight * (i - minPitch + 1),
 				(end - start) * toPixels,
 				noteHeight - 0.5);
 		}
@@ -201,16 +201,6 @@ TrackNotes.prototype.redraw = function(time1, time2)
 				noteHeight - 0.5);
 		}
 	}
-	
-	// Mark the middle octave.
-	ctx.fillStyle = "#000000";
-	ctx.globalAlpha = 0.1;
-	ctx.fillRect(
-		xMin,
-		this.height - noteHeight * (6 * 12 - minPitch),
-		xMax - xMin,
-		noteHeight * 12 - 0.5);
-	ctx.globalAlpha = 1;
 	
 	// Draw beat lines.
 	ctx.strokeStyle = "#ffffff";
@@ -232,16 +222,28 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	});
 	ctx.stroke();
 	
-	// Draw C-pitch row markers.
-	ctx.strokeStyle = "#000000";
-	ctx.beginPath();
-	for (var i = Math.floor(minPitch / 12) * 12; i <= maxPitch; i += 12)
+	// Draw root pitch markers.
+	this.timeline.trackKeys.enumerateKeysAtRange(new TimeRange(time1, time2), function (key, start, end)
 	{
-		ctx.moveTo(xMin, that.height - noteHeight * (i - minPitch));
-		ctx.lineTo(xMax, that.height - noteHeight * (i - minPitch));
-	}
-	ctx.stroke();
-	
+		for (var i = Math.floor(minPitch / 12) * 12 + key.rootMidiPitch; i <= maxPitch; i += 12)
+		{
+			ctx.strokeStyle = "#000000";
+			ctx.beginPath();
+			ctx.moveTo(start * toPixels, that.height - noteHeight * (i - minPitch));
+			ctx.lineTo(  end * toPixels, that.height - noteHeight * (i - minPitch));
+			
+			if (i == 5 * 12 + key.rootMidiPitch || i == 6 * 12 + key.rootMidiPitch)
+			{
+				ctx.moveTo(start * toPixels, that.height - noteHeight * (i - minPitch) - 1);
+				ctx.lineTo(  end * toPixels, that.height - noteHeight * (i - minPitch) - 1);
+				ctx.moveTo(start * toPixels, that.height - noteHeight * (i - minPitch) + 1);
+				ctx.lineTo(  end * toPixels, that.height - noteHeight * (i - minPitch) + 1);
+			}
+			
+			ctx.stroke();
+		}
+	});
+		
 	// Draw notes.
 	this.elements.enumerateOverlappingRange(new TimeRange(time1, time2), function (elem)
 		{ that.drawNote(elem); });
@@ -288,6 +290,7 @@ TrackNotes.prototype.getModifiedElement = function(elem)
 	
 	return {
 		start:    start,
+		end:      start + duration,
 		duration: duration,
 		pitch:    pitch
 	};
@@ -318,6 +321,7 @@ TrackNotes.prototype.getModifiedScrollY = function()
 
 TrackNotes.prototype.drawNote = function(elem)
 {
+	var that         = this;
 	var ctx          = this.timeline.ctx;
 	var toPixels     = this.timeline.timeToPixelsScaling;
 	var noteHeight   = this.timeline.noteHeight;
@@ -325,28 +329,60 @@ TrackNotes.prototype.drawNote = function(elem)
 	var scrollY      = this.getModifiedScrollY();
 	var modifiedElem = this.getModifiedElement(elem);
 	
-	ctx.globalAlpha = 1;
-	if (elem == this.timeline.hoverElement || (elem.selected && this.timeline.mouseDown))
-		ctx.fillStyle = "#ff8888";
-	else
-		ctx.fillStyle = "#ff0000";
-	
-	var x = 0.5 + Math.floor(modifiedElem.start * toPixels);
-	var y = 0.5 + this.height - noteHeight * (modifiedElem.pitch - minPitch);
-	var w = Math.floor(modifiedElem.duration * toPixels - 1);
-	
+	var y = 0.5 + that.height - noteHeight * (modifiedElem.pitch - minPitch);
 	y =
 		Math.max(-scrollY + 3,
-		Math.min(this.height - scrollY + noteHeight - 2,
+		Math.min(that.height - scrollY + noteHeight - 2,
 		y));
+			
+	this.timeline.trackKeys.enumerateKeysAtRange(
+		new TimeRange(modifiedElem.start, modifiedElem.end),
+		function (key, start, end)
+		{
+			var degree = theory.pitchDegreeInKey(key.scaleIndex, key.rootMidiPitch, modifiedElem.pitch);
+			
+			switch (degree)
+			{
+				case 0:  ctx.fillStyle = "#ff0000"; break;
+				case 1:  ctx.fillStyle = "#ff8800"; break;
+				case 2:  ctx.fillStyle = "#ffdd00"; break;
+				case 3:  ctx.fillStyle = "#00dd00"; break;
+				case 4:  ctx.fillStyle = "#0000ff"; break;
+				case 5:  ctx.fillStyle = "#8800ff"; break;
+				case 6:  ctx.fillStyle = "#ff00ff"; break;
+				default: ctx.fillStyle = "#888888"; break;
+			}
+			
+			var isLast = end == modifiedElem.end;
+			var x = 0.5 + Math.floor(start * toPixels);
+			var w = Math.floor((end - start) * toPixels - (isLast ? 1 : 0));
+			
+			ctx.fillRect(x, y - noteHeight, w, noteHeight - 1);
+		});
 	
-	ctx.fillRect(x, y - noteHeight, w, noteHeight - 1);
+	if (elem == this.timeline.hoverElement || (elem.selected && this.timeline.mouseDown))
+	{
+		ctx.fillStyle = "#ffffff"
+		ctx.globalAlpha = 0.35;
 		
+		ctx.fillRect(
+			0.5 + Math.floor(modifiedElem.start * toPixels),
+			y - noteHeight,
+			Math.floor(modifiedElem.duration * toPixels - 1),
+			noteHeight - 1);
+	}
+	
 	if (elem.selected)
 	{
 		ctx.fillStyle = "#ffffff"
-		ctx.globalAlpha = 0.5;
+		ctx.globalAlpha = 0.35;
 		
-		ctx.fillRect(x, y - noteHeight + 2, w, noteHeight - 1 - 4);
+		ctx.fillRect(
+			0.5 + Math.floor(modifiedElem.start * toPixels),
+			y - noteHeight + 2,
+			Math.floor(modifiedElem.duration * toPixels - 1),
+			noteHeight - 1 - 4);
 	}
+	
+	ctx.globalAlpha = 1;
 }
