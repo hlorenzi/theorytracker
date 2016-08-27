@@ -162,22 +162,55 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	ctx.translate(0, scrollY);
 	
 	// Draw pitch rows.
-	for (var i = minPitch; i <= maxPitch; i++)
+	this.timeline.trackKeys.enumerateKeysAtRange(new TimeRange(time1, time2), function (key, start, end)
 	{
-		ctx.fillStyle = "#cccccc";
-		ctx.fillRect(
-			xLen,
-			this.height - noteHeight * (i - minPitch),
-			xMax - xLen,
-			noteHeight - 0.5);
+		for (var i = minPitch; i <= maxPitch; i++)
+		{
+			var degree = theory.pitchDegreeInKey(key.scaleIndex, key.rootMidiPitch, i);
 			
-		ctx.fillStyle = "#e4e4e4";
-		ctx.fillRect(
-			xMin,
-			this.height - noteHeight * (i - minPitch),
-			xLen - xMin,
-			noteHeight - 0.5);
+			switch (degree)
+			{
+				case 0:  ctx.fillStyle = "#ffcccc"; break;
+				case 1:  ctx.fillStyle = "#ffeecc"; break;
+				case 2:  ctx.fillStyle = "#ffffcc"; break;
+				case 3:  ctx.fillStyle = "#cceecc"; break;
+				case 4:  ctx.fillStyle = "#ccccff"; break;
+				case 5:  ctx.fillStyle = "#eeccff"; break;
+				case 6:  ctx.fillStyle = "#ffccff"; break;
+				default: ctx.fillStyle = "#e4e4e4"; break;
+			}
+			
+			ctx.fillRect(
+				start * toPixels,
+				that.height - noteHeight * (i - minPitch),
+				(end - start) * toPixels,
+				noteHeight - 0.5);
+		}
+	});
+	
+	// Draw pitch rows after song length.
+	if (time2 > this.timeline.length)
+	{
+		for (var i = minPitch; i <= maxPitch; i++)
+		{
+			ctx.fillStyle = "#cccccc";
+			ctx.fillRect(
+				this.timeline.length * toPixels,
+				this.height - noteHeight * (i - minPitch),
+				(time2 - this.timeline.length) * toPixels,
+				noteHeight - 0.5);
+		}
 	}
+	
+	// Mark the middle octave.
+	ctx.fillStyle = "#000000";
+	ctx.globalAlpha = 0.1;
+	ctx.fillRect(
+		xMin,
+		this.height - noteHeight * (6 * 12 - minPitch),
+		xMax - xMin,
+		noteHeight * 12 - 0.5);
+	ctx.globalAlpha = 1;
 	
 	// Draw beat lines.
 	ctx.strokeStyle = "#ffffff";
@@ -197,6 +230,16 @@ TrackNotes.prototype.redraw = function(time1, time2)
 			ctx.lineTo(x + 1, that.height);
 		}
 	});
+	ctx.stroke();
+	
+	// Draw C-pitch row markers.
+	ctx.strokeStyle = "#000000";
+	ctx.beginPath();
+	for (var i = Math.floor(minPitch / 12) * 12; i <= maxPitch; i += 12)
+	{
+		ctx.moveTo(xMin, that.height - noteHeight * (i - minPitch));
+		ctx.lineTo(xMax, that.height - noteHeight * (i - minPitch));
+	}
 	ctx.stroke();
 	
 	// Draw notes.
@@ -260,7 +303,7 @@ TrackNotes.prototype.getModifiedScrollY = function()
 	var scrollY = this.scrollY;
 	
 	if (this.timeline.mouseDownTrack == this &&
-		this.timeline.mouseAction == this.timeline.INTERACT_NONE)
+		this.timeline.mouseAction == this.timeline.INTERACT_SCROLL)
 	{
 		scrollY += this.timeline.mouseMoveScrollY;
 		scrollY =

@@ -4,9 +4,10 @@ function Timeline(canvas)
 
 	// Set up constants.
 	this.INTERACT_NONE         = 0x0;
-	this.INTERACT_MOVE_TIME    = 0x1;
-	this.INTERACT_MOVE_PITCH   = 0x2;
-	this.INTERACT_STRETCH_TIME = 0x4;
+	this.INTERACT_SCROLL       = 0x1;
+	this.INTERACT_MOVE_TIME    = 0x2;
+	this.INTERACT_MOVE_PITCH   = 0x4;
+	this.INTERACT_STRETCH_TIME = 0x8;
 
 	this.TIME_PER_WHOLE_NOTE   = 960;
 	this.MAX_VALID_LENGTH      = 960 * 1024;
@@ -23,10 +24,11 @@ function Timeline(canvas)
 	this.canvasHeight = 0;
 
 	// Set up mouse/keyboard interaction.
-	this.canvas.onmousedown = function(ev) { that.handleMouseDown(ev); };
-	window.onmousemove      = function(ev) { that.handleMouseMove(ev); };
-	window.onmouseup        = function(ev) { that.handleMouseUp(ev);   };
-	//window.onkeydown        = function(ev) { that.handleKeyDown(ev);   };
+	this.canvas.oncontextmenu = function(ev) { that.handleContextMenu(ev); };
+	this.canvas.onmousedown   = function(ev) { that.handleMouseDown(ev);   };
+	window.onmousemove        = function(ev) { that.handleMouseMove(ev);   };
+	window.onmouseup          = function(ev) { that.handleMouseUp(ev);     };
+	//window.onkeydown        = function(ev) { that.handleKeyDown(ev);     };
 
 	this.mouseDown           = false;
 	this.mouseDownPos        = null;
@@ -56,11 +58,13 @@ function Timeline(canvas)
 	// Set up tracks.
 	this.length     = 0;
 	this.trackLength = new TrackLength(this);
+	this.trackKeys   = new TrackKeys(this);
 	this.trackMeters = new TrackMeters(this);
 	this.trackNotes  = new TrackNotes(this);
 
 	this.tracks = [];
 	this.tracks.push(this.trackLength);
+	this.tracks.push(this.trackKeys);
 	this.tracks.push(this.trackMeters);
 	this.tracks.push(this.trackNotes);
 }
@@ -91,6 +95,13 @@ Timeline.prototype.mouseToClient = function(ev)
 }
 
 
+Timeline.prototype.handleContextMenu = function(ev)
+{
+	ev.preventDefault();
+	return false;
+}
+
+
 Timeline.prototype.handleMouseDown = function(ev)
 {
 	var that = this;
@@ -104,17 +115,24 @@ Timeline.prototype.handleMouseDown = function(ev)
 	if (!ctrl && (this.hoverElement == null || !this.hoverElement.selected))
 		this.unselectAll();
 
-	if (this.hoverElement != null)
+	if (ev.which !== 1)
+		this.mouseAction = this.INTERACT_SCROLL;
+	
+	else if (this.hoverElement != null && this.hoverRegion != null)
 	{
 		// Handle selection of element under mouse.
 		if (!this.hoverElement.selected)
 			this.select(this.hoverElement);
-
-		this.unselectAllOfDifferentKind(this.hoverElement.interactKind);
-
-		this.mouseAction = this.hoverElement.interactKind;
+		
+		// Set mouse action to a common action of
+		// all selected elements.
+		this.mouseAction = this.hoverRegion.kind;
+		for (var i = 0; i < this.selectedElements.length; i++)
+			this.mouseAction &= this.selectedElements[i].interactKind;
+		
 		this.markDirtyAllSelectedElements(0);
 	}
+	
 	else
 		this.mouseAction = this.INTERACT_NONE;
 
@@ -147,7 +165,7 @@ Timeline.prototype.handleMouseMove = function(ev)
 		var mousePitchDelta = Math.round((this.mouseDownPos.y - mousePos.y) / this.noteHeight);
 
 		// Handle scrolling.
-		if (this.mouseAction == this.INTERACT_NONE)
+		if (this.mouseAction == this.INTERACT_SCROLL)
 		{
 			var scrollTimeDelta = (this.mouseDownPos.x - mousePos.x) / this.timeToPixelsScaling;
 			this.scrollTime =
@@ -273,10 +291,10 @@ Timeline.prototype.handleMouseMove = function(ev)
 		if (this.hoverRegion != null)
 			regionKind = this.hoverRegion.kind;
 
-		if ((regionKind & this.INTERACT_MOVE_TIME != 0) ||
-			(regionKind & this.INTERACT_MOVE_PITCH != 0))
+		if (((regionKind & this.INTERACT_MOVE_TIME) != 0) ||
+			((regionKind & this.INTERACT_MOVE_PITCH) != 0))
 			this.canvas.style.cursor = "pointer";
-		else if (regionKind & this.INTERACT_STRETCH_TIME != 0)
+		else if ((regionKind & this.INTERACT_STRETCH_TIME) != 0)
 			this.canvas.style.cursor = "ew-resize"
 		else
 			this.canvas.style.cursor = "default";
@@ -293,7 +311,7 @@ Timeline.prototype.handleMouseUp = function(ev)
 	// Handle releasing the mouse after dragging.
 	if (this.mouseDown)
 	{
-		if (this.mouseAction == this.INTERACT_NONE)
+		if (this.mouseAction == this.INTERACT_SCROLL)
 		{
 			if (this.mouseDownTrack != null)
 				this.mouseDownTrack.handleScroll();
@@ -312,9 +330,9 @@ Timeline.prototype.handleMouseUp = function(ev)
 		}
 	}
 
-	this.mouseDown           = false;
-	this.mouseAction         = this.INTERACT_NONE;
-	this.mouseDownTrack      = null;
+	this.mouseDown      = false;
+	this.mouseAction    = this.INTERACT_NONE;
+	this.mouseDownTrack = null;
 	this.redraw();
 }
 
@@ -371,20 +389,6 @@ Timeline.prototype.unselectAll = function()
 }
 
 
-Timeline.prototype.unselectAllOfDifferentKind = function(kind)
-{
-	for (var i = this.selectedElements.length - 1; i >= 0; i--)
-	{
-		if ((this.selectedElements[i].interactKind & kind) == 0)
-		{
-			this.selectedElements[i].unselect();
-			this.markDirtyElement(this.selectedElements[i]);
-			this.selectedElements[i].splice(i, 1);
-		}
-	}
-}
-
-
 Timeline.prototype.select = function(elem)
 {
 	elem.select();
@@ -415,11 +419,14 @@ Timeline.prototype.relayout = function()
 	this.trackLength.y      = 5;
 	this.trackLength.height = 20;
 
-	this.trackMeters.y      = 25;
+	this.trackKeys.y      = 25;
+	this.trackKeys.height = 20;
+	
+	this.trackMeters.y      = 50;
 	this.trackMeters.height = 20;
 
-	this.trackNotes.y      = 50;
-	this.trackNotes.height = this.canvasHeight - 55;
+	this.trackNotes.y      = 75;
+	this.trackNotes.height = this.canvasHeight - 80;
 	
 	this.lastTrackBottomY  = this.trackNotes.y + this.trackNotes.height;
 
