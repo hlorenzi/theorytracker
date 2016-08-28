@@ -64,12 +64,14 @@ function Timeline(canvas)
 	this.trackKeys   = new TrackKeys(this);
 	this.trackMeters = new TrackMeters(this);
 	this.trackNotes  = new TrackNotes(this);
+	this.trackChords = new TrackChords(this);
 
 	this.tracks = [];
 	this.tracks.push(this.trackLength);
 	this.tracks.push(this.trackKeys);
 	this.tracks.push(this.trackMeters);
 	this.tracks.push(this.trackNotes);
+	this.tracks.push(this.trackChords);
 }
 
 
@@ -497,9 +499,12 @@ Timeline.prototype.relayout = function()
 	this.trackMeters.height = 20;
 
 	this.trackNotes.y      = 75;
-	this.trackNotes.height = this.canvasHeight - 80;
+	this.trackNotes.height = this.canvasHeight - 80 - 65;
 	
-	this.lastTrackBottomY  = this.trackNotes.y + this.trackNotes.height;
+	this.trackChords.y      = this.canvasHeight - 60;
+	this.trackChords.height = 55;
+	
+	this.lastTrackBottomY  = this.trackChords.y + this.trackChords.height;
 
 	for (var i = 0; i < this.tracks.length; i++)
 		this.tracks[i].relayout();

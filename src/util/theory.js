@@ -18,13 +18,33 @@ function Theory()
 	[
 		{ name: "Major", notes: [ C, D, E, F, G, A, B ], degrees: [0, 0.5, 1, 1.5, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] }
 	];
+	
+	
+	this.chords =
+	[
+		{ notes: [ C,  E,  G  ], uppercase: true,  symbolSup: "",     symbolSub: "", name: "Major" },
+		{ notes: [ C,  Ds, G  ], uppercase: false, symbolSup: "",     symbolSub: "", name: "Minor" },
+		{ notes: [ C,  Ds, Fs ], uppercase: false, symbolSup: "o",    symbolSub: "", name: "Diminished" },
+		{ notes: [ C,  E,  Gs ], uppercase: true,  symbolSup: "+",    symbolSub: "", name: "Augmented" },
+		{ notes: [ C,  E,  Fs ], uppercase: true,  symbolSup: "(♭5)", symbolSub: "", name: "Flat Fifth(?)" },
+		{ notes: [ C,  D,  Fs ], uppercase: true,  symbolSup: "(?)",  symbolSub: "", name: "(?)" },
+		
+		{ notes: [ C,  E,  G,  As ], uppercase: true,  symbolSup: "7",     symbolSub: "", name: "Dominant Seventh" },
+		{ notes: [ C,  E,  G,  B  ], uppercase: true,  symbolSup: "M7",    symbolSub: "", name: "Major Seventh" },
+		{ notes: [ C,  Ds, G,  As ], uppercase: false, symbolSup: "7",     symbolSub: "", name: "Minor Seventh" },
+		{ notes: [ C,  Ds, G,  B  ], uppercase: true,  symbolSup: "m(M7)", symbolSub: "", name: "Minor-Major Seventh" },
+		{ notes: [ C,  Ds, G,  A  ], uppercase: false, symbolSup: "o7",    symbolSub: "", name: "Diminished Seventh" },
+		{ notes: [ C,  Ds, Fs, As ], uppercase: false, symbolSup: "ø7",    symbolSub: "", name: "Half-Diminished Seventh" },
+		{ notes: [ C,  E,  Gs, As ], uppercase: true,  symbolSup: "+7",    symbolSub: "", name: "Augmented Seventh" },
+		{ notes: [ C,  E,  Gs, B  ], uppercase: true,  symbolSup: "+(M7)", symbolSub: "", name: "Augmented Major Seventh" }
+	];
 }
 
 
 Theory.prototype.pitchNameInScale = function(scaleIndex, midiPitch)
 {
 	// TODO: Take into consideration scale accidentals.
-	var names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+	var names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 	return names[midiPitch % 12];
 }
 
@@ -32,6 +52,15 @@ Theory.prototype.pitchNameInScale = function(scaleIndex, midiPitch)
 Theory.prototype.pitchDegreeInKey = function(scaleIndex, rootMidiPitch, midiPitch)
 {
 	return this.scales[scaleIndex].degrees[(midiPitch + 12 - rootMidiPitch) % 12];
+}
+
+
+Theory.prototype.chordSymbolInKey = function(scaleIndex, rootMidiPitch, midiPitch, uppercase)
+{
+	// TODO: Take into consideration scale accidentals.
+	var upper = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
+	var lower = ["i", "♭ii", "ii", "♭iii", "iii", "iv", "♭v", "v", "♭vi", "vi", "♭vii", "vii"];
+	return (uppercase ? upper : lower)[(midiPitch + 12 - rootMidiPitch) % 12];
 }
 
 

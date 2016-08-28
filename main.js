@@ -18,6 +18,10 @@ function main()
 	song.noteAdd(new Note(new TimeRange(240, 480), new Pitch(5 * 12 + 2)));
 	song.noteAdd(new Note(new TimeRange(480, 720), new Pitch(5 * 12 + 3)));
 	song.noteAdd(new Note(new TimeRange(720, 960), new Pitch(5 * 12 + 4)));
+	song.chordAdd(new Chord(new TimeRange(  0, 240), 0, theory.C));
+	song.chordAdd(new Chord(new TimeRange(240, 480), 1, theory.D));
+	song.chordAdd(new Chord(new TimeRange(480, 720), 2, theory.Fs));
+	song.chordAdd(new Chord(new TimeRange(720, 960), 3, theory.As));
 	
 	var timeline = new Timeline(canvas);
 	timeline.setSong(song);
