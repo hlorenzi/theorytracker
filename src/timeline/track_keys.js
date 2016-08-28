@@ -124,8 +124,9 @@ TrackKeys.prototype.elementRefresh = function(elem)
 		elem.key.time - this.KNOB_WIDTH / 2 / toPixels,
 		elem.key.time + (this.KNOB_WIDTH / 2 + this.TEXT_MAX_WIDTH) / toPixels);
 	
-	elem.interactKind      = this.timeline.INTERACT_MOVE_TIME;
 	elem.interactTimeRange = new TimeRange(elem.key.time, elem.key.time);
+	elem.interactKind      = this.timeline.INTERACT_MOVE_TIME |
+		this.timeline.INTERACT_STRETCH_TIME_L | this.timeline.INTERACT_STRETCH_TIME_R;
 	
 	elem.regions = [
 		{
@@ -177,6 +178,16 @@ TrackKeys.prototype.getModifiedElement = function(elem)
 	{
 		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
 			time += this.timeline.mouseMoveDeltaTime;
+		
+		if ((this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
+			(this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
+		{
+			time = stretch(
+				time,
+				this.timeline.mouseStretchTimePivot,
+				this.timeline.mouseStretchTimeOrigin,
+				this.timeline.mouseMoveDeltaTime);
+		}
 	}
 
 	return {

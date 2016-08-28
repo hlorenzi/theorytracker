@@ -51,7 +51,8 @@ TrackLength.prototype.elementRefresh = function(elem)
 		elem.length + this.LENGTH_KNOB_WIDTH / 2 / toPixels);
 		
 	elem.length       = this.timeline.length;
-	elem.interactKind = this.timeline.INTERACT_MOVE_TIME;
+	elem.interactKind = this.timeline.INTERACT_MOVE_TIME |
+		this.timeline.INTERACT_STRETCH_TIME_L | this.timeline.INTERACT_STRETCH_TIME_R;
 
 	elem.regions = [
 		{
@@ -129,6 +130,16 @@ TrackLength.prototype.getModifiedLengthKnob = function(elem)
 	{
 		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
 			length += this.timeline.mouseMoveDeltaTime;
+		
+		if ((this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
+			(this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
+		{
+			length = stretch(
+				length,
+				this.timeline.mouseStretchTimePivot,
+				this.timeline.mouseStretchTimeOrigin,
+				this.timeline.mouseMoveDeltaTime);
+		}
 	}
 	
 	length =

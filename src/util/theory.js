@@ -35,4 +35,21 @@ Theory.prototype.pitchDegreeInKey = function(scaleIndex, rootMidiPitch, midiPitc
 }
 
 
+Theory.prototype.degreeColor = function(degree)
+{
+	switch (degree)
+	{
+		case 0:  return "#ff0000";
+		case 1:  return "#ff8800";
+		case 2:  return "#ffdd00";
+		case 3:  return "#00dd00";
+		case 4:  return "#0000ff";
+		case 5:  return "#8800ff";
+		case 6:  return "#ff00ff";
+		case 7:  return "#ff0000";
+		default: return "#888888";
+	}
+}
+
+
 var theory = new Theory();

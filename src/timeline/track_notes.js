@@ -111,9 +111,11 @@ TrackNotes.prototype.elementRefresh = function(elem)
 	var minPitch   = this.timeline.MIN_VALID_MIDI_PITCH;
 	
 	elem.timeRange         = elem.note.timeRange.clone();
-	elem.interactKind      = this.timeline.INTERACT_MOVE_TIME | this.timeline.INTERACT_MOVE_PITCH;
 	elem.interactTimeRange = elem.note.timeRange.clone();
 	elem.interactPitch     = elem.note.pitch.clone();
+	elem.interactKind      =
+		this.timeline.INTERACT_MOVE_TIME      | this.timeline.INTERACT_MOVE_PITCH |
+		this.timeline.INTERACT_STRETCH_TIME_L | this.timeline.INTERACT_STRETCH_TIME_R;
 	
 	elem.regions = [
 		{
@@ -121,6 +123,20 @@ TrackNotes.prototype.elementRefresh = function(elem)
 			x:      elem.note.timeRange.start * toPixels,
 			y:      this.height - noteHeight * (elem.note.pitch.midiPitch - minPitch) - noteHeight,
 			width:  elem.note.timeRange.duration() * toPixels,
+			height: noteHeight - 1
+		},
+		{
+			kind:   this.timeline.INTERACT_STRETCH_TIME_L,
+			x:      elem.note.timeRange.start * toPixels - 4,
+			y:      this.height - noteHeight * (elem.note.pitch.midiPitch - minPitch) - noteHeight,
+			width:  4,
+			height: noteHeight - 1
+		},
+		{
+			kind:   this.timeline.INTERACT_STRETCH_TIME_R,
+			x:      elem.note.timeRange.end * toPixels,
+			y:      this.height - noteHeight * (elem.note.pitch.midiPitch - minPitch) - noteHeight,
+			width:  4,
 			height: noteHeight - 1
 		}
 	];
@@ -275,23 +291,34 @@ TrackNotes.prototype.redraw = function(time1, time2)
 
 TrackNotes.prototype.getModifiedElement = function(elem)
 {
-	var start    = elem.note.timeRange.start;
-	var duration = elem.note.timeRange.duration();
-	var pitch    = elem.note.pitch.midiPitch;
+	var timeRange = elem.note.timeRange.clone();
+	var pitch     = elem.note.pitch.midiPitch;
 	
 	if (elem.selected)
 	{
 		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
-			start += this.timeline.mouseMoveDeltaTime;
+		{
+			timeRange.start += this.timeline.mouseMoveDeltaTime;
+			timeRange.end   += this.timeline.mouseMoveDeltaTime;
+		}
 	
 		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_PITCH) != 0)
 			pitch += this.timeline.mouseMoveDeltaPitch;
+		
+		if ((this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
+			(this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
+		{
+			timeRange.stretch(
+				this.timeline.mouseStretchTimePivot,
+				this.timeline.mouseStretchTimeOrigin,
+				this.timeline.mouseMoveDeltaTime);
+		}
 	}
 	
 	return {
-		start:    start,
-		end:      start + duration,
-		duration: duration,
+		start:    timeRange.start,
+		end:      timeRange.end,
+		duration: timeRange.duration(),
 		pitch:    pitch
 	};
 }
@@ -339,25 +366,22 @@ TrackNotes.prototype.drawNote = function(elem)
 		new TimeRange(modifiedElem.start, modifiedElem.end),
 		function (key, start, end)
 		{
-			var degree = theory.pitchDegreeInKey(key.scaleIndex, key.rootMidiPitch, modifiedElem.pitch);
-			
-			switch (degree)
-			{
-				case 0:  ctx.fillStyle = "#ff0000"; break;
-				case 1:  ctx.fillStyle = "#ff8800"; break;
-				case 2:  ctx.fillStyle = "#ffdd00"; break;
-				case 3:  ctx.fillStyle = "#00dd00"; break;
-				case 4:  ctx.fillStyle = "#0000ff"; break;
-				case 5:  ctx.fillStyle = "#8800ff"; break;
-				case 6:  ctx.fillStyle = "#ff00ff"; break;
-				default: ctx.fillStyle = "#888888"; break;
-			}
-			
 			var isLast = end == modifiedElem.end;
 			var x = 0.5 + Math.floor(start * toPixels);
-			var w = Math.floor((end - start) * toPixels - (isLast ? 1 : 0));
+			var w = Math.floor((end - start) * toPixels - (isLast ? 1 : 0))
 			
-			ctx.fillRect(x, y - noteHeight, w, noteHeight - 1);
+			var degree = theory.pitchDegreeInKey(key.scaleIndex, key.rootMidiPitch, modifiedElem.pitch);
+			if (Math.floor(degree) == degree)
+			{
+				ctx.fillStyle = theory.degreeColor(degree);
+				ctx.fillRect(x, y - noteHeight, w, noteHeight - 1);
+			}
+			else
+			{
+				var color1 = theory.degreeColor(Math.floor(degree));
+				var color2 = theory.degreeColor(Math.ceil(degree));
+				drawStripedRect(ctx, x, y - noteHeight, w, noteHeight - 1, color1, color2);
+			}
 		});
 	
 	if (elem == this.timeline.hoverElement || (elem.selected && this.timeline.mouseDown))

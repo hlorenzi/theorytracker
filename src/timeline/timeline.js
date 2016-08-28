@@ -3,11 +3,12 @@ function Timeline(canvas)
 	var that = this;
 
 	// Set up constants.
-	this.INTERACT_NONE         = 0x0;
-	this.INTERACT_SCROLL       = 0x1;
-	this.INTERACT_MOVE_TIME    = 0x2;
-	this.INTERACT_MOVE_PITCH   = 0x4;
-	this.INTERACT_STRETCH_TIME = 0x8;
+	this.INTERACT_NONE           = 0x0;
+	this.INTERACT_SCROLL         = 0x1;
+	this.INTERACT_MOVE_TIME      = 0x2;
+	this.INTERACT_MOVE_PITCH     = 0x4;
+	this.INTERACT_STRETCH_TIME_L = 0x8;
+	this.INTERACT_STRETCH_TIME_R = 0x10;
 
 	this.TIME_PER_WHOLE_NOTE   = 960;
 	this.MAX_VALID_LENGTH      = 960 * 1024;
@@ -30,14 +31,16 @@ function Timeline(canvas)
 	window.onmouseup          = function(ev) { that.handleMouseUp(ev);     };
 	//window.onkeydown        = function(ev) { that.handleKeyDown(ev);     };
 
-	this.mouseDown           = false;
-	this.mouseDownPos        = null;
-	this.mouseDownTrack      = null;
-	this.mouseDownScrollTime = 0;
-	this.mouseAction         = this.INTERACT_NONE;
-	this.mouseMoveDeltaTime  = 0;
-	this.mouseMovePitch      = 0;
-	this.mouseMoveScrollY    = 0;
+	this.mouseDown              = false;
+	this.mouseDownPos           = null;
+	this.mouseDownTrack         = null;
+	this.mouseDownScrollTime    = 0;
+	this.mouseAction            = this.INTERACT_NONE;
+	this.mouseMoveDeltaTime     = 0;
+	this.mouseMovePitch         = 0;
+	this.mouseMoveScrollY       = 0;
+	this.mouseStretchTimePivot  = 0;
+	this.mouseStretchTimeOrigin = 0;
 
 	this.hoverElement     = null;
 	this.hoverRegion      = null;
@@ -111,40 +114,58 @@ Timeline.prototype.handleMouseDown = function(ev)
 	var ctrl     = ev.ctrlKey;
 	var mousePos = this.mouseToClient(ev);
 
-	// Handle multi-selection with Ctrl.
-	if (!ctrl && (this.hoverElement == null || !this.hoverElement.selected))
-		this.unselectAll();
+	this.mouseAction            = this.INTERACT_NONE;
+	this.mouseDown              = true;
+	this.mouseDownPos           = mousePos;
+	this.mouseDownScrollTime    = this.scrollTime;
+	this.mouseMoveDeltaTime     = 0;
+	this.mouseMoveDeltaPitch    = 0;
+	this.mouseMoveScrollY       = 0;
+	this.mouseStretchTimePivot  = 0;
+	this.mouseStretchTimeOrigin = 0;
+	
 
 	if (ev.which !== 1)
 		this.mouseAction = this.INTERACT_SCROLL;
-	
-	else if (this.hoverElement != null && this.hoverRegion != null)
-	{
-		// Handle selection of element under mouse.
-		if (!this.hoverElement.selected)
-			this.select(this.hoverElement);
-		
-		// Set mouse action to a common action of
-		// all selected elements.
-		this.mouseAction = this.hoverRegion.kind;
-		for (var i = 0; i < this.selectedElements.length; i++)
-			this.mouseAction &= this.selectedElements[i].interactKind;
-		
-		this.markDirtyAllSelectedElements(0);
-	}
-	
 	else
-		this.mouseAction = this.INTERACT_NONE;
+	{
+		// Handle multi-selection with Ctrl.
+		if (!ctrl && (this.hoverElement == null || !this.hoverElement.selected))
+			this.unselectAll();
+		
+		if (this.hoverElement != null && this.hoverRegion != null)
+		{
+			// Handle selection of element under mouse.
+			if (!this.hoverElement.selected)
+				this.select(this.hoverElement);
+			
+			// Set mouse action to a common action of
+			// all selected elements.
+			this.mouseAction = this.hoverRegion.kind;
+			for (var i = 0; i < this.selectedElements.length; i++)
+				this.mouseAction &= this.selectedElements[i].interactKind;
+			
+			// Redraw all selected elements to
+			// indicate multiple modification.
+			this.markDirtyAllSelectedElements(0);
+			
+			// Set up stretch values, if applicable.
+			if ((this.mouseAction & this.INTERACT_STRETCH_TIME_L) != 0)
+			{
+				this.mouseStretchTimePivot  = this.getSelectedElementsTimeRange().end;
+				this.mouseStretchTimeOrigin = this.hoverElement.interactTimeRange.start;
+			}
+			else if ((this.mouseAction & this.INTERACT_STRETCH_TIME_R) != 0)
+			{
+				this.mouseStretchTimePivot  = this.getSelectedElementsTimeRange().start;
+				this.mouseStretchTimeOrigin = this.hoverElement.interactTimeRange.end;
+			}
+		}
+	}
 
 	var trackIndex = this.getTrackIndexAtY(mousePos.y);
 	this.mouseDownTrack = (trackIndex == -1 ? null : this.tracks[trackIndex]);
 
-	this.mouseDown           = true;
-	this.mouseDownPos        = mousePos;
-	this.mouseDownScrollTime = this.scrollTime;
-	this.mouseMoveDeltaTime  = 0;
-	this.mouseMoveDeltaPitch = 0;
-	this.mouseMoveScrollY    = 0;
 	this.redraw();
 }
 
@@ -180,25 +201,13 @@ Timeline.prototype.handleMouseMove = function(ev)
 			this.markDirtyAll();
 		}
 
-		if (this.selectedElements.length != 0)
+		else if (this.selectedElements.length != 0)
 		{
 			// Handle time displacement.
 			if ((this.mouseAction & this.INTERACT_MOVE_TIME) != 0)
 			{
 				// Get merged time ranges of all selected elements.
-				var allEncompasingInteractTimeRange = null;
-
-				for (var i = 0; i < this.selectedElements.length; i++)
-				{
-					var timeRange = this.selectedElements[i].interactTimeRange;
-					if (timeRange == null)
-						continue;
-
-					if (allEncompasingInteractTimeRange == null)
-						allEncompasingInteractTimeRange = timeRange.clone();
-					else
-						allEncompasingInteractTimeRange.merge(timeRange);
-				}
+				var allTimeRange = this.getSelectedElementsTimeRange();
 
 				// Mark elements' previous positions as dirty,
 				// to redraw over when they move away.
@@ -206,12 +215,12 @@ Timeline.prototype.handleMouseMove = function(ev)
 
 				// Calculate displacement,
 				// ensuring that elements cannot fall out of bounds.
-				if (allEncompasingInteractTimeRange == null)
+				if (allTimeRange == null)
 					this.mouseMoveDeltaTime = mouseTimeDelta;
 				else
 					this.mouseMoveDeltaTime =
-						Math.max(-allEncompasingInteractTimeRange.start,
-						Math.min(this.length - allEncompasingInteractTimeRange.end,
+						Math.max(-allTimeRange.start,
+						Math.min(this.length - allTimeRange.end,
 						mouseTimeDelta));
 
 				this.mouseMoveDeltaTime = snap(this.mouseMoveDeltaTime, this.timeSnap);
@@ -223,6 +232,39 @@ Timeline.prototype.handleMouseMove = function(ev)
 			// If not displacing time, mark elements as dirty in their current positions.
 			else
 				this.markDirtyAllSelectedElements(0);
+
+			// Handle time stretching.
+			if ((this.mouseAction & this.INTERACT_STRETCH_TIME_L) != 0 ||
+				(this.mouseAction & this.INTERACT_STRETCH_TIME_R) != 0)
+			{
+				// Get merged time ranges of all selected elements.
+				var allTimeRange = this.getSelectedElementsTimeRange();
+				
+				// Mark elements' previous positions as dirty,
+				// to redraw over when they stretch away.
+				var prevStretchedAllTimeRange = allTimeRange.clone();
+				prevStretchedAllTimeRange.stretch(
+					this.mouseStretchTimePivot,
+					this.mouseStretchTimeOrigin,
+					this.mouseMoveDeltaTime);
+					
+				this.markDirtyTimeRange(prevStretchedAllTimeRange);
+
+				// FIXME: Calculate stretch,
+				// ensuring that elements cannot stretch out of bounds.
+				this.mouseMoveDeltaTime = mouseTimeDelta;
+				this.mouseMoveDeltaTime = snap(this.mouseMoveDeltaTime, this.timeSnap);
+
+				// Mark elements' new positions as dirty,
+				// to redraw them at wherever they stretch to.
+				var newStretchedAllTimeRange = allTimeRange.clone();
+				newStretchedAllTimeRange.stretch(
+					this.mouseStretchTimePivot,
+					this.mouseStretchTimeOrigin,
+					this.mouseMoveDeltaTime);
+					
+				this.markDirtyTimeRange(newStretchedAllTimeRange);
+			}
 
 			// Handle pitch displacement.
 			if ((this.mouseAction & this.INTERACT_MOVE_PITCH) != 0)
@@ -266,22 +308,24 @@ Timeline.prototype.handleMouseMove = function(ev)
 		{
 			var track = this.tracks[trackIndex];
 
-			track.elements.enumerateOverlappingTime(mouseTime, function (elem)
-			{
-				for (var e = 0; e < elem.regions.length; e++)
+			track.elements.enumerateOverlappingRange(
+				new TimeRange(mouseTime - 10 * this.timeToPixelsScaling, mouseTime + 10 * this.timeToPixelsScaling),
+				function (elem)
 				{
-					var region = elem.regions[e];
-
-					if (mousePos.xScrolled >= region.x &&
-						mousePos.xScrolled <= region.x + region.width &&
-						mousePos.y         >= region.y + track.y + track.scrollY &&
-						mousePos.y         <= region.y + region.height + track.y + track.scrollY)
+					for (var e = 0; e < elem.regions.length; e++)
 					{
-						that.hoverElement = elem;
-						that.hoverRegion  = region;
+						var region = elem.regions[e];
+
+						if (mousePos.xScrolled >= region.x &&
+							mousePos.xScrolled <= region.x + region.width &&
+							mousePos.y         >= region.y + track.y + track.scrollY &&
+							mousePos.y         <= region.y + region.height + track.y + track.scrollY)
+						{
+							that.hoverElement = elem;
+							that.hoverRegion  = region;
+						}
 					}
-				}
-			});
+				});
 		}
 
 		if (this.hoverElement != null)
@@ -294,7 +338,8 @@ Timeline.prototype.handleMouseMove = function(ev)
 		if (((regionKind & this.INTERACT_MOVE_TIME) != 0) ||
 			((regionKind & this.INTERACT_MOVE_PITCH) != 0))
 			this.canvas.style.cursor = "pointer";
-		else if ((regionKind & this.INTERACT_STRETCH_TIME) != 0)
+		else if ((regionKind & this.INTERACT_STRETCH_TIME_L) != 0 ||
+			(regionKind & this.INTERACT_STRETCH_TIME_R) != 0)
 			this.canvas.style.cursor = "ew-resize"
 		else
 			this.canvas.style.cursor = "default";
@@ -360,6 +405,12 @@ Timeline.prototype.markDirty = function(timeStart, timeEnd)
 }
 
 
+Timeline.prototype.markDirtyTimeRange = function(timeRange)
+{
+	this.markDirty(timeRange.start, timeRange.end);
+}
+
+
 Timeline.prototype.markDirtyElement = function(elem)
 {
 	this.markDirty(elem.timeRange.start, elem.timeRange.end);
@@ -394,6 +445,26 @@ Timeline.prototype.select = function(elem)
 	elem.select();
 	this.selectedElements.push(elem);
 	this.markDirtyElement(elem);
+}
+
+
+Timeline.prototype.getSelectedElementsTimeRange = function()
+{
+	var allTimeRange = null;
+
+	for (var i = 0; i < this.selectedElements.length; i++)
+	{
+		var timeRange = this.selectedElements[i].interactTimeRange;
+		if (timeRange == null)
+			continue;
+
+		if (allTimeRange == null)
+			allTimeRange = timeRange.clone();
+		else
+			allTimeRange.merge(timeRange);
+	}
+	
+	return allTimeRange;
 }
 
 
@@ -445,7 +516,17 @@ Timeline.prototype.redraw = function()
 	// Return early if nothing dirty.
 	if (this.redrawDirtyTimeMin == -1 || this.redrawDirtyTimeMax == -1)
 		return;
-
+	
+	/*
+	// Clear background for redraw debug.
+	this.ctx.fillStyle = "#ffffff";
+	this.ctx.fillRect(
+		0,
+		0,
+		this.canvasWidth,
+		this.canvasHeight);
+	*/
+	
 	this.ctx.save();
 	this.ctx.translate(
 		Math.floor(this.OFFSET_X - this.scrollTime * this.timeToPixelsScaling),

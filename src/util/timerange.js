@@ -18,6 +18,16 @@ TimeRange.prototype.merge = function(other)
 }
 
 
+TimeRange.prototype.stretch = function(pivot, origin, delta)
+{
+	var start = stretch(this.start, pivot, origin, delta);
+	var end   = stretch(this.end,   pivot, origin, delta);
+	
+	this.start = Math.min(start, end);
+	this.end   = Math.max(start, end);
+}
+
+
 TimeRange.prototype.getClippedParts = function(clipRange)
 {
 	var parts = [];
