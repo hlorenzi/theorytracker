@@ -63,3 +63,9 @@ TimeRange.prototype.overlapsRange = function(other)
 {
 	return this.start < other.end && this.end > other.start;
 }
+
+
+TimeRange.prototype.includedInRange = function(other)
+{
+	return this.start < other.end && this.end >= other.start;
+}
