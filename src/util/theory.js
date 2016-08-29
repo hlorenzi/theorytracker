@@ -29,6 +29,12 @@ function Theory()
 		{ notes: [ C,  E,  Fs ], uppercase: true,  symbolSup: "(♭5)", symbolSub: "", name: "Flat Fifth(?)" },
 		{ notes: [ C,  D,  Fs ], uppercase: true,  symbolSup: "(?)",  symbolSub: "", name: "(?)" },
 		
+		{ notes: [ C,  D,  G  ],     uppercase: true,  symbolSup: "",      symbolSub: "sus2", name: "Major with Suspended Second" },
+		{ notes: [ C,  F,  G  ],     uppercase: true,  symbolSup: "",      symbolSub: "sus4", name: "Major with Suspended Fourth" },
+		{ notes: [ C,  E,  G,  A  ], uppercase: true,  symbolSup: "add6",  symbolSub: "",     name: "Major with Added Sixth" },
+		{ notes: [ C,  E,  G,  D  ], uppercase: true,  symbolSup: "add9",  symbolSub: "",     name: "Major with Added Ninth" },
+		{ notes: [ C,  E,  G,  F  ], uppercase: true,  symbolSup: "add11", symbolSub: "",     name: "Major with Added Eleventh" },
+		
 		{ notes: [ C,  E,  G,  As ], uppercase: true,  symbolSup: "7",     symbolSub: "", name: "Dominant Seventh" },
 		{ notes: [ C,  E,  G,  B  ], uppercase: true,  symbolSup: "M7",    symbolSub: "", name: "Major Seventh" },
 		{ notes: [ C,  Ds, G,  As ], uppercase: false, symbolSup: "7",     symbolSub: "", name: "Minor Seventh" },
@@ -36,7 +42,13 @@ function Theory()
 		{ notes: [ C,  Ds, G,  A  ], uppercase: false, symbolSup: "o7",    symbolSub: "", name: "Diminished Seventh" },
 		{ notes: [ C,  Ds, Fs, As ], uppercase: false, symbolSup: "ø7",    symbolSub: "", name: "Half-Diminished Seventh" },
 		{ notes: [ C,  E,  Gs, As ], uppercase: true,  symbolSup: "+7",    symbolSub: "", name: "Augmented Seventh" },
-		{ notes: [ C,  E,  Gs, B  ], uppercase: true,  symbolSup: "+(M7)", symbolSub: "", name: "Augmented Major Seventh" }
+		{ notes: [ C,  E,  Gs, B  ], uppercase: true,  symbolSup: "+(M7)", symbolSub: "", name: "Augmented Major Seventh" },
+		
+		{ notes: [ C,  E,  G,  B,  D  ], uppercase: true,  symbolSup: "maj9", symbolSub: "", name: "Major Ninth" },
+		{ notes: [ C,  Ds, G,  As, D  ], uppercase: true,  symbolSup: "m9",   symbolSub: "", name: "Minor Ninth" },
+		{ notes: [ C,  E,  G,  As, D  ], uppercase: true,  symbolSup: "9",    symbolSub: "", name: "Dominant Ninth" },
+		{ notes: [ C,  E,  G,  As, Cs ], uppercase: true,  symbolSup: "7♭9",  symbolSub: "", name: "Dominant Minor Ninth" },
+		{ notes: [ C,  E,  G,  A,  D  ], uppercase: true,  symbolSup: "6/9",  symbolSub: "", name: "6/9" },
 	];
 }
 

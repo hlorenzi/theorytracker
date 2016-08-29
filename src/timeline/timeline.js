@@ -3,12 +3,13 @@ function Timeline(canvas)
 	var that = this;
 
 	// Set up constants.
-	this.INTERACT_NONE           = 0x0;
-	this.INTERACT_SCROLL         = 0x1;
-	this.INTERACT_MOVE_TIME      = 0x2;
-	this.INTERACT_MOVE_PITCH     = 0x4;
-	this.INTERACT_STRETCH_TIME_L = 0x8;
-	this.INTERACT_STRETCH_TIME_R = 0x10;
+	this.INTERACT_NONE           = 0x00;
+	this.INTERACT_SCROLL         = 0x01;
+	this.INTERACT_CURSOR         = 0x02;
+	this.INTERACT_MOVE_TIME      = 0x04;
+	this.INTERACT_MOVE_PITCH     = 0x08;
+	this.INTERACT_STRETCH_TIME_L = 0x10;
+	this.INTERACT_STRETCH_TIME_R = 0x20;
 
 	this.TIME_PER_WHOLE_NOTE   = 960;
 	this.MAX_VALID_LENGTH      = 960 * 1024;
@@ -41,6 +42,12 @@ function Timeline(canvas)
 	this.mouseMoveScrollY       = 0;
 	this.mouseStretchTimePivot  = 0;
 	this.mouseStretchTimeOrigin = 0;
+	
+	this.cursorVisible = false;
+	this.cursorTime1   = 0;
+	this.cursorTrack1  = 0;
+	this.cursorTime2   = 0;
+	this.cursorTrack2  = 0;
 
 	this.hoverElement     = null;
 	this.hoverRegion      = null;
@@ -88,6 +95,37 @@ Timeline.prototype.setSong = function(song)
 }
 
 
+Timeline.prototype.setCursor = function(time, trackIndex)
+{
+	time =
+		Math.max(0,
+		Math.min(this.length,
+		time));
+	
+	this.cursorTime1  = time;
+	this.cursorTime2  = time;
+	this.cursorTrack1 = trackIndex;
+	this.cursorTrack2 = trackIndex;
+	
+	if (trackIndex == 0)
+		this.cursorTrack2 = this.tracks.length - 1;
+}
+
+
+Timeline.prototype.setCursor2 = function(time, trackIndex)
+{
+	time =
+		Math.max(0,
+		Math.min(this.length,
+		time));
+		
+	this.cursorTime2 = time;
+	
+	if (this.cursorTrack1 != 0)
+		this.cursorTrack2 = trackIndex;
+}
+
+
 Timeline.prototype.mouseToClient = function(ev)
 {
 	var rect = this.canvas.getBoundingClientRect();
@@ -113,8 +151,9 @@ Timeline.prototype.handleMouseDown = function(ev)
 
 	ev.preventDefault();
 
-	var ctrl     = ev.ctrlKey;
-	var mousePos = this.mouseToClient(ev);
+	var ctrl      = ev.ctrlKey;
+	var mousePos  = this.mouseToClient(ev);
+	var mouseTime = snap(mousePos.xScrolled / this.timeToPixelsScaling, this.timeSnap);
 
 	this.mouseAction            = this.INTERACT_NONE;
 	this.mouseDown              = true;
@@ -126,6 +165,12 @@ Timeline.prototype.handleMouseDown = function(ev)
 	this.mouseStretchTimePivot  = 0;
 	this.mouseStretchTimeOrigin = 0;
 	
+	if (this.cursorVisible)
+	{
+		this.markDirtyPixels(this.cursorTime1, 5);
+		this.markDirtyPixels(this.cursorTime2, 5);
+		this.markDirty(this.cursorTime1, this.cursorTime2);
+	}
 
 	if (ev.which !== 1)
 		this.mouseAction = this.INTERACT_SCROLL;
@@ -137,6 +182,8 @@ Timeline.prototype.handleMouseDown = function(ev)
 		
 		if (this.hoverElement != null && this.hoverRegion != null)
 		{
+			this.cursorVisible = false;
+			
 			// Handle selection of element under mouse.
 			if (!this.hoverElement.selected)
 				this.select(this.hoverElement);
@@ -161,6 +208,19 @@ Timeline.prototype.handleMouseDown = function(ev)
 			{
 				this.mouseStretchTimePivot  = this.getSelectedElementsTimeRange().start;
 				this.mouseStretchTimeOrigin = this.hoverElement.interactTimeRange.end;
+			}
+		}
+		
+		else
+		{
+			var trackIndex = this.getTrackIndexAtY(mousePos.y);
+			if (trackIndex != -1)
+			{
+				this.mouseAction   = this.INTERACT_CURSOR;
+				this.cursorVisible = true;
+				
+				this.setCursor(mouseTime, trackIndex);
+				this.markDirtyPixels(mouseTime, 5);
 			}
 		}
 	}
@@ -201,6 +261,25 @@ Timeline.prototype.handleMouseMove = function(ev)
 		
 			this.mouseMoveScrollY = (mousePos.y - this.mouseDownPos.y);
 			this.markDirtyAll();
+		}
+		
+		// Handle cursor selection.
+		else if (this.mouseAction == this.INTERACT_CURSOR)
+		{
+			this.markDirtyPixels(this.cursorTime2, 5);
+			this.markDirtyPixels(mouseTime, 5);
+			this.markDirty(this.cursorTime2, mouseTime);
+			
+			var trackIndex = this.getTrackIndexAtY(mousePos.y);
+			if (trackIndex != -1)
+			{
+				this.setCursor2(mouseTime, trackIndex);
+				this.markDirtyPixels(this.cursorTime1, 5);
+				this.markDirtyPixels(this.cursorTime2, 5);
+				this.markDirty(this.cursorTime1, this.cursorTime2);
+			}
+			else
+				this.setCursor2(mouseTime, this.cursorTrack1);
 		}
 
 		else if (this.selectedElements.length != 0)
@@ -413,6 +492,14 @@ Timeline.prototype.markDirtyTimeRange = function(timeRange)
 }
 
 
+Timeline.prototype.markDirtyPixels = function(time, pixelMargin)
+{
+	this.markDirty(
+		time - pixelMargin / this.timeToPixelsScaling,
+		time + pixelMargin / this.timeToPixelsScaling);
+}
+
+
 Timeline.prototype.markDirtyElement = function(elem)
 {
 	this.markDirty(elem.timeRange.start, elem.timeRange.end);
@@ -564,7 +651,57 @@ Timeline.prototype.redraw = function()
 
 		this.ctx.restore();
 	}
-
+	
+	// Draw cursor.
+	if (this.cursorVisible)
+	{
+		var time1  = Math.min(this.cursorTime1, this.cursorTime2);
+		var time2  = Math.max(this.cursorTime1, this.cursorTime2);
+		var track1 = Math.min(this.cursorTrack1, this.cursorTrack2);
+		var track2 = Math.max(this.cursorTrack1, this.cursorTrack2);
+		
+		var x1  = Math.floor(time1 * this.timeToPixelsScaling) + 0.5;
+		var x2  = Math.floor(time2 * this.timeToPixelsScaling) + 0.5;
+		var y1 = this.tracks[track1].y;
+		var y2 = this.tracks[track2].y + this.tracks[track2].height;
+		
+		this.ctx.strokeStyle = "#0000ff";
+		this.ctx.fillStyle = "#0000ff";
+		
+		this.ctx.beginPath();
+			this.ctx.moveTo(x1, y1);
+			this.ctx.lineTo(x1, y2);
+			
+			this.ctx.moveTo(x2, y1);
+			this.ctx.lineTo(x2, y2);
+		this.ctx.stroke();
+		
+		this.ctx.beginPath();
+			this.ctx.moveTo(x1, y1);
+			this.ctx.lineTo(x1 - 4, y1 - 4);
+			this.ctx.lineTo(x1 + 4, y1 - 4);
+			this.ctx.lineTo(x1, y1);
+			
+			this.ctx.moveTo(x2, y1);
+			this.ctx.lineTo(x2 - 4, y1 - 4);
+			this.ctx.lineTo(x2 + 4, y1 - 4);
+			this.ctx.lineTo(x2, y1);
+			
+			this.ctx.moveTo(x1, y2);
+			this.ctx.lineTo(x1 - 4, y2 + 4);
+			this.ctx.lineTo(x1 + 4, y2 + 4);
+			this.ctx.lineTo(x1, y2);
+			
+			this.ctx.moveTo(x2, y2);
+			this.ctx.lineTo(x2 - 4, y2 + 4);
+			this.ctx.lineTo(x2 + 4, y2 + 4);
+			this.ctx.lineTo(x2, y2);
+		this.ctx.fill();
+		
+		this.ctx.globalAlpha = 0.25;
+		this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+	}
+	
 	this.redrawDirtyTimeMin = -1;
 	this.redrawDirtyTimeMax = -1;
 	this.ctx.restore();
