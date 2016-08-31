@@ -22,28 +22,29 @@ Timeline.prototype.handleMouseDown = function(ev)
 	var that = this;
 
 	ev.preventDefault();
+	
+	if (this.actionDevice != 0)
+		this.interactionEnd();
 
 	var ctrl      = ev.ctrlKey;
 	var shift     = ev.shiftKey;
+	var alt       = ev.altKey;
 	var mousePos  = this.mouseToClient(ev);
 	var mouseTime = snap(mousePos.xScrolled / this.timeToPixelsScaling, this.timeSnap);
 
-	var lastMouseDate           = this.mouseDownDate;
-	this.mouseDownDate          = new Date();
-	this.mouseAction            = this.INTERACT_NONE;
-	this.mouseDown              = true;
-	this.mouseDownPos           = mousePos;
-	this.mouseDownScrollTime    = this.scrollTime;
-	this.mouseMoveDeltaTime     = 0;
-	this.mouseMoveDeltaPitch    = 0;
-	this.mouseMoveScrollY       = 0;
-	this.mouseStretchTimePivot  = 0;
-	this.mouseStretchTimeOrigin = 0;
+	var lastMouseDate        = this.mouseDownDate;
+	this.mouseDownDate       = new Date();
+	this.action              = this.INTERACT_NONE;
+	this.actionDevice        = this.MOUSE;
+	this.mouseDown           = true;
+	this.mouseDownPos        = mousePos;
+	this.mouseDownScrollTime = this.scrollTime;
+	this.mouseMoveScrollY    = 0;
 	
 	// Handle scrolling with the middle or right mouse buttons.
-	if (ev.which !== 1)
+	if (ev.which !== 1 || this.keyboardHoldSpace)
 	{
-		this.mouseAction = this.INTERACT_SCROLL;
+		this.action = this.INTERACT_SCROLL;
 		this.canvas.style.cursor = "default";
 	}
 	
@@ -55,33 +56,34 @@ Timeline.prototype.handleMouseDown = function(ev)
 		
 		if (!shift && this.hoverElement != null && this.hoverRegion != null)
 		{
-			this.cursorVisible = false;
+			this.hideCursor();
 			
 			// Handle selection of element under mouse.
 			if (!this.hoverElement.selected)
 				this.select(this.hoverElement);
 			
-			// Set mouse action to a common action of
+			// Set action to a common action of
 			// all selected elements.
-			this.mouseAction = this.hoverRegion.kind;
+			this.action = this.hoverRegion.kind;
 			for (var i = 0; i < this.selectedElements.length; i++)
-				this.mouseAction &= this.selectedElements[i].interactKind;
+				this.action &= this.selectedElements[i].interactKind;
 			
 			// Redraw all selected elements to
 			// indicate multiple modification.
 			this.markDirtyAllSelectedElements(0);
 			
-			// Set up stretch values, if applicable.
-			if ((this.mouseAction & this.INTERACT_STRETCH_TIME_L) != 0)
-			{
-				this.mouseStretchTimePivot  = this.getSelectedElementsTimeRange().end;
-				this.mouseStretchTimeOrigin = this.hoverElement.interactTimeRange.start;
-			}
-			else if ((this.mouseAction & this.INTERACT_STRETCH_TIME_R) != 0)
-			{
-				this.mouseStretchTimePivot  = this.getSelectedElementsTimeRange().start;
-				this.mouseStretchTimeOrigin = this.hoverElement.interactTimeRange.end;
-			}
+			// Set up interaction variables.
+			if ((this.action & this.INTERACT_MOVE_TIME) != 0)
+				this.interactionBeginMoveTime();
+			
+			if ((this.action & this.INTERACT_MOVE_PITCH) != 0)
+				this.interactionBeginMovePitch();
+			
+			if ((this.action & this.INTERACT_STRETCH_TIME_L) != 0)
+				this.interactionBeginStretchTimeL(this.hoverElement.interactTimeRange.start);
+			
+			if ((this.action & this.INTERACT_STRETCH_TIME_R) != 0)
+				this.interactionBeginStretchTimeR(this.hoverElement.interactTimeRange.end);
 		}
 		
 		// Handle cursor.
@@ -100,7 +102,7 @@ Timeline.prototype.handleMouseDown = function(ev)
 				}
 				else
 				{
-					this.mouseAction = this.INTERACT_CURSOR;
+					this.action = this.INTERACT_CURSOR;
 					this.setCursor(mouseTime, trackIndex);
 				}
 				
@@ -126,29 +128,24 @@ Timeline.prototype.handleMouseMove = function(ev)
 	var mouseTime = snap(mousePos.xScrolled / this.timeToPixelsScaling, this.timeSnap);
 
 	// Handle dragging with the mouse.
-	if (this.mouseDown)
+	if (this.actionDevice == this.MOUSE && this.mouseDown)
 	{
 		var mouseTimeDelta  = (mousePos.xScrolled - this.mouseDownPos.xScrolled) / this.timeToPixelsScaling;
 		var mousePitchDelta = Math.round((this.mouseDownPos.y - mousePos.y) / this.noteHeight);
 
 		// Handle scrolling.
-		if (this.mouseAction == this.INTERACT_SCROLL)
+		if (this.action == this.INTERACT_SCROLL)
 		{
 			var scrollTimeDelta = (this.mouseDownPos.x - mousePos.x) / this.timeToPixelsScaling;
-			this.scrollTime =
-				Math.max(0,
-				Math.min(this.length - 960,
-				this.mouseDownScrollTime + scrollTimeDelta));
+			this.setScrollTime(this.mouseDownScrollTime + scrollTimeDelta);
 			
-			this.firstTimeVisible = this.scrollTime - this.OFFSET_X / this.timeToPixelsScaling;
-			this.lastTimeVisible  = this.scrollTime + this.canvasWidth / this.timeToPixelsScaling;
-		
 			this.mouseMoveScrollY = (mousePos.y - this.mouseDownPos.y);
+			
 			this.markDirtyAll();
 		}
 		
 		// Handle cursor selection.
-		else if (this.mouseAction == this.INTERACT_CURSOR)
+		else if (this.action == this.INTERACT_CURSOR)
 		{
 			var lastTrack2 = this.cursorTrack2;
 			
@@ -157,126 +154,27 @@ Timeline.prototype.handleMouseMove = function(ev)
 				this.setCursor2(mouseTime, trackIndex);
 			else
 				this.setCursor2(mouseTime, this.cursorTrack1);
-			
-			if (this.cursorTime2 != this.cursorTime1)
-			{
-				this.unselectAll();
-				
-				var time1 = Math.min(this.cursorTime1, this.cursorTime2);
-				var time2 = Math.max(this.cursorTime1, this.cursorTime2);
-				var track1 = Math.min(this.cursorTrack1, this.cursorTrack2);
-				var track2 = Math.max(this.cursorTrack1, this.cursorTrack2);
-				var timeRange = new TimeRange(time1, time2);
-				
-				for (var i = track1; i <= track2; i++)
-				{
-					this.tracks[i].elements.enumerateOverlappingRange(timeRange, function (elem)
-						{
-							if (elem.interactTimeRange == null)
-								return;
-							
-							if (elem.interactTimeRange.includedInRange(timeRange))
-								that.select(elem);
-						});
-				}
-			}
 		}
 
 		else if (this.selectedElements.length != 0)
 		{
 			// Handle time displacement.
-			if ((this.mouseAction & this.INTERACT_MOVE_TIME) != 0)
-			{
-				// Get merged time ranges of all selected elements.
-				var allTimeRange = this.getSelectedElementsTimeRange();
-
-				// Mark elements' previous positions as dirty,
-				// to redraw over when they move away.
-				this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
-
-				// Calculate displacement,
-				// ensuring that elements cannot fall out of bounds.
-				if (allTimeRange == null)
-					this.mouseMoveDeltaTime = mouseTimeDelta;
-				else
-					this.mouseMoveDeltaTime =
-						Math.max(-allTimeRange.start,
-						Math.min(this.length - allTimeRange.end,
-						mouseTimeDelta));
-
-				this.mouseMoveDeltaTime = snap(this.mouseMoveDeltaTime, this.timeSnap);
-
-				// Mark elements' new positions as dirty,
-				// to redraw them at wherever they move to.
-				this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
-			}
-			// If not displacing time, mark elements as dirty in their current positions.
-			else
-				this.markDirtyAllSelectedElements(0);
-
-			// Handle time stretching.
-			if ((this.mouseAction & this.INTERACT_STRETCH_TIME_L) != 0 ||
-				(this.mouseAction & this.INTERACT_STRETCH_TIME_R) != 0)
-			{
-				// Get merged time ranges of all selected elements.
-				var allTimeRange = this.getSelectedElementsTimeRange();
-				
-				// Mark elements' previous positions as dirty,
-				// to redraw over when they stretch away.
-				var prevStretchedAllTimeRange = allTimeRange.clone();
-				prevStretchedAllTimeRange.stretch(
-					this.mouseStretchTimePivot,
-					this.mouseStretchTimeOrigin,
-					this.mouseMoveDeltaTime);
-					
-				this.markDirtyTimeRange(prevStretchedAllTimeRange);
-
-				// FIXME: Calculate stretch,
-				// ensuring that elements cannot stretch out of bounds.
-				this.mouseMoveDeltaTime = mouseTimeDelta;
-				this.mouseMoveDeltaTime = snap(this.mouseMoveDeltaTime, this.timeSnap);
-
-				// Mark elements' new positions as dirty,
-				// to redraw them at wherever they stretch to.
-				var newStretchedAllTimeRange = allTimeRange.clone();
-				newStretchedAllTimeRange.stretch(
-					this.mouseStretchTimePivot,
-					this.mouseStretchTimeOrigin,
-					this.mouseMoveDeltaTime);
-					
-				this.markDirtyTimeRange(newStretchedAllTimeRange);
-			}
+			if ((this.action & this.INTERACT_MOVE_TIME) != 0)
+				this.interactionUpdateMoveTime(mouseTimeDelta);
 
 			// Handle pitch displacement.
-			if ((this.mouseAction & this.INTERACT_MOVE_PITCH) != 0)
-			{
-				// Get the pitch range of all selected elements.
-				var pitchMin = this.selectedElements[0].interactPitch.clone();
-				var pitchMax = this.selectedElements[0].interactPitch.clone();
+			if ((this.action & this.INTERACT_MOVE_PITCH) != 0)
+				this.interactionUpdateMovePitch(mousePitchDelta);
 
-				for (var i = 1; i < this.selectedElements.length; i++)
-				{
-					var pitch = this.selectedElements[i].interactPitch.midiPitch;
-
-					if (pitch < pitchMin.midiPitch)
-						pitchMin = new Pitch(pitch);
-
-					if (pitch > pitchMax.midiPitch)
-						pitchMax = new Pitch(pitch);
-				}
-
-				// Calculate displacement,
-				// ensuring that pitches cannot fall out of bounds.
-				this.mouseMoveDeltaPitch =
-					Math.max(this.MIN_VALID_MIDI_PITCH - pitchMin.midiPitch,
-					Math.min(this.MAX_VALID_MIDI_PITCH - 1 - pitchMax.midiPitch,
-					mousePitchDelta));
-			}
+			// Handle time stretching.
+			if ((this.action & this.INTERACT_STRETCH_TIME_L) != 0 ||
+				(this.action & this.INTERACT_STRETCH_TIME_R) != 0)
+				this.interactionUpdateStretchTime(mouseTimeDelta);
 		}
 	}
 
 	// If mouse is not down, just handle hovering.
-	else
+	else if (this.actionDevice == 0)
 	{
 		if (this.hoverElement != null)
 			this.markDirtyElement(this.hoverElement);
@@ -335,29 +233,20 @@ Timeline.prototype.handleMouseUp = function(ev)
 	ev.preventDefault();
 
 	// Handle releasing the mouse after dragging.
-	if (this.mouseDown)
+	if (this.actionDevice == this.MOUSE && this.mouseDown)
 	{
-		if (this.mouseAction == this.INTERACT_SCROLL)
+		if (this.action == this.INTERACT_SCROLL)
 		{
 			if (this.mouseDownTrack != null)
 				this.mouseDownTrack.handleScroll();
 		}
 		else
-		{
-			this.markDirtyAllSelectedElements(this.mouseMoveDeltaTime);
-
-			for (var i = 0; i < this.selectedElements.length; i++)
-				this.selectedElements[i].modify();
-
-			for (var i = 0; i < this.tracks.length; i++)
-				this.tracks[i].applyModifications();
-
-			this.markDirtyAllSelectedElements(0);
-		}
+			this.interactionEnd();
+		
+		this.actionDevice = 0;
 	}
 
 	this.mouseDown      = false;
-	this.mouseAction    = this.INTERACT_NONE;
 	this.mouseDownTrack = null;
 	this.redraw();
 }

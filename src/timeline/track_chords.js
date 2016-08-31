@@ -14,15 +14,14 @@ TrackChords.prototype.setSong = function(song)
 	this.selectedElements = [];
 	
 	for (var i = 0; i < song.chords.length; i++)
-	{
-		this._clipChords(song.chords[i].timeRange);
-		this._chordAdd(song.chords[i]);
-	}
+		this.chordAdd(song.chords[i]);
 }
 
 
-TrackChords.prototype._chordAdd = function(chord)
+TrackChords.prototype.chordAdd = function(chord)
 {
+	this._clipChords(chord.timeRange);
+		
 	var elem = new Element();
 	elem.track = this;
 	elem.chord = chord.clone();
@@ -30,6 +29,8 @@ TrackChords.prototype._chordAdd = function(chord)
 	this.elementRefresh(elem);
 	this.elements.add(elem);
 	this.timeline.markDirtyElement(elem);
+	
+	return elem;
 }
 
 
@@ -53,7 +54,7 @@ TrackChords.prototype._clipChords = function(timeRange)
 		{
 			var clippedChord = elem.chord.clone();
 			clippedChord.timeRange = parts[p];
-			this._chordAdd(clippedChord);
+			this.chordAdd(clippedChord);
 		}
 	}
 }
@@ -86,8 +87,9 @@ TrackChords.prototype.elementModify = function(elem)
 	
 	var modifiedElem = this.getModifiedElement(elem);
 	
-	elem.chord = elem.chord.clone();
-	elem.chord.timeRange =
+	elem.chord               = elem.chord.clone();
+	elem.chord.rootMidiPitch = modifiedElem.rootMidiPitch;
+	elem.chord.timeRange     =
 		new TimeRange(modifiedElem.start, modifiedElem.start + modifiedElem.duration);
 	
 	this.modifiedElements.push(elem);
@@ -101,7 +103,7 @@ TrackChords.prototype.elementRefresh = function(elem)
 	elem.timeRange         = elem.chord.timeRange.clone();
 	elem.interactTimeRange = elem.chord.timeRange.clone();
 	elem.interactKind      =
-		this.timeline.INTERACT_MOVE_TIME      |
+		this.timeline.INTERACT_MOVE_TIME      | this.timeline.INTERACT_MOVE_PITCH    |
 		this.timeline.INTERACT_STRETCH_TIME_L | this.timeline.INTERACT_STRETCH_TIME_R;
 	
 	elem.regions = [
@@ -225,30 +227,35 @@ TrackChords.prototype.redraw = function(time1, time2)
 
 TrackChords.prototype.getModifiedElement = function(elem)
 {
-	var timeRange = elem.chord.timeRange.clone();
+	var timeRange     = elem.chord.timeRange.clone();
+	var rootMidiPitch = elem.chord.rootMidiPitch;
 	
 	if (elem.selected)
 	{
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
+		if ((this.timeline.action & this.timeline.INTERACT_MOVE_TIME) != 0)
 		{
-			timeRange.start += this.timeline.mouseMoveDeltaTime;
-			timeRange.end   += this.timeline.mouseMoveDeltaTime;
+			timeRange.start += this.timeline.actionMoveDeltaTime;
+			timeRange.end   += this.timeline.actionMoveDeltaTime;
 		}
 	
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
-			(this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
+		if ((this.timeline.action & this.timeline.INTERACT_MOVE_PITCH) != 0)
+			rootMidiPitch = mod(rootMidiPitch + this.timeline.actionMoveDeltaPitch, 12);
+		
+		if ((this.timeline.action & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
+			(this.timeline.action & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
 		{
 			timeRange.stretch(
-				this.timeline.mouseStretchTimePivot,
-				this.timeline.mouseStretchTimeOrigin,
-				this.timeline.mouseMoveDeltaTime);
+				this.timeline.actionStretchTimePivot,
+				this.timeline.actionStretchTimeOrigin,
+				this.timeline.actionMoveDeltaTime);
 		}
 	}
 	
 	return {
-		start:    timeRange.start,
-		end:      timeRange.end,
-		duration: timeRange.duration()
+		start:         timeRange.start,
+		end:           timeRange.end,
+		duration:      timeRange.duration(),
+		rootMidiPitch: rootMidiPitch
 	};
 }
 
@@ -263,12 +270,14 @@ TrackChords.prototype.drawChord = function(elem)
 	ctx.fillStyle = "#ffffff"
 	ctx.globalAlpha = 0.75;
 	
+	// Draw chord background.
 	ctx.fillRect(
 		0.5 + Math.floor(modifiedElem.start * toPixels),
 		0,
 		Math.floor(modifiedElem.duration * toPixels - 1),
 		this.height);
 		
+	// Draw chord parts, one for each key region it overlaps.
 	this.timeline.trackKeys.enumerateKeysAtRange(
 		new TimeRange(modifiedElem.start, modifiedElem.end),
 		function (key, start, end)
@@ -277,7 +286,7 @@ TrackChords.prototype.drawChord = function(elem)
 			var x = 0.5 + Math.floor(start * toPixels);
 			var w = Math.floor((end - start) * toPixels - (isLast ? 1 : 0))
 			
-			var degree = theory.pitchDegreeInKey(key.scaleIndex, key.rootMidiPitch, elem.chord.rootMidiPitch);
+			var degree = theory.pitchDegreeInKey(key.scaleIndex, key.rootMidiPitch, modifiedElem.rootMidiPitch);
 			if (Math.floor(degree) == degree)
 			{
 				ctx.fillStyle = theory.degreeColor(degree);
@@ -294,7 +303,7 @@ TrackChords.prototype.drawChord = function(elem)
 			
 			// Draw roman symbol.
 			var mainSymbol = theory.chordSymbolInKey(
-				key.scaleIndex, key.rootMidiPitch, elem.chord.rootMidiPitch,
+				key.scaleIndex, key.rootMidiPitch, modifiedElem.rootMidiPitch,
 				theory.chords[elem.chord.chordIndex].uppercase);
 			
 			ctx.fillStyle = "#000000";
@@ -339,6 +348,7 @@ TrackChords.prototype.drawChord = function(elem)
 				maxTextWidth - mainTextWidth - supTextWidth);
 		});
 		
+	// Draw hover white-fade overlay.
 	if (elem == this.timeline.hoverElement || (elem.selected && this.timeline.mouseDown))
 	{
 		ctx.fillStyle = "#ffffff"
@@ -351,6 +361,7 @@ TrackChords.prototype.drawChord = function(elem)
 			this.height);
 	}
 	
+	// Draw selected double-stripe overlay.
 	if (elem.selected)
 	{
 		ctx.fillStyle = "#ffffff"
@@ -358,9 +369,9 @@ TrackChords.prototype.drawChord = function(elem)
 		
 		ctx.fillRect(
 			0.5 + Math.floor(modifiedElem.start * toPixels),
-			0,
+			3,
 			Math.floor(modifiedElem.duration * toPixels - 1),
-			this.height);
+			this.height - 6);
 	}
 	
 	ctx.globalAlpha = 1;

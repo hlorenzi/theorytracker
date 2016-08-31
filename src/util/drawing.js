@@ -13,12 +13,12 @@ function drawStripedRect(ctx, x, y, w, h, color1, color2)
 	ctx.lineWidth = 4;
 	ctx.beginPath();
 	
-	var lineX = 0;
-	while (lineX - h * 0.6 < w)
+	var stripeX = -(x % 10);
+	while (stripeX - h * 0.6 < w)
 	{
-		ctx.moveTo(x + lineX + 5,           y - 5);
-		ctx.lineTo(x + lineX - h * 0.6 - 5, y + h + 5);
-		lineX += 10;
+		ctx.moveTo(x + stripeX + 5,           y - 5);
+		ctx.lineTo(x + stripeX - h * 0.6 - 5, y + h + 5);
+		stripeX += 10;
 	}
 	
 	ctx.stroke();

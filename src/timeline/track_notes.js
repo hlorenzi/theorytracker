@@ -14,15 +14,14 @@ TrackNotes.prototype.setSong = function(song)
 	this.selectedElements = [];
 	
 	for (var i = 0; i < song.notes.length; i++)
-	{
-		this._clipNotes(song.notes[i].timeRange, song.notes[i].pitch);
-		this._noteAdd(song.notes[i]);
-	}
+		this.noteAdd(song.notes[i]);
 }
 
 
-TrackNotes.prototype._noteAdd = function(note)
+TrackNotes.prototype.noteAdd = function(note)
 {
+	this._clipNotes(note.timeRange, note.pitch);
+	
 	var elem = new Element();
 	elem.track = this;
 	elem.note  = note.clone();
@@ -30,6 +29,8 @@ TrackNotes.prototype._noteAdd = function(note)
 	this.elementRefresh(elem);
 	this.elements.add(elem);
 	this.timeline.markDirtyElement(elem);
+	
+	return elem;
 }
 
 
@@ -56,7 +57,7 @@ TrackNotes.prototype._clipNotes = function(timeRange, pitch)
 		{
 			var clippedNote = elem.note.clone();
 			clippedNote.timeRange = parts[p];
-			this._noteAdd(clippedNote);
+			this.noteAdd(clippedNote);
 		}
 	}
 }
@@ -212,7 +213,7 @@ TrackNotes.prototype.redraw = function(time1, time2)
 			ctx.fillStyle = "#cccccc";
 			ctx.fillRect(
 				this.timeline.length * toPixels,
-				this.height - noteHeight * (i - minPitch),
+				this.height - noteHeight * (i - minPitch + 1),
 				(time2 - this.timeline.length) * toPixels,
 				noteHeight - 0.5);
 		}
@@ -225,14 +226,14 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	{
 		var x = Math.floor(time * toPixels);
 		
-		ctx.moveTo(x, that.height - noteHeight * (maxPitch - minPitch));
+		ctx.moveTo(x, that.height - noteHeight * (maxPitch + 1 - minPitch));
 		ctx.lineTo(x, that.height);
 		
 		if (isStrong)
 		{
-			ctx.moveTo(x - 1, that.height - noteHeight * (maxPitch - minPitch));
+			ctx.moveTo(x - 1, that.height - noteHeight * (maxPitch + 1 - minPitch));
 			ctx.lineTo(x - 1, that.height);
-			ctx.moveTo(x + 1, that.height - noteHeight * (maxPitch - minPitch));
+			ctx.moveTo(x + 1, that.height - noteHeight * (maxPitch + 1 - minPitch));
 			ctx.lineTo(x + 1, that.height);
 		}
 	});
@@ -243,17 +244,19 @@ TrackNotes.prototype.redraw = function(time1, time2)
 	{
 		for (var i = Math.floor(minPitch / 12) * 12 + key.rootMidiPitch; i <= maxPitch; i += 12)
 		{
+			var y = that.height - noteHeight * (i - minPitch);
+			
 			ctx.strokeStyle = "#000000";
 			ctx.beginPath();
-			ctx.moveTo(start * toPixels, that.height - noteHeight * (i - minPitch));
-			ctx.lineTo(  end * toPixels, that.height - noteHeight * (i - minPitch));
+			ctx.moveTo(start * toPixels, y);
+			ctx.lineTo(  end * toPixels, y);
 			
 			if (i == 5 * 12 + key.rootMidiPitch || i == 6 * 12 + key.rootMidiPitch)
 			{
-				ctx.moveTo(start * toPixels, that.height - noteHeight * (i - minPitch) - 1);
-				ctx.lineTo(  end * toPixels, that.height - noteHeight * (i - minPitch) - 1);
-				ctx.moveTo(start * toPixels, that.height - noteHeight * (i - minPitch) + 1);
-				ctx.lineTo(  end * toPixels, that.height - noteHeight * (i - minPitch) + 1);
+				ctx.moveTo(start * toPixels, y - 1);
+				ctx.lineTo(  end * toPixels, y - 1);
+				ctx.moveTo(start * toPixels, y + 1);
+				ctx.lineTo(  end * toPixels, y + 1);
 			}
 			
 			ctx.stroke();
@@ -296,22 +299,22 @@ TrackNotes.prototype.getModifiedElement = function(elem)
 	
 	if (elem.selected)
 	{
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
+		if ((this.timeline.action & this.timeline.INTERACT_MOVE_TIME) != 0)
 		{
-			timeRange.start += this.timeline.mouseMoveDeltaTime;
-			timeRange.end   += this.timeline.mouseMoveDeltaTime;
+			timeRange.start += this.timeline.actionMoveDeltaTime;
+			timeRange.end   += this.timeline.actionMoveDeltaTime;
 		}
 	
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_PITCH) != 0)
-			pitch += this.timeline.mouseMoveDeltaPitch;
+		if ((this.timeline.action & this.timeline.INTERACT_MOVE_PITCH) != 0)
+			pitch += this.timeline.actionMoveDeltaPitch;
 		
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
-			(this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
+		if ((this.timeline.action & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
+			(this.timeline.action & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
 		{
 			timeRange.stretch(
-				this.timeline.mouseStretchTimePivot,
-				this.timeline.mouseStretchTimeOrigin,
-				this.timeline.mouseMoveDeltaTime);
+				this.timeline.actionStretchTimePivot,
+				this.timeline.actionStretchTimeOrigin,
+				this.timeline.actionMoveDeltaTime);
 		}
 	}
 	
@@ -333,12 +336,12 @@ TrackNotes.prototype.getModifiedScrollY = function()
 	var scrollY = this.scrollY;
 	
 	if (this.timeline.mouseDownTrack == this &&
-		this.timeline.mouseAction == this.timeline.INTERACT_SCROLL)
+		this.timeline.action == this.timeline.INTERACT_SCROLL)
 	{
 		scrollY += this.timeline.mouseMoveScrollY;
 		scrollY =
 			Math.max(0,
-			Math.min((maxPitch - minPitch) * noteHeight - this.height,
+			Math.min((maxPitch + 1 - minPitch) * noteHeight - this.height,
 			scrollY));
 	}
 	
@@ -357,11 +360,14 @@ TrackNotes.prototype.drawNote = function(elem)
 	var modifiedElem = this.getModifiedElement(elem);
 	
 	var y = 0.5 + that.height - noteHeight * (modifiedElem.pitch - minPitch);
+	
+	// Clamp Y position for out-of-view peek.
 	y =
 		Math.max(-scrollY + 3,
 		Math.min(that.height - scrollY + noteHeight - 2,
 		y));
 			
+	// Draw note parts, one for each key region it overlaps.
 	this.timeline.trackKeys.enumerateKeysAtRange(
 		new TimeRange(modifiedElem.start, modifiedElem.end),
 		function (key, start, end)
@@ -384,6 +390,7 @@ TrackNotes.prototype.drawNote = function(elem)
 			}
 		});
 	
+	// Draw hover white-fade overlay.
 	if (elem == this.timeline.hoverElement || (elem.selected && this.timeline.mouseDown))
 	{
 		ctx.fillStyle = "#ffffff"
@@ -396,6 +403,7 @@ TrackNotes.prototype.drawNote = function(elem)
 			noteHeight - 1);
 	}
 	
+	// Draw selected double-stripe overlay.
 	if (elem.selected)
 	{
 		ctx.fillStyle = "#ffffff"

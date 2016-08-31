@@ -4,6 +4,12 @@ function snap(x, step)
 }
 
 
+function mod(x, m)
+{
+	return (x % m + m) % m;
+}
+
+
 function stretch(x, pivot, origin, delta)
 {
 	var dist = (origin - pivot);

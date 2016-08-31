@@ -176,17 +176,17 @@ TrackKeys.prototype.getModifiedElement = function(elem)
 
 	if (elem.selected)
 	{
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_MOVE_TIME) != 0)
-			time += this.timeline.mouseMoveDeltaTime;
+		if ((this.timeline.action & this.timeline.INTERACT_MOVE_TIME) != 0)
+			time += this.timeline.actionMoveDeltaTime;
 		
-		if ((this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
-			(this.timeline.mouseAction & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
+		if ((this.timeline.action & this.timeline.INTERACT_STRETCH_TIME_L) != 0 ||
+			(this.timeline.action & this.timeline.INTERACT_STRETCH_TIME_R) != 0)
 		{
 			time = stretch(
 				time,
-				this.timeline.mouseStretchTimePivot,
-				this.timeline.mouseStretchTimeOrigin,
-				this.timeline.mouseMoveDeltaTime);
+				this.timeline.actionStretchTimePivot,
+				this.timeline.actionStretchTimeOrigin,
+				this.timeline.actionMoveDeltaTime);
 		}
 	}
 
