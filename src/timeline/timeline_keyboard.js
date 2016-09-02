@@ -320,7 +320,9 @@ Timeline.prototype._doPitchAction = function(pitch)
 					new TimeRange(time1, time2),
 					new Pitch(nearestPitch)));
 					
-			this.select(noteElem);
+			if (noteElem != null)
+				this.select(noteElem);
+			
 			this.setCursor(time2, this.trackNotesIndex);
 		}
 		
@@ -332,7 +334,9 @@ Timeline.prototype._doPitchAction = function(pitch)
 					0,
 					pitch));
 					
-			this.select(chordElem);
+			if (chordElem != null)
+				this.select(chordElem);
+			
 			this.setCursor(time2, this.trackChordsIndex);
 		}
 	}

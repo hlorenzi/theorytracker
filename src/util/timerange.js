@@ -28,6 +28,13 @@ TimeRange.prototype.stretch = function(pivot, origin, delta)
 }
 
 
+TimeRange.prototype.clip = function(min, max)
+{
+	this.start = Math.max(this.start, min)
+	this.end   = Math.min(this.end,   max);
+}
+
+
 TimeRange.prototype.getClippedParts = function(clipRange)
 {
 	var parts = [];

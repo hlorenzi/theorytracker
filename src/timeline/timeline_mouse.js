@@ -58,9 +58,8 @@ Timeline.prototype.handleMouseDown = function(ev)
 		{
 			this.hideCursor();
 			
-			// Handle selection of element under mouse.
-			if (!this.hoverElement.selected)
-				this.select(this.hoverElement);
+			// Select element under mouse.
+			this.select(this.hoverElement);
 			
 			// Set action to a common action of
 			// all selected elements.

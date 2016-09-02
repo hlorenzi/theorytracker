@@ -26,6 +26,10 @@ TrackChords.prototype.chordAdd = function(chord)
 	elem.track = this;
 	elem.chord = chord.clone();
 	
+	elem.chord.timeRange.clip(0, this.timeline.length);
+	if (elem.chord.timeRange.duration() <= 0)
+		return null;
+	
 	this.elementRefresh(elem);
 	this.elements.add(elem);
 	this.timeline.markDirtyElement(elem);
@@ -65,12 +69,18 @@ TrackChords.prototype.applyModifications = function()
 	for (var i = 0; i < this.modifiedElements.length; i++)
 	{
 		var elem = this.modifiedElements[i];
+		elem.chord.timeRange.clip(0, this.timeline.length);
 		this._clipChords(elem.chord.timeRange);
 	}
 		
 	for (var i = 0; i < this.modifiedElements.length; i++)
 	{
 		var elem = this.modifiedElements[i];
+		if (elem.chord.timeRange.duration() <= 0)
+		{
+			this.timeline.unselect(elem);
+			continue;
+		}
 		
 		this.elementRefresh(elem);
 		this.elements.add(elem);

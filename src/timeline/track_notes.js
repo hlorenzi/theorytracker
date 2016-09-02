@@ -28,6 +28,10 @@ TrackNotes.prototype.noteAdd = function(note)
 	elem.track = this;
 	elem.note  = note.clone();
 	
+	elem.note.timeRange.clip(0, this.timeline.length);
+	if (elem.note.timeRange.duration() <= 0)
+		return null;
+	
 	this.elementRefresh(elem);
 	this.elements.add(elem);
 	this.timeline.markDirtyElement(elem);
@@ -125,12 +129,18 @@ TrackNotes.prototype.applyModifications = function()
 	for (var i = 0; i < this.modifiedElements.length; i++)
 	{
 		var elem = this.modifiedElements[i];
+		elem.note.timeRange.clip(0, this.timeline.length);
 		this._clipNotes(elem.note.timeRange, elem.note.pitch);
 	}
 		
 	for (var i = 0; i < this.modifiedElements.length; i++)
 	{
 		var elem = this.modifiedElements[i];
+		if (elem.note.timeRange.duration() <= 0)
+		{
+			this.timeline.unselect(elem);
+			continue;
+		}
 		
 		this.elementRefresh(elem);
 		this.elements.add(elem);

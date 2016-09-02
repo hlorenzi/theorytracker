@@ -380,9 +380,26 @@ Timeline.prototype.unselectAll = function()
 
 Timeline.prototype.select = function(elem)
 {
+	if (elem.selected)
+		return;
+	
 	elem.select();
 	this.selectedElements.push(elem);
 	this.markDirtyElement(elem);
+}
+
+
+Timeline.prototype.unselect = function(elem)
+{
+	if (!elem.selected)
+		return;
+	
+	elem.unselect();
+	this.markDirtyElement(elem);
+	
+	var indexOf = this.selectedElements.indexOf(elem);
+	if (indexOf >= 0)
+		this.selectedElements.splice(indexOf, 1);
 }
 
 
