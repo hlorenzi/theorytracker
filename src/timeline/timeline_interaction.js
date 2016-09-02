@@ -40,35 +40,20 @@ Timeline.prototype.interactionBeginMovePitch = function()
 Timeline.prototype.interactionUpdateMovePitch = function(deltaFromOrigin)
 {
 	// Get the pitch range of all selected elements.
-	var pitchMin = null;
-	var pitchMax = null;
-
-	for (var i = 0; i < this.selectedElements.length; i++)
-	{
-		if (this.selectedElements[i].interactPitch == null)
-			continue;
-		
-		var pitch = this.selectedElements[i].interactPitch.midiPitch;
-
-		if (pitchMin == null || pitch < pitchMin.midiPitch)
-			pitchMin = new Pitch(pitch);
-
-		if (pitchMax == null || pitch > pitchMax.midiPitch)
-			pitchMax = new Pitch(pitch);
-	}
+	var pitchRange = this.getSelectedElementsPitchRange();
 
 	// Calculate displacement,
 	// ensuring that pitches cannot fall out of bounds.
 	this.actionMoveDeltaPitch = deltaFromOrigin;
 	
-	if (pitchMin != null && pitchMax != null)
+	if (pitchRange.min != null && pitchRange.max != null)
 	{
 		this.actionMoveDeltaPitch =
-			Math.max(this.MIN_VALID_MIDI_PITCH - pitchMin.midiPitch,
-			Math.min(this.MAX_VALID_MIDI_PITCH - pitchMax.midiPitch,
+			Math.max(this.MIN_VALID_MIDI_PITCH - pitchRange.min.midiPitch,
+			Math.min(this.MAX_VALID_MIDI_PITCH - pitchRange.max.midiPitch,
 			this.actionMoveDeltaPitch));
 			
-		this.createLastPitch = Math.round((pitchMin.midiPitch + pitchMax.midiPitch) / 2);
+		this.createLastPitch = Math.round((pitchRange.min.midiPitch + pitchRange.max.midiPitch) / 2);
 	}
 	
 	this.markDirtyAllSelectedElements(0);

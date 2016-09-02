@@ -28,6 +28,24 @@ function Timeline(canvas)
 	this.canvasWidth  = 0;
 	this.canvasHeight = 0;
 
+	// Set up tracks.
+	this.length     = 0;
+	this.trackLength = new TrackLength(this);
+	this.trackKeys   = new TrackKeys(this);
+	this.trackMeters = new TrackMeters(this);
+	this.trackNotes  = new TrackNotes(this);
+	this.trackChords = new TrackChords(this);
+
+	this.tracks = [];
+	this.tracks.push(this.trackLength);
+	this.tracks.push(this.trackKeys);
+	this.tracks.push(this.trackMeters);
+	this.tracks.push(this.trackNotes);
+	this.tracks.push(this.trackChords);
+	
+	this.trackNotesIndex  = 3;
+	this.trackChordsIndex = 4;
+	
 	// Set up mouse/keyboard interaction.
 	this.canvas.oncontextmenu = function(ev) { that.handleContextMenu(ev); };
 	this.canvas.onmousedown   = function(ev) { that.handleMouseDown(ev);   };
@@ -55,11 +73,11 @@ function Timeline(canvas)
 	this.createLastPitch    = 12 * 5 + theory.Fs;
 	this.createLastDuration = this.TIME_PER_WHOLE_NOTE / 4;
 	
-	this.cursorVisible = false;
+	this.cursorVisible = true;
 	this.cursorTime1   = 0;
-	this.cursorTrack1  = 0;
+	this.cursorTrack1  = this.trackNotesIndex;
 	this.cursorTime2   = 0;
-	this.cursorTrack2  = 0;
+	this.cursorTrack2  = this.trackNotesIndex;
 
 	this.hoverElement     = null;
 	this.hoverRegion      = null;
@@ -77,24 +95,6 @@ function Timeline(canvas)
 
 	this.redrawDirtyTimeMin = -1;
 	this.redrawDirtyTimeMax = -1;
-
-	// Set up tracks.
-	this.length     = 0;
-	this.trackLength = new TrackLength(this);
-	this.trackKeys   = new TrackKeys(this);
-	this.trackMeters = new TrackMeters(this);
-	this.trackNotes  = new TrackNotes(this);
-	this.trackChords = new TrackChords(this);
-
-	this.tracks = [];
-	this.tracks.push(this.trackLength);
-	this.tracks.push(this.trackKeys);
-	this.tracks.push(this.trackMeters);
-	this.tracks.push(this.trackNotes);
-	this.tracks.push(this.trackChords);
-	
-	this.trackNotesIndex  = 3;
-	this.trackChordsIndex = 4;
 }
 
 
@@ -123,10 +123,29 @@ Timeline.prototype.setScrollTime = function(time)
 	this.durationVisible  = (this.canvasWidth - this.OFFSET_X) / this.timeToPixelsScaling; 
 	this.firstTimeVisible = this.scrollTime - this.OFFSET_X / this.timeToPixelsScaling;
 	this.lastTimeVisible  = this.scrollTime + this.canvasWidth / this.timeToPixelsScaling;
+	
 	this.markDirtyAll();
 }
 
 
+Timeline.prototype.setScrollPitchAtBottom = function(pitch)
+{
+	this.trackNotes.setScrollPitchAtBottom(pitch);
+}
+
+
+Timeline.prototype.setScrollPitchAtCenter = function(pitch)
+{
+	this.trackNotes.setScrollPitchAtCenter(pitch);
+}
+
+
+Timeline.prototype.getScrollPitchAtBottom = function()
+{
+	return this.trackNotes.getScrollPitchAtBottom();
+}
+
+	
 Timeline.prototype.scrollTimeIntoView = function(time)
 {
 	if (time < this.firstTimeVisible)
@@ -134,6 +153,12 @@ Timeline.prototype.scrollTimeIntoView = function(time)
 	
 	else if (time > this.lastTimeVisible)
 		this.setScrollTime(time - this.durationVisible + this.TIME_PER_WHOLE_NOTE * 4);
+}
+
+
+Timeline.prototype.scrollPitchIntoView = function(pitch)
+{
+	this.trackNotes.scrollPitchIntoView(pitch);
 }
 
 
@@ -398,6 +423,32 @@ Timeline.prototype.getSelectedElementsInteractTimeRange = function()
 	}
 	
 	return allTimeRange;
+}
+
+
+Timeline.prototype.getSelectedElementsPitchRange = function()
+{
+	var pitchMin = null;
+	var pitchMax = null;
+
+	for (var i = 0; i < this.selectedElements.length; i++)
+	{
+		if (this.selectedElements[i].interactPitch == null)
+			continue;
+		
+		var pitch = this.selectedElements[i].interactPitch.midiPitch;
+
+		if (pitchMin == null || pitch < pitchMin.midiPitch)
+			pitchMin = new Pitch(pitch);
+
+		if (pitchMax == null || pitch > pitchMax.midiPitch)
+			pitchMax = new Pitch(pitch);
+	}
+	
+	return {
+		min: pitchMin,
+		max: pitchMax
+	};
 }
 
 

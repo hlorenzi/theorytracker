@@ -15,6 +15,8 @@ TrackNotes.prototype.setSong = function(song)
 	
 	for (var i = 0; i < song.notes.length; i++)
 		this.noteAdd(song.notes[i]);
+	
+	this.setScrollPitchAtCenter(12 * 5 + theory.F + 0.5);
 }
 
 
@@ -67,6 +69,54 @@ TrackNotes.prototype.handleScroll = function()
 {
 	this.scrollY = this.getModifiedScrollY();
 	this.timeline.markDirtyAll();
+}
+
+
+TrackNotes.prototype.getScrollPitchAtBottom = function()
+{
+	return this.timeline.MIN_VALID_MIDI_PITCH + this.scrollY / this.timeline.noteHeight;
+}
+
+
+TrackNotes.prototype.getScrollPitchAtTop = function()
+{
+	return this.getScrollPitchAtBottom() + this.height / this.timeline.noteHeight;
+}
+
+
+TrackNotes.prototype.setScrollPitchAtBottom = function(pitch)
+{
+	var noteHeight  = this.timeline.noteHeight;
+	var minPitch    = this.timeline.MIN_VALID_MIDI_PITCH;
+	var maxPitch    = this.timeline.MAX_VALID_MIDI_PITCH;
+	
+	this.scrollY =
+		Math.floor(
+		Math.max(0,
+		Math.min((maxPitch + 1 - minPitch) * noteHeight - this.height,
+		(pitch - minPitch) * noteHeight)));
+	
+	this.timeline.markDirtyAll();
+}
+
+
+TrackNotes.prototype.setScrollPitchAtCenter = function(pitch)
+{
+	this.setScrollPitchAtBottom(pitch + 0.5 - this.height / this.timeline.noteHeight / 2);
+}
+
+
+TrackNotes.prototype.scrollPitchIntoView = function(pitch)
+{
+	var noteHeight  = this.timeline.noteHeight;
+	var minPitch    = this.timeline.MIN_VALID_MIDI_PITCH;
+	var maxPitch    = this.timeline.MAX_VALID_MIDI_PITCH;
+	
+	if (pitch < this.getScrollPitchAtBottom())
+		this.setScrollPitchAtBottom(pitch - 4);
+	
+	else if (pitch + 1 > this.getScrollPitchAtTop())
+		this.setScrollPitchAtBottom(pitch + 4 - this.height / noteHeight);
 }
 
 

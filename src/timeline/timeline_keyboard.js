@@ -140,7 +140,12 @@ Timeline.prototype.handleKeyDown = function(ev)
 		// Up arrow
 		case 38:
 		{
-			if (shift && this.cursorVisible)
+			if (this.keyboardHoldSpace)
+			{
+				this.setScrollPitchAtBottom(
+					this.getScrollPitchAtBottom() + 4);
+			}
+			else if (shift && this.cursorVisible)
 			{
 				this.setCursor2(
 					this.cursorTime2,
@@ -160,7 +165,13 @@ Timeline.prototype.handleKeyDown = function(ev)
 					this.interactionBeginMovePitch();
 				
 				if (this.action == this.INTERACT_MOVE_PITCH)
+				{
 					this.interactionUpdateMovePitch(this.actionMoveDeltaPitch + 1);
+					
+					var pitchRange = this.getSelectedElementsPitchRange();
+					if (pitchRange.max != null)
+						this.scrollPitchIntoView(this.actionMoveDeltaPitch + pitchRange.max.midiPitch);
+				}
 			}
 			
 			break;
@@ -169,7 +180,12 @@ Timeline.prototype.handleKeyDown = function(ev)
 		// Down arrow
 		case 40:
 		{
-			if (shift && this.cursorVisible)
+			if (this.keyboardHoldSpace)
+			{
+				this.setScrollPitchAtBottom(
+					this.getScrollPitchAtBottom() - 4);
+			}
+			else if (shift && this.cursorVisible)
 			{
 				this.setCursor2(
 					this.cursorTime2,
@@ -189,7 +205,13 @@ Timeline.prototype.handleKeyDown = function(ev)
 					this.interactionBeginMovePitch();
 				
 				if (this.action == this.INTERACT_MOVE_PITCH)
+				{
 					this.interactionUpdateMovePitch(this.actionMoveDeltaPitch - 1);
+					
+					var pitchRange = this.getSelectedElementsPitchRange();
+					if (pitchRange.min != null)
+						this.scrollPitchIntoView(this.actionMoveDeltaPitch + pitchRange.min.midiPitch);
+				}
 			}
 			
 			break;

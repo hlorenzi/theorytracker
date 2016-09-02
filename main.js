@@ -24,8 +24,8 @@ function main()
 	song.chordAdd(new Chord(new TimeRange(960 * 3, 960 * 4), 22, theory.As));
 	
 	var timeline = new Timeline(canvas);
-	timeline.setSong(song);
 	timeline.relayout();
+	timeline.setSong(song);
 	timeline.redraw();
 	
 	mainTimeline = timeline;
