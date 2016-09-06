@@ -23,7 +23,10 @@ function main()
 	song.chordAdd(new Chord(new TimeRange(960 * 2, 960 * 3), 16, theory.Fs));
 	song.chordAdd(new Chord(new TimeRange(960 * 3, 960 * 4), 22, theory.As));
 	
-	var timeline = new Timeline(canvas);
+	var synth = new Synth();
+	setInterval(function() { synth.process(1 / 60); }, 1000 / 60);
+	
+	var timeline = new Timeline(canvas, synth);
 	timeline.relayout();
 	timeline.setSong(song);
 	timeline.redraw();

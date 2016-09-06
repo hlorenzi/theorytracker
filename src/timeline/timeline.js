@@ -1,4 +1,4 @@
-function Timeline(canvas)
+function Timeline(canvas, synth)
 {
 	var that = this;
 
@@ -27,6 +27,9 @@ function Timeline(canvas)
 
 	this.canvasWidth  = 0;
 	this.canvasHeight = 0;
+	
+	// Store synth context.
+	this.synth = synth;
 
 	// Set up tracks.
 	this.length     = 0;

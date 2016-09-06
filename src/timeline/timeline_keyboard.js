@@ -398,6 +398,9 @@ Timeline.prototype._doPitchAction = function(pitch)
 			this.scrollTimeIntoView(time2);
 			this.scrollPitchIntoView(nearestPitch);
 			this.setCursor(time2, this.trackNotesIndex);
+			
+			this.synth.addNoteOn(0, 1, nearestPitch, 1);
+			this.synth.addNoteOff(0.2, 1, nearestPitch);
 		}
 		
 		else if (this.cursorTrack1 == this.trackChordsIndex)
