@@ -4,6 +4,7 @@ Timeline.prototype.handleKeyDown = function(ev)
 
 	var ctrl  = ev.ctrlKey;
 	var shift = ev.shiftKey;
+	var alt   = ev.altKey;
 	
 	//ev.preventDefault();
 	
@@ -35,10 +36,79 @@ Timeline.prototype.handleKeyDown = function(ev)
 			break;
 		}
 		
+		// Backspace
+		case 8:
+		{
+			var eraseToTime = 0;
+			
+			var time1 = Math.min(this.cursorTime1, this.cursorTime2);
+			var time2 = Math.max(this.cursorTime1, this.cursorTime2);
+			var track1 = Math.min(this.cursorTrack1, this.cursorTrack2);
+			var track2 = Math.max(this.cursorTrack1, this.cursorTrack2);
+			
+			this.unselectAll();
+			
+			if (this.cursorTime1 == this.cursorTime2)
+			{
+				for (var i = track1; i <= track2; i++)
+				{
+					eraseToTime = Math.max(
+						this.tracks[i].getBackspaceTime(this.cursorTime1),
+						eraseToTime);
+				}
+				
+				for (var i = track1; i <= track2; i++)
+				{
+					this.tracks[i].clipRange(new TimeRange(eraseToTime, this.cursorTime1));
+					this.tracks[i].sanitize();
+				}
+				
+				this.showCursor();
+				this.setCursorBoth(eraseToTime, eraseToTime, this.cursorTrack1, this.cursorTrack2);
+				this.scrollTimeIntoView(eraseToTime);
+			}
+			else
+			{
+				for (var i = track1; i <= track2; i++)
+				{
+					this.tracks[i].clipRange(new TimeRange(time1, time2));
+					this.tracks[i].sanitize();
+				}
+				
+				this.showCursor();
+				this.setCursorBoth(time1, time1, this.cursorTrack1, this.cursorTrack2);
+				this.scrollTimeIntoView(time1);
+			}
+			
+			break;
+		}
+		
+		// Delete
+		case 46:
+		{
+			for (var i = 0; i < this.selectedElements.length; i++)
+			{
+				var elem = this.selectedElements[i];
+				
+				if (!elem.selected)
+					return;
+				
+				elem.unselect();
+				this.markDirtyElement(elem);
+				elem.remove();
+			}
+			
+			for (var i = 0; i < this.tracks.length; i++)
+				this.tracks[i].sanitize();
+			
+			this.selectedElements = [];			
+			break;
+		}
+		
 		// Left arrow
 		case 37:
 		{
-			if (this.keyboardHoldSpace)
+			if (alt)
 			{
 				this.setScrollTime(this.scrollTime - this.TIME_PER_WHOLE_NOTE);
 			}
@@ -89,7 +159,7 @@ Timeline.prototype.handleKeyDown = function(ev)
 		// Right arrow
 		case 39:
 		{
-			if (this.keyboardHoldSpace)
+			if (alt)
 			{
 				this.setScrollTime(this.scrollTime + this.TIME_PER_WHOLE_NOTE);
 			}
@@ -140,7 +210,7 @@ Timeline.prototype.handleKeyDown = function(ev)
 		// Up arrow
 		case 38:
 		{
-			if (this.keyboardHoldSpace)
+			if (alt)
 			{
 				this.setScrollPitchAtBottom(
 					this.getScrollPitchAtBottom() + 4);
@@ -180,7 +250,7 @@ Timeline.prototype.handleKeyDown = function(ev)
 		// Down arrow
 		case 40:
 		{
-			if (this.keyboardHoldSpace)
+			if (alt)
 			{
 				this.setScrollPitchAtBottom(
 					this.getScrollPitchAtBottom() - 4);
@@ -233,6 +303,8 @@ Timeline.prototype.handleKeyDown = function(ev)
 		case 77: { this._doPitchAction(theory.B);  break; }
 	}
 	
+	this.hoverElement = null;
+	this.hoverRegion  = null;
 	this.redraw();
 }
 
@@ -314,7 +386,7 @@ Timeline.prototype._doPitchAction = function(pitch)
 				nearestPitch));
 			
 			this.createLastPitch = nearestPitch;
-			
+						
 			var noteElem = this.trackNotes.noteAdd(
 				new Note(
 					new TimeRange(time1, time2),
@@ -323,6 +395,8 @@ Timeline.prototype._doPitchAction = function(pitch)
 			if (noteElem != null)
 				this.select(noteElem);
 			
+			this.scrollTimeIntoView(time2);
+			this.scrollPitchIntoView(nearestPitch);
 			this.setCursor(time2, this.trackNotesIndex);
 		}
 		
@@ -337,6 +411,7 @@ Timeline.prototype._doPitchAction = function(pitch)
 			if (chordElem != null)
 				this.select(chordElem);
 			
+			this.scrollTimeIntoView(time2);
 			this.setCursor(time2, this.trackChordsIndex);
 		}
 	}

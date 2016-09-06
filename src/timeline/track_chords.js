@@ -20,7 +20,7 @@ TrackChords.prototype.setSong = function(song)
 
 TrackChords.prototype.chordAdd = function(chord)
 {
-	this._clipChords(chord.timeRange);
+	this.clipRange(chord.timeRange);
 		
 	var elem = new Element();
 	elem.track = this;
@@ -38,7 +38,7 @@ TrackChords.prototype.chordAdd = function(chord)
 }
 
 
-TrackChords.prototype._clipChords = function(timeRange)
+TrackChords.prototype.clipRange = function(timeRange)
 {
 	// Check for overlapping chords and clip them.
 	var overlapping = [];
@@ -70,7 +70,7 @@ TrackChords.prototype.applyModifications = function()
 	{
 		var elem = this.modifiedElements[i];
 		elem.chord.timeRange.clip(0, this.timeline.length);
-		this._clipChords(elem.chord.timeRange);
+		this.clipRange(elem.chord.timeRange);
 	}
 		
 	for (var i = 0; i < this.modifiedElements.length; i++)

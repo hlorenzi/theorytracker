@@ -20,7 +20,7 @@ TrackMeters.prototype.setSong = function(song)
 	
 	for (var i = 0; i < song.meters.length; i++)
 	{
-		this._clipMeters(song.meters[i].time);
+		this.clipRange(new TimeRange(song.meters[i].time, song.meters[i].time));
 		this._meterAdd(song.meters[i]);
 	}
 	
@@ -67,21 +67,23 @@ TrackMeters.prototype._meterAdd = function(meter)
 }
 
 
-TrackMeters.prototype._clipMeters = function(time)
+TrackMeters.prototype.clipRange = function(timeRange)
 {
 	// Check for overlapping meter changes and clip them.
 	var overlapping = [];
 	
-	this.elements.enumerateOverlappingTime(time, function (elem)
-	{
-		if (elem.meter.time == time)
-			overlapping.push(elem);
-	});
+	this.elements.enumerateOverlappingRange(
+		new TimeRange(timeRange.start - 1, timeRange.end + 1),
+		function (elem)
+		{
+			if (timeRange.overlapsTime(elem.meter.time) ||
+				(timeRange.start == timeRange.end && elem.meter.time == timeRange.start))
+				overlapping.push(elem);
+		});
 	
 	for (var i = 0; i < overlapping.length; i++)
 	{
-		this.elements.remove(overlapping[i]);
-		this.meters.remove(overlapping[i]);
+		this.elementRemove(overlapping[i]);
 	}
 }
 
@@ -92,7 +94,7 @@ TrackMeters.prototype.applyModifications = function()
 	{
 		var elem = this.modifiedElements[i];
 		
-		this._clipMeters(elem.meter.time);
+		this.clipRange(new TimeRange(elem.meter.time, elem.meter.time));
 		this.elementRefresh(elem);
 		this.elements.add(elem);
 		this.meters.add(elem);
@@ -102,6 +104,14 @@ TrackMeters.prototype.applyModifications = function()
 	
 	this.modifiedElements = [];
 	this.timeline.markDirtyAll();
+}
+
+
+TrackMeters.prototype.elementRemove = function(elem)
+{
+	this.timeline.markDirtyAll();
+	this.elements.remove(elem);
+	this.meters.remove(elem);
 }
 
 

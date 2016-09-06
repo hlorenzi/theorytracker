@@ -62,6 +62,12 @@ TimeRange.prototype.duration = function()
 
 TimeRange.prototype.overlapsTime = function(time)
 {
+	return time > this.start && time < this.end;
+}
+
+
+TimeRange.prototype.includesTime = function(time)
+{
 	return time >= this.start && time < this.end;
 }
 

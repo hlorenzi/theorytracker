@@ -20,7 +20,7 @@ TrackKeys.prototype.setSong = function(song)
 	
 	for (var i = 0; i < song.keys.length; i++)
 	{
-		this._clipKeys(song.keys[i].time);
+		this.clipRange(new TimeRange(song.keys[i].time, song.keys[i].time));
 		this._keyAdd(song.keys[i]);
 	}
 	
@@ -61,21 +61,23 @@ TrackKeys.prototype._keyAdd = function(key)
 }
 
 
-TrackKeys.prototype._clipKeys = function(time)
+TrackKeys.prototype.clipRange = function(timeRange)
 {
 	// Check for overlapping key changes and clip them.
 	var overlapping = [];
 	
-	this.elements.enumerateOverlappingTime(time, function (elem)
-	{
-		if (elem.key.time == time)
-			overlapping.push(elem);
-	});
+	this.elements.enumerateOverlappingRange(
+		new TimeRange(timeRange.start - 1, timeRange.end + 1),
+		function (elem)
+		{
+			if (timeRange.overlapsTime(elem.key.time) ||
+				(timeRange.start == timeRange.end && elem.key.time == timeRange.start))
+				overlapping.push(elem);
+		});
 	
 	for (var i = 0; i < overlapping.length; i++)
 	{
-		this.elements.remove(overlapping[i]);
-		this.keys.remove(overlapping[i]);
+		this.elementRemove(overlapping[i]);
 	}
 }
 
@@ -86,7 +88,7 @@ TrackKeys.prototype.applyModifications = function()
 	{
 		var elem = this.modifiedElements[i];
 		
-		this._clipKeys(elem.key.time);
+		this.clipRange(new TimeRange(elem.key.time, elem.key.time));
 		this.elementRefresh(elem);
 		this.elements.add(elem);
 		this.keys.add(elem);
@@ -96,6 +98,14 @@ TrackKeys.prototype.applyModifications = function()
 	
 	this.modifiedElements = [];
 	this.timeline.markDirtyAll();
+}
+
+
+TrackKeys.prototype.elementRemove = function(elem)
+{
+	this.timeline.markDirtyAll();
+	this.elements.remove(elem);
+	this.keys.remove(elem);
 }
 
 

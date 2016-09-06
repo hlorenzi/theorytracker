@@ -28,4 +28,5 @@ function Element()
 	};
 	
 	this.modify = function() { that.track.elementModify(this); };
+	this.remove = function() { that.track.elementRemove(this); };
 }

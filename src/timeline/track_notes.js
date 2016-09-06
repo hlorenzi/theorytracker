@@ -22,7 +22,7 @@ TrackNotes.prototype.setSong = function(song)
 
 TrackNotes.prototype.noteAdd = function(note)
 {
-	this._clipNotes(note.timeRange, note.pitch);
+	this.clipRangeWithPitch(note.timeRange, note.pitch);
 	
 	var elem = new Element();
 	elem.track = this;
@@ -40,14 +40,14 @@ TrackNotes.prototype.noteAdd = function(note)
 }
 
 
-TrackNotes.prototype._clipNotes = function(timeRange, pitch)
+TrackNotes.prototype.clipRangeWithPitch = function(timeRange, pitch)
 {
 	// Check for overlapping notes and clip them.
 	var overlapping = [];
 	
 	this.elements.enumerateOverlappingRange(timeRange, function (elem)
 	{
-		if (elem.note.pitch.midiPitch == pitch.midiPitch)
+		if (pitch == null || elem.note.pitch.midiPitch == pitch.midiPitch)
 			overlapping.push(elem);
 	});
 	
@@ -66,6 +66,12 @@ TrackNotes.prototype._clipNotes = function(timeRange, pitch)
 			this.noteAdd(clippedNote);
 		}
 	}
+}
+
+
+TrackNotes.prototype.clipRange = function(timeRange)
+{
+	this.clipRangeWithPitch(timeRange, null);
 }
 
 
@@ -129,8 +135,8 @@ TrackNotes.prototype.applyModifications = function()
 	for (var i = 0; i < this.modifiedElements.length; i++)
 	{
 		var elem = this.modifiedElements[i];
+		this.clipRangeWithPitch(elem.note.timeRange, elem.note.pitch);
 		elem.note.timeRange.clip(0, this.timeline.length);
-		this._clipNotes(elem.note.timeRange, elem.note.pitch);
 	}
 		
 	for (var i = 0; i < this.modifiedElements.length; i++)
@@ -311,10 +317,13 @@ TrackNotes.prototype.redraw = function(time1, time2)
 			ctx.moveTo(start * toPixels, y);
 			ctx.lineTo(  end * toPixels, y);
 			
-			if (i == 5 * 12 + key.rootMidiPitch || i == 6 * 12 + key.rootMidiPitch)
+			if (i == 5 * 12 + key.rootMidiPitch)
 			{
 				ctx.moveTo(start * toPixels, y - 1);
 				ctx.lineTo(  end * toPixels, y - 1);
+			}
+			else if (i == 6 * 12 + key.rootMidiPitch)
+			{
 				ctx.moveTo(start * toPixels, y + 1);
 				ctx.lineTo(  end * toPixels, y + 1);
 			}

@@ -41,8 +41,9 @@ Timeline.prototype.handleMouseDown = function(ev)
 	this.mouseDownScrollTime = this.scrollTime;
 	this.mouseMoveScrollY    = 0;
 	
-	// Handle scrolling with the middle or right mouse buttons.
-	if (ev.which !== 1 || this.keyboardHoldSpace)
+	// Handle scrolling with the middle or right mouse buttons,
+	// or if Alt is held down.
+	if (ev.which !== 1 || alt)
 	{
 		this.action = this.INTERACT_SCROLL;
 		this.canvas.style.cursor = "default";
@@ -106,6 +107,7 @@ Timeline.prototype.handleMouseDown = function(ev)
 				}
 				
 				this.canvas.style.cursor = "text";
+				this.scrollTimeIntoView(this.cursorTime1);
 			}
 		}
 	}
@@ -113,6 +115,8 @@ Timeline.prototype.handleMouseDown = function(ev)
 	var trackIndex = this.getTrackIndexAtY(mousePos.y);
 	this.mouseDownTrack = (trackIndex == -1 ? null : this.tracks[trackIndex]);
 
+	this.hoverElement = null;
+	this.hoverRegion  = null;
 	this.redraw();
 }
 

@@ -31,9 +31,18 @@ TrackLength.prototype.elementModify = function(elem)
 	var modifiedElem = this.getModifiedLengthKnob(elem);
 	
 	elem.length = modifiedElem.length;
-	this.timeline.length = modifiedElem.length;
 	
-	// FIXME: Clip elements of all tracks to the new length.
+	if (modifiedElem.length < this.timeline.length)
+	{
+		// Clip elements that are now out of the song's bounds.
+		for (var i = 0; i < this.timeline.tracks.length; i++)
+		{
+			this.timeline.tracks[i].clipRange(new TimeRange(modifiedElem.length, this.timeline.length + 1));
+			this.timeline.tracks[i].sanitize();
+		}
+	}
+	
+	this.timeline.length = modifiedElem.length;
 	
 	this.elementRefresh(elem);
 	this.elements.add(elem);
@@ -46,11 +55,12 @@ TrackLength.prototype.elementRefresh = function(elem)
 {
 	var toPixels = this.timeline.timeToPixelsScaling;
 
+	elem.length = this.timeline.length;
+	
 	elem.timeRange = new TimeRange(
 		elem.length - this.LENGTH_KNOB_WIDTH / 2 / toPixels,
 		elem.length + this.LENGTH_KNOB_WIDTH / 2 / toPixels);
 		
-	elem.length       = this.timeline.length;
 	elem.interactKind = this.timeline.INTERACT_MOVE_TIME |
 		this.timeline.INTERACT_STRETCH_TIME_L | this.timeline.INTERACT_STRETCH_TIME_R;
 

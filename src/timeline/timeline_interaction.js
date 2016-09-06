@@ -53,7 +53,7 @@ Timeline.prototype.interactionUpdateMovePitch = function(deltaFromOrigin)
 			Math.min(this.MAX_VALID_MIDI_PITCH - pitchRange.max.midiPitch,
 			this.actionMoveDeltaPitch));
 			
-		this.createLastPitch = Math.round((pitchRange.min.midiPitch + pitchRange.max.midiPitch) / 2);
+		this.createLastPitch = Math.round(this.actionMoveDeltaPitch + (pitchRange.min.midiPitch + pitchRange.max.midiPitch) / 2);
 	}
 	
 	this.markDirtyAllSelectedElements(0);
@@ -101,6 +101,11 @@ Timeline.prototype.interactionUpdateStretchTime = function(deltaFromOrigin)
 		this.actionStretchTimePivot,
 		this.actionStretchTimeOrigin,
 		this.actionMoveDeltaTime);
+		
+	if (this.selectedElements.length == 1)
+	{
+		this.createLastDuration = newStretchedAllTimeRange.duration();
+	}
 		
 	this.markDirtyTimeRange(newStretchedAllTimeRange);
 }
