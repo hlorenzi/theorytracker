@@ -33,6 +33,9 @@ Timeline.prototype.handleKeyDown = function(ev)
 		case 32:
 		{
 			this.keyboardHoldSpace = true;
+			
+			this.playbackToggle();
+			
 			break;
 		}
 		
@@ -399,8 +402,9 @@ Timeline.prototype._doPitchAction = function(pitch)
 			this.scrollPitchIntoView(nearestPitch);
 			this.setCursor(time2, this.trackNotesIndex);
 			
-			this.synth.addNoteOn(0, 1, nearestPitch, 1);
-			this.synth.addNoteOff(0.2, 1, nearestPitch);
+			this.synth.addNoteOn(0, 0, nearestPitch, 1);
+			this.synth.addNoteOff(0.2, 0, nearestPitch);
+			this.synth.sortEvents();
 		}
 		
 		else if (this.cursorTrack1 == this.trackChordsIndex)

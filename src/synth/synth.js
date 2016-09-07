@@ -95,6 +95,16 @@ Synth.prototype.addNoteOff = function(time, instrument, midiPitch)
 }
 
 
+Synth.prototype.sortEvents = function()
+{
+	this.noteOnEvents.sort(function (a, b)
+		{ return a.time - b.time; });
+		
+	this.noteOffEvents.sort(function (a, b)
+		{ return a.time - b.time; });
+}
+
+
 Synth.prototype.voiceStart = function(instrument, midiPitch, volume)
 {
 	for (var i = this.voices.length - 1; i >= 0; i--)

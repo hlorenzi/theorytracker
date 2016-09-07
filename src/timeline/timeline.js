@@ -32,7 +32,8 @@ function Timeline(canvas, synth)
 	this.synth = synth;
 
 	// Set up tracks.
-	this.length     = 0;
+	this.length      = 0;
+	this.bpm         = 120;
 	this.trackLength = new TrackLength(this);
 	this.trackKeys   = new TrackKeys(this);
 	this.trackMeters = new TrackMeters(this);
@@ -48,6 +49,12 @@ function Timeline(canvas, synth)
 	
 	this.trackNotesIndex  = 3;
 	this.trackChordsIndex = 4;
+	
+	// Set up playback state.
+	this.playing          = false;
+	this.playingTime      = 0;
+	this.playingTimeEnd   = 0;
+	this.playbackInterval = null;
 	
 	// Set up mouse/keyboard interaction.
 	this.canvas.oncontextmenu = function(ev) { that.handleContextMenu(ev); };
@@ -586,56 +593,66 @@ Timeline.prototype.redraw = function()
 	}
 	
 	// Draw cursor.
-	if (this.cursorVisible)
+	if (this.playing)
+	{
+		this.drawCursor("#ff0000", this.playingTime, this.playingTime, 0, this.tracks.length - 1);
+	}
+	else if (this.cursorVisible)
 	{
 		var time1  = Math.min(this.cursorTime1, this.cursorTime2);
 		var time2  = Math.max(this.cursorTime1, this.cursorTime2);
 		var track1 = Math.min(this.cursorTrack1, this.cursorTrack2);
 		var track2 = Math.max(this.cursorTrack1, this.cursorTrack2);
 		
-		var x1  = Math.floor(time1 * this.timeToPixelsScaling) + 0.5;
-		var x2  = Math.floor(time2 * this.timeToPixelsScaling) + 0.5;
-		var y1 = this.tracks[track1].y;
-		var y2 = this.tracks[track2].y + this.tracks[track2].height;
-		
-		this.ctx.strokeStyle = "#0000ff";
-		this.ctx.fillStyle = "#0000ff";
-		
-		this.ctx.beginPath();
-			this.ctx.moveTo(x1, y1);
-			this.ctx.lineTo(x1, y2);
-			
-			this.ctx.moveTo(x2, y1);
-			this.ctx.lineTo(x2, y2);
-		this.ctx.stroke();
-		
-		this.ctx.beginPath();
-			this.ctx.moveTo(x1, y1);
-			this.ctx.lineTo(x1 - 4, y1 - 4);
-			this.ctx.lineTo(x1 + 4, y1 - 4);
-			this.ctx.lineTo(x1, y1);
-			
-			this.ctx.moveTo(x2, y1);
-			this.ctx.lineTo(x2 - 4, y1 - 4);
-			this.ctx.lineTo(x2 + 4, y1 - 4);
-			this.ctx.lineTo(x2, y1);
-			
-			this.ctx.moveTo(x1, y2);
-			this.ctx.lineTo(x1 - 4, y2 + 4);
-			this.ctx.lineTo(x1 + 4, y2 + 4);
-			this.ctx.lineTo(x1, y2);
-			
-			this.ctx.moveTo(x2, y2);
-			this.ctx.lineTo(x2 - 4, y2 + 4);
-			this.ctx.lineTo(x2 + 4, y2 + 4);
-			this.ctx.lineTo(x2, y2);
-		this.ctx.fill();
-		
-		this.ctx.globalAlpha = 0.25;
-		this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+		this.drawCursor("#0000ff", time1, time2, track1, track2);
 	}
 	
 	this.redrawDirtyTimeMin = -1;
 	this.redrawDirtyTimeMax = -1;
 	this.ctx.restore();
+}
+
+
+Timeline.prototype.drawCursor = function(color, time1, time2, track1, track2)
+{
+	var x1  = Math.floor(time1 * this.timeToPixelsScaling) + 0.5;
+	var x2  = Math.floor(time2 * this.timeToPixelsScaling) + 0.5;
+	var y1 = this.tracks[track1].y;
+	var y2 = this.tracks[track2].y + this.tracks[track2].height;
+	
+	this.ctx.strokeStyle = color;
+	this.ctx.fillStyle   = color;
+	
+	this.ctx.beginPath();
+		this.ctx.moveTo(x1, y1);
+		this.ctx.lineTo(x1, y2);
+		
+		this.ctx.moveTo(x2, y1);
+		this.ctx.lineTo(x2, y2);
+	this.ctx.stroke();
+	
+	this.ctx.beginPath();
+		this.ctx.moveTo(x1, y1);
+		this.ctx.lineTo(x1 - 4, y1 - 4);
+		this.ctx.lineTo(x1 + 4, y1 - 4);
+		this.ctx.lineTo(x1, y1);
+		
+		this.ctx.moveTo(x2, y1);
+		this.ctx.lineTo(x2 - 4, y1 - 4);
+		this.ctx.lineTo(x2 + 4, y1 - 4);
+		this.ctx.lineTo(x2, y1);
+		
+		this.ctx.moveTo(x1, y2);
+		this.ctx.lineTo(x1 - 4, y2 + 4);
+		this.ctx.lineTo(x1 + 4, y2 + 4);
+		this.ctx.lineTo(x1, y2);
+		
+		this.ctx.moveTo(x2, y2);
+		this.ctx.lineTo(x2 - 4, y2 + 4);
+		this.ctx.lineTo(x2 + 4, y2 + 4);
+		this.ctx.lineTo(x2, y2);
+	this.ctx.fill();
+	
+	this.ctx.globalAlpha = 0.25;
+	this.ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
 }

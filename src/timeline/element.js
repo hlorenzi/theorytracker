@@ -4,6 +4,11 @@ function Element()
 	this.track     = null;
 	this.timeRange = null;
 	
+	this.note  = null;
+	this.chord = null;
+	this.key   = null;
+	this.meter = null;
+	
 	this.regions           = [];
 	this.interactKind      = 0;
 	this.interactTimeRange = null;
