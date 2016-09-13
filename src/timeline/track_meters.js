@@ -28,6 +28,18 @@ TrackMeters.prototype.setSong = function(song)
 }
 
 
+TrackMeters.prototype.enumerateMetersAtRange = function(timeRange, callback)
+{
+	this.meters.enumerateAffectingRange(timeRange, function (elem, start, end)
+	{
+		if (elem == null)
+			return;
+		
+		callback(elem.meter, start, end);
+	});
+}
+
+
 TrackMeters.prototype.enumerateBeatsAtRange = function(timeRange, callback)
 {
 	var that = this;

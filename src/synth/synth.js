@@ -2,6 +2,7 @@ function Synth()
 {
 	this.audioCtx      = new AudioContext();
 	this.globalVolume  = 0.1;
+	this.time          = 0;
 	this.noteOnEvents  = [];
 	this.noteOffEvents = [];
 	this.voices        = [];
@@ -10,41 +11,71 @@ function Synth()
 
 Synth.prototype.process = function(deltaTime)
 {
-	for (var i = this.noteOnEvents.length - 1; i >= 0; i--)
-	{
-		var ev = this.noteOnEvents[i];
-		
-		if (ev.time <= 0)
-		{
-			this.voiceStart(ev.instrument, ev.midiPitch, ev.volume);
-			this.noteOnEvents.splice(i, 1);
-		}
-		else
-			ev.time -= deltaTime;
-	}
+	this.time += deltaTime;
 	
-	for (var i = this.noteOffEvents.length - 1; i >= 0; i--)
+	// Process note events.
+	var noteOnProcessed = 0;
+	var noteOffProcessed = 0;
+	
+	while (true)
 	{
-		var ev = this.noteOffEvents[i];
+		var processWhichKind = -1;
+		var nextEventTime = this.time;
 		
-		if (ev.time <= 0)
+		// Determine which event is next up.
+		if (noteOnProcessed < this.noteOnEvents.length &&
+			this.noteOnEvents[noteOnProcessed].time < nextEventTime)
 		{
-			for (var j = 0; j < this.voices.length; j++)
+			processWhichKind = 0;
+			nextEventTime = this.noteOnEvents[noteOnProcessed].time;
+		}
+		
+		if (noteOffProcessed < this.noteOffEvents.length &&
+			this.noteOffEvents[noteOffProcessed].time < nextEventTime)
+		{
+			processWhichKind = 1;
+			nextEventTime = this.noteOffEvents[noteOffProcessed].time;
+		}
+		
+		if (processWhichKind == -1)
+			break;
+		
+		// Process next event.
+		switch (processWhichKind)
+		{
+			case 0:
 			{
-				var voice = this.voices[j];
-				if (voice.instrument == ev.instrument &&
-					voice.midiPitch == ev.midiPitch)
-				{
-					this.voiceOff(j);
-				}
+				var ev = this.noteOnEvents[noteOnProcessed];
+				noteOnProcessed++;
+				this.voiceStart(ev.instrument, ev.midiPitch, ev.volume);
+				break;
 			}
-			
-			this.noteOffEvents.splice(i, 1);
+			case 1:
+			{
+				var ev = this.noteOffEvents[noteOffProcessed];
+				
+				noteOffProcessed++;
+				processedEvent = true;
+				
+				for (var j = 0; j < this.voices.length; j++)
+				{
+					var voice = this.voices[j];
+					if (voice.instrument == ev.instrument &&
+						voice.midiPitch == ev.midiPitch)
+					{
+						this.voiceOff(j);
+					}
+				}
+				break;
+			}
 		}
-		else
-			ev.time -= deltaTime;
 	}
 	
+	// Remove processed events.
+	this.noteOnEvents.splice(0, noteOnProcessed);
+	this.noteOffEvents.splice(0, noteOffProcessed);
+	
+	// Update audio output.
 	for (var i = this.voices.length - 1; i >= 0; i--)
 	{
 		var voice = this.voices[i];
@@ -55,7 +86,12 @@ Synth.prototype.process = function(deltaTime)
 		if (voice.off)
 			envelope = Math.max(0, 1 - voice.timer / 0.1);
 		else
-			envelope = Math.max(1, 1.5 - voice.timer / 0.05);
+		{
+			if (voice.timer < 0.1)
+				envelope = Math.max(1, 1.75 - voice.timer / 0.2);
+			else
+				envelope = Math.max(0.5, 1 - voice.timer / 0.5);
+		}
 		
 		if (voice.off && voice.timer > 0.1)
 		{
@@ -77,10 +113,10 @@ Synth.prototype.process = function(deltaTime)
 Synth.prototype.addNoteOn = function(time, instrument, midiPitch, volume)
 {
 	this.noteOnEvents.push({
-		time:        time,
-		instrument:  instrument,
-		midiPitch:   midiPitch,
-		volume:      volume
+		time:       time + this.time,
+		instrument: instrument,
+		midiPitch:  midiPitch,
+		volume:     volume
 	});
 }
 
@@ -88,9 +124,9 @@ Synth.prototype.addNoteOn = function(time, instrument, midiPitch, volume)
 Synth.prototype.addNoteOff = function(time, instrument, midiPitch)
 {
 	this.noteOffEvents.push({
-		time:        time,
-		instrument:  instrument,
-		midiPitch:   midiPitch
+		time:       time + this.time,
+		instrument: instrument,
+		midiPitch:  midiPitch
 	});
 }
 
@@ -203,4 +239,6 @@ Synth.prototype.stopAll = function()
 	this.voices        = [];
 	this.noteOnEvents  = [];
 	this.noteOffEvents = [];
+	
+	this.time = 0;
 }

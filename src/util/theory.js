@@ -76,6 +76,62 @@ Theory.prototype.chordSymbolInKey = function(scaleIndex, rootMidiPitch, midiPitc
 }
 
 
+Theory.prototype.chordBassPitch = function(chordIndex, rootMidiPitch)
+{
+	if (rootMidiPitch >= theory.Fs)
+		return 12 * 3 + rootMidiPitch;
+	else
+		return 12 * 4 + rootMidiPitch;
+}
+
+
+Theory.prototype.chordMainPitches = function(chordIndex, rootMidiPitch)
+{
+	var pitches = [];
+	var lastPitch = 12 * 5;
+	
+	for (var i = 0; i < this.chords[chordIndex].notes.length; i++)
+	{
+		var pitch = (rootMidiPitch + this.chords[chordIndex].notes[i]) % 12;
+		
+		while (pitch < lastPitch)
+			pitch += 12;
+		
+		pitches.push(pitch);
+		lastPitch = pitch;
+	}
+	
+	if (rootMidiPitch >= theory.Fs)
+		pitches = pitches.map(function (pitch) { return pitch - 12; });
+	
+	return pitches;
+}
+
+
+Theory.prototype.chordBassVoicingInMeter = function(meter)
+{
+	// [ [ start beat, end beat, volume ], ... ]
+	switch (meter.numerator)
+	{
+		case 3: return [ [ 0, 1.5, 1 ], [ 1.5, 2, 0.7 ] ];
+		case 4: return [ [ 0, 1.5, 1 ], [ 1.5, 2, 0.7 ], [ 2, 3.5, 1 ], [ 3.5, 4, 0.7 ] ];
+		default: return [ ];
+	}
+}
+
+
+Theory.prototype.chordMainVoicingInMeter = function(meter)
+{
+	// [ [ start beat, end beat, volume ], ... ]
+	switch (meter.numerator)
+	{
+		case 3: return [ [ 0, 1, 1 ], [ 1, 2, 0.7 ], [ 2, 3, 0.7 ] ];
+		case 4: return [ [ 0, 0.9, 1 ], [ 1, 1.9, 0.5 ], [ 2, 2.9, 0.7 ], [ 3, 3.9, 0.5 ] ];
+		default: return [ ];
+	}
+}
+
+
 Theory.prototype.degreeColor = function(degree)
 {
 	switch (degree)
