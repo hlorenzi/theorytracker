@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+
+<html>
+
+	<head>
+	
+		<title>Music Analysis</title>
+		<meta charset="UTF-8"/>
+		<link rel="stylesheet" href="style.css"/>
+		
+	</head>
+
+	
+	<body id="body" onLoad="main();">
+	
+		<div id="divEditor">
+			<svg id="svgEditor"></svg>
+		</div>
+		
+		<div id="divToolbox">
+			<table style="margin: auto;">
+				<tr>
+					<td>
+						<button id="buttonPlay" class="toolboxButton toolboxButtonPlay" onClick="handleButtonPlay();"></button>
+						<button id="buttonRewind" class="toolboxButton" onClick="handleButtonRewind();">◀◀</button>
+						<br>
+						<span class="toolboxLabel">Tempo: </span>
+						<input id="inputTempo" class="toolboxInput" onInput="handleInputTempo();" value="120"></input>
+					</td>
+				</tr>
+			</table>
+		</div>
+		
+	</body>
+
+	
+	<script src="src/util/math.js"></script>
+	<script src="src/util/rational.js"></script>
+	<script src="src/util/list_by_point.js"></script>
+	<script src="src/util/list_by_range.js"></script>
+	<script src="src/util/theory.js"></script>
+	
+	<script src="src/song/song.js"></script>
+	<script src="src/song/note.js"></script>
+	<script src="src/song/chord.js"></script>
+	<script src="src/song/meter.js"></script>
+	<script src="src/song/key.js"></script>
+	
+	<script src="src/editor/editor.js"></script>
+	<script src="src/editor/editor_interaction.js"></script>
+	
+	<script src="src/synth/instrument_square.js"></script>
+	<script src="src/synth/instrument_triangle.js"></script>
+	<script src="src/synth/instrument_piano.js"></script>
+	<script src="src/synth/synth.js"></script>
+	
+	<script src="src/main.js"></script>
+
+</html>

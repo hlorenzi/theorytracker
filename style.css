@@ -1,0 +1,349 @@
+html
+{
+	height: 100%;
+	min-height: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+body
+{
+	height: 100%;
+	min-height: 100%;
+	margin: 0;
+}
+
+#divToolbox
+{
+	width: 100%;
+	height: 100px;
+	padding-top: 5px;
+	overflow: hidden;
+	background-color: #ccc;
+	text-align: center;
+}
+
+#divEditor
+{
+	width: 100%;
+	height: calc(100% - 100px);
+	overflow-x: hidden;
+	overflow-y: scroll;
+}
+
+#svgEditor
+{
+	width: 100%;
+}
+
+.toolboxLabel
+{
+	margin-top: 5px;
+	margin-bottom: 5px;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+}
+
+.toolboxButton
+{
+	padding: 10px;
+	background-color: #fff;
+	border: 0;
+	border-top: 2px solid #fff;
+	border-bottom: 2px solid black;
+	border-radius: 10px;
+	box-shadow: 5px;
+	outline: none;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+}
+
+.toolboxButton:hover
+{
+	cursor: pointer;
+}
+
+.toolboxButton:active
+{
+	cursor: pointer;
+	background-color: #ddd;
+	border: 0;
+	border-top: 2px solid black;
+	border-bottom: 2px solid #ddd;
+}
+
+.toolboxButtonPlay
+{
+	font-size: 24px;
+	width: 110px;
+	height: 60px;
+}
+
+.toolboxInput
+{
+	margin-top: 5px;
+	margin-bottom: 5px;
+	border: 0;
+	border-radius: 10px;
+	outline: none;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-align: center;
+	width: 60px;
+	height: 20px;
+}
+
+.viewerBlockBackground
+{
+	stroke-width: 0px;
+	fill: #eee;
+}
+
+.viewerBlockSelection
+{
+	stroke-width: 0px;
+	fill: rgba(0, 0, 255, 0.25);
+}
+
+.viewerBlockFrame
+{
+	stroke: #666;
+	stroke-width: 2px;
+	fill: rgba(0, 0, 0, 0);
+}
+
+.viewerBeat
+{
+	stroke: #fff;
+	stroke-width: 2px;
+}
+
+.viewerDegree0
+{
+	stroke-width: 0px;
+	fill: #f00;
+}
+
+.viewerDegree0Selected
+{
+	stroke-width: 2px;
+	stroke: #f00;
+	fill: #fcc;
+}
+
+.viewerDegree1
+{
+	stroke-width: 0px;
+	fill: #f40;
+}
+
+.viewerDegree1Selected
+{
+	stroke-width: 2px;
+	stroke: #f40;
+	fill: #fed;
+}
+
+.viewerDegree2
+{
+	stroke-width: 0px;
+	fill: #f80;
+}
+
+.viewerDegree2Selected
+{
+	stroke-width: 2px;
+	stroke: #f80;
+	fill: #fed;
+}
+
+.viewerDegree3
+{
+	stroke-width: 0px;
+	fill: #fa0;
+}
+
+.viewerDegree3Selected
+{
+	stroke-width: 2px;
+	stroke: #fa0;
+	fill: #fed;
+}
+
+.viewerDegree4
+{
+	stroke-width: 0px;
+	fill: #fd0;
+}
+
+.viewerDegree4Selected
+{
+	stroke-width: 2px;
+	stroke: #fd0;
+	fill: #fed;
+}
+
+.viewerDegree5
+{
+	stroke-width: 0px;
+	fill: #0d0;
+}
+
+.viewerDegree5Selected
+{
+	stroke-width: 2px;
+	stroke: #0d0;
+	fill: #dfd;
+}
+
+.viewerDegree6
+{
+	stroke-width: 0px;
+	fill: #068;
+}
+
+.viewerDegree6Selected
+{
+	stroke-width: 2px;
+	stroke: #068;
+	fill: #def;
+}
+
+.viewerDegree7
+{
+	stroke-width: 0px;
+	fill: #00f;
+}
+
+.viewerDegree7Selected
+{
+	stroke-width: 2px;
+	stroke: #00f;
+	fill: #ddf;
+}
+
+.viewerDegree8
+{
+	stroke-width: 0px;
+	fill: #40f;
+}
+
+.viewerDegree8Selected
+{
+	stroke-width: 2px;
+	stroke: #40f;
+	fill: #edf;
+}
+
+.viewerDegree9
+{
+	stroke-width: 0px;
+	fill: #80f;
+}
+
+.viewerDegree9Selected
+{
+	stroke-width: 2px;
+	stroke: #80f;
+	fill: #edf;
+}
+
+.viewerDegree10
+{
+	stroke-width: 0px;
+	fill: #a0f;
+}
+
+.viewerDegree10Selected
+{
+	stroke-width: 2px;
+	stroke: #a0f;
+	fill: #edf;
+}
+
+.viewerDegree11
+{
+	stroke-width: 0px;
+	fill: #f0f;
+}
+
+.viewerDegree11Selected
+{
+	stroke-width: 2px;
+	stroke: #f0f;
+	fill: #fdf;
+}
+
+.viewerChordBackground
+{
+	stroke-width: 0px;
+	fill: white;
+}
+
+.viewerChordLabel
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 20px;
+	text-anchor: middle;
+	alignment-baseline: central;
+}
+
+.viewerChordLabelSuperscript
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 14px;
+	text-anchor: middle;
+	alignment-baseline: central;
+	baseline-shift: super;
+}
+
+.viewerMeterLine
+{
+	stroke: #0af;
+	stroke-width: 2px;
+}
+
+.viewerMeterLabel
+{
+	fill: #0af;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: left;
+	alignment-baseline: middle;
+}
+
+.viewerKeyLine
+{
+	stroke: #f04;
+	stroke-width: 2px;
+}
+
+.viewerKeyLabel
+{
+	fill: #f04;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: left;
+	alignment-baseline: middle;
+}
+
+.viewerCursor
+{
+	stroke: blue;
+	stroke-width: 2px;
+}
+
+.viewerCursorGhost
+{
+	stroke: rgba(0, 0, 255, 0.25);
+	stroke-width: 2px;
+}
+
+.viewerCursorPlayback
+{
+	stroke: red;
+	stroke-width: 2px;
+}
