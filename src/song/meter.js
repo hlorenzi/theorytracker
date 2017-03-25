@@ -1,9 +1,9 @@
-function SongMeterChange(tick, numerator, denominator)
+function SongMeterChange(tick, numerator, denominator, editorData = null)
 {
 	this.tick        = tick;
 	this.numerator   = numerator;
 	this.denominator = denominator;
-	this.editorData  = null;
+	this.editorData  = editorData;
 }
 
 

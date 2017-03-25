@@ -24,7 +24,19 @@ Rational.fromFloat = function(value, step)
 }
 
 
+Rational.fromArray = function(arr)
+{
+	return new Rational(arr[0], arr[1], arr[2]);
+}
+
+
 Rational.prototype.toString = function()
+{	
+	return "[" + this.integer + ", " + this.numerator + ", " + this.denominator + "]";
+}
+
+
+Rational.prototype.toUserString = function()
 {	
 	if (this.integer == 0 && this.numerator == 0)
 		return "0";

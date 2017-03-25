@@ -17,7 +17,7 @@ body
 #divToolbox
 {
 	width: 100%;
-	height: 100px;
+	height: 130px;
 	padding-top: 5px;
 	overflow: hidden;
 	background-color: #ccc;
@@ -27,7 +27,7 @@ body
 #divEditor
 {
 	width: 100%;
-	height: calc(100% - 100px);
+	height: calc(100% - 130px);
 	overflow-x: hidden;
 	overflow-y: scroll;
 }

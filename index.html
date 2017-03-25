@@ -18,7 +18,7 @@
 		</div>
 		
 		<div id="divToolbox">
-			<table style="margin: auto;">
+			<table style="margin:auto;">
 				<tr>
 					<td>
 						<button id="buttonPlay" class="toolboxButton toolboxButtonPlay" onClick="handleButtonPlay();"></button>
@@ -26,6 +26,24 @@
 						<br>
 						<span class="toolboxLabel">Tempo: </span>
 						<input id="inputTempo" class="toolboxInput" onInput="handleInputTempo();" value="120"></input>
+					</td>
+					
+					<td style="border-left:1px solid black;">
+					</td>
+					
+					<td>
+						<span class="toolboxLabel">Local</span>
+						<br>
+						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
+						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
+						
+						<br>
+						
+						<span class="toolboxLabel">Dropbox</span>
+						<br>
+						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
+						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
+						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
 					</td>
 				</tr>
 			</table>
@@ -55,5 +73,7 @@
 	<script src="src/synth/synth.js"></script>
 	
 	<script src="src/main.js"></script>
+	
+	<script src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="9h2eh3v67sgghpl"></script>
 
 </html>

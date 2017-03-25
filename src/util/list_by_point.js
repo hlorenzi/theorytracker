@@ -18,6 +18,19 @@ ListByPoint.prototype.clear = function()
 }
 
 
+ListByPoint.prototype.sort = function()
+{
+	var that = this;
+	
+	this.items.sort(function (a, b)
+	{
+		var aRange = that.getItemPointFunc(a);
+		var bRange = that.getItemPointFunc(b);
+		return aRange.compare(bRange);
+	});
+}
+
+
 ListByPoint.prototype.insert = function(item)
 {
 	this.items.push(item);
@@ -54,7 +67,7 @@ ListByPoint.prototype.getTotalRange = function()
 	
 	for (var i = 0; i < this.items.length; i++)
 	{
-		var itemPoint = this.getItemPointFunc(item);
+		var itemPoint = this.getItemPointFunc(this.items[i]);
 		
 		if (itemPoint.compare(start) < 0)
 			start = itemPoint.clone();

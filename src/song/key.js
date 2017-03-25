@@ -1,9 +1,9 @@
-function SongKeyChange(tick, scaleIndex, tonicMidiPitch)
+function SongKeyChange(tick, scaleIndex, tonicMidiPitch, editorData = null)
 {
 	this.tick           = tick;
 	this.scaleIndex     = scaleIndex;
 	this.tonicMidiPitch = tonicMidiPitch;
-	this.editorData     = null;
+	this.editorData     = editorData;
 }
 
 
