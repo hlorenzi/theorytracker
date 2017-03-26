@@ -103,13 +103,32 @@ ListByPoint.prototype.enumerateOverlappingPoint = function(point, callback)
 
 ListByPoint.prototype.enumerateOverlappingRange = function(rangeStart, rangeEnd, callback)
 {
+	if (rangeStart.compare(rangeEnd) == 0)
+		this.enumerateOverlappingPoint(rangeStart, callback);
+	else
+	{
+		for (var i = 0; i < this.items.length; i++)
+		{
+			var itemPoint = this.getItemPointFunc(this.items[i]);
+			
+			if (itemPoint.compare(rangeEnd) < 0 && itemPoint.compare(rangeStart) >= 0)
+				callback(this.items[i]);
+		}
+	}
+}
+
+
+ListByPoint.prototype.findAt = function(point)
+{
 	for (var i = 0; i < this.items.length; i++)
 	{
 		var itemPoint = this.getItemPointFunc(this.items[i]);
 		
-		if (itemPoint.compare(rangeEnd) < 0 && itemPoint.compare(rangeStart) >= 0)
-			callback(this.items[i]);
+		if (itemPoint.compare(point) == 0)
+			return this.items[i];
 	}
+	
+	return null;
 }
 
 

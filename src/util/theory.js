@@ -1,6 +1,31 @@
 var Theory = {};
 
 
+Theory.scales =
+[
+	{ pitches: [0, 2, 4, 5, 7, 9, 11], name: "Major" },
+	{ pitches: [0, 2, 3, 5, 7, 9, 10], name: "Dorian" },
+	{ pitches: [0, 1, 3, 5, 7, 8, 10], name: "Phrygian" },
+	{ pitches: [0, 2, 4, 6, 7, 9, 11], name: "Lydian" },
+	{ pitches: [0, 2, 4, 5, 7, 9, 10], name: "Mixolydian" },
+	{ pitches: [0, 2, 3, 5, 7, 8, 10], name: "Natural Minor" },
+	{ pitches: [0, 1, 3, 5, 6, 8, 10], name: "Locrian" }
+];
+
+
+Theory.meterNumerators =
+[
+	 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
+	17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+];
+
+
+Theory.meterDenominators =
+[
+	1, 2, 4, 8, 16, 32
+];
+
+
 Theory.chordKinds =
 [
 	/*
@@ -41,163 +66,6 @@ Theory.chordKinds =
 	{ pitches: [0, 3, 6, 10, 14], code: "%9",    symbol: [true,  "",     "ø9"],    name: "Half-Diminished Ninth" },
 	{ pitches: [0, 3, 6, 10, 13], code: "%b9",   symbol: [true,  "",     "ø♭9"],   name: "Half-Diminished Minor Ninth" }
 ];
-
-
-Theory.isNoteRelativeInsteadOfAbsolute = function(string)
-{
-	for (var i = 0; i < string.length; i++)
-	{
-		switch (string.charAt(i).toLowerCase())
-		{
-			case "1": case "2": case "3":
-			case "4": case "5": case "6":
-			case "7":
-				return true;
-		}
-	}
-	
-	return false;
-}
-
-
-Theory.isChordRelativeInsteadOfAbsolute = function(string)
-{
-	for (var i = 0; i < string.length; i++)
-	{
-		switch (string.charAt(i).toLowerCase())
-		{
-			case "i":
-			case "v":
-				return true;
-		}
-	}
-	
-	return false;
-}
-
-
-Theory.decodeAbsoluteNoteName = function(string)
-{
-	var note = 0;
-	switch (string.charAt(0).toLowerCase())
-	{
-		case "c": note = 0; break;
-		case "d": note = 2; break;
-		case "e": note = 4; break;
-		case "f": note = 5; break;
-		case "g": note = 7; break;
-		case "a": note = 9; break;
-		case "b": note = 11; break;
-		default: return null;
-	}
-	
-	for (var i = 1; i < string.length; i++)
-	{
-		switch (string.charAt(i))
-		{
-			case "#": note += 1; break;
-			case "b": note -= 1; break;
-			default: return null;
-		}
-	}
-	
-	return note;
-}
-
-
-Theory.decodeRelativeNoteName = function(string)
-{
-	var degree = 0;
-	var i = 0;
-	
-	loop: for ( ; i < string.length; i++)
-	{
-		switch (string.charAt(i))
-		{
-			case "#": degree += 1; break;
-			case "b": degree -= 1; break;
-			default: break loop;
-		}
-	}
-	
-	if (i != string.length - 1)
-		return null;
-	
-	switch (string.charAt(i))
-	{
-		case "1": degree += 0; break;
-		case "2": degree += 2; break;
-		case "3": degree += 4; break;
-		case "4": degree += 5; break;
-		case "5": degree += 7; break;
-		case "6": degree += 9; break;
-		case "7": degree += 11; break;
-		default: return null;
-	}
-	
-	return degree;
-}
-
-
-Theory.decodeAbsoluteChordName = function(string)
-{
-	return Theory.decodeAbsoluteNoteName(string);
-}
-
-
-Theory.decodeRelativeChordName = function(string)
-{
-	var degree = 0;
-	var i = 0;
-	
-	loop: for ( ; i < string.length; i++)
-	{
-		switch (string.charAt(i))
-		{
-			case "#": degree += 1; break;
-			case "b": degree -= 1; break;
-			default: break loop;
-		}
-	}
-	
-	switch (string.slice(i).toLowerCase())
-	{
-		case "i":   degree += 0; break;
-		case "ii":  degree += 2; break;
-		case "iii": degree += 4; break;
-		case "iv":  degree += 5; break;
-		case "v":   degree += 7; break;
-		case "vi":  degree += 9; break;
-		case "vii": degree += 11; break;
-		default: return null;
-	}
-	
-	return degree;
-}
-
-
-Theory.decodeChordKindName = function(string)
-{
-	for (var i = 0; i < Theory.chordKinds.length; i++)
-	{
-		if (string == Theory.chordKinds[i].code)
-			return i;
-	}
-	
-	return null;
-}
-
-
-Theory.getTruncatedPitchFromPitch = function(pitch)
-{
-	while (pitch >= 12)
-		pitch -= 12;
-		
-	while (pitch < 0)
-		pitch += 12;
-	
-	return pitch;
-}
 
 
 Theory.midiPitchMin = 12 * 2;
@@ -243,17 +111,24 @@ Theory.getMeterLabel = function(numerator, denominator)
 }
 
 
-Theory.getKeyLabel = function(scale, tonicMidiPitch)
+Theory.getIndependentPitchLabel = function(midiPitch)
 {
-	// TODO: Use the representation set by the user (i.e., C# versus Db).
-	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
-	return labels[tonicMidiPitch % 12];
+	var labels = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"];
+	return labels[midiPitch % 12];
 }
 
 
-Theory.getChordRootLabel = function(scale, rootMidiPitch)
+Theory.getKeyLabel = function(scaleIndex, tonicMidiPitch)
 {
-	// TODO: Use the representation set by the user (i.e., #IV versus bV).
+	// TODO: Take scale into consideration.
+	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+	return labels[tonicMidiPitch % 12] + " " + Theory.scales[scaleIndex].name;
+}
+
+
+Theory.getChordRootLabel = function(scaleIndex, rootMidiPitch)
+{
+	// TODO: Take scale into consideration.
 	var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
 	return labels[rootMidiPitch % 12];
 }

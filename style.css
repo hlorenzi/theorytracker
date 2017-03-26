@@ -47,7 +47,10 @@ body
 
 .toolboxButton
 {
-	padding: 10px;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 2px;
+	padding-bottom: 2px;
 	background-color: #fff;
 	border: 0;
 	border-top: 2px solid #fff;
@@ -80,6 +83,11 @@ body
 	height: 60px;
 }
 
+.toolboxButtonRewind
+{
+	height: 40px;
+}
+
 .toolboxInput
 {
 	margin-top: 5px;
@@ -94,194 +102,194 @@ body
 	height: 20px;
 }
 
-.viewerBlockBackground
+.editorBlockBackground
 {
 	stroke-width: 0px;
 	fill: #eee;
 }
 
-.viewerBlockSelection
+.editorBlockSelection
 {
 	stroke-width: 0px;
 	fill: rgba(0, 0, 255, 0.25);
 }
 
-.viewerBlockFrame
+.editorBlockFrame
 {
 	stroke: #666;
 	stroke-width: 2px;
 	fill: rgba(0, 0, 0, 0);
 }
 
-.viewerBeat
+.editorBeat
 {
 	stroke: #fff;
 	stroke-width: 2px;
 }
 
-.viewerDegree0
+.editorDegree0
 {
 	stroke-width: 0px;
 	fill: #f00;
 }
 
-.viewerDegree0Selected
+.editorDegree0Selected
 {
 	stroke-width: 2px;
 	stroke: #f00;
 	fill: #fcc;
 }
 
-.viewerDegree1
+.editorDegree1
 {
 	stroke-width: 0px;
 	fill: #f40;
 }
 
-.viewerDegree1Selected
+.editorDegree1Selected
 {
 	stroke-width: 2px;
 	stroke: #f40;
 	fill: #fed;
 }
 
-.viewerDegree2
+.editorDegree2
 {
 	stroke-width: 0px;
 	fill: #f80;
 }
 
-.viewerDegree2Selected
+.editorDegree2Selected
 {
 	stroke-width: 2px;
 	stroke: #f80;
 	fill: #fed;
 }
 
-.viewerDegree3
+.editorDegree3
 {
 	stroke-width: 0px;
 	fill: #fa0;
 }
 
-.viewerDegree3Selected
+.editorDegree3Selected
 {
 	stroke-width: 2px;
 	stroke: #fa0;
 	fill: #fed;
 }
 
-.viewerDegree4
+.editorDegree4
 {
 	stroke-width: 0px;
 	fill: #fd0;
 }
 
-.viewerDegree4Selected
+.editorDegree4Selected
 {
 	stroke-width: 2px;
 	stroke: #fd0;
 	fill: #fed;
 }
 
-.viewerDegree5
+.editorDegree5
 {
 	stroke-width: 0px;
 	fill: #0d0;
 }
 
-.viewerDegree5Selected
+.editorDegree5Selected
 {
 	stroke-width: 2px;
 	stroke: #0d0;
 	fill: #dfd;
 }
 
-.viewerDegree6
+.editorDegree6
 {
 	stroke-width: 0px;
 	fill: #068;
 }
 
-.viewerDegree6Selected
+.editorDegree6Selected
 {
 	stroke-width: 2px;
 	stroke: #068;
 	fill: #def;
 }
 
-.viewerDegree7
+.editorDegree7
 {
 	stroke-width: 0px;
 	fill: #00f;
 }
 
-.viewerDegree7Selected
+.editorDegree7Selected
 {
 	stroke-width: 2px;
 	stroke: #00f;
 	fill: #ddf;
 }
 
-.viewerDegree8
+.editorDegree8
 {
 	stroke-width: 0px;
 	fill: #40f;
 }
 
-.viewerDegree8Selected
+.editorDegree8Selected
 {
 	stroke-width: 2px;
 	stroke: #40f;
 	fill: #edf;
 }
 
-.viewerDegree9
+.editorDegree9
 {
 	stroke-width: 0px;
 	fill: #80f;
 }
 
-.viewerDegree9Selected
+.editorDegree9Selected
 {
 	stroke-width: 2px;
 	stroke: #80f;
 	fill: #edf;
 }
 
-.viewerDegree10
+.editorDegree10
 {
 	stroke-width: 0px;
 	fill: #a0f;
 }
 
-.viewerDegree10Selected
+.editorDegree10Selected
 {
 	stroke-width: 2px;
 	stroke: #a0f;
 	fill: #edf;
 }
 
-.viewerDegree11
+.editorDegree11
 {
 	stroke-width: 0px;
 	fill: #f0f;
 }
 
-.viewerDegree11Selected
+.editorDegree11Selected
 {
 	stroke-width: 2px;
 	stroke: #f0f;
 	fill: #fdf;
 }
 
-.viewerChordBackground
+.editorChordBackground
 {
 	stroke-width: 0px;
 	fill: white;
 }
 
-.viewerChordLabel
+.editorChordLabel
 {
 	fill: black;
 	font-family: Verdana, sans-serif;
@@ -290,7 +298,7 @@ body
 	alignment-baseline: central;
 }
 
-.viewerChordLabelSuperscript
+.editorChordLabelSuperscript
 {
 	fill: black;
 	font-family: Verdana, sans-serif;
@@ -300,13 +308,26 @@ body
 	baseline-shift: super;
 }
 
-.viewerMeterLine
+.editorMeterHandle
+{
+	fill: #0af;
+	stroke-width: 0px;
+}
+
+.editorMeterHandleSelected
+{
+	stroke: #0af;
+	stroke-width: 2px;
+	fill: #aef;
+}
+
+.editorMeterLine
 {
 	stroke: #0af;
 	stroke-width: 2px;
 }
 
-.viewerMeterLabel
+.editorMeterLabel
 {
 	fill: #0af;
 	font-family: Verdana, sans-serif;
@@ -315,13 +336,26 @@ body
 	alignment-baseline: middle;
 }
 
-.viewerKeyLine
+.editorKeyHandle
+{
+	fill: #f04;
+	stroke-width: 0px;
+}
+
+.editorKeyHandleSelected
+{
+	stroke: #f04;
+	stroke-width: 2px;
+	fill: #fad;
+}
+
+.editorKeyLine
 {
 	stroke: #f04;
 	stroke-width: 2px;
 }
 
-.viewerKeyLabel
+.editorKeyLabel
 {
 	fill: #f04;
 	font-family: Verdana, sans-serif;
@@ -330,19 +364,19 @@ body
 	alignment-baseline: middle;
 }
 
-.viewerCursor
+.editorCursor
 {
 	stroke: blue;
 	stroke-width: 2px;
 }
 
-.viewerCursorGhost
+.editorCursorGhost
 {
 	stroke: rgba(0, 0, 255, 0.25);
 	stroke-width: 2px;
 }
 
-.viewerCursorPlayback
+.editorCursorPlayback
 {
 	stroke: red;
 	stroke-width: 2px;

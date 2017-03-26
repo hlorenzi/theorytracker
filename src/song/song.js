@@ -1,6 +1,6 @@
 function Song()
 {
-	this.length = new Rational(1);
+	this.length = new Rational(4);
 	
 	this.notes          = new ListByRange(function(item) { return { start: item.startTick, end: item.endTick }; });
 	this.chords         = new ListByRange(function(item) { return { start: item.startTick, end: item.endTick }; });
@@ -18,7 +18,7 @@ function Song()
 
 Song.prototype.clear = function()
 {
-	this.length = new Rational(1);	
+	this.length = new Rational(4);	
 	this.notes.clear();
 	this.chords.clear();
 	this.keyChanges.clear();
@@ -44,11 +44,11 @@ Song.prototype.sanitize = function()
 	if (this.length.compare(new Rational(1)) <= 0)
 		this.length = new Rational(1);
 	
-	if (this.keyChanges.findPrevious(new Rational(0)) == null)
-		this.keyChanges.insert(new SongKeyChange(new Rational(0), 0, 0));
+	if (this.keyChanges.findAt(new Rational(0)) == null)
+		this.keyChanges.insert(new SongKeyChange(new Rational(0), 0, 0, { selected: false }));
 	
-	if (this.meterChanges.findPrevious(new Rational(0)) == null)
-		this.meterChanges.insert(new SongMeterChange(new Rational(0), 4, 4));
+	if (this.meterChanges.findAt(new Rational(0)) == null)
+		this.meterChanges.insert(new SongMeterChange(new Rational(0), 4, 4, { selected: false }));
 }
 
 
@@ -206,8 +206,7 @@ Song.prototype.load = function(jsonStr)
 			Rational.fromArray(song.notes[i][0]),
 			Rational.fromArray(song.notes[i][1]),
 			song.notes[i][2],
-			song.notes[i][3],
-			{ selected: false }));
+			song.notes[i][3]));
 	}
 	
 	for (var i = 0; i < song.chords.length; i++)
@@ -217,8 +216,7 @@ Song.prototype.load = function(jsonStr)
 			Rational.fromArray(song.chords[i][1]),
 			song.chords[i][2],
 			song.chords[i][3],
-			[],
-			{ selected: false }));
+			[]));
 	}
 	
 	for (var i = 0; i < song.keyChanges.length; i++)
@@ -226,8 +224,7 @@ Song.prototype.load = function(jsonStr)
 		this.keyChanges.insert(new SongKeyChange(
 			Rational.fromArray(song.keyChanges[i][0]),
 			song.keyChanges[i][1],
-			song.keyChanges[i][2],
-			{ selected: false }));
+			song.keyChanges[i][2]));
 	}
 	
 	for (var i = 0; i < song.meterChanges.length; i++)
@@ -235,8 +232,7 @@ Song.prototype.load = function(jsonStr)
 		this.meterChanges.insert(new SongMeterChange(
 			Rational.fromArray(song.meterChanges[i][0]),
 			song.meterChanges[i][1],
-			song.meterChanges[i][2],
-			{ selected: false }));
+			song.meterChanges[i][2]));
 	}
 	
 	this.setLengthAuto();

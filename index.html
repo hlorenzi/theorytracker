@@ -22,29 +22,47 @@
 				<tr>
 					<td>
 						<button id="buttonPlay" class="toolboxButton toolboxButtonPlay" onClick="handleButtonPlay();"></button>
-						<button id="buttonRewind" class="toolboxButton" onClick="handleButtonRewind();">◀◀</button>
+						<button id="buttonRewind" class="toolboxButton toolboxButtonRewind" onClick="handleButtonRewind();">◀◀</button>
 						<br>
 						<span class="toolboxLabel">Tempo: </span>
 						<input id="inputTempo" class="toolboxInput" onInput="handleInputTempo();" value="120"></input>
 					</td>
 					
-					<td style="border-left:1px solid black;">
-					</td>
+					<td style="border-left:1px solid black;"></td>
 					
 					<td>
 						<span class="toolboxLabel">Local</span>
 						<br>
-						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
-						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
+						<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
+						<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
 						
 						<br>
 						
 						<span class="toolboxLabel">Dropbox</span>
 						<br>
-						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
-						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
-						<button id="buttonLoadDropbox" class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
+						<button class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
+						<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
+						<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
 					</td>
+					
+					<td style="border-left:1px solid black;"></td>
+					
+					<td>
+						<select id="selectKeyPitch" class="toolboxButton"></select>
+						<select id="selectKeyScale" class="toolboxButton"></select>
+						<br>
+						<button class="toolboxButton" onClick="handleButtonInsertKeyChange();">Insert Key Change</button>
+						
+						<br><br>
+						
+						<select id="selectMeterNumerator" class="toolboxButton"></select>
+						<span class="toolboxLabel">/</span>
+						<select id="selectMeterDenominator" class="toolboxButton"></select>
+						<br>
+						<button class="toolboxButton" onClick="handleButtonInsertMeterChange();">Insert Meter Change</button>
+					</td>
+					
+					<td style="border-left:1px solid black;"></td>
 				</tr>
 			</table>
 		</div>

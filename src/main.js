@@ -20,8 +20,9 @@ function main()
 	
 	window.onresize = function() { g_Editor.refresh(); };
 	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
-	
+		
 	refreshButtonPlay(false);
+	refreshSelectBoxes();
 }
 
 
@@ -29,6 +30,44 @@ function refreshButtonPlay(isPlaying)
 {
 	var button = document.getElementById("buttonPlay");
 	button.innerHTML = isPlaying ? "◼ Stop" : "► Play";
+}
+
+
+function refreshSelectBoxes()
+{
+	var selectKeyPitch = document.getElementById("selectKeyPitch");
+	for (var i = 0; i < 12; i++)
+	{
+		var option = document.createElement("option");
+		option.innerHTML = Theory.getIndependentPitchLabel(i);
+		selectKeyPitch.appendChild(option);
+	}
+	
+	var selectKeyScale = document.getElementById("selectKeyScale");
+	for (var i = 0; i < Theory.scales.length; i++)
+	{
+		var option = document.createElement("option");
+		option.innerHTML = Theory.scales[i].name;
+		selectKeyScale.appendChild(option);
+	}
+	
+	var selectMeterNumerator = document.getElementById("selectMeterNumerator");
+	for (var i = 0; i < Theory.meterNumerators.length; i++)
+	{
+		var option = document.createElement("option");
+		option.innerHTML = Theory.meterNumerators[i].toString();
+		selectMeterNumerator.appendChild(option);
+	}
+	selectMeterNumerator.selectedIndex = 3;
+	
+	var selectMeterDenominator = document.getElementById("selectMeterDenominator");
+	for (var i = 0; i < Theory.meterDenominators.length; i++)
+	{
+		var option = document.createElement("option");
+		option.innerHTML = Theory.meterDenominators[i].toString();
+		selectMeterDenominator.appendChild(option);
+	}
+	selectMeterDenominator.selectedIndex = 2;
 }
 
 
@@ -54,6 +93,24 @@ function handleInputTempo()
 }
 
 
+function handleButtonInsertKeyChange()
+{
+	var pitch = document.getElementById("selectKeyPitch").selectedIndex;
+	var scaleIndex = document.getElementById("selectKeyScale").selectedIndex;
+	g_Editor.insertKeyChange(scaleIndex, pitch);
+}
+
+
+function handleButtonInsertMeterChange()
+{
+	var numeratorIndex = document.getElementById("selectMeterNumerator").selectedIndex;
+	var denominatorIndex = document.getElementById("selectMeterDenominator").selectedIndex;
+	g_Editor.insertMeterChange(
+		Theory.meterNumerators[numeratorIndex],
+		Theory.meterDenominators[denominatorIndex]);
+}
+
+
 function handleButtonLoadLocal()
 {
 	var data = window.prompt("Paste a saved song data:", "");
@@ -72,6 +129,7 @@ function handleButtonLoadLocal()
 	}
 	
 	document.getElementById("inputTempo").value = g_Song.bpm.toString();
+	g_Editor.setSong(g_Song);
 	g_Editor.cursorSetTickBoth(new Rational(0));
 	g_Editor.refresh();
 }
@@ -79,8 +137,9 @@ function handleButtonLoadLocal()
 
 function handleButtonSaveLocal()
 {
-	var data = g_Song.save();
-	window.prompt("Copy and save this data to a file:", data);
+	var songData = g_Song.save();
+	var data = "data:text/plain," + encodeURIComponent(songData);
+	window.open(data);
 }
 
 
@@ -118,6 +177,7 @@ function handleButtonLoadDropbox()
 				}
 				
 				document.getElementById("inputTempo").value = g_Song.bpm.toString();
+				g_Editor.setSong(g_Song);
 				g_Editor.cursorSetTickBoth(new Rational(0));
 				g_Editor.refresh();
 			};

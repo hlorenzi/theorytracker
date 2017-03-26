@@ -30,7 +30,7 @@ function Editor(svg, synth)
 	this.defaultNoteMidiPitchMin = 60;
 	this.defaultNoteMidiPitchMax = 71;
 	
-	this.margin = 10;
+	this.margin = 20;
 	this.marginBetweenRows = 10;
 	this.wholeTickWidth = 100;
 	this.noteHeight = 5;
@@ -38,6 +38,7 @@ function Editor(svg, synth)
 	this.chordHeight = 50;
 	this.chordSideMargin = 0.5;
 	this.chordOrnamentHeight = 5;
+	this.handleSize = 8;
 	
 	this.eventInit();
 	
@@ -49,6 +50,37 @@ function Editor(svg, synth)
 Editor.prototype.setSong = function(song)
 {
 	this.song = song;
+	
+	this.song.notes.enumerateAll(function (item)
+	{
+		if (item.editorData == null)
+			item.editorData = { selected: false };
+	});
+	
+	this.song.chords.enumerateAll(function (item)
+	{
+		if (item.editorData == null)
+			item.editorData = { selected: false };
+	});
+	
+	this.song.keyChanges.enumerateAll(function (item)
+	{
+		if (item.editorData == null)
+			item.editorData = { selected: false };
+	});
+	
+	this.song.meterChanges.enumerateAll(function (item)
+	{
+		if (item.editorData == null)
+			item.editorData = { selected: false };
+	});
+	
+	this.song.forcedMeasures.enumerateAll(function (item)
+	{
+		if (item.editorData == null)
+			item.editorData = { selected: false };
+	});
+	
 	this.refresh();
 }
 
@@ -123,6 +155,28 @@ Editor.prototype.rewind = function()
 }
 
 
+Editor.prototype.insertKeyChange = function(scaleIndex, tonicMidiPitch)
+{
+	this.selectNone();
+	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
+	this.eraseKeyChangesAt(this.cursorTick1, this.cursorTick1);
+	this.song.keyChanges.insert(
+		new SongKeyChange(this.cursorTick1.clone(), scaleIndex, tonicMidiPitch, { selected: true }));
+	this.refresh();
+}
+
+
+Editor.prototype.insertMeterChange = function(numerator, denominator)
+{
+	this.selectNone();
+	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
+	this.eraseMeterChangesAt(this.cursorTick1, this.cursorTick1);
+	this.song.meterChanges.insert(
+		new SongMeterChange(this.cursorTick1.clone(), numerator, denominator, { selected: true }));
+	this.refresh();
+}
+
+
 Editor.prototype.updateSvgCursor = function(node, visible, tick, track1, track2)
 {
 	if (!visible)
@@ -162,7 +216,7 @@ Editor.prototype.updateSvgCursor = function(node, visible, tick, track1, track2)
 }
 
 
-Editor.prototype.getBlockAt = function(x, y)
+Editor.prototype.getBlockIndexAt = function(x, y)
 {
 	// TODO: Optimize block search.
 	for (var i = 0; i < this.blocks.length; i++)
@@ -176,9 +230,19 @@ Editor.prototype.getBlockAt = function(x, y)
 		if (x < block.x + block.width &&
 			y < block.y + block.height)
 		{
-			return block;
+			return i;
 		}
 	}
+	
+	return null;
+}
+
+
+Editor.prototype.getBlockAt = function(x, y)
+{
+	var blockIndex = this.getBlockIndexAt(x, y);
+	if (blockIndex != null)
+		return this.blocks[blockIndex];
 	
 	return null;
 }
@@ -199,9 +263,8 @@ Editor.prototype.getBlockAtTick = function(tick)
 }
 
 
-Editor.prototype.getElementAt = function(x, y)
+Editor.prototype.getElementInBlockAt = function(block, x, y)
 {
-	var block = this.getBlockAt(x, y);
 	if (block == null)
 		return null;
 	
@@ -214,6 +277,23 @@ Editor.prototype.getElementAt = function(x, y)
 			y <= elem.y + elem.height)
 			return elem;
 	}
+	
+	return null;
+}
+
+
+Editor.prototype.getElementAt = function(x, y)
+{
+	var blockIndex = this.getBlockIndexAt(x, y);
+	if (blockIndex == null)
+		return null;
+	
+	var elem = this.getElementInBlockAt(this.blocks[blockIndex], x, y);
+	if (elem != null)
+		return elem;
+	
+	if (blockIndex + 1 < this.blocks.length)
+		return this.getElementInBlockAt(this.blocks[blockIndex + 1], x, y);
 	
 	return null;
 }
@@ -264,9 +344,9 @@ Editor.prototype.refresh = function()
 	this.svg.style.height = y + this.margin;
 	
 	// Render cursors.
-	this.svgCursor1 = this.addSvgNode("viewerCursor", "line", { x1: 0, y1: 0, x2: 0, y2: 0 });
-	this.svgCursor2 = this.addSvgNode("viewerCursor", "line", { x1: 0, y1: 0, x2: 0, y2: 0 });
-	this.svgCursorPlayback = this.addSvgNode("viewerCursorPlayback", "line", { x1: 0, y1: 0, x2: 0, y2: 0 });
+	this.svgCursor1 = this.addSvgNode("editorCursor", "line", { x1: 0, y1: 0, x2: 0, y2: 0 });
+	this.svgCursor2 = this.addSvgNode("editorCursor", "line", { x1: 0, y1: 0, x2: 0, y2: 0 });
+	this.svgCursorPlayback = this.addSvgNode("editorCursorPlayback", "line", { x1: 0, y1: 0, x2: 0, y2: 0 });
 	
 	if (this.cursorVisible)
 	{
@@ -285,11 +365,19 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	var currentBlockStart = rowTickStart.clone();
 	var currentKeyChange = this.song.keyChanges.findPrevious(rowTickStart);
 	var currentMeterChange = this.song.meterChanges.findPrevious(rowTickStart);
+	var currentMeasureStart = currentMeterChange.tick.clone();
 	
 	var x = this.margin;
 	while (true)
 	{
-		var nextBlockEnd = currentBlockStart.clone().add(currentMeterChange.getMeasureLength());
+		var nextBlockEnd = currentMeasureStart.clone();
+		while (true)
+		{
+			if (nextBlockEnd.compare(currentBlockStart) > 0)
+				break;
+			
+			nextBlockEnd.add(currentMeterChange.getMeasureLength());
+		}
 		
 		var nextKeyChange = this.song.keyChanges.findNext(currentBlockStart);
 		var nextMeterChange = this.song.meterChanges.findNext(currentBlockStart);
@@ -330,7 +418,10 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 			currentKeyChange = nextKeyChange;
 		
 		if (nextMeterChange != null && nextMeterChange.tick.compare(nextBlockEnd) == 0)
+		{
 			currentMeterChange = nextMeterChange;
+			currentMeasureStart = currentMeterChange.tick.clone();
+		}
 		
 		if (this.song.length.compare(nextBlockEnd) == 0)
 			break;
@@ -417,7 +508,7 @@ Editor.prototype.refreshBlock = function(
 	block.height = block.trackChordYEnd;
 	
 	// Render the row's background.
-	this.addSvgNode("viewerBlockBackground", "rect",
+	this.addSvgNode("editorBlockBackground", "rect",
 	{
 		x: block.x,
 		y: block.y + block.trackNoteYStart,
@@ -439,7 +530,7 @@ Editor.prototype.refreshBlock = function(
 		
 		var xBeat = (beatTick.asFloat() - block.tickStart.asFloat()) * this.wholeTickWidth;
 		
-		var svgBeat = this.addSvgNode("viewerBeat", "line",
+		var svgBeat = this.addSvgNode("editorBeat", "line",
 		{
 			x1: block.x + xBeat,
 			y1: block.y + block.trackNoteYStart,
@@ -449,7 +540,7 @@ Editor.prototype.refreshBlock = function(
 	}
 		
 	// Render the note track's frame.
-	this.addSvgNode("viewerBlockFrame", "rect",
+	this.addSvgNode("editorBlockFrame", "rect",
 	{
 		x: block.x,
 		y: block.y + block.trackNoteYStart,
@@ -458,7 +549,7 @@ Editor.prototype.refreshBlock = function(
 	});
 	
 	// Render the chord track's frame.
-	this.addSvgNode("viewerBlockFrame", "rect",
+	this.addSvgNode("editorBlockFrame", "rect",
 	{
 		x: block.x,
 		y: block.y + block.trackChordYStart,
@@ -478,7 +569,7 @@ Editor.prototype.refreshBlock = function(
 		var midiPitchOffset = note.midiPitch - midiPitchMin;
 		var noteYTop = block.trackNoteYEnd - (midiPitchOffset + 1) * that.noteHeight;
 		
-		var noteDegree = Theory.getTruncatedPitchFromPitch(note.midiPitch);
+		var noteDegree = (note.midiPitch + 12 - block.key.tonicMidiPitch) % 12;
 		
 		var noteX = block.x + noteXStart + that.noteSideMargin;
 		var noteY = block.y + noteYTop;
@@ -486,7 +577,7 @@ Editor.prototype.refreshBlock = function(
 		var noteH = that.noteHeight;
 			
 		var svgNote = that.addSvgNode(
-			"viewerDegree" + noteDegree + (note.editorData.selected ? "Selected" : ""),
+			"editorDegree" + noteDegree + (note.editorData.selected ? "Selected" : ""),
 			"rect", { x: noteX, y: noteY, width: noteW, height: noteH });
 		
 		block.elements.push({ note: note, x: noteX, y: noteY, width: noteW, height: noteH });
@@ -501,19 +592,20 @@ Editor.prototype.refreshBlock = function(
 		chordXStart = Math.max(chordXStart, 0);
 		chordXEnd   = Math.min(chordXEnd,   block.width);
 		
-		var chordDegree = Theory.getTruncatedPitchFromPitch(chord.rootMidiPitch);
+		var chordDegree =
+			(chord.rootMidiPitch + 12 - block.key.tonicMidiPitch) % 12;
 		
 		var chordX = block.x + chordXStart + that.chordSideMargin;
 		var chordY = block.y + block.trackChordYStart;
 		var chordW = chordXEnd - chordXStart - that.chordSideMargin * 2;
 		var chordH = block.trackChordYEnd - block.trackChordYStart;
 		
-		that.addSvgNode("viewerChordBackground", "rect",
+		that.addSvgNode("editorChordBackground", "rect",
 			{ x: chordX, y: chordY, width: chordW, height: chordH });
 			
 		block.elements.push({ chord: chord, x: chordX, y: chordY, width: chordW, height: chordH });
 		
-		that.addSvgNode("viewerDegree" + chordDegree + (chord.editorData.selected ? "Selected" : ""),
+		that.addSvgNode("editorDegree" + chordDegree + (chord.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
 				x: block.x + chordXStart + that.chordSideMargin,
@@ -522,7 +614,7 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 		
-		that.addSvgNode("viewerDegree" + chordDegree + (chord.editorData.selected ? "Selected" : ""),
+		that.addSvgNode("editorDegree" + chordDegree + (chord.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
 				x: block.x + chordXStart + that.chordSideMargin,
@@ -532,7 +624,7 @@ Editor.prototype.refreshBlock = function(
 			});
 		
 		// Build and add the chord label.
-		var chordLabel = Theory.getChordRootLabel(null, chordDegree);
+		var chordLabel = Theory.getChordRootLabel(block.key.scaleIndex, chordDegree);
 		if (Theory.chordKinds[chord.chordKindIndex].symbol[0])
 			chordLabel = chordLabel.toLowerCase();
 		
@@ -541,8 +633,8 @@ Editor.prototype.refreshBlock = function(
 		var chordLabelSuperscript = Theory.chordKinds[chord.chordKindIndex].symbol[2]; 
 		
 		var svgChordLabel = that.addSvgTextComplemented(
-			"viewerChordLabel",
-			"viewerChordLabelSuperscript",
+			"editorChordLabel",
+			"editorChordLabelSuperscript",
 			chordLabel,
 			chordLabelSuperscript,
 			{
@@ -585,7 +677,7 @@ Editor.prototype.refreshBlock = function(
 		if (cursorTrackMax == 1)
 			selectionYEnd = block.trackChordYEnd;
 		
-		this.addSvgNode("viewerBlockSelection", "rect",
+		this.addSvgNode("editorBlockSelection", "rect",
 		{
 			x: block.x + selectionXStart,
 			y: block.y + selectionYStart,
@@ -597,40 +689,74 @@ Editor.prototype.refreshBlock = function(
 	// Render key change.
 	if (block.key.tick.compare(block.tickStart) == 0)
 	{
-		var keyChX = block.key.tick.clone().subtract(block.tickStart).asFloat() * this.wholeTickWidth;
-		
-		that.addSvgNode("viewerKeyLine", "line",
+		that.addSvgNode("editorKeyLine", "line",
 		{
-			x1: block.x + keyChX,
-			y1: block.y + block.trackKeyChangeYStart,
-			x2: block.x + keyChX,
+			x1: block.x,
+			y1: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2,
+			x2: block.x,
 			y2: block.y + block.trackChordYEnd
 		});
 		
-		that.addSvgText("viewerKeyLabel", block.key.getLabel(),
+		that.addSvgNode(
+			"editorKeyHandle" + (block.key.editorData.selected ? "Selected" : ""),
+			"rect",
+			{
+				x: block.x - this.handleSize / 2,
+				y: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2 - 1 - this.handleSize / 2,
+				width: this.handleSize,
+				height: this.handleSize
+			});
+		
+		that.addSvgText("editorKeyLabel", block.key.getLabel(),
 		{
-			x: block.x + keyChX + 5,
+			x: block.x + this.handleSize / 2 + 5,
 			y: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2
+		});
+		
+		block.elements.push(
+		{
+			keyChange: block.key,
+			x: block.x - this.handleSize / 2,
+			y: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2 - 1 - this.handleSize / 2,
+			width: this.handleSize * 2,
+			height: this.handleSize
 		});
 	}
 	
 	// Render meter change.
 	if (block.meter.tick.compare(block.tickStart) == 0)
 	{
-		var meterChX = block.meter.tick.clone().subtract(block.tickStart).asFloat() * this.wholeTickWidth;
-		
-		that.addSvgNode("viewerMeterLine", "line",
+		that.addSvgNode("editorMeterLine", "line",
 		{
-			x1: block.x + meterChX,
-			y1: block.y + block.trackMeterChangeYStart,
-			x2: block.x + meterChX,
+			x1: block.x,
+			y1: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2,
+			x2: block.x,
 			y2: block.y + block.trackChordYEnd
 		});
 		
-		that.addSvgText("viewerMeterLabel", block.meter.getLabel(),
+		that.addSvgNode(
+			"editorMeterHandle" + (block.meter.editorData.selected ? "Selected" : ""),
+			"rect",
+			{
+				x: block.x - this.handleSize / 2,
+				y: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2 - 1 - this.handleSize / 2,
+				width: this.handleSize,
+				height: this.handleSize
+			});
+		
+		that.addSvgText("editorMeterLabel", block.meter.getLabel(),
 		{
-			x: block.x + meterChX + 5,
+			x: block.x + this.handleSize / 2 + 5,
 			y: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2
+		});
+		
+		block.elements.push(
+		{
+			meterChange: block.meter,
+			x: block.x - this.handleSize,
+			y: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2 - 1 - this.handleSize / 2,
+			width: this.handleSize * 2,
+			height: this.handleSize * 2
 		});
 	}
 	

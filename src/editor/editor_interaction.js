@@ -15,8 +15,22 @@ Editor.prototype.isAnySelected = function()
 {
 	// TODO: Optimize.
 	var anySelected = false;
-	this.song.notes .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
-	this.song.chords.enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.notes         .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.chords        .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.keyChanges    .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.meterChanges  .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.forcedMeasures.enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	return anySelected;
+}
+
+
+Editor.prototype.isAnyIsolateElementSelected = function()
+{
+	// TODO: Optimize.
+	var anySelected = false;
+	this.song.keyChanges    .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.meterChanges  .enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
+	this.song.forcedMeasures.enumerateAll(function (item) { anySelected = anySelected || item.editorData.selected; });
 	return anySelected;
 }
 
@@ -24,8 +38,11 @@ Editor.prototype.isAnySelected = function()
 Editor.prototype.selectNone = function()
 {
 	// TODO: Optimize.
-	this.song.notes .enumerateAll(function (item) { item.editorData.selected = false; });
-	this.song.chords.enumerateAll(function (item) { item.editorData.selected = false; });
+	this.song.notes         .enumerateAll(function (item) { item.editorData.selected = false; });
+	this.song.chords        .enumerateAll(function (item) { item.editorData.selected = false; });
+	this.song.keyChanges    .enumerateAll(function (item) { item.editorData.selected = false; });
+	this.song.meterChanges  .enumerateAll(function (item) { item.editorData.selected = false; });
+	this.song.forcedMeasures.enumerateAll(function (item) { item.editorData.selected = false; });
 }
 
 
@@ -79,6 +96,39 @@ Editor.prototype.enumerateSelectedChords = function(callback)
 	{
 		if (chord.editorData.selected)
 			callback(chord);
+	});
+}
+
+
+Editor.prototype.enumerateSelectedKeyChanges = function(callback)
+{
+	// TODO: Optimize.
+	this.song.keyChanges.enumerateAll(function(keyCh)
+	{
+		if (keyCh.editorData.selected)
+			callback(keyCh);
+	});
+}
+
+
+Editor.prototype.enumerateSelectedMeterChanges = function(callback)
+{
+	// TODO: Optimize.
+	this.song.meterChanges.enumerateAll(function(meterCh)
+	{
+		if (meterCh.editorData.selected)
+			callback(meterCh);
+	});
+}
+
+
+Editor.prototype.enumerateSelectedForcedMeasures = function(callback)
+{
+	// TODO: Optimize.
+	this.song.forcedMeasures.enumerateAll(function(forcedMeasure)
+	{
+		if (forcedMeasure.editorData.selected)
+			callback(forcedMeasure);
 	});
 }
 
@@ -139,6 +189,24 @@ Editor.prototype.cursorSetTickAtSelectionStart = function()
 				tick = chord.startTick.clone();
 		});
 		
+		this.enumerateSelectedKeyChanges(function(keyCh)
+		{
+			if (keyCh.tick.compare(tick) < 0)
+				tick = keyCh.tick.clone();
+		});
+		
+		this.enumerateSelectedMeterChanges(function(meterCh)
+		{
+			if (meterCh.tick.compare(tick) < 0)
+				tick = meterCh.tick.clone();
+		});
+		
+		this.enumerateSelectedForcedMeasures(function(forcedMeasure)
+		{
+			if (forcedMeasure.tick.compare(tick) < 0)
+				tick = forcedMeasure.tick.clone();
+		});
+		
 		this.cursorSetTickBoth(tick);
 	}
 }
@@ -160,6 +228,24 @@ Editor.prototype.cursorSetTickAtSelectionEnd = function()
 		{
 			if (chord.endTick.compare(tick) > 0)
 				tick = chord.endTick.clone();
+		});
+		
+		this.enumerateSelectedKeyChanges(function(keyCh)
+		{
+			if (keyCh.tick.compare(tick) > 0)
+				tick = keyCh.tick.clone();
+		});
+		
+		this.enumerateSelectedMeterChanges(function(meterCh)
+		{
+			if (meterCh.tick.compare(tick) > 0)
+				tick = meterCh.tick.clone();
+		});
+		
+		this.enumerateSelectedForcedMeasures(function(forcedMeasure)
+		{
+			if (forcedMeasure.tick.compare(tick) > 0)
+				tick = forcedMeasure.tick.clone();
 		});
 		
 		this.cursorSetTickBoth(tick);
@@ -238,10 +324,11 @@ Editor.prototype.eventMouseMove = function(ev)
 		var elementAtMouse = this.getElementAt(mouseX, mouseY);
 		if (elementAtMouse != null)
 		{
-			if (elementAtMouse.note != undefined)
-				this.svg.style.cursor = "pointer";
-			
-			else if (elementAtMouse.chord != undefined)
+			if (elementAtMouse.note != undefined ||
+				elementAtMouse.chord != undefined ||
+				elementAtMouse.keyChange != undefined ||
+				elementAtMouse.meterChange != undefined ||
+				elementAtMouse.forcedMeasure != undefined)
 				this.svg.style.cursor = "pointer";
 		}
 	}
@@ -261,10 +348,9 @@ Editor.prototype.eventMouseDown = function(ev)
 	var mouseY = ev.clientY - elemRect.top;
 	
 	this.cursorVisible = true;
-	
-	// Select elements.
 	this.sliceOverlapping();
 	
+	// Handle element selection.
 	var elementAtMouse = this.getElementAt(mouseX, mouseY);
 	
 	if (!ev.ctrlKey)
@@ -289,6 +375,15 @@ Editor.prototype.eventMouseDown = function(ev)
 				elementAtMouse.chord.rootMidiPitch,
 				elementAtMouse.chord.embelishments);
 		}
+		
+		else if (elementAtMouse.keyChange != undefined)
+			elementAtMouse.keyChange.editorData.selected = !elementAtMouse.keyChange.editorData.selected;
+		
+		else if (elementAtMouse.meterChange != undefined)
+			elementAtMouse.meterChange.editorData.selected = !elementAtMouse.meterChange.editorData.selected;
+		
+		else if (elementAtMouse.forcedMeasure != undefined)
+			elementAtMouse.forcedMeasure.editorData.selected = !elementAtMouse.forcedMeasure.editorData.selected;
 	}
 	
 	// Set cursor tick.
@@ -309,6 +404,7 @@ Editor.prototype.eventMouseDown = function(ev)
 	
 	
 	this.mouseIsDown = true;
+	this.autoExtendSongLength();
 	this.refresh();
 }
 
@@ -522,32 +618,43 @@ Editor.prototype.performDeleteAction = function()
 	
 	var notesToDelete = [];
 	this.enumerateSelectedNotes(function (note) { notesToDelete.push(note); });
-	
-	for (var i = 0; i < notesToDelete.length; i++)
-		this.song.notes.remove(notesToDelete[i]);
+	this.song.notes.removeList(notesToDelete);
 	
 	var chordsToDelete = [];
 	this.enumerateSelectedChords(function (chord) { chordsToDelete.push(chord); });
+	this.song.chords.removeList(chordsToDelete);
 	
-	for (var i = 0; i < chordsToDelete.length; i++)
-		this.song.chords.remove(chordsToDelete[i]);
+	var keyChangesToDelete = [];
+	this.enumerateSelectedKeyChanges(function (keyCh) { keyChangesToDelete.push(keyCh); });
+	this.song.keyChanges.removeList(keyChangesToDelete);
+	
+	var meterChangesToDelete = [];
+	this.enumerateSelectedMeterChanges(function (meterCh) { meterChangesToDelete.push(meterCh); });
+	this.song.meterChanges.removeList(meterChangesToDelete);
+	
+	var forcedMeasuresToDelete = [];
+	this.enumerateSelectedForcedMeasures(function (forcedMeasure) { forcedMeasuresToDelete.push(forcedMeasure); });
+	this.song.forcedMeasures.removeList(forcedMeasuresToDelete);
 	
 	this.selectNone();
+	this.song.sanitize();
 	this.refresh();
 }
 
 
 Editor.prototype.performBackEraseAction = function()
 {
-	this.cursorVisible = true;
-	
 	var that = this;
 	var tickMin = this.cursorTick1.clone().min(this.cursorTick2);
 	var tickMax = this.cursorTick1.clone().max(this.cursorTick2);
 	var trackMin = Math.min(this.cursorTrack1, this.cursorTrack2);
 	var trackMax = Math.max(this.cursorTrack1, this.cursorTrack2);
 	
-	if (this.cursorIsRangeSelection())
+	if (!this.cursorVisible)
+	{
+		this.performDeleteAction();
+	}
+	else if (this.cursorIsRangeSelection())
 	{
 		// Erase selected section.
 		if (trackMin <= 0 && trackMax >= 0)
@@ -617,6 +724,7 @@ Editor.prototype.performBackEraseAction = function()
 		this.cursorSetTickBoth(moveToTick);
 	}
 	
+	this.cursorVisible = true;
 	this.selectNone();
 	this.refresh();
 }
@@ -748,8 +856,6 @@ Editor.prototype.performInsertPitchAction = function(midiPitch)
 	}
 	
 	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
-	
-	
 	this.autoExtendSongLength();
 	this.refresh();
 }
@@ -783,10 +889,11 @@ Editor.prototype.performElementPitchChange = function(amount)
 		chordToSample = chord;
 	});
 	
-	if (chordToSample == null)
+	// Play sample.
+	if (noteToSample != null && chordToSample == null)
 		Theory.playSampleNote(this.synth, noteToSample.midiPitch);
 	
-	if (noteToSample == null)
+	if (chordToSample != null && noteToSample == null)
 		Theory.playSampleChord(
 			this.synth,
 			chordToSample.chordKindIndex,
@@ -817,6 +924,30 @@ Editor.prototype.performElementTimeChange = function(amount)
 			amount = minCap;
 	});
 	
+	this.enumerateSelectedKeyChanges(function(keyCh)
+	{
+		var minCap = keyCh.tick.clone().negate();
+		
+		if (minCap.compare(amount) > 0)
+			amount = minCap;
+	});
+	
+	this.enumerateSelectedMeterChanges(function(meterCh)
+	{
+		var minCap = meterCh.tick.clone().negate();
+		
+		if (minCap.compare(amount) > 0)
+			amount = minCap;
+	});
+	
+	this.enumerateSelectedForcedMeasures(function(forcedMeasure)
+	{
+		var minCap = forcedMeasure.tick.clone().negate();
+		
+		if (minCap.compare(amount) > 0)
+			amount = minCap;
+	});
+	
 	// Apply changes to elements.
 	this.enumerateSelectedNotes(function(note)
 	{
@@ -830,7 +961,22 @@ Editor.prototype.performElementTimeChange = function(amount)
 		chord.endTick.add(amount);
 	});
 	
+	this.enumerateSelectedKeyChanges(function(keyCh)
+	{
+		keyCh.tick.add(amount);
+	});
 	
+	this.enumerateSelectedMeterChanges(function(meterCh)
+	{
+		meterCh.tick.add(amount);
+	});
+	
+	this.enumerateSelectedForcedMeasures(function(forcedMeasure)
+	{
+		forcedMeasure.tick.add(amount);
+	});
+	
+	this.song.sanitize();
 	this.refresh();
 }
 
@@ -878,6 +1024,18 @@ Editor.prototype.sliceOverlapping = function()
 	this.enumerateSelectedChords(function(chord) { selectedChords.push(chord); });
 	this.song.chords.removeList(selectedChords);
 	
+	var selectedKeyChanges = [];
+	this.enumerateSelectedKeyChanges(function(keyCh) { selectedKeyChanges.push(keyCh); });
+	this.song.keyChanges.removeList(selectedKeyChanges);
+	
+	var selectedMeterChanges = [];
+	this.enumerateSelectedMeterChanges(function(meterCh) { selectedMeterChanges.push(meterCh); });
+	this.song.meterChanges.removeList(selectedMeterChanges);
+	
+	var selectedForcedMeasures = [];
+	this.enumerateSelectedForcedMeasures(function(forcedMeasure) { selectedForcedMeasures.push(forcedMeasure); });
+	this.song.forcedMeasures.removeList(selectedForcedMeasures);
+	
 	// Remove overlapping parts from song.
 	for (var i = 0; i < selectedNotes.length; i++)
 		this.eraseNotesAt(
@@ -889,10 +1047,28 @@ Editor.prototype.sliceOverlapping = function()
 		this.eraseChordsAt(
 			selectedChords[i].startTick,
 			selectedChords[i].endTick);
+			
+	for (var i = 0; i < selectedKeyChanges.length; i++)
+		this.eraseKeyChangesAt(
+			selectedKeyChanges[i].tick,
+			selectedKeyChanges[i].tick);
+			
+	for (var i = 0; i < selectedMeterChanges.length; i++)
+		this.eraseMeterChangesAt(
+			selectedMeterChanges[i].tick,
+			selectedMeterChanges[i].tick);
+			
+	for (var i = 0; i < selectedForcedMeasures.length; i++)
+		this.eraseForcedMeasuresAt(
+			selectedForcedMeasures[i].tick,
+			selectedForcedMeasures[i].tick);
 	
 	// Reinsert selected elements.
-	this.song.notes .insertList(selectedNotes);
-	this.song.chords.insertList(selectedChords);
+	this.song.notes         .insertList(selectedNotes);
+	this.song.chords        .insertList(selectedChords);
+	this.song.keyChanges    .insertList(selectedKeyChanges);
+	this.song.meterChanges  .insertList(selectedMeterChanges);
+	this.song.forcedMeasures.insertList(selectedForcedMeasures);
 }
 
 
@@ -960,4 +1136,49 @@ Editor.prototype.eraseChordsAt = function(start, end)
 		
 	this.song.chords.removeList(overlappingChords);
 	this.song.chords.insertList(slicedChords);
+}
+
+
+Editor.prototype.eraseKeyChangesAt = function(start, end)
+{
+	var overlappingKeyChanges = [];
+	
+	this.song.keyChanges.enumerateOverlappingRange(
+		start, end,
+		function (keyCh)
+		{
+			overlappingKeyChanges.push(keyCh);
+		});
+		
+	this.song.keyChanges.removeList(overlappingKeyChanges);
+}
+
+
+Editor.prototype.eraseMeterChangesAt = function(start, end)
+{
+	var overlappingMeterChanges = [];
+	
+	this.song.meterChanges.enumerateOverlappingRange(
+		start, end,
+		function (meterCh)
+		{
+			overlappingMeterChanges.push(meterCh);
+		});
+		
+	this.song.meterChanges.removeList(overlappingMeterChanges);
+}
+
+
+Editor.prototype.eraseForcedMeasuresAt = function(start, end)
+{
+	var overlappingForcedMeasures = [];
+	
+	this.song.forcedMeasures.enumerateOverlappingRange(
+		start, end,
+		function (forcedMeasure)
+		{
+			overlappingForcedMeasures.push(forcedMeasure);
+		});
+		
+	this.song.forcedMeasures.removeList(overlappingForcedMeasures);
 }
