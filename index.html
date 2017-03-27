@@ -18,9 +18,9 @@
 		</div>
 		
 		<div id="divToolbox">
-			<table style="margin:auto;">
+			<table style="height:120px; margin-left:15px;">
 				<tr>
-					<td>
+					<td style="background-color:#ccc; border-radius:5px; padding:5px;">
 						<button id="buttonPlay" class="toolboxButton toolboxButtonPlay" onClick="handleButtonPlay();"></button>
 						<button id="buttonRewind" class="toolboxButton toolboxButtonRewind" onClick="handleButtonRewind();">◀◀</button>
 						<br>
@@ -28,41 +28,81 @@
 						<input id="inputTempo" class="toolboxInput" onInput="handleInputTempo();" value="120"></input>
 					</td>
 					
-					<td style="border-left:1px solid black;"></td>
+					<td></td>
 					
-					<td>
-						<span class="toolboxLabel">Local</span>
-						<br>
-						<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
-						<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
-						
+					<td style="width:100px;">
+						<button id="buttonTabFile" class="toolboxButton" style="width:100%;"
+							onClick="g_MainTabIndex = 0; refreshMainTabs();">General ></button>
+							
 						<br>
 						
-						<span class="toolboxLabel">Dropbox</span>
+						<button id="buttonTabMarkers" class="toolboxButton" style="width:100%;"
+							onClick="g_MainTabIndex = 1; refreshMainTabs();">Markers ></button>
 						<br>
-						<button class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
-						<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
-						<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
+						
+						<button id="buttonTabChords" class="toolboxButton" style="width:100%;"
+							onClick="g_MainTabIndex = 2; refreshMainTabs();">Chords ></button>
 					</td>
 					
-					<td style="border-left:1px solid black;"></td>
+					<td></td>
 					
-					<td>
-						<select id="selectKeyPitch" class="toolboxButton"></select>
-						<select id="selectKeyScale" class="toolboxButton"></select>
-						<br>
-						<button class="toolboxButton" onClick="handleButtonInsertKeyChange();">Insert Key Change</button>
-						
-						<br><br>
-						
-						<select id="selectMeterNumerator" class="toolboxButton"></select>
-						<span class="toolboxLabel">/</span>
-						<select id="selectMeterDenominator" class="toolboxButton"></select>
-						<br>
-						<button class="toolboxButton" onClick="handleButtonInsertMeterChange();">Insert Meter Change</button>
-					</td>
-					
-					<td style="border-left:1px solid black;"></td>
+					<td style="background-color:#ccc; border-radius:5px;">
+						<table>
+							<td id="tdTabFile">
+								<table style="text-align:left;">
+									<tr>
+										<td>
+											<span class="toolboxLabel">Local:</span>
+										</td>
+										<td>
+											<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
+											<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
+										</td>
+									</tr>
+									<tr>
+										<td>
+											<span class="toolboxLabel">Dropbox:</span>
+										</td>
+										<td>
+											<button class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
+											<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
+											<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
+										</td>
+									</tr>
+								</table>
+							</td>
+							
+							<td id="tdTabMarkers">
+								<table style="text-align:left;">
+									<tr>
+										<td>
+											<span class="toolboxLabel">Key Change:</span>
+										</td>
+										<td>
+											<select id="selectKeyPitch" class="toolboxButton"></select>
+											<select id="selectKeyScale" class="toolboxButton"></select>
+											<button class="toolboxButton" onClick="handleButtonInsertKeyChange();">Insert</button>
+										</td>
+									</tr>
+									<tr>
+										<td>
+											<span class="toolboxLabel">Meter Change:</span>
+										</td>
+										<td>
+											<select id="selectMeterNumerator" class="toolboxButton"></select>
+											<span class="toolboxLabel">/</span>
+											<select id="selectMeterDenominator" class="toolboxButton"></select>
+											<button class="toolboxButton" onClick="handleButtonInsertMeterChange();">Insert</button>
+										</td>
+									</tr>
+								</table>
+							</td>
+							
+							<td id="tdTabChords">
+								<select id="selectChordKinds" class="toolboxButton"></select>
+								<!--<div id="divChordKinds" style="height:110px; overflow-y:scroll;"></div>-->
+							</td>
+						</table>
 				</tr>
 			</table>
 		</div>

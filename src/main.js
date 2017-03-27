@@ -2,7 +2,7 @@ var g_Editor = null;
 var g_Song = null;
 var g_Synth = null;
 
-var songPlaying = false;
+var g_MainTabIndex = 0;
 
 
 function main()
@@ -22,7 +22,9 @@ function main()
 	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
 		
 	refreshButtonPlay(false);
+	refreshMainTabs();
 	refreshSelectBoxes();
+	refreshKeyDependentItems();
 }
 
 
@@ -30,6 +32,18 @@ function refreshButtonPlay(isPlaying)
 {
 	var button = document.getElementById("buttonPlay");
 	button.innerHTML = isPlaying ? "◼ Stop" : "► Play";
+}
+
+
+function refreshMainTabs()
+{
+	document.getElementById("tdTabFile")   .style.display = (g_MainTabIndex == 0 ? "block" : "none");
+	document.getElementById("tdTabMarkers").style.display = (g_MainTabIndex == 1 ? "block" : "none");
+	document.getElementById("tdTabChords") .style.display = (g_MainTabIndex == 2 ? "block" : "none");
+	
+	document.getElementById("buttonTabFile")   .className = (g_MainTabIndex == 0 ? "toolboxButtonSelected" : "toolboxButton");
+	document.getElementById("buttonTabMarkers").className = (g_MainTabIndex == 1 ? "toolboxButtonSelected" : "toolboxButton");
+	document.getElementById("buttonTabChords") .className = (g_MainTabIndex == 2 ? "toolboxButtonSelected" : "toolboxButton");
 }
 
 
@@ -68,6 +82,94 @@ function refreshSelectBoxes()
 		selectMeterDenominator.appendChild(option);
 	}
 	selectMeterDenominator.selectedIndex = 2;
+}
+
+
+function refreshKeyDependentItems()
+{
+	var selectChordKinds = document.getElementById("selectChordKinds");
+	
+	var optionInKey = document.createElement("option");
+	optionInKey.innerHTML = "In Key";
+	selectChordKinds.appendChild(optionInKey);
+	
+	for (var i = 0; i < Theory.chordKinds.length; i++)
+	{
+		if (Theory.chordKinds[i].startGroup != undefined)
+		{
+			var optGroup = document.createElement("optgroup");
+			optGroup.label = "-- " + Theory.chordKinds[i].startGroup + " --";
+			selectChordKinds.appendChild(optGroup);
+		}		
+		
+		var option = document.createElement("option");
+		
+		var labelMain = document.createElement("span");
+		var labelSuperscript = document.createElement("sup");
+		
+		labelMain.innerHTML = Theory.getChordLabelMain(0, i, 0, []);
+		labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(0, i, 0, []);
+		
+		option.appendChild(labelMain);
+		labelMain.appendChild(labelSuperscript);
+		selectChordKinds.appendChild(option);
+	}
+	selectChordKinds.selectedIndex = 0;
+	
+	/*var divChordKinds = document.getElementById("divChordKinds");
+	
+	var tableChordColumns = document.createElement("table");
+	tableChordColumns.style.textAlign = "left";
+	divChordKinds.appendChild(tableChordColumns);
+	
+	var currentTd = null;
+	var groupCount = 0;
+	
+	for (var i = 0; i < Theory.chordKinds.length; i++)
+	{
+		if (Theory.chordKinds[i].startGroup != undefined)
+		{
+			groupCount = 0;
+			
+			var tr = document.createElement("tr");
+			var tdLabel = document.createElement("td");
+			var label = document.createElement("span");
+			label.className = "toolboxLabel";
+			label.innerHTML = Theory.chordKinds[i].startGroup + ":";
+			tdLabel.appendChild(label);
+			tr.appendChild(tdLabel);
+			
+			currentTd = document.createElement("td");
+			tr.appendChild(currentTd);
+			
+			tableChordColumns.appendChild(tr);
+			
+			if (i == 0)
+			{
+				var button = document.createElement("button");
+				button.className = "toolboxButton";
+				button.innerHTML = "In Key";
+				currentTd.appendChild(button);
+			}
+		}
+		
+		var button = document.createElement("button");
+		button.className = "toolboxButton";
+		
+		var labelMain = document.createElement("span");
+		var labelSuperscript = document.createElement("sup");
+		
+		labelMain.innerHTML = Theory.getChordLabelMain(0, i, 0, []);
+		labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(0, i, 0, []);
+		
+		button.appendChild(labelMain);
+		button.appendChild(labelSuperscript);
+		currentTd.appendChild(button);
+		
+		groupCount++;
+		if (groupCount % 6 == 5)
+			currentTd.appendChild(document.createElement("br"));
+	}*/
 }
 
 

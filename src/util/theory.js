@@ -34,19 +34,17 @@ Theory.chordKinds =
 			[isLowercase, complement, superscriptComplement]
 	*/
 	
-	{ pitches: [0, 4, 7],         code: "",      symbol: [false, "",     "" ],     name: "Major" },
+	{ pitches: [0, 4, 7],         code: "",      symbol: [false, "",     "" ],     name: "Major", startGroup: "Triads" },
 	{ pitches: [0, 3, 7],         code: "m",     symbol: [true,  "",     "" ],     name: "Minor" },
 	{ pitches: [0, 4, 8],         code: "+",     symbol: [false, "+",    "" ],     name: "Augmented" },
 	{ pitches: [0, 3, 6],         code: "o",     symbol: [true,  "",     "o"],     name: "Diminished" },
-	{ pitches: [0, 2, 7],         code: "sus2",  symbol: [false, "sus2", "" ],     name: "Suspended Second" },
-	{ pitches: [0, 5, 7],         code: "sus4",  symbol: [false, "sus4", "" ],     name: "Suspended Fourth" },
 	
 	{ pitches: [0, 0, 7, 12],     code: "5",     symbol: [false, "",     "5"],     name: "Power" },
 	
-	{ pitches: [0, 4, 7,  9],     code: "6",     symbol: [false, "",     "6"],     name: "Major Sixth" },
+	{ pitches: [0, 4, 7,  9],     code: "6",     symbol: [false, "",     "6"],     name: "Major Sixth", startGroup: "Sixths" },
 	{ pitches: [0, 3, 7,  9],     code: "m6",    symbol: [true,  "",     "6"],     name: "Minor Sixth" },
 	
-	{ pitches: [0, 4, 7, 10],     code: "7",     symbol: [false, "",     "7"],     name: "Dominant Seventh" },
+	{ pitches: [0, 4, 7, 10],     code: "7",     symbol: [false, "",     "7"],     name: "Dominant Seventh", startGroup: "Sevenths" },
 	{ pitches: [0, 4, 7, 11],     code: "maj7",  symbol: [false, "",     "M7"],    name: "Major Seventh" },
 	{ pitches: [0, 3, 7, 10],     code: "m7",    symbol: [true,  "",     "7"],     name: "Minor Seventh" },
 	{ pitches: [0, 3, 7, 11],     code: "mmaj7", symbol: [true,  "",     "M7"],    name: "Minor-Major Seventh" },
@@ -55,7 +53,7 @@ Theory.chordKinds =
 	{ pitches: [0, 3, 6,  9],     code: "o7",    symbol: [true,  "",     "o7"],    name: "Diminished Seventh" },
 	{ pitches: [0, 3, 6, 10],     code: "%7",    symbol: [true,  "",     "ø7"],    name: "Half-Diminished Seventh" },
 	
-	{ pitches: [0, 4, 7, 10, 14], code: "9",     symbol: [false, "",     "9"],     name: "Dominant Ninth" },
+	{ pitches: [0, 4, 7, 10, 14], code: "9",     symbol: [false, "",     "9"],     name: "Dominant Ninth", startGroup: "Ninths" },
 	{ pitches: [0, 4, 7, 11, 14], code: "maj9",  symbol: [false, "",     "M9"],    name: "Major Ninth" },
 	{ pitches: [0, 3, 7, 10, 14], code: "m9",    symbol: [true,  "",     "9"],     name: "Minor Ninth" },
 	{ pitches: [0, 3, 7, 11, 14], code: "mmaj9", symbol: [true, "",      "M9"],    name: "Minor-Major Ninth" },
@@ -131,6 +129,23 @@ Theory.getChordRootLabel = function(scaleIndex, rootMidiPitch)
 	// TODO: Take scale into consideration.
 	var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
 	return labels[rootMidiPitch % 12];
+}
+
+
+Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, rootMidiPitch, embelishments)
+{
+	var rootLabel = Theory.getChordRootLabel(scaleIndex, rootMidiPitch);
+	
+	if (Theory.chordKinds[chordKindIndex].symbol[0])
+		rootLabel = rootLabel.toLowerCase();
+	
+	return rootLabel + Theory.chordKinds[chordKindIndex].symbol[1];
+}
+
+
+Theory.getChordLabelSuperscript = function(scaleIndex, chordKindIndex, rootMidiPitch, embelishments)
+{
+	return Theory.chordKinds[chordKindIndex].symbol[2];
 }
 
 

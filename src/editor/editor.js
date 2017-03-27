@@ -336,6 +336,9 @@ Editor.prototype.refresh = function()
 	while (tick.compare(this.song.length) < 0)
 	{
 		var row = this.refreshRow(tick, y);
+		if (row == null)
+			break;
+		
 		tick = row.tickEnd;
 		y = row.yEnd;
 	}
@@ -426,6 +429,10 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 		if (this.song.length.compare(nextBlockEnd) == 0)
 			break;
 	}
+	
+	// Check if we can't make any progress to avoid an infinite loop.
+	if (calculatedBlocks.length == 0 && this.song.length.compare(currentBlockStart) > 0)
+		return null;
 	
 	var rowTickEnd = currentBlockStart;
 	var rowTickLength = rowTickEnd.clone().subtract(rowTickStart);
