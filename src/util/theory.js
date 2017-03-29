@@ -66,7 +66,11 @@ Theory.chordKinds =
 	{ pitches: [0, -3, -6, -9,  2], code: "o9",    symbol: [true,  "",     "o9"],    name: "Diminished Ninth", ext: 4 },
 	{ pitches: [0, -3, -6, -9, -5], code: "ob9",   symbol: [true,  "",     "o♭9"],   name: "Diminished Minor Ninth", ext: 4 },
 	{ pitches: [0, -3, -6, -2,  2], code: "%9",    symbol: [true,  "",     "ø9"],    name: "Half-Diminished Ninth", ext: 4 },
-	{ pitches: [0, -3, -6, -2, -5], code: "%b9",   symbol: [true,  "",     "ø♭9"],   name: "Half-Diminished Minor Ninth", ext: 4 }
+	{ pitches: [0, -3, -6, -2, -5], code: "%b9",   symbol: [true,  "",     "ø♭9"],   name: "Half-Diminished Minor Ninth", ext: 4 },
+
+	{ pitches: [0,  4, -6, -2],     code: "7b5",   symbol: [false, "",     "7♭5"],   name: "Dominant Seventh Flat Fifth", startGroup: "Altered" },
+	{ pitches: [0,  4,  1, -2, -5], code: "7b9",   symbol: [true,  "",     "7♭9"],   name: "Dominant Seventh Minor Ninth", ext: 4 },
+	{ pitches: [0, -3,  1, -2, -5], code: "m7b9",  symbol: [true,  "",     "m7♭9"],  name: "Minor Seventh Minor Ninth", ext: 4 },
 ];
 
 
@@ -257,12 +261,12 @@ Theory.getChordStackPattern = function(meter)
 }*/
 
 
-Theory.findChordKindForDegree = function(scaleIndex, degree)
+Theory.findChordKindForDegree = function(scaleIndex, degree, count)
 {
 	var scale = Theory.scales[scaleIndex].pitches;
 	
 	var chordPitches = [];
-	for (var i = 0; i < 3; i++)
+	for (var i = 0; i < count; i++)
 	{
 		chordPitches.push(scale[mod(degree + i * 2, scale.length)]);		// // //
 	}

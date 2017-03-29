@@ -185,17 +185,20 @@ function handleSelectChordKindsChange()
 	// In Key
 	if (selectedIndex == 0)
 	{
-		for (var i = 0; i < 7; i++)
+		for (var i = 0; i < 21; i++)
 		{
-			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, i);
-			var pitch = Theory.getPitchForScaleInterval(g_CurrentKey.scaleIndex, 0, i);
+			let degree = i % 7;
+			let count = 3 + Math.floor(i / 7);
+
+			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, degree, count);
+			var pitch = Theory.getPitchForScaleInterval(g_CurrentKey.scaleIndex, 0, degree);
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
 			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
 			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
 			
-			var button = document.getElementById("buttonChord" + (i + 7));
+			var button = document.getElementById("buttonChord" + i);
 			
 			while (button.firstChild != null)
 				button.removeChild(button.firstChild);
@@ -213,14 +216,6 @@ function handleSelectChordKindsChange()
 			{
 				g_Editor.insertChord(this.chordKindIndex, this.rootPitch + g_CurrentKey.tonicPitch, []);
 			};
-		}
-		
-		for (var i = 0; i < 7; i++)
-		{
-			var button = document.getElementById("buttonChord" + i);
-			button.style.visibility = "hidden";
-			button = document.getElementById("buttonChord" + (i + 14));
-			button.style.visibility = "hidden";
 		}
 	}
 	

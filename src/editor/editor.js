@@ -230,7 +230,7 @@ Editor.prototype.insertChordByDegree = function(degree)
 	
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
 	
-	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
+	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree, 3);
 	var rootPitch = Theory.getPitchForScaleInterval(key.scaleIndex, 0, degree);		// // //
 	
 	this.insertChord(chordKindIndex, rootPitch + key.tonicPitch, []);

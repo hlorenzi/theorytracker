@@ -843,7 +843,7 @@ Editor.prototype.performInsertDegreeAction = function(degree)
 	}
 	else
 	{
-		this.insertChordByDegree(degree);
+		this.insertChordByDegree(degree, 3);
 	}
 }
 
