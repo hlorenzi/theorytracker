@@ -93,10 +93,7 @@ Editor.prototype.togglePlay = function()
 	
 	if (this.isPlaying)
 	{
-		var startAtTick = this.cursorTick1.clone().min(this.cursorTick2);
-		startAtTick.subtract(new Rational(1));
-		startAtTick.max(new Rational(0));
-		
+		var startAtTick = this.cursorTick1.clone().min(this.cursorTick2);		
 		this.play(startAtTick);
 	}
 	else
@@ -213,6 +210,30 @@ Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishm
 	
 	this.autoExtendSongLength();
 	this.refresh();
+}
+
+
+Editor.prototype.insertNoteByDegree = function(degree)
+{
+	this.cursorSetTickAtSelectionEnd();
+	
+	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
+	var pitch = Theory.scales[key.scaleIndex].pitches[degree];
+	
+	this.insertNote(pitch + 60);
+}
+
+
+Editor.prototype.insertChordByDegree = function(degree)
+{
+	this.cursorSetTickAtSelectionEnd();
+	
+	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
+	
+	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
+	var rootMidiPitch = Theory.scales[key.scaleIndex].pitches[degree];
+	
+	this.insertChord(chordKindIndex, rootMidiPitch, []);
 }
 
 

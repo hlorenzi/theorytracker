@@ -224,6 +224,28 @@ Theory.findPitchDegree = function(scaleIndex, relativePitch, usePopularNotation 
 }
 
 
+Theory.findChordKindForDegree = function(scaleIndex, degree)
+{
+	var scale = Theory.scales[scaleIndex];
+	
+	var chordPitches = [];
+	for (var i = 0; i < 3; i++)
+	{
+		var noteDegree = degree + i * 2;
+		
+		var nextPitch;
+		if (noteDegree >= 7)
+			nextPitch = scale.pitches[noteDegree % 7] + 12;
+		else
+			nextPitch = scale.pitches[noteDegree];
+		
+		chordPitches.push(nextPitch);
+	}
+	
+	return Theory.findChordKindIndex(chordPitches);
+}
+
+
 Theory.findChordKindIndex = function(relativePitches)
 {
 	for (var i = 0; i < Theory.chordKinds.length; i++)

@@ -581,6 +581,15 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
+			// 1, 2, 3, 4, 5, 6, 7
+			case 49: { this.performInsertDegreeAction(0); break; }
+			case 50: { this.performInsertDegreeAction(1); break; }
+			case 51: { this.performInsertDegreeAction(2); break; }
+			case 52: { this.performInsertDegreeAction(3); break; }
+			case 53: { this.performInsertDegreeAction(4); break; }
+			case 54: { this.performInsertDegreeAction(5); break; }
+			case 55: { this.performInsertDegreeAction(6); break; }
+			
 			//  S, D,    G, H, J,
 			// Z, X, C, V, B, N, M
 			case 90: { this.performInsertPitchAction(0);  break; }
@@ -822,6 +831,19 @@ Editor.prototype.performInsertPitchAction = function(midiPitch)
 	else
 	{
 		this.insertChord(0, midiPitch, []);
+	}
+}
+
+
+Editor.prototype.performInsertDegreeAction = function(degree)
+{
+	if (this.cursorTrack1 != this.cursorTrack2 || this.cursorTrack1 == 0)
+	{
+		this.insertNoteByDegree(degree);
+	}
+	else
+	{
+		this.insertChordByDegree(degree);
 	}
 }
 

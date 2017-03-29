@@ -186,26 +186,12 @@ function handleSelectChordKindsChange()
 	{
 		for (var i = 0; i < 7; i++)
 		{
-			var chordPitches = [];
-			for (var j = 0; j < 3; j++)
-			{
-				var degree = i + j * 2;
-				
-				var nextPitch;
-				if (degree >= 7)
-					nextPitch = tonic + scale.pitches[degree % 7] + 12;
-				else
-					nextPitch = tonic + scale.pitches[degree];
-				
-				chordPitches.push(nextPitch);
-			}
-			
-			var chordKindIndex = Theory.findChordKindIndex(chordPitches);
+			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, i);
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, chordPitches[0] - tonic, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, chordPitches[0] - tonic, [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, scale.pitches[i], [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, scale.pitches[i], [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			
@@ -215,13 +201,13 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, chordPitches[0] - tonic, g_Editor.usePopularNotation);
+			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, scale.pitches[i], g_Editor.usePopularNotation);
 			var degreeColor = Theory.getDegreeColor(degree);
 			button.style.borderTop = "4px solid " + degreeColor;
 			button.style.borderBottom = "4px solid " + degreeColor;
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootMidiPitch = chordPitches[0];
+			button.rootMidiPitch = scale.pitches[i];
 			button.onclick = function()
 			{
 				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
