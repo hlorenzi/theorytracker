@@ -132,6 +132,8 @@ Synth.prototype.process = function(deltaTime)
 
 Synth.prototype.addNoteOn = function(time, instrumentIndex, midiPitch, volume)
 {
+	if (midiPitch == undefined)
+		throw new Error("Unknown MIDI pitch");
 	this.noteOnEvents.push({
 		time:            time + this.time,
 		instrumentIndex: instrumentIndex,
@@ -163,6 +165,8 @@ Synth.prototype.sortEvents = function()
 
 Synth.prototype.voiceStart = function(instrumentIndex, midiPitch, volume)
 {
+	if (midiPitch == undefined)
+		throw new Error("Unknown MIDI pitch");
 	for (var i = this.voices.length - 1; i >= 0; i--)
 	{
 		var otherVoice = this.voices[i];

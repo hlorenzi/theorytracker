@@ -369,7 +369,7 @@ Editor.prototype.eventMouseDown = function(ev)
 		if (elementAtMouse.note != undefined)
 		{
 			elementAtMouse.note.editorData.selected = !elementAtMouse.note.editorData.selected;
-			Theory.playSampleNote(this.synth, elementAtMouse.note.midiPitch);
+			Theory.playSampleNote(this.synth, elementAtMouse.note.getMidiPitch());
 		}
 		
 		else if (elementAtMouse.chord != undefined)
@@ -850,22 +850,25 @@ Editor.prototype.performInsertDegreeAction = function(degree)
 
 Editor.prototype.performElementPitchChange = function(amount)
 {
+	var that = this;
+
 	// Cap amount, in case notes would fall
 	// out of bounds.
-	this.enumerateSelectedNotes(function(note)
-	{
-		if (note.midiPitch + amount > Theory.midiPitchMax)
-			amount = Theory.midiPitchMax - note.midiPitch;
-		
-		else if (note.midiPitch + amount < Theory.midiPitchMin)
-			amount = Theory.midiPitchMin - note.midiPitch;
-	});
-	
 	// Apply changes to elements.
 	var noteToSample = null;
 	this.enumerateSelectedNotes(function(note)
 	{
-		note.midiPitch += amount;
+		let midiPitch = note.getMidiPitch();
+		midiPitch += amount;
+		if (midiPitch > Theory.midiPitchMax)
+			midiPitch = Theory.midiPitchMax;
+		else if (midiPitch < Theory.midiPitchMin)
+			midiPitch = Theory.midiPitchMin;
+
+		let block = that.getBlockAtTick(note.startTick);
+
+		note.octave = Math.floor(midiPitch / 12);
+		note.pitch = Theory.findPitchForSemitones(block.key.tonicPitch, block.key.scaleIndex, mod(midiPitch, 12), amount < 0);
 		noteToSample = note;
 	});
 	
@@ -878,7 +881,7 @@ Editor.prototype.performElementPitchChange = function(amount)
 	
 	// Play sample.
 	if (noteToSample != null && chordToSample == null)
-		Theory.playSampleNote(this.synth, noteToSample.midiPitch);
+		Theory.playSampleNote(this.synth, noteToSample.getMidiPitch());
 	
 	if (chordToSample != null && noteToSample == null)
 		Theory.playSampleChord(
@@ -1028,7 +1031,7 @@ Editor.prototype.sliceOverlapping = function()
 		this.eraseNotesAt(
 			selectedNotes[i].startTick,
 			selectedNotes[i].endTick,
-			selectedNotes[i].midiPitch);
+			selectedNotes[i].getMidiPitch());
 	
 	for (var i = 0; i < selectedChords.length; i++)
 		this.eraseChordsAt(
@@ -1068,7 +1071,7 @@ Editor.prototype.eraseNotesAt = function(start, end, atMidiPitch = null)
 		start, end,
 		function (note)
 		{
-			if (atMidiPitch != null && atMidiPitch != note.midiPitch)
+			if (atMidiPitch != null && atMidiPitch != note.getMidiPitch())
 				return;
 			
 			overlappingNotes.push(note);

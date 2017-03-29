@@ -233,16 +233,16 @@ Editor.prototype.insertChordByDegree = function(degree)
 	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
 	var rootPitch = Theory.getPitchForScaleInterval(key.scaleIndex, 0, degree);		// // //
 	
-	this.insertChord(chordKindIndex, rootPitch, []);
+	this.insertChord(chordKindIndex, rootPitch + key.tonicPitch, []);
 }
 
 
-Editor.prototype.insertKeyChange = function(scaleIndex, tonicMidiPitch)
+Editor.prototype.insertKeyChange = function(scaleIndex, tonicPitch)
 {
 	this.selectNone();
 	this.eraseKeyChangesAt(this.cursorTick1, this.cursorTick1);
 	this.song.keyChanges.insert(
-		new SongKeyChange(this.cursorTick1.clone(), scaleIndex, tonicMidiPitch, { selected: true }));
+		new SongKeyChange(this.cursorTick1.clone(), scaleIndex, tonicPitch, { selected: true }));
 	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
 	this.refresh();
 }
@@ -681,11 +681,13 @@ Editor.prototype.refreshBlock = function(
 	{
 		var chordXStart = chord.startTick.clone().subtract(block.tickStart).asFloat() * that.wholeTickWidth;
 		var chordXEnd   = chord.endTick  .clone().subtract(block.tickStart).asFloat() * that.wholeTickWidth;
+
+		let pitch = chord.rootPitch - block.key.tonicPitch;
 		
 		chordXStart = Math.max(chordXStart, 0);
 		chordXEnd   = Math.min(chordXEnd,   block.width);
 		
-		var chordColor = Theory.getPitchColor(block.key.scaleIndex, chord.rootPitch, that.usePopularNotation);
+		var chordColor = Theory.getPitchColor(block.key.scaleIndex, pitch, that.usePopularNotation);
 		
 		var chordX = block.x + chordXStart + that.chordSideMargin;
 		var chordY = block.y + block.trackChordYStart;
@@ -722,9 +724,9 @@ Editor.prototype.refreshBlock = function(
 		
 		// Build and add the chord label.
 		var chordLabel = Theory.getChordLabelMain(
-			block.key.scaleIndex, chord.chordKindIndex, chord.rootPitch, chord.embelishments, that.usePopularNotation); 
+			block.key.scaleIndex, chord.chordKindIndex, pitch, chord.embelishments, that.usePopularNotation); 
 		var chordLabelSuperscript = Theory.getChordLabelSuperscript(
-			block.key.scaleIndex, chord.chordKindIndex, chord.rootPitch, chord.embelishments, that.usePopularNotation); 
+			block.key.scaleIndex, chord.chordKindIndex, pitch, chord.embelishments, that.usePopularNotation); 
 		
 		var svgChordLabel = that.addSvgTextComplemented(
 			"editorChordLabel",

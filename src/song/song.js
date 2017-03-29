@@ -68,8 +68,8 @@ Song.prototype.feedSynth = function(synth, startTick)
 		var timeStart = offsetStart.asFloat() * (1000 / that.bpm / 4);
 		var timeEnd = offsetEnd.asFloat() * (1000 / that.bpm / 4);
 		
-		synth.addNoteOn(timeStart, 0, note.midiPitch, 1);
-		synth.addNoteOff(timeEnd - 0.01, 0, note.midiPitch);
+		synth.addNoteOn(timeStart, 0, note.getMidiPitch(), 1);
+		synth.addNoteOff(timeEnd - 0.01, 0, note.getMidiPitch());
 	});
 	
 	// Register chords.
@@ -121,7 +121,7 @@ Song.prototype.save = function()
 		json += "[ " + note.startTick.toString() + ", ";
 		json += note.endTick.toString() + ", ";
 		json += note.trackIndex.toString() + ", ";
-		json += note.midiPitch.toString() + " ]";
+		json += note.pitch.toString() + " ]";
 		
 		if (i < this.notes.items.length - 1)
 			json += ",";
@@ -159,7 +159,7 @@ Song.prototype.save = function()
 		json += "    ";
 		json += "[ " + keyCh.tick.toString() + ", ";
 		json += keyCh.scaleIndex.toString() + ", ";
-		json += keyCh.tonicMidiPitch.toString() + " ]";
+		json += keyCh.tonicPitch.toString() + " ]";
 		
 		if (i < this.keyChanges.items.length - 1)
 			json += ",";

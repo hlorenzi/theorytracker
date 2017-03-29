@@ -1,9 +1,9 @@
-function SongKeyChange(tick, scaleIndex, tonicMidiPitch, editorData = null)
+function SongKeyChange(tick, scaleIndex, tonicPitch, editorData = null)
 {
-	this.tick           = tick;
-	this.scaleIndex     = scaleIndex;
-	this.tonicMidiPitch = tonicMidiPitch;
-	this.editorData     = editorData;
+	this.tick       = tick;
+	this.scaleIndex = scaleIndex;
+	this.tonicPitch = tonicPitch;
+	this.editorData = editorData;
 }
 
 
@@ -12,11 +12,11 @@ SongKeyChange.prototype.clone = function()
 	return new SongKeyChange(
 		this.tick.clone(),
 		this.scaleIndex,
-		this.tonicMidiPitch);
+		this.tonicPitch);
 }
 
 
 SongKeyChange.prototype.getLabel = function()
 {
-	return Theory.getKeyLabel(this.scaleIndex, this.tonicMidiPitch);
+	return Theory.getKeyLabel(this.scaleIndex, this.tonicPitch);
 }

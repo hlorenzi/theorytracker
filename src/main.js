@@ -52,12 +52,13 @@ function refreshMainTabs()
 function refreshSelectBoxes()
 {
 	var selectKeyPitch = document.getElementById("selectKeyPitch");
-	for (var i = 0; i < 12; i++)
+	for (var i = -8; i <= 8; i++)
 	{
 		var option = document.createElement("option");
 		option.innerHTML = Theory.getIndependentPitchLabel(i);
 		selectKeyPitch.appendChild(option);
 	}
+	selectKeyPitch.selectedIndex = 8;
 	
 	var selectKeyScale = document.getElementById("selectKeyScale");
 	for (var i = 0; i < Theory.scales.length; i++)
@@ -158,7 +159,7 @@ function handleInputTempo()
 
 function handleButtonInsertKeyChange()
 {
-	var pitch = document.getElementById("selectKeyPitch").selectedIndex;
+	var pitch = document.getElementById("selectKeyPitch").selectedIndex - 8;
 	var scaleIndex = document.getElementById("selectKeyScale").selectedIndex;
 	g_Editor.insertKeyChange(scaleIndex, pitch);
 }
@@ -178,7 +179,7 @@ function handleSelectChordKindsChange()
 {
 	var selectedIndex = document.getElementById("selectChordKinds").selectedIndex;
 	
-	var tonic = g_CurrentKey.tonicMidiPitch;
+	var tonic = g_CurrentKey.tonicPitch;
 	var scale = Theory.scales[g_CurrentKey.scaleIndex];
 	
 	// In Key
@@ -210,7 +211,7 @@ function handleSelectChordKindsChange()
 			button.rootPitch = pitch;
 			button.onclick = function()
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootPitch, []);
+				g_Editor.insertChord(this.chordKindIndex, this.rootPitch + g_CurrentKey.tonicPitch, []);
 			};
 		}
 		
@@ -256,10 +257,10 @@ function handleSelectChordKindsChange()
 			button.style.visibility = "visible";
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootPitch = (pitch + g_CurrentKey.tonicMidiPitch) % 12;
+			button.rootPitch = pitch;
 			button.onclick = function()
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootPitch, []);
+				g_Editor.insertChord(this.chordKindIndex, this.rootPitch + g_CurrentKey.tonicPitch, []);
 			};
 		}
 	}

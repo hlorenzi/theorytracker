@@ -282,6 +282,14 @@ Theory.findChordKindIndex = function(relativePitches)
 }
 
 
+Theory.findPitchForSemitones = function(keyPitch, scaleIndex, semitones, downward)
+{
+	let scale = Theory.scales[scaleIndex];
+	let table = downward ? scale.midi.down : scale.midi.up;
+	return table[mod(semitones - Theory.getSemitones(keyPitch), 12)] + keyPitch;
+}
+
+
 Theory.playSampleNote = function(synth, midiPitch)
 {
 	synth.clear();
@@ -333,5 +341,25 @@ Theory.getPitchColor = function(scaleIndex, pitch, usePopularNotation = true)
 		case 13: return ["#808", "#fdf"];
 		
 		default: return ["#888", "#eee"];
+	}
+}
+
+
+for (let i = 0; i < Theory.scales.length; i++)
+{
+	let scale = Theory.scales[i];
+	scale.midi = { up: [], down: [] };
+	for (let j = 0; j < scale.pitches.length; j++)
+	{
+		let semitones = Theory.getSemitones(scale.pitches[j]);
+		scale.midi.up[semitones] = scale.pitches[j];
+		scale.midi.down[semitones] = scale.pitches[j];
+	}
+	for (let s = 0; s < 12; s++)
+	{
+		if (scale.midi.up[s] == undefined)
+			scale.midi.up[s] = scale.midi.up[mod(s - 1, 12)] + 7;
+		if (scale.midi.down[s] == undefined)
+			scale.midi.down[s] = scale.midi.down[mod(s + 1, 12)] - 7;
 	}
 }
