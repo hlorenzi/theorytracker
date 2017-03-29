@@ -198,7 +198,6 @@ Theory.getChordLabelSuperscript = function(scaleIndex, chordKindIndex, pitch, em
 
 Theory.calculateChordPitches = function(chordKindIndex, rootPitch, embelishments)
 {
-	var pitches = [];
 	let chord = Theory.chordKinds[chordKindIndex];
 	
 	var octave = 12 * 4;
@@ -206,14 +205,30 @@ Theory.calculateChordPitches = function(chordKindIndex, rootPitch, embelishments
 	if (rootMidiPitch >= 6)
 		octave -= 12;
 	
-	for (var i = 0; i < chord.pitches.length; i++)
+	let pitches = [];
+	for (let i = 1; i < chord.pitches.length; i++)
 	{
-		if (i == chord.ext)
-			octave += 12;
 		let pitch = chord.pitches[i];
-		pitches.push(octave + rootMidiPitch + Theory.getSemitones(pitch));
+		pitches.push(Theory.getSemitones(rootPitch + pitch));
+	}
+	if (chord.pitches.length <= 3)
+		pitches.push(Theory.getSemitones(rootPitch + chord.pitches[0]));
+	pitches = pitches.sort(function (x, y) { return x > y; });
+
+	let sum = pitches.reduce(function (x, y) { return x + y; }) / pitches.length;
+	while (sum < 60)
+	{
+		let x = pitches.shift();
+		pitches.push(x + 12);
+		sum += 12 / pitches.length;
 	}
 	
+	if (pitches.length >= 4)
+	{
+		pitches[0] += 12;
+		pitches[3] -= 12;
+	}
+	pitches.unshift(octave + rootMidiPitch);
 	return pitches;
 }
 
