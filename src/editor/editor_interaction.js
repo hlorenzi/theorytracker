@@ -378,7 +378,7 @@ Editor.prototype.eventMouseDown = function(ev)
 			Theory.playSampleChord(
 				this.synth,
 				elementAtMouse.chord.chordKindIndex,
-				elementAtMouse.chord.rootMidiPitch,
+				elementAtMouse.chord.rootPitch,
 				elementAtMouse.chord.embelishments);
 		}
 		
@@ -872,7 +872,7 @@ Editor.prototype.performElementPitchChange = function(amount)
 	var chordToSample = null;
 	this.enumerateSelectedChords(function(chord)
 	{
-		chord.rootMidiPitch = (chord.rootMidiPitch + 12 + amount) % 12;
+		//chord.rootMidiPitch = (chord.rootMidiPitch + 12 + amount) % 12;
 		chordToSample = chord;
 	});
 	
@@ -884,7 +884,7 @@ Editor.prototype.performElementPitchChange = function(amount)
 		Theory.playSampleChord(
 			this.synth,
 			chordToSample.chordKindIndex,
-			chordToSample.rootMidiPitch,
+			chordToSample.rootPitch,
 			chordToSample.embelishments);
 	
 	this.refresh();

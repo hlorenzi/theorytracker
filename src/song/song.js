@@ -79,7 +79,7 @@ Song.prototype.feedSynth = function(synth, startTick)
 			return;
 		
 		var pitches = Theory.calculateChordPitches(
-			chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments);
+			chord.chordKindIndex, chord.rootPitch, chord.embelishments);
 		
 		for (var j = 0; j < pitches.length; j++)
 		{
@@ -140,7 +140,7 @@ Song.prototype.save = function()
 		json += "[ " + chord.startTick.toString() + ", ";
 		json += chord.endTick.toString() + ", ";
 		json += chord.chordKindIndex.toString() + ", ";
-		json += chord.rootMidiPitch.toString() + ", ";
+		json += chord.rootPitch.toString() + ", ";
 		json += "[] ]";//chord.embelishments.toString() + " ]";
 		
 		if (i < this.chords.items.length - 1)

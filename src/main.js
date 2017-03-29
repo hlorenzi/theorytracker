@@ -187,13 +187,14 @@ function handleSelectChordKindsChange()
 		for (var i = 0; i < 7; i++)
 		{
 			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, i);
+			var pitch = Theory.getPitchForScaleInterval(g_CurrentKey.scaleIndex, 0, i);
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, scale.pitches[i], [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, scale.pitches[i], [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
 			
-			var button = document.getElementById("buttonChord" + i);
+			var button = document.getElementById("buttonChord" + (i + 7));
 			
 			while (button.firstChild != null)
 				button.removeChild(button.firstChild);
@@ -201,22 +202,23 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, scale.pitches[i], g_Editor.usePopularNotation);
-			var degreeColor = Theory.getDegreeColor(degree);
-			button.style.borderTop = "4px solid " + degreeColor;
-			button.style.borderBottom = "4px solid " + degreeColor;
+			var degreeColor = Theory.getPitchColor(g_CurrentKey.scaleIndex, pitch, g_Editor.usePopularNotation);
+			button.style.borderTop = "4px solid " + degreeColor[0];
+			button.style.borderBottom = "4px solid " + degreeColor[0];
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootMidiPitch = scale.pitches[i];
+			button.rootPitch = pitch;
 			button.onclick = function()
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
+				g_Editor.insertChord(this.chordKindIndex, this.rootPitch, []);
 			};
 		}
 		
-		for (var i = 7; i < 12; i++)
+		for (var i = 0; i < 7; i++)
 		{
 			var button = document.getElementById("buttonChord" + i);
+			button.style.visibility = "hidden";
+			button = document.getElementById("buttonChord" + (i + 14));
 			button.style.visibility = "hidden";
 		}
 	}
@@ -224,9 +226,13 @@ function handleSelectChordKindsChange()
 	else
 	{
 		var chordKindIndex = selectedIndex - 1;
-		var buttonAssignment = [0, 2, 4, 5, 7, 9, 11, 1, 3, 6, 8, 10];
+		var buttonAssignment = [		// // //
+			 7,  9, 11,  6,  8, 10, 12,
+			 0,  2,  4, -1,  1,  3,  5,
+			-7, -5, -3, -8, -6, -4, -2,
+		];
 		
-		for (var i = 0; i < 12; i++)
+		for (var i = 0; i < buttonAssignment.length; i++)
 		{
 			var pitch = buttonAssignment[i];
 			
@@ -243,18 +249,17 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, pitch, g_Editor.usePopularNotation);
-			var degreeColor = Theory.getDegreeColor(degree);
-			button.style.borderTop = "4px solid " + degreeColor;
-			button.style.borderBottom = "4px solid " + degreeColor;
+			var degreeColor = Theory.getPitchColor(g_CurrentKey.scaleIndex, pitch, g_Editor.usePopularNotation);
+			button.style.borderTop = "4px solid " + degreeColor[0];
+			button.style.borderBottom = "4px solid " + degreeColor[0];
 		
 			button.style.visibility = "visible";
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootMidiPitch = (pitch + g_CurrentKey.tonicMidiPitch) % 12;
+			button.rootPitch = (pitch + g_CurrentKey.tonicMidiPitch) % 12;
 			button.onclick = function()
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
+				g_Editor.insertChord(this.chordKindIndex, this.rootPitch, []);
 			};
 		}
 	}

@@ -156,7 +156,7 @@ Editor.prototype.rewind = function()
 }
 
 
-Editor.prototype.insertNote = function(midiPitch)
+Editor.prototype.insertNote = function(pitch, octave)		// // //
 {
 	this.cursorSetTickAtSelectionEnd();
 	this.sliceOverlapping();
@@ -166,14 +166,14 @@ Editor.prototype.insertNote = function(midiPitch)
 		this.cursorTick1.clone(),
 		this.cursorTick1.clone().add(this.newElementDuration),
 		0,
-		midiPitch,
+		pitch, octave,
 		{ selected: true });
 	
 	this.song.notes.insert(note);
 	
 	this.synth.clear();
 	this.synth.stop();
-	Theory.playSampleNote(this.synth, midiPitch);
+	Theory.playSampleNote(this.synth, note.getMidiPitch(), octave);
 	this.synth.play();
 	
 	this.cursorSetTrackBoth(0);
@@ -184,7 +184,7 @@ Editor.prototype.insertNote = function(midiPitch)
 }
 
 
-Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishments)
+Editor.prototype.insertChord = function(chordKindIndex, rootPitch, embelishments)
 {
 	this.cursorSetTickAtSelectionEnd();
 	this.sliceOverlapping();
@@ -194,7 +194,7 @@ Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishm
 		this.cursorTick1.clone(),
 		this.cursorTick1.clone().add(this.newElementDuration),
 		chordKindIndex,
-		rootMidiPitch,
+		rootPitch,
 		embelishments,
 		{ selected: true });
 	
@@ -202,7 +202,7 @@ Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishm
 	
 	this.synth.clear();
 	this.synth.stop();
-	Theory.playSampleChord(this.synth, chordKindIndex, rootMidiPitch, embelishments);
+	Theory.playSampleChord(this.synth, chordKindIndex, rootPitch, embelishments);
 	this.synth.play();
 	
 	this.cursorSetTrackBoth(1);
@@ -220,7 +220,7 @@ Editor.prototype.insertNoteByDegree = function(degree)
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
 	var pitch = Theory.scales[key.scaleIndex].pitches[degree];
 	
-	this.insertNote(pitch + 60);
+	this.insertNote(pitch, 5);		// // //
 }
 
 
@@ -231,9 +231,9 @@ Editor.prototype.insertChordByDegree = function(degree)
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
 	
 	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
-	var rootMidiPitch = Theory.scales[key.scaleIndex].pitches[degree];
+	var rootPitch = Theory.getPitchForScaleInterval(key.scaleIndex, 0, degree);		// // //
 	
-	this.insertChord(chordKindIndex, rootMidiPitch, []);
+	this.insertChord(chordKindIndex, rootPitch, []);
 }
 
 
@@ -525,8 +525,9 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	
 	this.song.notes.enumerateOverlappingRange(rowTickStart, rowTickEnd, function (note)
 	{
-		midiPitchMin = Math.min(note.midiPitch, midiPitchMin);
-		midiPitchMax = Math.max(note.midiPitch, midiPitchMax);
+		let midi = note.getMidiPitch();
+		midiPitchMin = Math.min(midi, midiPitchMin);
+		midiPitchMax = Math.max(midi, midiPitchMax);
 	});
 	
 	// Check if there are any key changes in this row.
@@ -655,13 +656,10 @@ Editor.prototype.refreshBlock = function(
 		noteXStart = Math.max(noteXStart, 0);
 		noteXEnd   = Math.min(noteXEnd,   block.width);
 		
-		var midiPitchOffset = note.midiPitch - midiPitchMin;
+		var midiPitchOffset = note.getMidiPitch() - midiPitchMin;
 		var noteYTop = block.trackNoteYEnd - (midiPitchOffset + 1) * that.noteHeight;
 		
-		var noteRelativePitch = (note.midiPitch + 12 - block.key.tonicMidiPitch) % 12;
-		var noteDegree = Theory.findPitchDegree(block.key.scaleIndex, noteRelativePitch, that.usePopularNotation);
-		var noteColor = Theory.getDegreeColor(noteDegree);
-		var noteColorAccent = Theory.getDegreeColorAccent(noteDegree);
+		var noteColor = Theory.getPitchColor(block.key.scaleIndex, note.pitch, that.usePopularNotation);
 		
 		var noteX = block.x + noteXStart + that.noteSideMargin;
 		var noteY = block.y + noteYTop;
@@ -672,8 +670,8 @@ Editor.prototype.refreshBlock = function(
 			"editorDegree" + (note.editorData.selected ? "Selected" : ""),
 			"rect", { x: noteX, y: noteY, width: noteW, height: noteH });
 			
-		svgNote.style.fill = (note.editorData.selected ? noteColorAccent : noteColor);
-		svgNote.style.stroke = noteColor;
+		svgNote.style.fill = noteColor[note.editorData.selected ? 1 : 0];
+		svgNote.style.stroke = noteColor[0];
 		
 		block.elements.push({ note: note, x: noteX, y: noteY, width: noteW, height: noteH });
 	});
@@ -687,10 +685,7 @@ Editor.prototype.refreshBlock = function(
 		chordXStart = Math.max(chordXStart, 0);
 		chordXEnd   = Math.min(chordXEnd,   block.width);
 		
-		var chordRelativePitch = (chord.rootMidiPitch + 12 - block.key.tonicMidiPitch) % 12;
-		var chordDegree = Theory.findPitchDegree(block.key.scaleIndex, chordRelativePitch, that.usePopularNotation);
-		var chordColor = Theory.getDegreeColor(chordDegree);
-		var chordColorAccent = Theory.getDegreeColorAccent(chordDegree);
+		var chordColor = Theory.getPitchColor(block.key.scaleIndex, chord.rootPitch, that.usePopularNotation);
 		
 		var chordX = block.x + chordXStart + that.chordSideMargin;
 		var chordY = block.y + block.trackChordYStart;
@@ -720,16 +715,16 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 			
-		svgChordOrnament1.style.fill = (chord.editorData.selected ? chordColorAccent : chordColor);
-		svgChordOrnament1.style.stroke = chordColor;
-		svgChordOrnament2.style.fill = (chord.editorData.selected ? chordColorAccent : chordColor);
-		svgChordOrnament2.style.stroke = chordColor;
+		svgChordOrnament1.style.fill = chordColor[chord.editorData.selected ? 1 : 0];
+		svgChordOrnament1.style.stroke = chordColor[0];
+		svgChordOrnament2.style.fill = chordColor[chord.editorData.selected ? 1 : 0];
+		svgChordOrnament2.style.stroke = chordColor[0];
 		
 		// Build and add the chord label.
 		var chordLabel = Theory.getChordLabelMain(
-			block.key.scaleIndex, chord.chordKindIndex, chordRelativePitch, chord.embelishments, that.usePopularNotation); 
+			block.key.scaleIndex, chord.chordKindIndex, chord.rootPitch, chord.embelishments, that.usePopularNotation); 
 		var chordLabelSuperscript = Theory.getChordLabelSuperscript(
-			block.key.scaleIndex, chord.chordKindIndex, chordRelativePitch, chord.embelishments, that.usePopularNotation); 
+			block.key.scaleIndex, chord.chordKindIndex, chord.rootPitch, chord.embelishments, that.usePopularNotation); 
 		
 		var svgChordLabel = that.addSvgTextComplemented(
 			"editorChordLabel",
