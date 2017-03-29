@@ -18,9 +18,9 @@
 		</div>
 		
 		<div id="divToolbox">
-			<table style="height:120px; margin-left:15px;">
+			<table id="tableToolboxMainLayout">
 				<tr>
-					<td style="background-color:#ccc; border-radius:5px; padding:5px;">
+					<td class="toolboxGroup">
 						<button id="buttonPlay" class="toolboxButton toolboxButtonPlay" onClick="handleButtonPlay();"></button>
 						<button id="buttonRewind" class="toolboxButton toolboxButtonRewind" onClick="handleButtonRewind();">◀◀</button>
 						<br>
@@ -30,7 +30,7 @@
 					
 					<td></td>
 					
-					<td style="width:100px;">
+					<td class="toolboxGroupMainTabs">
 						<button id="buttonTabFile" class="toolboxButton" style="width:100%;"
 							onClick="g_MainTabIndex = 0; refreshMainTabs();">General ></button>
 							
@@ -46,30 +46,45 @@
 					
 					<td></td>
 					
-					<td style="background-color:#ccc; border-radius:5px;">
+					<td class="toolboxGroup" style="text-align:left;">
 						<table>
 							<td id="tdTabFile">
-								<table style="text-align:left;">
-									<tr>
-										<td>
-											<span class="toolboxLabel">Local:</span>
-										</td>
-										<td>
-											<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
-											<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
-										</td>
-									</tr>
-									<tr>
-										<td>
-											<span class="toolboxLabel">Dropbox:</span>
-										</td>
-										<td>
-											<button class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
-											<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
-											<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
-										</td>
-									</tr>
-								</table>
+								<table><tr>
+									<td>
+										<table><tr>
+											<td>
+												<span class="toolboxLabel">Local:</span>
+											</td>
+											<td>
+												<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
+												<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<span class="toolboxLabel">Dropbox:</span>
+											</td>
+											<td>
+												<button class="toolboxButton" onClick="handleButtonLoadDropbox();">Load</button>
+												<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
+												<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
+											</td>
+										</tr></table>
+									</td>
+									
+									<td class="toolboxSeparator"></td>
+									
+									<td>
+										<table><tr>
+											<td>
+												<label class="toolboxGroup2">
+													<input type="checkbox" id="checkboxPopularNotation" class="toolboxCheckbox" onChange="handleCheckboxPopularNotation();" checked></input>
+													<span class="toolboxLabel">Use Popular Notation</span>
+												</label>
+											</td>
+										</tr></table>
+									</td>
+								</tr></table>
 							</td>
 							
 							<td id="tdTabMarkers">
@@ -99,8 +114,32 @@
 							</td>
 							
 							<td id="tdTabChords">
-								<select id="selectChordKinds" class="toolboxButton"></select>
-								<!--<div id="divChordKinds" style="height:110px; overflow-y:scroll;"></div>-->
+								<table>
+									<tr>
+										<td><select id="selectChordKinds" class="toolboxButton" onChange="handleSelectChordKindsChange();"></select></td>
+										
+										<td></td>
+									</tr>
+									
+									<tr>
+										<td></td>
+										
+										<td style="text-align:center;">
+											<button id="buttonChord0" class="toolboxChord"></button>
+											<button id="buttonChord1" class="toolboxChord"></button>
+											<button id="buttonChord2" class="toolboxChord"></button>
+											<button id="buttonChord3" class="toolboxChord"></button>
+											<button id="buttonChord4" class="toolboxChord"></button>
+											<button id="buttonChord5" class="toolboxChord"></button>
+											<button id="buttonChord6" class="toolboxChord"></button><br>
+											<button id="buttonChord7" class="toolboxChord"></button>
+											<button id="buttonChord8" class="toolboxChord"></button>
+											<button id="buttonChord9" class="toolboxChord"></button>
+											<button id="buttonChord10" class="toolboxChord"></button>
+											<button id="buttonChord11" class="toolboxChord"></button>
+										</td>
+									</tr>
+								</table>								
 							</td>
 						</table>
 				</tr>

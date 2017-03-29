@@ -124,17 +124,32 @@ Theory.getKeyLabel = function(scaleIndex, tonicMidiPitch)
 }
 
 
-Theory.getChordRootLabel = function(scaleIndex, rootMidiPitch)
+Theory.getChordRootLabel = function(scaleIndex, relativePitch, usePopularNotation = true)
 {
-	// TODO: Take scale into consideration.
-	var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
-	return labels[rootMidiPitch % 12];
+	if (usePopularNotation)
+	{
+		var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
+		return labels[relativePitch % 12];
+	}
+	else
+	{
+		// FIXME: Compute correct Common Practice labels.
+		var labels = ["I", "II", "III", "IV", "V", "VI", "VII", "I"];
+		
+		var degree = Theory.findPitchDegree(scaleIndex, relativePitch, false);
+		var degreeInteger = Math.floor(degree);
+		
+		if (degree == degreeInteger)
+			return labels[degreeInteger];
+		else
+			return "♭" + labels[degreeInteger + 1];
+	}
 }
 
 
-Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, rootMidiPitch, embelishments)
+Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, relativePitch, embelishments, usePopularNotation = true)
 {
-	var rootLabel = Theory.getChordRootLabel(scaleIndex, rootMidiPitch);
+	var rootLabel = Theory.getChordRootLabel(scaleIndex, relativePitch, usePopularNotation);
 	
 	if (Theory.chordKinds[chordKindIndex].symbol[0])
 		rootLabel = rootLabel.toLowerCase();
@@ -143,7 +158,7 @@ Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, rootMidiPitch, e
 }
 
 
-Theory.getChordLabelSuperscript = function(scaleIndex, chordKindIndex, rootMidiPitch, embelishments)
+Theory.getChordLabelSuperscript = function(scaleIndex, chordKindIndex, relativePitch, embelishments, usePopularNotation = true)
 {
 	return Theory.chordKinds[chordKindIndex].symbol[2];
 }
@@ -166,7 +181,7 @@ Theory.calculateChordPitches = function(chordKindIndex, rootMidiPitch, embelishm
 }
 
 
-Theory.getChordBassPattern = function(meter)
+/*Theory.getChordBassPattern = function(meter)
 {
 	// [ [ start beat, end beat, volume ], ... ]
 	switch (meter.numerator)
@@ -187,6 +202,49 @@ Theory.getChordStackPattern = function(meter)
 		case 4: return [ [ 0, 0.9, 1 ], [ 1, 1.9, 0.5 ], [ 2, 2.9, 0.7 ], [ 3, 3.9, 0.5 ] ];
 		default: return [ ];
 	}
+}*/
+
+
+Theory.findPitchDegree = function(scaleIndex, relativePitch, usePopularNotation = true)
+{
+	var scale = Theory.scales[scaleIndex];
+	if (usePopularNotation)
+		scale = Theory.scales[0];
+	
+	for (var i = 0; i < scale.pitches.length; i++)
+	{
+		if (relativePitch == scale.pitches[i])
+			return i;
+		
+		if (relativePitch < scale.pitches[i])
+			return (i + 7 - 0.5) % 7;
+	}
+	
+	return 6.5;
+}
+
+
+Theory.findChordKindIndex = function(relativePitches)
+{
+	for (var i = 0; i < Theory.chordKinds.length; i++)
+	{
+		var chordKind = Theory.chordKinds[i];
+		
+		if (relativePitches.length != chordKind.pitches.length)
+			continue;
+		
+		var match = true;
+		for (var j = 0; j < relativePitches.length; j++)
+		{
+			if (relativePitches[j] - relativePitches[0] != chordKind.pitches[j])
+				match = false;
+		}
+		
+		if (match)
+			return i;
+	}
+	
+	return null;
 }
 
 
@@ -214,4 +272,54 @@ Theory.playSampleChord = function(synth, chordKindIndex, rootMidiPitch, embelish
 	}
 	
 	synth.play();
+}
+
+
+Theory.getDegreeColor = function(degree)
+{
+	switch (degree)
+	{
+		case 0: return "#f00";
+		case 1: return "#f80";
+		case 2: return "#fd0";
+		case 3: return "#0d0";
+		case 4: return "#00f";
+		case 5: return "#80f";
+		case 6: return "#f0f";
+		
+		case 0.5: return "#800";
+		case 1.5: return "#840";
+		case 2.5: return "#860";
+		case 3.5: return "#060";
+		case 4.5: return "#008";
+		case 5.5: return "#408";
+		case 6.5: return "#808";
+		
+		default: return "#888";
+	}
+}
+
+
+Theory.getDegreeColorAccent = function(degree)
+{
+	switch (degree)
+	{
+		case 0: return "#fdd";
+		case 1: return "#fed";
+		case 2: return "#fed";
+		case 3: return "#dfd";
+		case 4: return "#ddf";
+		case 5: return "#edf";
+		case 6: return "#fdf";
+		
+		case 0.5: return "#fdd";
+		case 1.5: return "#fed";
+		case 2.5: return "#fed";
+		case 3.5: return "#dfd";
+		case 4.5: return "#ddf";
+		case 5.5: return "#edf";
+		case 6.5: return "#fdf";
+		
+		default: return "#eee";
+	}
 }

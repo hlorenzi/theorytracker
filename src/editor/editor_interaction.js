@@ -149,12 +149,18 @@ Editor.prototype.cursorSetTickBoth = function(tick)
 {
 	this.cursorTick1 = tick.clone();
 	this.cursorTick2 = tick.clone();
+	
+	if (this.callbackCursorChange != null)
+		this.callbackCursorChange(this.cursorTick1);
 }
 
 
 Editor.prototype.cursorSetTick2 = function(tick)
 {
 	this.cursorTick2 = tick.clone();
+	
+	if (this.callbackCursorChange != null)
+		this.callbackCursorChange(this.cursorTick2);
 }
 
 
@@ -809,55 +815,14 @@ Editor.prototype.performCursorTrackChange = function(amount, both)
 
 Editor.prototype.performInsertPitchAction = function(midiPitch)
 {
-	this.cursorSetTickAtSelectionEnd();
-	this.sliceOverlapping();
-	this.selectNone();
-	
-	// Add a note.
-	if (this.cursorTrack1 != this.cursorTrack2 ||
-		this.cursorTrack1 == 0)
+	if (this.cursorTrack1 != this.cursorTrack2 || this.cursorTrack1 == 0)
 	{
-		var note = new SongNote(
-			this.cursorTick1.clone(),
-			this.cursorTick1.clone().add(this.newElementDuration),
-			0,
-			midiPitch + 60,
-			{ selected: true });
-		
-		this.song.notes.insert(note);
-		
-		this.synth.clear();
-		this.synth.stop();
-		Theory.playSampleNote(this.synth, midiPitch + 60);
-		this.synth.play();
-		
-		this.cursorSetTrackBoth(0);
+		this.insertNote(midiPitch + 60);
 	}
-	
-	// Else, add a chord.
 	else
 	{
-		var chord = new SongChord(
-			this.cursorTick1.clone(),
-			this.cursorTick1.clone().add(this.newElementDuration),
-			0,
-			midiPitch,
-			[],
-			{ selected: true });
-		
-		this.song.chords.insert(chord);
-		
-		this.synth.clear();
-		this.synth.stop();
-		Theory.playSampleChord(this.synth, 0, midiPitch, []);
-		this.synth.play();
-		
-		this.cursorSetTrackBoth(1);
+		this.insertChord(0, midiPitch, []);
 	}
-	
-	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
-	this.autoExtendSongLength();
-	this.refresh();
 }
 
 

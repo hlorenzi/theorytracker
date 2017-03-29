@@ -19,9 +19,17 @@ body
 	width: 100%;
 	height: 130px;
 	padding-top: 5px;
+	padding-bottom: 5px;
+	padding-left: 5px;
+	padding-right: 5px;
 	overflow: hidden;
 	background-color: #ddd;
 	text-align: center;
+}
+
+#tableToolboxMainLayout
+{
+	height: 120px;
 }
 
 #divEditor
@@ -37,6 +45,34 @@ body
 	width: 100%;
 }
 
+.toolboxGroup
+{
+	padding-left: 10px;
+	padding-right: 10px;
+	background-color: #ccc;
+	border-radius: 5px;
+}
+
+.toolboxGroup2
+{
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	background-color: #bbb;
+	border-radius: 5px;
+}
+
+.toolboxSeparator
+{
+	border-left: 1px solid black;
+}
+
+.toolboxGroupMainTabs
+{
+	width: 100px;
+}
+
 .toolboxLabel
 {
 	margin-top: 5px;
@@ -47,7 +83,6 @@ body
 
 .toolboxButton
 {
-	margin: 1px;
 	padding-left: 10px;
 	padding-right: 10px;
 	padding-top: 2px;
@@ -79,15 +114,14 @@ body
 .toolboxButtonPlay
 {
 	font-size: 24px;
-	width: 110px;
+	width: 120px;
 	height: 60px;
 }
 
-.toolboxButtonSelected
+.toolboxMainTabSelected
 {
 	position: relative;
-	left: 8px;
-	margin: 1px;
+	left: 10px;
 	padding-left: 10px;
 	padding-right: 10px;
 	padding-top: 2px;
@@ -105,6 +139,40 @@ body
 	height: 40px;
 }
 
+.toolboxChord
+{
+	width: 40px;
+	height: 30px;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	background-color: #fff;
+	border: 0;
+	border-top: 2px solid #fff;
+	border-bottom: 2px solid black;
+	border-radius: 5px;
+	outline: none;
+	overflow: hidden;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-align: center;
+}
+
+.toolboxChord:hover
+{
+	cursor: pointer;
+}
+
+.toolboxChord:active
+{
+	cursor: pointer;
+	background-color: #ddd;
+	border: 0;
+	border-top: 2px solid black;
+	border-bottom: 2px solid #ddd;
+}
+
 .toolboxInput
 {
 	margin-top: 5px;
@@ -117,6 +185,10 @@ body
 	text-align: center;
 	width: 60px;
 	height: 20px;
+}
+
+.toolboxCheckbox
+{
 }
 
 .editorBlockBackground
@@ -144,160 +216,17 @@ body
 	stroke-width: 2px;
 }
 
-.editorDegree0
+.editorDegree
 {
 	stroke-width: 0px;
-	fill: #f00;
+	fill: #888;
 }
 
-.editorDegree0Selected
+.editorDegreeSelected
 {
 	stroke-width: 2px;
-	stroke: #f00;
-	fill: #fcc;
-}
-
-.editorDegree1
-{
-	stroke-width: 0px;
-	fill: #f40;
-}
-
-.editorDegree1Selected
-{
-	stroke-width: 2px;
-	stroke: #f40;
-	fill: #fed;
-}
-
-.editorDegree2
-{
-	stroke-width: 0px;
-	fill: #f80;
-}
-
-.editorDegree2Selected
-{
-	stroke-width: 2px;
-	stroke: #f80;
-	fill: #fed;
-}
-
-.editorDegree3
-{
-	stroke-width: 0px;
-	fill: #fa0;
-}
-
-.editorDegree3Selected
-{
-	stroke-width: 2px;
-	stroke: #fa0;
-	fill: #fed;
-}
-
-.editorDegree4
-{
-	stroke-width: 0px;
-	fill: #fd0;
-}
-
-.editorDegree4Selected
-{
-	stroke-width: 2px;
-	stroke: #fd0;
-	fill: #fed;
-}
-
-.editorDegree5
-{
-	stroke-width: 0px;
-	fill: #0d0;
-}
-
-.editorDegree5Selected
-{
-	stroke-width: 2px;
-	stroke: #0d0;
-	fill: #dfd;
-}
-
-.editorDegree6
-{
-	stroke-width: 0px;
-	fill: #068;
-}
-
-.editorDegree6Selected
-{
-	stroke-width: 2px;
-	stroke: #068;
-	fill: #def;
-}
-
-.editorDegree7
-{
-	stroke-width: 0px;
-	fill: #00f;
-}
-
-.editorDegree7Selected
-{
-	stroke-width: 2px;
-	stroke: #00f;
-	fill: #ddf;
-}
-
-.editorDegree8
-{
-	stroke-width: 0px;
-	fill: #40f;
-}
-
-.editorDegree8Selected
-{
-	stroke-width: 2px;
-	stroke: #40f;
-	fill: #edf;
-}
-
-.editorDegree9
-{
-	stroke-width: 0px;
-	fill: #80f;
-}
-
-.editorDegree9Selected
-{
-	stroke-width: 2px;
-	stroke: #80f;
-	fill: #edf;
-}
-
-.editorDegree10
-{
-	stroke-width: 0px;
-	fill: #a0f;
-}
-
-.editorDegree10Selected
-{
-	stroke-width: 2px;
-	stroke: #a0f;
-	fill: #edf;
-}
-
-.editorDegree11
-{
-	stroke-width: 0px;
-	fill: #f0f;
-}
-
-.editorDegree11Selected
-{
-	stroke-width: 2px;
-	stroke: #f0f;
-	fill: #fdf;
+	stroke: #888;
+	fill: #eee;
 }
 
 .editorChordBackground
