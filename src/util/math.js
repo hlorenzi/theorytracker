@@ -10,6 +10,12 @@ function mod(x, m)
 }
 
 
+function midiPitchToHertz(midiPitch)
+{
+	return Math.pow(2, (midiPitch - 69) / 12) * 440;
+}
+
+
 function stretch(x, pivot, origin, delta)
 {
 	var dist = (origin - pivot);
