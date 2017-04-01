@@ -68,8 +68,7 @@ Song.prototype.feedSynth = function(synth, startTick)
 		var timeStart = offsetStart.asFloat() * (1000 / that.bpm / 4);
 		var timeEnd = offsetEnd.asFloat() * (1000 / that.bpm / 4);
 		
-		synth.addNoteOn(timeStart, 0, note.midiPitch, 1);
-		synth.addNoteOff(timeEnd - 0.01, 0, note.midiPitch);
+		synth.addNoteEvent(timeStart, 0, midiPitchToHertz(note.midiPitch), 1, timeEnd - timeStart);
 	});
 	
 	// Register chords.
@@ -89,8 +88,7 @@ Song.prototype.feedSynth = function(synth, startTick)
 			var timeStart = offsetStart.asFloat() * (1000 / that.bpm / 4);
 			var timeEnd = offsetEnd.asFloat() * (1000 / that.bpm / 4);
 			
-			synth.addNoteOn(timeStart, 1, pitches[j], 1);
-			synth.addNoteOff(timeEnd - 0.01, 1, pitches[j], 1);
+			synth.addNoteEvent(timeStart, 0, midiPitchToHertz(pitches[j]), 1, timeEnd - timeStart);
 		}
 	});
 }

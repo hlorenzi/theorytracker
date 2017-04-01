@@ -272,26 +272,20 @@ Theory.findChordKindIndex = function(relativePitches)
 
 Theory.playSampleNote = function(synth, midiPitch)
 {
-	synth.clear();
 	synth.stop();
-	synth.addNoteOn(0, 0, midiPitch, 1);
-	synth.addNoteOff(0.1, 0, midiPitch);
+	synth.addNoteEvent(0, 0, midiPitchToHertz(midiPitch), 1, 0.1);
 	synth.play();
 }
 
 
 Theory.playSampleChord = function(synth, chordKindIndex, rootMidiPitch, embelishments)
 {
-	synth.clear();
 	synth.stop();
 	
 	var pitches = Theory.calculateChordPitches(chordKindIndex, rootMidiPitch, embelishments);
 	
 	for (var j = 0; j < pitches.length; j++)
-	{
-		synth.addNoteOn(0, 1, pitches[j], 1);
-		synth.addNoteOff(0.1, 1, pitches[j], 1);
-	}
+		synth.addNoteEvent(0, 0, midiPitchToHertz(pitches[j]), 1, 0.2);
 	
 	synth.play();
 }

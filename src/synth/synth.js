@@ -1,15 +1,28 @@
 function Synth()
 {
-	this.audioCtx      = new AudioContext();
-	this.interval      = null;
-	this.globalVolume  = 0.1;
-	this.time          = 0;
-	this.noteOnEvents  = [];
-	this.noteOffEvents = [];
-	this.voices        = [];
+	this.audioCtx     = new AudioContext();
+	this.interval     = null;
+	this.time         = 0;
+	this.noteEvents   = [];
+	this.playingNotes = [];
 	this.processCallback = null;
 	
-	this.instruments = [InstrumentPiano, InstrumentPiano];
+	this.audioCtxOutput = this.audioCtx.createGain();
+	this.audioCtxOutput.connect(this.audioCtx.destination);
+	this.audioCtxOutput.gain.value = 0.1;
+	
+	var piano = new Instrument(this,
+	[
+		[  55.0, "audio/piano/a1.mp3"],
+		[ 110.0, "audio/piano/a2.mp3"],
+		[ 220.0, "audio/piano/a3.mp3"],
+		[ 440.0, "audio/piano/a4.mp3"],
+		[ 880.0, "audio/piano/a5.mp3"],
+		[1760.0, "audio/piano/a6.mp3"],
+		[3520.0, "audio/piano/a7.mp3"]
+	]);
+	
+	this.instruments = [piano, piano];
 }
 
 
@@ -20,7 +33,7 @@ Synth.prototype.play = function(callback)
 	
 	this.processCallback = callback;
 	
-	this.sortEvents();
+	this.noteEvents.sort(function (a, b) { return a.time - b.time; });
 	
 	var that = this;
 	this.interval = setInterval(function() { that.process(1 / 60); }, 1000 / 60);
@@ -29,23 +42,18 @@ Synth.prototype.play = function(callback)
 
 Synth.prototype.stop = function()
 {
+	this.time = 0;
+	this.noteEvents = [];
+	
 	if (this.interval != null)
 		clearInterval(this.interval);
 	
-	this.interval = null;	
-}
-
-
-Synth.prototype.clear = function()
-{
-	for (var i = this.voices.length - 1; i >= 0; i--)
-		this.voiceStop(i);
+	this.interval = null;
 	
-	this.voices        = [];
-	this.noteOnEvents  = [];
-	this.noteOffEvents = [];
+	for (var i = 0; i < this.playingNotes.length; i++)
+		this.playingNotes[i].stop();
 	
-	this.time = 0;
+	this.playingNotes = [];
 }
 
 
@@ -56,173 +64,50 @@ Synth.prototype.process = function(deltaTime)
 	if (this.processCallback != null)
 		this.processCallback(this.time);
 	
-	// Process note events.
-	var noteOnProcessed = 0;
-	var noteOffProcessed = 0;
-	
-	while (true)
+	// Process pending note events up to the current time.
+	var noteEventsProcessed = 0;
+	while (noteEventsProcessed < this.noteEvents.length &&
+		this.noteEvents[noteEventsProcessed].time <= this.time)
 	{
-		// Handle pending note on events up to the current time.
-		if (noteOnProcessed < this.noteOnEvents.length &&
-			this.noteOnEvents[noteOnProcessed].time <= this.time)
-		{
-			var ev = this.noteOnEvents[noteOnProcessed];
-			noteOnProcessed++;
-			
-			this.voiceStart(ev.instrumentIndex, ev.midiPitch, ev.volume);
-		}
+		var ev = this.noteEvents[noteEventsProcessed];
+		noteEventsProcessed++;
 		
-		// Handle pending note off events up to the current time.
-		else if (noteOffProcessed < this.noteOffEvents.length &&
-			this.noteOffEvents[noteOffProcessed].time <= this.time)
-		{
-			var ev = this.noteOffEvents[noteOffProcessed];
-			noteOffProcessed++;
+		var noteData =
+			this.instruments[ev.instrumentIndex].playNote(ev.frequency, ev.volume, ev.duration);
 			
-			for (var j = 0; j < this.voices.length; j++)
-			{
-				var voice = this.voices[j];
-				if (voice.instrumentIndex == ev.instrumentIndex &&
-					voice.midiPitch == ev.midiPitch)
-				{
-					this.voiceRelease(j);
-				}
-			}
-		}
+		var that = this;
+		noteData.process = function(deltaTime)
+		{
+			that.instruments[ev.instrumentIndex].processNote(this, deltaTime);
+		};
 		
-		// Else, there are no more events up to the current time.
-		else
-			break;
+		noteData.stop = function()
+		{
+			that.instruments[ev.instrumentIndex].stopNote(this);
+		};
+			
+		this.playingNotes.push(noteData);
 	}
 	
 	// Remove processed events.
-	this.noteOnEvents.splice(0, noteOnProcessed);
-	this.noteOffEvents.splice(0, noteOffProcessed);
+	this.noteEvents.splice(0, noteEventsProcessed);
 	
 	// Update audio output.
-	for (var i = this.voices.length - 1; i >= 0; i--)
+	for (var i = this.playingNotes.length - 1; i >= 0; i--)
 	{
-		var voice = this.voices[i];
-		
-		voice.time += deltaTime;
-		if (voice.released)
-			voice.timeReleased += deltaTime;
-		
-		var frequencies = this.instruments[voice.instrumentIndex].generate(
-			voice.time, voice.timeReleased, voice.midiPitch);
-		
-		if (frequencies == null)
-		{
-			this.voiceStop(i);
-			this.voices.splice(i, 1);
-		}
-		else
-		{
-			for (var j = 0; j < frequencies.length; j++)
-			{
-				voice.oscillators[j].frequency.value =
-					Math.min(24000, frequencies[j][0] * voice.frequencyInHertz);
-				
-				voice.gainNodes[j].gain.value = frequencies[j][1] * voice.volume * this.globalVolume;
-			}
-		}
+		if (this.playingNotes[i].process(deltaTime))
+			this.playingNotes.splice(i, 1);
 	}
 }
 
 
-Synth.prototype.addNoteOn = function(time, instrumentIndex, midiPitch, volume)
+Synth.prototype.addNoteEvent = function(time, instrumentIndex, frequency, volume, duration)
 {
-	this.noteOnEvents.push({
+	this.noteEvents.push({
 		time:            time + this.time,
 		instrumentIndex: instrumentIndex,
-		midiPitch:       midiPitch,
-		volume:          volume
+		frequency:       frequency,
+		volume:          volume,
+		duration:        duration
 	});
-}
-
-
-Synth.prototype.addNoteOff = function(time, instrumentIndex, midiPitch)
-{
-	this.noteOffEvents.push({
-		time:            time + this.time,
-		instrumentIndex: instrumentIndex,
-		midiPitch:       midiPitch
-	});
-}
-
-
-Synth.prototype.sortEvents = function()
-{
-	this.noteOnEvents.sort(function (a, b)
-		{ return a.time - b.time; });
-		
-	this.noteOffEvents.sort(function (a, b)
-		{ return a.time - b.time; });
-}
-
-
-Synth.prototype.voiceStart = function(instrumentIndex, midiPitch, volume)
-{
-	for (var i = this.voices.length - 1; i >= 0; i--)
-	{
-		var otherVoice = this.voices[i];
-		if (otherVoice.instrumentIndex == instrumentIndex &&
-			otherVoice.midiPitch == midiPitch)
-		{
-			this.voiceStop(i);
-			this.voices.splice(i, 1);
-		}
-	}
-	
-	var frequencyInHertz = Math.pow(2, (midiPitch - 69) / 12) * 440;
-	
-	var voice = {
-		instrumentIndex:  instrumentIndex,
-		midiPitch:        midiPitch,
-		frequencyInHertz: frequencyInHertz,
-		volume:           volume,
-		time:             0,
-		timeReleased:     0,
-		released:         false,
-		oscillators:      [],
-		gainNodes:        []
-	};
-	
-	var frequencies = this.instruments[instrumentIndex].generate(0, 0, midiPitch);
-	if (frequencies == null)
-		return;
-	
-	for (var i = 0; i < frequencies.length; i++)
-	{
-		var oscillator = this.audioCtx.createOscillator();
-		oscillator.frequency.value = Math.min(24000, frequencies[i][0] * frequencyInHertz);
-		oscillator.type = "sine";
-		
-		var gainNode = this.audioCtx.createGain();
-		oscillator.connect(gainNode);
-		gainNode.connect(this.audioCtx.destination);
-		gainNode.gain.value = frequencies[i][1] * volume * this.globalVolume;
-		
-		oscillator.start(0);
-		
-		voice.oscillators.push(oscillator);
-		voice.gainNodes.push(gainNode);
-	}
-	
-	this.voices.push(voice);
-}
-
-
-Synth.prototype.voiceRelease = function(index)
-{
-	var voice = this.voices[index];
-	voice.released = true;
-}
-
-
-Synth.prototype.voiceStop = function(index)
-{
-	var voice = this.voices[index];
-	for (var i = 0; i < voice.oscillators.length; i++)
-		voice.oscillators[i].stop(0);
 }

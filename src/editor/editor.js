@@ -98,7 +98,6 @@ Editor.prototype.togglePlay = function()
 	}
 	else
 	{
-		this.synth.clear();
 		this.synth.stop();
 		this.cursorHidePlayback();
 		this.cursorVisible = true;
@@ -112,7 +111,6 @@ Editor.prototype.togglePlay = function()
 
 Editor.prototype.play = function(startAtTick)
 {
-	this.synth.clear();
 	this.synth.stop();
 	
 	if (this.song != null)
@@ -171,10 +169,7 @@ Editor.prototype.insertNote = function(midiPitch)
 	
 	this.song.notes.insert(note);
 	
-	this.synth.clear();
-	this.synth.stop();
 	Theory.playSampleNote(this.synth, midiPitch);
-	this.synth.play();
 	
 	this.cursorSetTrackBoth(0);
 	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
@@ -200,10 +195,7 @@ Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishm
 	
 	this.song.chords.insert(chord);
 	
-	this.synth.clear();
-	this.synth.stop();
 	Theory.playSampleChord(this.synth, chordKindIndex, rootMidiPitch, embelishments);
-	this.synth.play();
 	
 	this.cursorSetTrackBoth(1);
 	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
