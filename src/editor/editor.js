@@ -32,7 +32,7 @@ function Editor(svg, synth)
 	
 	this.margin = 20;
 	this.marginBetweenRows = 10;
-	this.wholeTickWidth = 100;
+	this.wholeTickWidth = 150;
 	this.noteHeight = 5;
 	this.noteSideMargin = 0.5;
 	this.chordHeight = 50;
@@ -150,6 +150,29 @@ Editor.prototype.rewind = function()
 	this.sliceOverlapping();
 	this.selectNone();
 	this.cursorSetTickBoth(new Rational(0));
+	
+	this.refresh();
+}
+
+
+Editor.prototype.setCursorSnap = function(newSnap)
+{
+	this.sliceOverlapping();
+	this.selectNone();
+	
+	this.cursorSnap = newSnap;
+	
+	// Re-align cursor.
+	var cursorTickFloat = this.cursorTick1.clone().min(this.cursorTick2).asFloat();
+	this.cursorSetTickBoth(Rational.fromFloat(cursorTickFloat, this.cursorSnap));
+	
+	// Re-align new element duration.
+	this.newElementDuration =
+		Rational.fromFloat(this.newElementDuration.asFloat(), this.cursorSnap);
+		
+	if (this.newElementDuration.compare(this.cursorSnap) < 0)
+		this.newElementDuration = this.cursorSnap.clone();
+	
 	
 	this.refresh();
 }

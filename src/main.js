@@ -85,6 +85,22 @@ function refreshSelectBoxes()
 	}
 	selectMeterDenominator.selectedIndex = 2;
 	
+	var selectSnap = document.getElementById("selectSnap");
+	for (var i = 0; i < Theory.allowedSnaps.length; i++)
+	{
+		if (Theory.allowedSnaps[i].startGroup != undefined)
+		{
+			var group = document.createElement("optgroup");
+			group.label = "-- " + Theory.allowedSnaps[i].startGroup + " --";
+			selectSnap.appendChild(group);
+		}
+		
+		var option = document.createElement("option");
+		option.innerHTML = Theory.allowedSnaps[i].snap.toUserString();
+		selectSnap.appendChild(option);
+	}
+	selectSnap.selectedIndex = 0;
+	
 	
 	var selectChordKinds = document.getElementById("selectChordKinds");
 	
@@ -153,6 +169,13 @@ function handleInputTempo()
 	
 	if (Theory.isValidBpm(tempo))
 		g_Song.bpm = tempo;
+}
+
+
+function handleSelectSnap()
+{
+	var snapIndex = document.getElementById("selectSnap").selectedIndex;
+	g_Editor.setCursorSnap(Theory.allowedSnaps[snapIndex].snap);
 }
 
 

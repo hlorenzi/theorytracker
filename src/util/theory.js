@@ -66,6 +66,23 @@ Theory.chordKinds =
 ];
 
 
+Theory.allowedSnaps =
+[
+	{ snap: new Rational(0, 1, 16), startGroup: "Regular" },
+	{ snap: new Rational(0, 1, 32) },
+	{ snap: new Rational(0, 1, 64) },
+	{ snap: new Rational(0, 1, 12), startGroup: "Triplets" },
+	{ snap: new Rational(0, 1, 24) },
+	{ snap: new Rational(0, 1, 48) },
+	{ snap: new Rational(0, 1, 20), startGroup: "Quintuplets" },
+	{ snap: new Rational(0, 1, 40) },
+	{ snap: new Rational(0, 1, 80) },
+	{ snap: new Rational(0, 1, 28), startGroup: "Septuplets" },
+	{ snap: new Rational(0, 1, 52) },
+	{ snap: new Rational(0, 1, 104) }
+];
+
+
 Theory.midiPitchMin = 12 * 2;
 Theory.midiPitchMax = 12 * 9 - 1;
 
