@@ -52,9 +52,28 @@ Song.prototype.sanitize = function()
 }
 
 
-Song.prototype.feedSynth = function(synth, startTick)
+Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 {
 	var that = this;
+	
+	var addNoteEvent = function(tickStart, duration, instrument, midiPitch, volume)
+	{
+		var offsetStart = tickStart.clone().subtract(startTick);
+		
+		var timeStart = offsetStart.asFloat() * (1000 / that.bpm / 4);
+		var timeDuration = duration.asFloat() * (1000 / that.bpm / 4);
+		
+		if (timeStart <= 0)
+		{
+			timeDuration += timeStart;
+			timeStart = 0;
+		}
+		
+		if (timeDuration <= 0)
+			return;
+		
+		synth.addNoteEvent(timeStart, instrument, midiPitchToHertz(midiPitch), volume, timeDuration);
+	}
 	
 	// Register notes.
 	this.notes.enumerateAll(function (note)
@@ -62,13 +81,7 @@ Song.prototype.feedSynth = function(synth, startTick)
 		if (note.endTick.compare(startTick) <= 0)
 			return;
 		
-		var offsetStart = note.startTick.clone().subtract(startTick);
-		var offsetEnd = note.endTick.clone().subtract(startTick);
-		
-		var timeStart = offsetStart.asFloat() * (1000 / that.bpm / 4);
-		var timeEnd = offsetEnd.asFloat() * (1000 / that.bpm / 4);
-		
-		synth.addNoteEvent(timeStart, 0, midiPitchToHertz(note.midiPitch), 1, timeEnd - timeStart);
+		addNoteEvent(note.startTick, note.endTick.clone().subtract(note.startTick), 0, note.midiPitch, 1);
 	});
 	
 	// Register chords.
@@ -79,16 +92,91 @@ Song.prototype.feedSynth = function(synth, startTick)
 		
 		var pitches = Theory.calculateChordPitches(
 			chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments);
-		
-		for (var j = 0; j < pitches.length; j++)
+			
+		if (!useChordPatterns)
 		{
-			var offsetStart = chord.startTick.clone().subtract(startTick);
-			var offsetEnd = chord.endTick.clone().subtract(startTick);
+			for (var j = 0; j < pitches.length; j++)
+				addNoteEvent(chord.startTick, chord.endTick.clone().subtract(chord.startTick), 1, pitches[j], 0.7);
+			return;
+		}
 			
-			var timeStart = offsetStart.asFloat() * (1000 / that.bpm / 4);
-			var timeEnd = offsetEnd.asFloat() * (1000 / that.bpm / 4);
+		var meter = that.meterChanges.findPrevious(chord.startTick);
+		var meterBeatLength = meter.getBeatLength();
+		
+		var pattern = Theory.calculateChordStrummingPattern(
+			meter.numerator, meter.denominator);
+		
+		var tick = meter.tick.clone();
+		var skipTick = new Rational(0);
+		var patternIndex = 0;
+		var mustPlayFirstBeat = false;
+		
+		while (tick.compare(chord.endTick) < 0)
+		{
+			var patternBeat = pattern[patternIndex];
+			var patternBeatKind = patternBeat[0];
+			var patternBeatLength = patternBeat[1].clone().multiply(meterBeatLength);
+			patternIndex = (patternIndex + 1) % pattern.length;
 			
-			synth.addNoteEvent(timeStart, 0, midiPitchToHertz(pitches[j]), 1, timeEnd - timeStart);
+			var nextTick = tick.clone().add(patternBeatLength);
+			if (nextTick.compare(chord.endTick) > 0)
+			{
+				nextTick = chord.endTick.clone();
+				patternBeatLength = nextTick.clone().subtract(tick);
+			}
+			
+			// Handle beats after the first one.
+			if (tick.compare(chord.startTick) > 0 && skipTick.compare(new Rational(0)) <= 0)
+			{
+				if (mustPlayFirstBeat)
+				{
+					mustPlayFirstBeat = false;
+					for (var j = 0; j < pitches.length; j++)
+						addNoteEvent(chord.startTick, tick.clone().subtract(chord.startTick), 1, pitches[j], 0.7);
+				}
+				
+				switch (patternBeatKind)
+				{
+					case 0:
+					{
+						for (var j = 0; j < pitches.length; j++)
+							addNoteEvent(tick, patternBeatLength, 1, pitches[j], 0.6);
+						break;
+					}
+					case 1:
+					{
+						for (var j = 1; j < pitches.length; j++)
+							addNoteEvent(tick, patternBeatLength, 1, pitches[j], 0.5);
+						break;
+					}
+					case 2:
+					{
+						addNoteEvent(tick, patternBeatLength, 1, pitches[0], 0.5);
+						break;
+					}
+				}
+			}
+			
+			skipTick.subtract(patternBeatLength);
+			
+			// Mark first beat occurred; will register notes on next beat, to account
+			// for longer starting beats due to off-beat chords.
+			if (tick.compare(chord.startTick) <= 0 && nextTick.compare(chord.startTick) > 0)
+			{
+				mustPlayFirstBeat = true;
+				
+				if (!(tick.compare(chord.startTick) == 0 && patternBeatKind == 0))
+					skipTick = pattern[0][1].clone().multiply(meterBeatLength);
+			}
+			
+			tick = nextTick;
+		}
+		
+		if (mustPlayFirstBeat)
+		{
+			mustPlayFirstBeat = false;
+			for (var j = 0; j < pitches.length; j++)
+				addNoteEvent(chord.startTick, tick.clone().subtract(chord.startTick), 1, pitches[j], 0.7);
 		}
 	});
 }

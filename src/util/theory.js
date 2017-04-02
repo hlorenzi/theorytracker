@@ -181,28 +181,37 @@ Theory.calculateChordPitches = function(chordKindIndex, rootMidiPitch, embelishm
 }
 
 
-/*Theory.getChordBassPattern = function(meter)
+Theory.calculateChordStrummingPattern = function(numerator, denominator)
 {
-	// [ [ start beat, end beat, volume ], ... ]
-	switch (meter.numerator)
+	// [[beat kind, duration], ...]
+	// Beat kinds:
+	//   0: Full chord
+	//   1: Full chord minus bass
+	//   2: Only bass
+	var one   = [[0, new Rational(1)]];
+	var two   = [[0, new Rational(1)], [1, new Rational(0, 1, 2)], [2, new Rational(0, 1, 2)]];
+	var three = [[0, new Rational(1)], [1, new Rational(1)      ], [1, new Rational(1)      ]];
+	
+	switch (numerator)
 	{
-		case 3: return [ [ 0, 1.5, 1 ], [ 1.5, 2, 0.7 ] ];
-		case 4: return [ [ 0, 1.5, 1 ], [ 1.5, 2, 0.7 ], [ 2, 3.5, 1 ], [ 3.5, 4, 0.7 ] ];
-		default: return [ ];
+		case 2: return two;
+		case 3: return three;
+		case 4: return two.concat(two);
+		case 5: return three.concat(two);
+		case 6: return three.concat(three);
+		case 7: return three.concat(two).concat(two);
+		case 8: return two.concat(two).concat(two).concat(two);
+		case 9: return three.concat(three).concat(three);
+		
+		default:
+		{
+			var pattern = [];
+			for (var i = 0; i < numerator; i++)
+				pattern = pattern.concat(one);
+			return pattern;
+		}
 	}
 }
-
-
-Theory.getChordStackPattern = function(meter)
-{
-	// [ [ start beat, end beat, volume ], ... ]
-	switch (meter.numerator)
-	{
-		case 3: return [ [ 0, 1, 1 ], [ 1, 2, 0.7 ], [ 2, 3, 0.7 ] ];
-		case 4: return [ [ 0, 0.9, 1 ], [ 1, 1.9, 0.5 ], [ 2, 2.9, 0.7 ], [ 3, 3.9, 0.5 ] ];
-		default: return [ ];
-	}
-}*/
 
 
 Theory.findPitchDegree = function(scaleIndex, relativePitch, usePopularNotation = true)

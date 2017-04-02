@@ -41,6 +41,7 @@ function Editor(svg, synth)
 	this.handleSize = 8;
 	
 	this.usePopularNotation = true;
+	this.useChordPatterns = true;
 	
 	this.eventInit();
 	
@@ -114,7 +115,7 @@ Editor.prototype.play = function(startAtTick)
 	this.synth.stop();
 	
 	if (this.song != null)
-		this.song.feedSynth(this.synth, startAtTick);
+		this.song.feedSynth(this.synth, startAtTick, this.useChordPatterns);
 	
 	this.sliceOverlapping();
 	this.selectNone();

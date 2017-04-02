@@ -263,10 +263,15 @@ function handleSelectChordKindsChange()
 
 function handleCheckboxPopularNotation()
 {
-	var usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
-	g_Editor.usePopularNotation = usePopularNotation;
+	g_Editor.usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
 	g_Editor.refresh();
 	refreshKeyDependentItems();
+}
+
+
+function handleCheckboxChordPatterns()
+{
+	g_Editor.useChordPatterns = document.getElementById("checkboxChordPatterns").checked;
 }
 
 
@@ -350,7 +355,7 @@ function handleButtonLoadDropbox()
 function handleButtonSaveDropbox()
 {
 	var songData = g_Song.save();
-	var data = "data:," + encodeURIComponent(songData);
+	var data = "data:text/plain," + encodeURIComponent(songData);
 	
 	Dropbox.save(
 		data,
@@ -370,7 +375,7 @@ function handleButtonSaveAsDropbox()
 		return;
 	
 	var songData = g_Song.save();
-	var data = "data:," + encodeURIComponent(songData);
+	var data = "data:text/plain," + encodeURIComponent(songData);
 	
 	Dropbox.save(
 		data,

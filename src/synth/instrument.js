@@ -67,7 +67,7 @@ Instrument.prototype.playNote = function(frequency, volume, duration)
 		released: false,
 		voices:
 		[
-			this.playSample(bestFitSample, frequency, volume)
+			this.playVoice(bestFitSample, frequency, volume)
 		]
 	};
 	
@@ -75,7 +75,7 @@ Instrument.prototype.playNote = function(frequency, volume, duration)
 }
 
 
-Instrument.prototype.playSample = function(sample, frequency, volume)
+Instrument.prototype.playVoice = function(sample, frequency, volume)
 {
 	var sourceNode = this.synth.audioCtx.createBufferSource();
 	sourceNode.playbackRate.value = frequency / sample.frequency;
