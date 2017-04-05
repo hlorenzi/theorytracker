@@ -433,9 +433,6 @@ Editor.prototype.eventMouseUp = function(ev)
 Editor.prototype.eventMouseOut = function(ev)
 {
 	ev.preventDefault();
-	
-	if (this.isPlaying)
-		return;
 }
 
 
@@ -654,6 +651,7 @@ Editor.prototype.performDeleteAction = function()
 	this.selectNone();
 	this.song.sanitize();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -742,6 +740,7 @@ Editor.prototype.performBackEraseAction = function()
 	this.cursorVisible = true;
 	this.selectNone();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -888,6 +887,7 @@ Editor.prototype.performElementPitchChange = function(amount)
 			chordToSample.embelishments);
 	
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -965,6 +965,7 @@ Editor.prototype.performElementTimeChange = function(amount)
 	
 	this.song.sanitize();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -997,6 +998,7 @@ Editor.prototype.performElementDurationChange = function(amount)
 	
 	
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -1091,6 +1093,7 @@ Editor.prototype.eraseNotesAt = function(start, end, atMidiPitch = null)
 		
 	this.song.notes.removeList(overlappingNotes);
 	this.song.notes.insertList(slicedNotes);
+	this.setUnsavedChanges(overlappingNotes.length > 0 || slicedNotes.length > 0);
 }
 
 
@@ -1123,6 +1126,7 @@ Editor.prototype.eraseChordsAt = function(start, end)
 		
 	this.song.chords.removeList(overlappingChords);
 	this.song.chords.insertList(slicedChords);
+	this.setUnsavedChanges(overlappingChords.length > 0 || slicedChords.length > 0);
 }
 
 
@@ -1138,6 +1142,7 @@ Editor.prototype.eraseKeyChangesAt = function(start, end)
 		});
 		
 	this.song.keyChanges.removeList(overlappingKeyChanges);
+	this.setUnsavedChanges(overlappingKeyChanges.length > 0);
 }
 
 
@@ -1153,6 +1158,7 @@ Editor.prototype.eraseMeterChangesAt = function(start, end)
 		});
 		
 	this.song.meterChanges.removeList(overlappingMeterChanges);
+	this.setUnsavedChanges(overlappingMeterChanges.length > 0);
 }
 
 
@@ -1168,4 +1174,5 @@ Editor.prototype.eraseForcedMeasuresAt = function(start, end)
 		});
 		
 	this.song.forcedMeasures.removeList(overlappingForcedMeasures);
+	this.setUnsavedChanges(overlappingForcedMeasures.length > 0);
 }

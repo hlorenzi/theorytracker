@@ -9,6 +9,7 @@ function Editor(svg, synth)
 	
 	this.song = null;
 	this.isPlaying = false;
+	this.unsavedChanges = false;
 	
 	this.blocks = [];
 	this.elements = [];
@@ -47,6 +48,15 @@ function Editor(svg, synth)
 	
 	this.callbackTogglePlay = null;
 	this.callbackCursorChange = null;
+	this.callbackSongChange = null;
+}
+
+
+Editor.prototype.setUnsavedChanges = function(unsavedChanges = true)
+{
+	this.unsavedChanges = unsavedChanges;
+	if (unsavedChanges && this.callbackSongChange != null)
+		this.callbackSongChange();
 }
 
 
@@ -200,6 +210,7 @@ Editor.prototype.insertNote = function(midiPitch)
 	
 	this.autoExtendSongLength();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -226,6 +237,7 @@ Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishm
 	
 	this.autoExtendSongLength();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -261,6 +273,7 @@ Editor.prototype.insertKeyChange = function(scaleIndex, tonicMidiPitch)
 		new SongKeyChange(this.cursorTick1.clone(), scaleIndex, tonicMidiPitch, { selected: true }));
 	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -272,6 +285,7 @@ Editor.prototype.insertMeterChange = function(numerator, denominator)
 		new SongMeterChange(this.cursorTick1.clone(), numerator, denominator, { selected: true }));
 	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 

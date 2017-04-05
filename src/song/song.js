@@ -182,7 +182,7 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 }
 
 // Returns a JSON string containing the song data.
-Song.prototype.save = function()
+Song.prototype.save = function(compressed)
 {
 	this.notes.sort();
 	this.chords.sort();
@@ -273,15 +273,27 @@ Song.prototype.save = function()
 	
 	json += "  ]\n}";
 	
+	if (compressed)
+	{
+		json = pako.deflateRaw(json, { to: "string" });
+		json = window.btoa(json);
+	}
+	
 	return json;
 }
 
 
 // Loads the song data contained in the given string.
 // Will throw an exception on error.
-Song.prototype.load = function(jsonStr)
+Song.prototype.load = function(jsonStr, compressed)
 {
 	this.clear();
+	
+	if (compressed)
+	{
+		jsonStr = window.atob(jsonStr);
+		jsonStr = pako.inflateRaw(jsonStr, { to: "string" });
+	}
 	
 	var song = JSON.parse(jsonStr);
 	this.bpm = song.bpm;

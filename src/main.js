@@ -4,6 +4,7 @@ var g_Synth = null;
 
 var g_MainTabIndex = 0;
 var g_CurrentKey = null;
+var g_UpdateURLTimeout = null;
 
 
 function main()
@@ -21,12 +22,73 @@ function main()
 	g_Editor.callbackCursorChange = callbackCursorChange;
 	
 	window.onresize = function() { g_Editor.refresh(); };
+	window.onbeforeunload = eventBeforeUnload;
 	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
-		
+    
 	refreshButtonPlay(false);
 	refreshMainTabs();
 	refreshSelectBoxes();
 	callbackCursorChange(new Rational(0));
+	
+	document.getElementById("divToolbox").style.visibility = "visible";
+	
+	var urlSong = getURLQueryParameter("song");
+	if (urlSong != null)
+		loadSongData(urlSong, true);
+}
+
+
+function eventBeforeUnload()
+{
+	return (g_Editor.unsavedChanges ? "Discard unsaved changes?" : null);
+}
+
+
+function askUnsavedChanges()
+{
+	if (g_Editor.unsavedChanges)
+		return window.confirm("Discard unsaved changes?");
+	else
+		return true;
+}
+
+
+function clearSongData()
+{
+	g_Song.clear();
+	g_Song.sanitize();
+	document.getElementById("inputTempo").value = g_Song.bpm.toString();
+	g_Editor.setSong(g_Song);
+	g_Editor.cursorSetTickBoth(new Rational(0));
+	g_Editor.refresh();
+	g_Editor.setUnsavedChanges(false);
+}
+
+
+function loadSongData(data, compressed)
+{
+	try
+	{
+		g_Song.load(data, compressed);
+		document.getElementById("inputTempo").value = g_Song.bpm.toString();
+		g_Editor.setSong(g_Song);
+		g_Editor.cursorSetTickBoth(new Rational(0));
+		g_Editor.refresh();
+		g_Editor.setUnsavedChanges(false);
+	}
+	catch (err)
+	{
+		window.alert("Error loading song data.");
+		clearSongData();
+	}
+}
+
+
+function refreshURL(songData)
+{
+	var urlWithoutQuery = [location.protocol, "//", location.host, location.pathname].join("");
+	var newUrl = urlWithoutQuery + (songData == null ? "" : "?song=" + encodeURIComponent(songData));
+	window.location = newUrl;
 }
 
 
@@ -298,41 +360,54 @@ function handleCheckboxChordPatterns()
 }
 
 
-function handleButtonLoadLocal()
+function handleButtonNew()
 {
+	if (!askUnsavedChanges())
+		return;
+	
+	clearSongData();
+	g_Editor.setUnsavedChanges(false);
+	refreshURL(null);
+}
+
+
+function handleButtonGenerateLink()
+{
+	var songData = g_Song.save(true);
+	g_Editor.setUnsavedChanges(false);
+	refreshURL(songData);
+}
+
+
+function handleButtonLoadString(compressed)
+{
+	if (!askUnsavedChanges())
+		return;
+	
 	var data = window.prompt("Paste a saved song data:", "");
 	if (data == null)
 		return;
 	
-	try
-	{
-		g_Song.load(data);
-	}
-	catch (err)
-	{
-		window.alert("Error loading song data.");
-		g_Song.clear();
-		g_Song.sanitize();
-	}
-	
-	document.getElementById("inputTempo").value = g_Song.bpm.toString();
-	g_Editor.setSong(g_Song);
-	g_Editor.cursorSetTickBoth(new Rational(0));
-	g_Editor.refresh();
+	loadSongData(data, compressed);
 }
 
 
-function handleButtonSaveLocal()
+function handleButtonSaveString(compressed)
 {
-	var songData = g_Song.save();
+	var songData = g_Song.save(compressed);
 	var data = "data:text/plain," + encodeURIComponent(songData);
 	window.open(data);
+	g_Editor.setUnsavedChanges(false);
 }
 
 
 function handleButtonLoadDropbox()
 {
-	Dropbox.choose({
+	if (!askUnsavedChanges())
+		return;
+	
+	Dropbox.choose(
+	{
 		linkType: "direct",
 		multiselect: false,
 		success: function(files)
@@ -343,30 +418,9 @@ function handleButtonLoadDropbox()
 			xhr.onload = function()
 			{
 				if (xhr.status == 200)
-				{
-					try
-					{
-						g_Song.load(xhr.response);
-					}
-					catch (err)
-					{
-						window.alert("Error loading song data.");
-						g_Song.clear();
-						g_Song.sanitize();
-					}
-				}
+					loadSongData(xhr.response);
 				else
-				{
-					console.log(xhr);
 					window.alert("Error loading Dropbox file.");
-					g_Song.clear();
-					g_Song.sanitize();
-				}
-				
-				document.getElementById("inputTempo").value = g_Song.bpm.toString();
-				g_Editor.setSong(g_Song);
-				g_Editor.cursorSetTickBoth(new Rational(0));
-				g_Editor.refresh();
 			};
 			xhr.send();
 		}
@@ -384,7 +438,7 @@ function handleButtonSaveDropbox()
 		data,
 		"song.txt",
 		{
-			success: function() { window.alert("Successfully saved file to Dropbox."); },
+			success: function() { window.alert("Successfully saved file to Dropbox."); g_Editor.setUnsavedChanges(false); },
 			error: function(msg) { window.alert("Error saving file to Dropbox.\n\nError message: " + msg); }
 		});
 }
@@ -404,7 +458,26 @@ function handleButtonSaveAsDropbox()
 		data,
 		filename,
 		{
-			success: function() { window.alert("Successfully saved file to Dropbox."); },
+			success: function() { window.alert("Successfully saved file to Dropbox."); g_Editor.setUnsavedChanges(false); },
 			error: function(msg) { window.alert("Error saving file to Dropbox.\n\nError message: " + msg); }
 		});
+}
+
+
+function getURLQueryParameter(name)
+{
+	var url = window.location.search;
+	
+	name = name.replace(/[\[\]]/g, "\\$&");
+	
+	var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+	var results = regex.exec(url);
+	
+	if (!results)
+		return null;
+	
+	if (!results[2])
+		return "";
+	
+	return decodeURIComponent(results[2].replace(/\+/g, " "));
 }

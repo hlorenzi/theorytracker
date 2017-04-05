@@ -17,7 +17,7 @@
 			<svg id="svgEditor"></svg>
 		</div>
 		
-		<div id="divToolbox">
+		<div id="divToolbox" style="visibility:hidden;">
 			<table id="tableToolboxMainLayout">
 				<tr>
 					<td class="toolboxGroup">
@@ -54,13 +54,31 @@
 							<td id="tdTabFile">
 								<table><tr>
 									<td>
-										<table><tr>
+										<table>
+										<tr>
 											<td>
-												<span class="toolboxLabel">Local:</span>
 											</td>
 											<td>
-												<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
-												<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
+												<button class="toolboxButton" onClick="handleButtonNew();">New</button>
+												<button class="toolboxButton" onClick="handleButtonGenerateLink();">Generate Link</button>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<span class="toolboxLabel">String:</span>
+											</td>
+											<td>
+												<button class="toolboxButton" onClick="handleButtonLoadString(false);">Load</button>
+												<button class="toolboxButton" onClick="handleButtonSaveString(false);">Save</button>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<span class="toolboxLabel">String (Compr.):</span>
+											</td>
+											<td>
+												<button class="toolboxButton" onClick="handleButtonLoadString(true);">Load</button>
+												<button class="toolboxButton" onClick="handleButtonSaveString(true);">Save</button>
 											</td>
 										</tr>
 										<tr>
@@ -72,7 +90,8 @@
 												<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
 												<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
 											</td>
-										</tr></table>
+										</tr>
+										</table>
 									</td>
 									
 									<td class="toolboxSeparator"></td>
@@ -179,6 +198,7 @@
 	
 	<script src="src/main.js"></script>
 	
+	<script src="src/pako/pako.js"></script>
 	<script src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="9h2eh3v67sgghpl"></script>
 
 </html>
