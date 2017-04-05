@@ -55,6 +55,7 @@ Song.prototype.sanitize = function()
 Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 {
 	var that = this;
+	var chordVolumeMul = 0.5;
 	
 	var addNoteEvent = function(tickStart, duration, instrument, midiPitch, volume)
 	{
@@ -96,7 +97,7 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 		if (!useChordPatterns)
 		{
 			for (var j = 0; j < pitches.length; j++)
-				addNoteEvent(chord.startTick, chord.endTick.clone().subtract(chord.startTick), 1, pitches[j], 0.7);
+				addNoteEvent(chord.startTick, chord.endTick.clone().subtract(chord.startTick), 1, pitches[j], chordVolumeMul);
 			return;
 		}
 			
@@ -132,7 +133,7 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 				{
 					mustPlayFirstBeat = false;
 					for (var j = 0; j < pitches.length; j++)
-						addNoteEvent(chord.startTick, tick.clone().subtract(chord.startTick), 1, pitches[j], 0.7);
+						addNoteEvent(chord.startTick, tick.clone().subtract(chord.startTick), 1, pitches[j], chordVolumeMul);
 				}
 				
 				switch (patternBeatKind)
@@ -140,18 +141,18 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 					case 0:
 					{
 						for (var j = 0; j < pitches.length; j++)
-							addNoteEvent(tick, patternBeatLength, 1, pitches[j], 0.6);
+							addNoteEvent(tick, patternBeatLength, 1, pitches[j], 0.9 * chordVolumeMul);
 						break;
 					}
 					case 1:
 					{
 						for (var j = 1; j < pitches.length; j++)
-							addNoteEvent(tick, patternBeatLength, 1, pitches[j], 0.5);
+							addNoteEvent(tick, patternBeatLength, 1, pitches[j], 0.5 * chordVolumeMul);
 						break;
 					}
 					case 2:
 					{
-						addNoteEvent(tick, patternBeatLength, 1, pitches[0], 0.5);
+						addNoteEvent(tick, patternBeatLength, 1, pitches[0], 0.5 * chordVolumeMul);
 						break;
 					}
 				}
