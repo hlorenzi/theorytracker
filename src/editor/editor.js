@@ -248,7 +248,7 @@ Editor.prototype.insertNoteByDegree = function(degree)
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
 	var pitch = Theory.scales[key.scaleIndex].pitches[degree];
 	
-	this.insertNote(pitch + 60);
+	this.insertNote(pitch + key.tonicMidiPitch + 60);
 }
 
 
@@ -261,7 +261,7 @@ Editor.prototype.insertChordByDegree = function(degree)
 	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
 	var rootMidiPitch = Theory.scales[key.scaleIndex].pitches[degree];
 	
-	this.insertChord(chordKindIndex, rootMidiPitch, []);
+	this.insertChord(chordKindIndex, (rootMidiPitch + key.tonicMidiPitch) % 12, []);
 }
 
 
