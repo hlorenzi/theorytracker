@@ -33,13 +33,14 @@ function Editor(svg, synth)
 	
 	this.margin = 20;
 	this.marginBetweenRows = 10;
-	this.wholeTickWidth = 150;
-	this.noteHeight = 8;
+	this.wholeTickWidth = 140;
+	this.noteHeight = 12;
 	this.noteSideMargin = 0.5;
 	this.chordHeight = 50;
 	this.chordSideMargin = 0.5;
 	this.chordOrnamentHeight = 5;
 	this.handleSize = 8;
+	this.scaleLabelsWidth = 32;
 	
 	this.usePopularNotation = true;
 	this.useChordPatterns = true;
@@ -224,13 +225,13 @@ Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishm
 		this.cursorTick1.clone(),
 		this.cursorTick1.clone().add(this.newElementDuration),
 		chordKindIndex,
-		rootMidiPitch,
+		rootMidiPitch % 12,
 		embelishments,
 		{ selected: true });
 	
 	this.song.chords.insert(chord);
 	
-	Theory.playSampleChord(this.synth, chordKindIndex, rootMidiPitch, embelishments);
+	Theory.playSampleChord(this.synth, chordKindIndex, rootMidiPitch % 12, embelishments);
 	
 	this.cursorSetTrackBoth(1);
 	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
@@ -485,8 +486,8 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	var currentMeasureStart = currentMeterChange.tick.clone();
 	
 	// Also find the lowest and highest pitch rows for notes in this row.
-	var pitchRowMin = Theory.findPitchRow(0, 0, 12 * 5,     that.usePopularNotation);
-	var pitchRowMax = Theory.findPitchRow(0, 0, 12 * 6 - 1, that.usePopularNotation);
+	var pitchRowMin = Theory.getPitchRow(0, 0, 12 * 5,     that.usePopularNotation);
+	var pitchRowMax = Theory.getPitchRow(0, 0, 12 * 6 - 1, that.usePopularNotation);
 	
 	var x = this.margin;
 	while (true)
@@ -514,7 +515,10 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 		
 		var width = (nextBlockEnd.asFloat() - currentBlockStart.asFloat()) * this.wholeTickWidth;
 		
-		if (x + width + this.margin > this.width)
+		var drawScaleLabels = (currentKeyChange.tick.compare(currentBlockStart) == 0) || calculatedBlocks.length == 0;
+		var scaleLabelsOffset = (drawScaleLabels ? this.scaleLabelsWidth : 0);
+		
+		if (x + width + scaleLabelsOffset + this.margin > this.width)
 			break;
 		
 		var block =
@@ -522,25 +526,26 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 			tickStart: currentBlockStart.clone(),
 			tickEnd: nextBlockEnd.clone(),
 			measureStartTick: currentMeterChange.tick.clone(),
-			x: x,
+			x: x + scaleLabelsOffset,
 			y: rowYStart,
 			width: width,
 			key: currentKeyChange,
-			meter: currentMeterChange
+			meter: currentMeterChange,
+			drawScaleLabels: drawScaleLabels
 		};
 		
 		calculatedBlocks.push(block);
 		
 		this.song.notes.enumerateOverlappingRange(block.tickStart, block.tickEnd, function (note)
 		{
-			var notePitchRow = Theory.findPitchRow(
+			var notePitchRow = Theory.getPitchRow(
 				block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
 			
 			pitchRowMin = Math.min(notePitchRow, pitchRowMin);
 			pitchRowMax = Math.max(notePitchRow, pitchRowMax);
 		});
 		
-		x += width;
+		x += width + scaleLabelsOffset;
 		
 		currentBlockStart = nextBlockEnd;
 		
@@ -690,13 +695,12 @@ Editor.prototype.refreshBlock = function(
 		noteXStart = Math.max(noteXStart, 0);
 		noteXEnd   = Math.min(noteXEnd,   block.width);
 		
-		var noteDegree = Theory.findPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
+		var noteDegree = Theory.getPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
 		var noteColor = Theory.getDegreeColor(noteDegree);
 		var noteColorAccent = Theory.getDegreeColorAccent(noteDegree);
 		
-		var noteRow = Theory.findPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
+		var noteRow = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
 		var noteDegreeOffset = noteRow - pitchRowMin;
-		console.log(noteRow);
 		var noteYTop = block.trackNoteYEnd - (noteDegreeOffset + 1) * that.noteHeight;
 		
 		var noteX = block.x + noteXStart + that.noteSideMargin;
@@ -723,7 +727,7 @@ Editor.prototype.refreshBlock = function(
 		chordXStart = Math.max(chordXStart, 0);
 		chordXEnd   = Math.min(chordXEnd,   block.width);
 		
-		var chordDegree = Theory.findPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, chord.rootMidiPitch, that.usePopularNotation);
+		var chordDegree = Theory.getPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, chord.rootMidiPitch, that.usePopularNotation);
 		var chordColor = Theory.getDegreeColor(chordDegree);
 		var chordColorAccent = Theory.getDegreeColorAccent(chordDegree);
 		
@@ -855,6 +859,32 @@ Editor.prototype.refreshBlock = function(
 			width: this.handleSize * 2,
 			height: this.handleSize
 		});
+	}
+	
+	// Render scale labels.
+	if (block.drawScaleLabels)
+	{
+		var pitchMin = Theory.getRowPitch(block.key.scaleIndex, block.key.tonicMidiPitch, pitchRowMin, this.usePopularNotation);
+		var pitchMax = Theory.getRowPitch(block.key.scaleIndex, block.key.tonicMidiPitch, pitchRowMax, this.usePopularNotation);
+		
+		for (var pitch = pitchMin; pitch <= pitchMax; pitch++)
+		{
+			var degree = Theory.getPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+			if (Math.floor(degree) != degree)
+				continue;
+			
+			var row = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+			if (row < pitchRowMin || row > pitchRowMax)
+				continue;
+			
+			var pitchLabel = Theory.getPitchLabel(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+			
+			that.addSvgText("editorScaleLabel", (mod(degree, 7) + 1).toString() + " " + pitchLabel,
+			{
+				x: block.x - this.scaleLabelsWidth + 2,
+				y: block.y + block.trackNoteYEnd - (row - pitchRowMin + 0.5) * this.noteHeight
+			});
+		}
 	}
 	
 	// Render meter change.

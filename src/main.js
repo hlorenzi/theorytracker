@@ -9,27 +9,29 @@ var g_UpdateURLTimeout = null;
 
 function main()
 {
+	test();
+	
 	g_Synth = new Synth();
+	
+	g_Song = new Song();
 	
 	var elemSvgEditor = document.getElementById("svgEditor");
 	g_Editor = new Editor(elemSvgEditor, g_Synth);
-	
-	g_Song = new Song();
 	g_Editor.setSong(g_Song);
 	g_Editor.refresh();
-	
 	g_Editor.callbackTogglePlay = refreshButtonPlay;
 	g_Editor.callbackCursorChange = callbackCursorChange;
+	g_Editor.usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
+	g_Editor.useChordPatterns = document.getElementById("checkboxChordPatterns").checked;
 	
-	window.onresize = function() { g_Editor.refresh(); };
-	window.onbeforeunload = eventBeforeUnload;
-	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
-    
 	refreshButtonPlay(false);
 	refreshMainTabs();
 	refreshSelectBoxes();
 	callbackCursorChange(new Rational(0));
 	
+	window.onresize = function() { g_Editor.refresh(); };
+	window.onbeforeunload = eventBeforeUnload;
+	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
 	document.getElementById("divToolbox").style.visibility = "visible";
 	
 	var urlSong = getURLQueryParameter("song");
@@ -286,7 +288,7 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
+			var degree = Theory.getPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
 			var degreeColor = Theory.getDegreeColor(degree);
 			button.style.borderTop = "4px solid " + degreeColor;
 			button.style.borderBottom = "4px solid " + degreeColor;
@@ -328,7 +330,7 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, pitch + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
+			var degree = Theory.getPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, pitch + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
 			var degreeColor = Theory.getDegreeColor(degree);
 			button.style.borderTop = "4px solid " + degreeColor;
 			button.style.borderBottom = "4px solid " + degreeColor;
