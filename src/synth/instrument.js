@@ -1,5 +1,5 @@
 // `sampleDefs` is an array containing each sample's
-// URL and frequency, like so:
+// URL and frequency, sorted by frequency, like so:
 //   [
 //     [440, "piano/a4.mp3"],
 //     [880, "piano/a5.mp3"]
@@ -47,28 +47,70 @@ Instrument.prototype.load = function(synth, url, frequency)
 }
 
 
-Instrument.prototype.playNote = function(frequency, volume, duration)
+Instrument.prototype.playNote = function(desiredFreq, desiredVolume, duration)
 {
-	var bestFitSample = this.samples[0];
-	var bestFitDistance = Math.abs(this.samples[0].frequency - frequency);
+	// Find the primary sample whose frequency is nearest to the desired frequency.
+	var sample1 = 0;
+	var sample1Dist = Math.abs(this.samples[0].frequency - desiredFreq);
 	for (var i = 1; i < this.samples.length; i++)
 	{
-		var dist = Math.abs(this.samples[i].frequency - frequency);
-		if (dist < bestFitDistance)
+		var dist = Math.abs(this.samples[i].frequency - desiredFreq);
+		if (dist < sample1Dist)
 		{
-			bestFitSample = this.samples[i];
-			bestFitDistance = dist;
+			sample1 = i;
+			sample1Dist = dist;
 		}
 	}
+	
+	// Find the sample whose frequency is second nearest to the desired frequency,
+	// unless the primary sample is already exactly a match.
+	// Then, calculate a cross-fade between the two.
+	// TODO: Probably should use an equal-power (logarithmic) cross-fade,
+	// but this seems good enough for now.
+	var sample2 = null;
+	
+	var volume1 = 1;
+	var volume2 = 0;
+	
+	if (this.samples[sample1].frequency < desiredFreq)
+	{
+		if (sample1 + 1 < this.samples.length)
+		{
+			sample2 = sample1 + 1;
+		
+			var t =
+				(desiredFreq - this.samples[sample1].frequency) /
+				(this.samples[sample2].frequency - this.samples[sample1].frequency);
+				
+			volume1 = 1 - t;
+			volume2 = t;
+		}
+	}
+	else if (this.samples[sample1].frequency > desiredFreq)
+	{
+		if (sample1 - 1 >= 0)
+		{
+			sample2 = sample1 - 1;
+			
+			var t =
+				(desiredFreq - this.samples[sample2].frequency) /
+				(this.samples[sample1].frequency - this.samples[sample2].frequency);
+				
+			volume1 = t;
+			volume2 = 1 - t;
+		}
+	}
+	
+	// Play the samples.
+	var voices = [ this.playVoice(this.samples[sample1], desiredFreq, desiredVolume * volume1) ];
+	if (sample2 != null)
+		voices.push(this.playVoice(this.samples[sample2], desiredFreq, desiredVolume * volume2));
 	
 	var data =
 	{
 		duration: duration,
 		released: false,
-		voices:
-		[
-			this.playVoice(bestFitSample, frequency, volume)
-		]
+		voices: voices
 	};
 	
 	return data;

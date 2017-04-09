@@ -9,7 +9,7 @@ function Synth()
 	
 	this.audioCtxOutput = this.audioCtx.createGain();
 	this.audioCtxOutput.connect(this.audioCtx.destination);
-	this.audioCtxOutput.gain.value = 0.1;
+	this.audioCtxOutput.gain.value = 0.5;
 	
 	var piano = new Instrument(this,
 	[
