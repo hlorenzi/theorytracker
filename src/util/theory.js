@@ -141,8 +141,10 @@ Theory.getKeyLabel = function(scaleIndex, tonicMidiPitch)
 }
 
 
-Theory.getChordRootLabel = function(scaleIndex, relativePitch, usePopularNotation = true)
+Theory.getChordRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation = true)
 {
+	var relativePitch = mod(rootMidiPitch - tonicMidiPitch, 12);
+	
 	if (usePopularNotation)
 	{
 		var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
@@ -153,7 +155,7 @@ Theory.getChordRootLabel = function(scaleIndex, relativePitch, usePopularNotatio
 		// FIXME: Compute correct Common Practice labels.
 		var labels = ["I", "II", "III", "IV", "V", "VI", "VII", "I"];
 		
-		var degree = Theory.findPitchDegree(scaleIndex, relativePitch, false);
+		var degree = Theory.findPitchDegree(scaleIndex, tonicMidiPitch, rootMidiPitch, false);
 		var degreeInteger = Math.floor(degree);
 		
 		if (degree == degreeInteger)
@@ -164,9 +166,9 @@ Theory.getChordRootLabel = function(scaleIndex, relativePitch, usePopularNotatio
 }
 
 
-Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, relativePitch, embelishments, usePopularNotation = true)
+Theory.getChordLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
 {
-	var rootLabel = Theory.getChordRootLabel(scaleIndex, relativePitch, usePopularNotation);
+	var rootLabel = Theory.getChordRootLabel(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation);
 	
 	if (Theory.chordKinds[chordKindIndex].symbol[0])
 		rootLabel = rootLabel.toLowerCase();
@@ -175,7 +177,7 @@ Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, relativePitch, e
 }
 
 
-Theory.getChordLabelSuperscript = function(scaleIndex, chordKindIndex, relativePitch, embelishments, usePopularNotation = true)
+Theory.getChordLabelSuperscript = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
 {
 	return Theory.chordKinds[chordKindIndex].symbol[2];
 }
@@ -231,8 +233,10 @@ Theory.calculateChordStrummingPattern = function(numerator, denominator)
 }
 
 
-Theory.findPitchDegree = function(scaleIndex, relativePitch, usePopularNotation = true)
+Theory.findPitchDegree = function(scaleIndex, tonicMidiPitch, midiPitch, usePopularNotation = true)
 {
+	var relativePitch = (midiPitch + 12 - tonicMidiPitch) % 12;
+	
 	var scale = Theory.scales[scaleIndex];
 	if (usePopularNotation)
 		scale = Theory.scales[0];
@@ -247,6 +251,17 @@ Theory.findPitchDegree = function(scaleIndex, relativePitch, usePopularNotation 
 	}
 	
 	return 6.5;
+}
+
+
+Theory.findPitchRow = function(scaleIndex, tonicMidiPitch, midiPitch, usePopularNotation = true)
+{
+	var degree = Theory.findPitchDegree(scaleIndex, tonicMidiPitch, midiPitch, usePopularNotation);
+	var degreeOctave = Math.floor((midiPitch - tonicMidiPitch) / 12);
+	
+	var degreeOffset = Theory.findPitchDegree(scaleIndex, 0, tonicMidiPitch, usePopularNotation);
+	
+	return degree + degreeOctave * 7 + degreeOffset;
 }
 
 
@@ -319,7 +334,7 @@ Theory.playSampleChord = function(synth, chordKindIndex, rootMidiPitch, embelish
 
 Theory.getDegreeColor = function(degree)
 {
-	switch (degree)
+	switch (degree % 7)
 	{
 		case 0: return "#f00";
 		case 1: return "#f80";
@@ -344,7 +359,7 @@ Theory.getDegreeColor = function(degree)
 
 Theory.getDegreeColorAccent = function(degree)
 {
-	switch (degree)
+	switch (degree % 7)
 	{
 		case 0: return "#fdd";
 		case 1: return "#fed";

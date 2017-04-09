@@ -275,8 +275,8 @@ function handleSelectChordKindsChange()
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, scale.pitches[i], [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, scale.pitches[i], [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			
@@ -286,13 +286,13 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, scale.pitches[i], g_Editor.usePopularNotation);
+			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
 			var degreeColor = Theory.getDegreeColor(degree);
 			button.style.borderTop = "4px solid " + degreeColor;
 			button.style.borderBottom = "4px solid " + degreeColor;
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootMidiPitch = scale.pitches[i];
+			button.rootMidiPitch = (scale.pitches[i] + g_CurrentKey.tonicMidiPitch) % 12;
 			button.onclick = function()
 			{
 				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
@@ -317,8 +317,8 @@ function handleSelectChordKindsChange()
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			
@@ -328,7 +328,7 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, pitch, g_Editor.usePopularNotation);
+			var degree = Theory.findPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, pitch + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
 			var degreeColor = Theory.getDegreeColor(degree);
 			button.style.borderTop = "4px solid " + degreeColor;
 			button.style.borderBottom = "4px solid " + degreeColor;
