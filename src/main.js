@@ -186,8 +186,8 @@ function refreshSelectBoxes()
 		var labelMain = document.createElement("span");
 		var labelSuperscript = document.createElement("sup");
 		
-		labelMain.innerHTML = Theory.getChordRomanLabelMain(0, i, 0, []);
-		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(0, i, 0, []);
+		labelMain.innerHTML = Theory.getChordRomanLabelMain(0, 0, i, 0, []);
+		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(0, 0, i, 0, []);
 		
 		option.appendChild(labelMain);
 		labelMain.appendChild(labelSuperscript);
