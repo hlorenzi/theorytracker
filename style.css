@@ -216,6 +216,12 @@ body
 	stroke-width: 2px;
 }
 
+.editorOctaveLine
+{
+	stroke: #aaa;
+	stroke-width: 2px;
+}
+
 .editorDegree
 {
 	stroke-width: 0px;

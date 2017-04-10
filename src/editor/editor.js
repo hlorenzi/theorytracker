@@ -636,7 +636,7 @@ Editor.prototype.refreshBlock = function(
 	
 	block.height = block.trackChordYEnd;
 	
-	// Render the row's background.
+	// Render the block's background.
 	this.addSvgNode("editorBlockBackground", "rect",
 	{
 		x: block.x,
@@ -645,7 +645,7 @@ Editor.prototype.refreshBlock = function(
 		height: block.trackChordYEnd - block.trackNoteYStart
 	});
 	
-	// Render the beat indicators.
+	// Render beat indicators.
 	var beatTick = block.measureStartTick.clone();
 	while (true)
 	{
@@ -685,6 +685,22 @@ Editor.prototype.refreshBlock = function(
 		width: block.width,
 		height: block.trackChordYEnd - block.trackChordYStart
 	});
+	
+	// Render octave indicators.
+	for (var pitch = Theory.midiPitchMin + block.key.tonicMidiPitch; pitch <= Theory.midiPitchMax; pitch += 12)
+	{
+		var row = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+		if (row < pitchRowMin || row > pitchRowMax)
+			continue;
+		
+		this.addSvgNode("editorOctaveLine", "line",
+		{
+			x1: block.x,
+			y1: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight,
+			x2: block.x + block.width,
+			y2: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight,
+		});
+	}
 		
 	// Render notes.
 	this.song.notes.enumerateOverlappingRange(block.tickStart, block.tickEnd, function (note)
@@ -827,7 +843,7 @@ Editor.prototype.refreshBlock = function(
 	// Render key change.
 	if (block.key.tick.compare(block.tickStart) == 0)
 	{
-		that.addSvgNode("editorKeyLine", "line",
+		this.addSvgNode("editorKeyLine", "line",
 		{
 			x1: block.x,
 			y1: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2,
@@ -835,7 +851,7 @@ Editor.prototype.refreshBlock = function(
 			y2: block.y + block.trackChordYEnd
 		});
 		
-		that.addSvgNode(
+		this.addSvgNode(
 			"editorKeyHandle" + (block.key.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
@@ -845,7 +861,7 @@ Editor.prototype.refreshBlock = function(
 				height: this.handleSize
 			});
 		
-		that.addSvgText("editorKeyLabel", block.key.getLabel(),
+		this.addSvgText("editorKeyLabel", block.key.getLabel(),
 		{
 			x: block.x + this.handleSize / 2 + 5,
 			y: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2
@@ -879,7 +895,7 @@ Editor.prototype.refreshBlock = function(
 			
 			var pitchLabel = Theory.getPitchLabel(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
 			
-			that.addSvgText("editorScaleLabel", (mod(degree, 7) + 1).toString() + " " + pitchLabel,
+			this.addSvgText("editorScaleLabel", (mod(degree, 7) + 1).toString() + " " + pitchLabel,
 			{
 				x: block.x - this.scaleLabelsWidth + 2,
 				y: block.y + block.trackNoteYEnd - (row - pitchRowMin + 0.5) * this.noteHeight
@@ -890,7 +906,7 @@ Editor.prototype.refreshBlock = function(
 	// Render meter change.
 	if (block.meter.tick.compare(block.tickStart) == 0)
 	{
-		that.addSvgNode("editorMeterLine", "line",
+		this.addSvgNode("editorMeterLine", "line",
 		{
 			x1: block.x,
 			y1: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2,
@@ -898,7 +914,7 @@ Editor.prototype.refreshBlock = function(
 			y2: block.y + block.trackChordYEnd
 		});
 		
-		that.addSvgNode(
+		this.addSvgNode(
 			"editorMeterHandle" + (block.meter.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
@@ -908,7 +924,7 @@ Editor.prototype.refreshBlock = function(
 				height: this.handleSize
 			});
 		
-		that.addSvgText("editorMeterLabel", block.meter.getLabel(),
+		this.addSvgText("editorMeterLabel", block.meter.getLabel(),
 		{
 			x: block.x + this.handleSize / 2 + 5,
 			y: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2
