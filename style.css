@@ -222,23 +222,30 @@ body
 	stroke-width: 2px;
 }
 
-.editorDegree
+.editorNote
 {
 	stroke-width: 0px;
-	fill: #888;
 }
 
-.editorDegreeSelected
+.editorNoteSelected
 {
 	stroke-width: 2px;
-	stroke: #888;
-	fill: #eee;
 }
 
 .editorChordBackground
 {
 	stroke-width: 0px;
 	fill: white;
+}
+
+.editorChordOrnament
+{
+	stroke-width: 0px;
+}
+
+.editorChordOrnamentSelected
+{
+	stroke-width: 2px;
 }
 
 .editorChordRomanLabel

@@ -436,6 +436,14 @@ Editor.prototype.refresh = function()
 	while (this.svg.lastChild)
 		this.svg.removeChild(this.svg.lastChild);
 	
+	// Add SVG fill patterns for scale degrees.
+	var degrees = [ 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5 ];
+	for (var i = 0; i < degrees.length; i++)
+	{
+		this.addSvgDegreePattern("pattern" + Math.floor(degrees[i] * 2),            degrees[i], false);
+		this.addSvgDegreePattern("pattern" + Math.floor(degrees[i] * 2) + "Accent", degrees[i], true);
+	}
+	
 	// Clear layout blocks.
 	this.blocks = [];
 	
@@ -725,11 +733,12 @@ Editor.prototype.refreshBlock = function(
 		var noteH = that.noteHeight;
 			
 		var svgNote = that.addSvgNode(
-			"editorDegree" + (note.editorData.selected ? "Selected" : ""),
+			"editorNote" + (note.editorData.selected ? "Selected" : ""),
 			"rect", { x: noteX, y: noteY, width: noteW, height: noteH });
 			
-		svgNote.style.fill = (note.editorData.selected ? noteColorAccent : noteColor);
-		svgNote.style.stroke = noteColor;
+		svgNote.style.fill = "url(#pattern" + Math.floor(mod(noteDegree, 7) * 2) + 
+			(note.editorData.selected ? "Accent" : "") + ")";
+		svgNote.style.stroke = "url(#pattern" + Math.floor(mod(noteDegree, 7) * 2) + ")";
 		
 		block.elements.push({ note: note, x: noteX, y: noteY, width: noteW, height: noteH });
 	});
@@ -757,7 +766,8 @@ Editor.prototype.refreshBlock = function(
 			
 		block.elements.push({ chord: chord, x: chordX, y: chordY, width: chordW, height: chordH });
 		
-		var svgChordOrnament1 = that.addSvgNode("editorDegree" + (chord.editorData.selected ? "Selected" : ""),
+		var svgChordOrnament1 = that.addSvgNode(
+			"editorChordOrnament" + (chord.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
 				x: block.x + chordXStart + that.chordSideMargin,
@@ -766,7 +776,8 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 		
-		var svgChordOrnament2 = that.addSvgNode("editorDegree" + (chord.editorData.selected ? "Selected" : ""),
+		var svgChordOrnament2 = that.addSvgNode(
+			"editorChordOrnament" + (chord.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
 				x: block.x + chordXStart + that.chordSideMargin,
@@ -775,10 +786,13 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 			
-		svgChordOrnament1.style.fill = (chord.editorData.selected ? chordColorAccent : chordColor);
-		svgChordOrnament1.style.stroke = chordColor;
-		svgChordOrnament2.style.fill = (chord.editorData.selected ? chordColorAccent : chordColor);
-		svgChordOrnament2.style.stroke = chordColor;
+		svgChordOrnament1.style.fill = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + 
+			(chord.editorData.selected ? "Accent" : "") + ")";
+		svgChordOrnament1.style.stroke = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + ")";
+		
+		svgChordOrnament2.style.fill = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + 
+			(chord.editorData.selected ? "Accent" : "") + ")";
+		svgChordOrnament2.style.stroke = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + ")";
 		
 		// Build and add the roman chord label.
 		var chordRomanLabel = Theory.getChordRomanLabelMain(
@@ -971,10 +985,58 @@ Editor.prototype.refreshBlock = function(
 }
 
 
+Editor.prototype.addSvgDegreePattern = function(name, degree, accentColor)
+{
+	var svgPattern = this.addSvgNode(null, "pattern",
+	{
+		id: name,
+		width: 10,
+		height: 10,
+		patternTransform: "rotate(30 0 0)",
+		patternUnits: "userSpaceOnUse"
+	});
+	
+	var svgPatternRect = makeSvgNode(null, "rect",
+	{
+		x: -5,
+		y: -5,
+		width: 20,
+		height: 20
+	});
+	
+	var color =
+		accentColor ?
+		Theory.getDegreeColorAccent(Math.floor(degree)) :
+		Theory.getDegreeColor(Math.floor(degree));
+		
+	svgPatternRect.style.fill = color;
+	svgPattern.appendChild(svgPatternRect);
+	
+	if (Math.floor(degree) != degree)
+	{
+		var svgPatternLine = makeSvgNode(null, "line",
+		{
+			x1: 0,
+			y1: -5,
+			x2: 0,
+			y2: 20
+		});
+		
+		var color2 =
+			accentColor ?
+			Theory.getDegreeColorAccent(mod(Math.floor(degree + 1), 7)) :
+			Theory.getDegreeColor(mod(Math.floor(degree + 1), 7));
+		
+		svgPatternLine.style.stroke = color2;
+		svgPatternLine.style.strokeWidth = 10;
+		svgPattern.appendChild(svgPatternLine);
+	}
+}
+
+
 Editor.prototype.addSvgNode = function(cl, kind, attributes)
 {
-	var node = makeSvgNode(kind, attributes);
-	node.setAttribute("class", cl);
+	var node = makeSvgNode(cl, kind, attributes);
 	this.svg.appendChild(node);
 	return node;
 }
@@ -982,8 +1044,7 @@ Editor.prototype.addSvgNode = function(cl, kind, attributes)
 
 Editor.prototype.addSvgText = function(cl, text, attributes)
 {
-	var node = makeSvgNode("text", attributes);
-	node.setAttribute("class", cl);
+	var node = makeSvgNode(cl, "text", attributes);
 	node.innerHTML = text;
 	this.svg.appendChild(node);
 	return node;
@@ -992,12 +1053,10 @@ Editor.prototype.addSvgText = function(cl, text, attributes)
 
 Editor.prototype.addSvgTextComplemented = function(cl, clSuperscript, text, textSuperscript, attributes)
 {
-	var nodeSuperscript = makeSvgNode("tspan", { "baseline-shift": "super" });
-	nodeSuperscript.setAttribute("class", clSuperscript);
+	var nodeSuperscript = makeSvgNode(clSuperscript, "tspan", { "baseline-shift": "super" });
 	nodeSuperscript.innerHTML = textSuperscript;
 	
-	var node = makeSvgNode("text", attributes);
-	node.setAttribute("class", cl);
+	var node = makeSvgNode(cl, "text", attributes);
 	node.innerHTML = text;
 	
 	node.appendChild(nodeSuperscript);
@@ -1006,11 +1065,16 @@ Editor.prototype.addSvgTextComplemented = function(cl, clSuperscript, text, text
 }
 
 
-function makeSvgNode(kind, attributes)
+function makeSvgNode(cl, kind, attributes)
 {
 	var node = document.createElementNS("http://www.w3.org/2000/svg", kind);
+	
+	if (cl != null)
+		node.setAttribute("class", cl);
+	
 	for (var attr in attributes)
 		node.setAttributeNS(null, attr, attributes[attr]);
+	
 	return node;
 }
 
