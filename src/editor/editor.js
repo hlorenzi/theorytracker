@@ -780,26 +780,52 @@ Editor.prototype.refreshBlock = function(
 		svgChordOrnament2.style.fill = (chord.editorData.selected ? chordColorAccent : chordColor);
 		svgChordOrnament2.style.stroke = chordColor;
 		
-		// Build and add the chord label.
-		var chordLabel = Theory.getChordLabelMain(
+		// Build and add the roman chord label.
+		var chordRomanLabel = Theory.getChordRomanLabelMain(
 			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
-		var chordLabelSuperscript = Theory.getChordLabelSuperscript(
+		var chordRomanLabelSuperscript = Theory.getChordRomanLabelSuperscript(
 			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
 		
-		var svgChordLabel = that.addSvgTextComplemented(
-			"editorChordLabel",
-			"editorChordLabelSuperscript",
-			chordLabel,
-			chordLabelSuperscript,
+		var svgChordRomanLabel = that.addSvgTextComplemented(
+			"editorChordRomanLabel",
+			"editorChordRomanLabelSuperscript",
+			chordRomanLabel,
+			chordRomanLabelSuperscript,
 			{
 				x: block.x + chordXStart + (chordXEnd - chordXStart) / 2,
-				y: block.y + (block.trackChordYStart + block.trackChordYEnd) / 2
+				y: block.y + (block.trackChordYStart + block.trackChordYEnd) / 2 - 4
 			});
 		
 		// Narrow text if it overflows the space.
-		if (svgChordLabel.getComputedTextLength() > chordXEnd - chordXStart)
+		if (svgChordRomanLabel.getComputedTextLength() > chordXEnd - chordXStart)
 		{
-			editSvgNode(svgChordLabel,
+			editSvgNode(svgChordRomanLabel,
+			{
+				textLength: chordXEnd - chordXStart,
+				lengthAdjust: "spacingAndGlyphs"
+			});
+		}
+		
+		// Build and add the absolute chord label.
+		var chordAbsoluteLabel = Theory.getChordAbsoluteLabelMain(
+			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
+		var chordAbsoluteLabelSuperscript = Theory.getChordAbsoluteLabelSuperscript(
+			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
+		
+		var svgChordAbsoluteLabel = that.addSvgTextComplemented(
+			"editorChordAbsoluteLabel",
+			"editorChordAbsoluteLabelSuperscript",
+			chordAbsoluteLabel,
+			chordAbsoluteLabelSuperscript,
+			{
+				x: block.x + chordXStart + (chordXEnd - chordXStart) / 2,
+				y: block.y + (block.trackChordYStart + block.trackChordYEnd) / 2 + 12
+			});
+		
+		// Narrow text if it overflows the space.
+		if (svgChordAbsoluteLabel.getComputedTextLength() > chordXEnd - chordXStart)
+		{
+			editSvgNode(svgChordAbsoluteLabel,
 			{
 				textLength: chordXEnd - chordXStart,
 				lengthAdjust: "spacingAndGlyphs"

@@ -186,8 +186,8 @@ function refreshSelectBoxes()
 		var labelMain = document.createElement("span");
 		var labelSuperscript = document.createElement("sup");
 		
-		labelMain.innerHTML = Theory.getChordLabelMain(0, i, 0, []);
-		labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(0, i, 0, []);
+		labelMain.innerHTML = Theory.getChordRomanLabelMain(0, i, 0, []);
+		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(0, i, 0, []);
 		
 		option.appendChild(labelMain);
 		labelMain.appendChild(labelSuperscript);
@@ -277,8 +277,8 @@ function handleSelectChordKindsChange()
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			
@@ -319,8 +319,8 @@ function handleSelectChordKindsChange()
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			

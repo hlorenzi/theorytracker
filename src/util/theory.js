@@ -210,7 +210,7 @@ Theory.getKeyLabel = function(scaleIndex, tonicMidiPitch)
 }
 
 
-Theory.getChordRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation = true)
+Theory.getChordRomanRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation = true)
 {
 	if (usePopularNotation)
 	{
@@ -233,9 +233,9 @@ Theory.getChordRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, u
 }
 
 
-Theory.getChordLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+Theory.getChordRomanLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
 {
-	var rootLabel = Theory.getChordRootLabel(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation);
+	var rootLabel = Theory.getChordRomanRootLabel(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation);
 	
 	if (Theory.chordKinds[chordKindIndex].symbol[0])
 		rootLabel = rootLabel.toLowerCase();
@@ -244,7 +244,32 @@ Theory.getChordLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, 
 }
 
 
-Theory.getChordLabelSuperscript = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+Theory.getChordRomanLabelSuperscript = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+{
+	return Theory.chordKinds[chordKindIndex].symbol[2];
+}
+
+
+Theory.getChordAbsoluteRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation = true)
+{
+	// TODO: Take scale into consideration.
+	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"];
+	return labels[mod(rootMidiPitch, 12)];
+}
+
+
+Theory.getChordAbsoluteLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+{
+	var rootLabel = Theory.getChordAbsoluteRootLabel(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation);
+	
+	if (Theory.chordKinds[chordKindIndex].symbol[0])
+		rootLabel += "m";
+	
+	return rootLabel + Theory.chordKinds[chordKindIndex].symbol[1];
+}
+
+
+Theory.getChordAbsoluteLabelSuperscript = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
 {
 	return Theory.chordKinds[chordKindIndex].symbol[2];
 }
