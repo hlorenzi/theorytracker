@@ -438,9 +438,10 @@ Editor.prototype.eventMouseOut = function(ev)
 
 Editor.prototype.eventKeyDown = function(ev)
 {
-	var actionSelect  = ev.shiftKey;
+	var actionSelect = ev.shiftKey;
 	var actionSpeedUp = ev.altKey;
 	var actionStretch = ev.ctrlKey;
+	var actionNonDiatonic = ev.ctrlKey;
 	
 	if (this.isPlaying)
 	{
@@ -552,7 +553,7 @@ Editor.prototype.eventKeyDown = function(ev)
 				if (this.isAnySelected() && !actionSelect)
 				{
 					this.cursorHide();
-					this.performElementPitchChange(actionSpeedUp ? 12 : 1);
+					this.performElementPitchChange(actionSpeedUp ? (!actionNonDiatonic ? 7 : 12) : 1, !actionNonDiatonic);
 				}
 				else if (this.cursorVisible)
 				{
@@ -568,7 +569,7 @@ Editor.prototype.eventKeyDown = function(ev)
 				if (this.isAnySelected() && !actionSelect)
 				{
 					this.cursorHide();
-					this.performElementPitchChange(actionSpeedUp ? -12 : -1);
+					this.performElementPitchChange(actionSpeedUp ? (!actionNonDiatonic ? -7 : -12) : -1, !actionNonDiatonic);
 				}
 				else if (this.cursorVisible)
 				{
@@ -847,44 +848,85 @@ Editor.prototype.performInsertDegreeAction = function(degree)
 }
 
 
-Editor.prototype.performElementPitchChange = function(amount)
+Editor.prototype.performElementPitchChange = function(amount, diatonic)
 {
-	// Cap amount, in case notes would fall
-	// out of bounds.
-	this.enumerateSelectedNotes(function(note)
+	var that = this;
+	var step = Math.sign(amount);
+	
+	if (diatonic && Math.abs(amount) == 7)
 	{
-		if (note.midiPitch + amount > Theory.midiPitchMax)
-			amount = Theory.midiPitchMax - note.midiPitch;
+		diatonic = false;
+		amount = Math.sign(amount) * 12;
+	}
+	
+	var diatonicPitchChange = function(tick, originalPitch)
+	{
+		var key = that.song.keyChanges.findPrevious(tick);
+		var degree = Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, originalPitch, false);
+		var newDegree = (step > 0 ? Math.floor(degree) : Math.ceil(degree)) + step;
+		return Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, newDegree, false);
+	}
+	
+	for (var a = 0; a < Math.abs(amount); a++)
+	{
+		var overflowed = false;
 		
-		else if (note.midiPitch + amount < Theory.midiPitchMin)
-			amount = Theory.midiPitchMin - note.midiPitch;
-	});
-	
-	// Apply changes to elements.
-	var noteToSample = null;
-	this.enumerateSelectedNotes(function(note)
-	{
-		note.midiPitch += amount;
-		noteToSample = note;
-	});
-	
-	var chordToSample = null;
-	this.enumerateSelectedChords(function(chord)
-	{
-		chord.rootMidiPitch = (chord.rootMidiPitch + 12 + amount) % 12;
-		chordToSample = chord;
-	});
-	
-	// Play sample.
-	if (noteToSample != null && chordToSample == null)
-		Theory.playSampleNote(this.synth, noteToSample.midiPitch);
-	
-	if (chordToSample != null && noteToSample == null)
-		Theory.playSampleChord(
-			this.synth,
-			chordToSample.chordKindIndex,
-			chordToSample.rootMidiPitch,
-			chordToSample.embelishments);
+		// Detect whether a step would make notes
+		// overflow the allowed pitch range.
+		this.enumerateSelectedNotes(function(note)
+		{
+			var newPitch = note.midiPitch;
+			
+			if (!diatonic)
+				newPitch += step;
+			else
+				newPitch = diatonicPitchChange(note.startTick, note.midiPitch);
+			
+			if (newPitch > Theory.midiPitchMax)
+				overflowed = true;
+			
+			if (newPitch < Theory.midiPitchMin)
+				overflowed = true;
+		});
+
+		// Apply changes to elements.
+		var noteToSample = null;
+		this.enumerateSelectedNotes(function(note)
+		{
+			if (!overflowed)
+			{
+				if (!diatonic)
+					note.midiPitch += step;
+				else
+					note.midiPitch = diatonicPitchChange(note.startTick, note.midiPitch);
+			}
+			noteToSample = note;
+		});
+
+		var chordToSample = null;
+		this.enumerateSelectedChords(function(chord)
+		{
+			if (!overflowed)
+			{
+				if (!diatonic)
+					chord.rootMidiPitch = mod(chord.rootMidiPitch + step, 12);
+				else
+					chord.rootMidiPitch = diatonicPitchChange(chord.startTick, chord.rootMidiPitch);
+			}
+			chordToSample = chord;
+		});
+
+		// Play sample.
+		if (noteToSample != null && chordToSample == null && a == Math.abs(amount) - 1)
+			Theory.playSampleNote(this.synth, noteToSample.midiPitch);
+
+		if (chordToSample != null && noteToSample == null && a == Math.abs(amount) - 1)
+			Theory.playSampleChord(
+				this.synth,
+				chordToSample.chordKindIndex,
+				chordToSample.rootMidiPitch,
+				chordToSample.embelishments);
+	}
 	
 	this.refresh();
 	this.setUnsavedChanges(true);

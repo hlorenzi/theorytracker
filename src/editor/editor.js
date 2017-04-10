@@ -698,7 +698,7 @@ Editor.prototype.refreshBlock = function(
 	for (var pitch = Theory.midiPitchMin + block.key.tonicMidiPitch; pitch <= Theory.midiPitchMax; pitch += 12)
 	{
 		var row = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
-		if (row < pitchRowMin || row > pitchRowMax)
+		if (row <= pitchRowMin || row > pitchRowMax)
 			continue;
 		
 		this.addSvgNode("editorOctaveLine", "line",
