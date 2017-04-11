@@ -16,6 +16,8 @@ function Editor(svg, synth)
 	
 	this.mouseIsDown = false;
 	this.newElementDuration = new Rational(0, 1, 4);
+	this.newElementPitchOctave = 5;
+	this.newElementDegreeOctave = 5;
 	
 	this.cursorSnap = new Rational(0, 1, 16);
 	this.cursorVisible = true;
@@ -247,9 +249,9 @@ Editor.prototype.insertNoteByDegree = function(degree)
 	this.cursorSetTickAtSelectionEnd();
 	
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
-	var pitch = Theory.scales[key.scaleIndex].pitches[degree];
+	var pitch = Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, degree, false);
 	
-	this.insertNote(pitch + key.tonicMidiPitch + 60);
+	this.insertNote(pitch);
 }
 
 
@@ -258,11 +260,10 @@ Editor.prototype.insertChordByDegree = function(degree)
 	this.cursorSetTickAtSelectionEnd();
 	
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
-	
 	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
-	var rootMidiPitch = Theory.scales[key.scaleIndex].pitches[degree];
+	var rootMidiPitch = mod(Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, degree, false), 12);
 	
-	this.insertChord(chordKindIndex, (rootMidiPitch + key.tonicMidiPitch) % 12, []);
+	this.insertChord(chordKindIndex, rootMidiPitch, []);
 }
 
 

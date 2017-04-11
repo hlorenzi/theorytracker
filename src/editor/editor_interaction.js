@@ -369,6 +369,12 @@ Editor.prototype.eventMouseDown = function(ev)
 		if (elementAtMouse.note != undefined)
 		{
 			elementAtMouse.note.editorData.selected = !elementAtMouse.note.editorData.selected;
+			
+			var key = this.song.keyChanges.findPrevious(elementAtMouse.note.startTick);
+			this.newElementPitchOctave = Math.floor(elementAtMouse.note.midiPitch / 12);
+			this.newElementDegreeOctave = 
+				Math.floor(Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, elementAtMouse.note.midiPitch, false) / 7);
+			
 			Theory.playSampleNote(this.synth, elementAtMouse.note.midiPitch);
 		}
 		
@@ -826,7 +832,7 @@ Editor.prototype.performInsertPitchAction = function(midiPitch)
 {
 	if (this.cursorTrack1 != this.cursorTrack2 || this.cursorTrack1 == 0)
 	{
-		this.insertNote(midiPitch + 60);
+		this.insertNote(midiPitch + this.newElementPitchOctave * 12);
 	}
 	else
 	{
@@ -839,7 +845,7 @@ Editor.prototype.performInsertDegreeAction = function(degree)
 {
 	if (this.cursorTrack1 != this.cursorTrack2 || this.cursorTrack1 == 0)
 	{
-		this.insertNoteByDegree(degree);
+		this.insertNoteByDegree(degree + this.newElementDegreeOctave * 7);
 	}
 	else
 	{
@@ -859,9 +865,8 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 		amount = Math.sign(amount) * 12;
 	}
 	
-	var diatonicPitchChange = function(tick, originalPitch)
+	var diatonicPitchChange = function(key, originalPitch)
 	{
-		var key = that.song.keyChanges.findPrevious(tick);
 		var degree = Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, originalPitch, false);
 		var newDegree = (step > 0 ? Math.floor(degree) : Math.ceil(degree)) + step;
 		return Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, newDegree, false);
@@ -880,7 +885,10 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 			if (!diatonic)
 				newPitch += step;
 			else
-				newPitch = diatonicPitchChange(note.startTick, note.midiPitch);
+			{
+				var key = that.song.keyChanges.findPrevious(note.startTick);
+				newPitch = diatonicPitchChange(key, note.midiPitch);
+			}
 			
 			if (newPitch > Theory.midiPitchMax)
 				overflowed = true;
@@ -895,10 +903,16 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 		{
 			if (!overflowed)
 			{
+				var key = that.song.keyChanges.findPrevious(note.startTick);
+				
 				if (!diatonic)
 					note.midiPitch += step;
 				else
-					note.midiPitch = diatonicPitchChange(note.startTick, note.midiPitch);
+					note.midiPitch = diatonicPitchChange(key, note.midiPitch);
+				
+				that.newElementPitchOctave = Math.floor(note.midiPitch / 12);
+				that.newElementDegreeOctave = 
+					Math.floor(Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, note.midiPitch, false) / 7);
 			}
 			noteToSample = note;
 		});
@@ -911,7 +925,10 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 				if (!diatonic)
 					chord.rootMidiPitch = mod(chord.rootMidiPitch + step, 12);
 				else
-					chord.rootMidiPitch = diatonicPitchChange(chord.startTick, chord.rootMidiPitch);
+				{
+					var key = that.song.keyChanges.findPrevious(chord.startTick);
+					chord.rootMidiPitch = mod(diatonicPitchChange(key, chord.rootMidiPitch), 12);
+				}
 			}
 			chordToSample = chord;
 		});
