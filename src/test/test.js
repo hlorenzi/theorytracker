@@ -2,6 +2,8 @@ function test()
 {
 	testPitchDegrees();
 	testPitchRows();
+	testIntegerBinaryIO();
+	testRationalBinaryIO();
 }
 
 
@@ -26,7 +28,7 @@ function testPitchDegrees()
 					var pitch  = Theory.getDegreePitch(s, t, degree, pop);
 					
 					console.assert(p == pitch,
-						"pitch-degree-pitch (", p, " == ", pitch, ")",
+						"pitch-degree-pitch roundtrip (", p, " != ", pitch, ")",
 						" -- s(", s, ") t(", t, ") p(", p, ") degree(", degree, ") pitch(", pitch, "), n(", n, ")");
 				}
 			}
@@ -56,10 +58,97 @@ function testPitchRows()
 					var pitch = Theory.getRowPitch(s, t, row, pop);
 					
 					console.assert(p == pitch,
-						"pitch-row-pitch roundtrip (", p, " == ", pitch, ")",
+						"pitch-row-pitch roundtrip (", p, " != ", pitch, ")",
 						"-- s(", s, ") t(", t, ") p(", p, ") row(", row, ") pitch(", pitch, "), n(", n, ")");
 				}
 			}
 		}
 	}
+}
+
+
+// Test BinaryIO integer write-read roundtrip.
+function testIntegerBinaryIO()
+{
+	var test = function(num)
+	{
+		var writer = new BinaryWriter();
+		writer.writeInteger(num);
+		var reader = new BinaryReader(writer.data);
+		var readNum = reader.readInteger();
+		console.assert(num == readNum, "integer binary io roundtrip (", num, " != ", readNum, ")");
+	};
+	
+	test(0);
+	
+	test(1);
+	test(2);
+	test(10);
+	test(0x7f);
+	test(0x80);
+	test(0x81);
+	test(0xff);
+	test(0x100);
+	test(0x101);
+	test(0xfff);
+	test(0xffff);
+	test(0xfffff);
+	test(0xffffff);
+	test(0xfffffff);
+	
+	test(-1);
+	test(-2);
+	test(-10);
+	test(-0x7f);
+	test(-0x80);
+	test(-0x81);
+	test(-0xff);
+	test(-0x100);
+	test(-0x101);
+	test(-0xfff);
+	test(-0xffff);
+	test(-0xfffff);
+	test(-0xffffff);
+	test(-0xfffffff);
+}
+
+
+// Test BinaryIO rational write-read roundtrip.
+function testRationalBinaryIO()
+{
+	var test = function(rational)
+	{
+		var writer = new BinaryWriter();
+		writer.writeRational(rational);
+		var reader = new BinaryReader(writer.data);
+		var readRational = reader.readRational();
+		console.assert(rational.compare(readRational) == 0, "rational binary io roundtrip (", rational.toString(), " != ", readRational.toString(), ")");
+	};
+	
+	test(new Rational(0));
+	
+	test(new Rational(1));
+	test(new Rational(0x7f));
+	test(new Rational(0x80));
+	test(new Rational(0x81));
+	
+	test(new Rational(-1));
+	test(new Rational(-0x7f));
+	test(new Rational(-0x80));
+	test(new Rational(-0x81));
+	
+	test(new Rational(0, 0, 1));
+	test(new Rational(0, 1, 2));
+	test(new Rational(0, 3, 4));
+	test(new Rational(0, 5, 8));
+	test(new Rational(0x7f, 1, 2));
+	test(new Rational(0xff, 3, 4));
+	test(new Rational(0x81, 5, 8));
+	
+	test(new Rational(-1, 1, 2));
+	test(new Rational(-1, 3, 4));
+	test(new Rational(-1, 5, 8));
+	test(new Rational(-0x7f, 1, 2));
+	test(new Rational(-0xff, 3, 4));
+	test(new Rational(-0x81, 5, 8));
 }

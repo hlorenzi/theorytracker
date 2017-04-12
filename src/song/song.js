@@ -183,14 +183,13 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 }
 
 // Returns a JSON string containing the song data.
-Song.prototype.save = function(compressed)
+Song.prototype.saveJSON = function()
 {
 	this.notes.sort();
 	this.chords.sort();
 	this.keyChanges.sort();
 	this.meterChanges.sort();
 	this.forcedMeasures.sort();
-	
 	this.setLengthAuto();
 	
 	var json = "{\n";
@@ -274,27 +273,15 @@ Song.prototype.save = function(compressed)
 	
 	json += "  ]\n}";
 	
-	if (compressed)
-	{
-		json = pako.deflateRaw(json, { to: "string" });
-		json = window.btoa(json);
-	}
-	
 	return json;
 }
 
 
 // Loads the song data contained in the given string.
 // Will throw an exception on error.
-Song.prototype.load = function(jsonStr, compressed)
+Song.prototype.loadJSON = function(jsonStr)
 {
 	this.clear();
-	
-	if (compressed)
-	{
-		jsonStr = window.atob(jsonStr);
-		jsonStr = pako.inflateRaw(jsonStr, { to: "string" });
-	}
 	
 	var song = JSON.parse(jsonStr);
 	this.bpm = song.bpm;
@@ -332,6 +319,133 @@ Song.prototype.load = function(jsonStr, compressed)
 			Rational.fromArray(song.meterChanges[i][0]),
 			song.meterChanges[i][1],
 			song.meterChanges[i][2]));
+	}
+	
+	this.setLengthAuto();
+	this.sanitize();
+}
+
+
+// Returns a compressed Base-64 string containing the song data.
+Song.prototype.saveBinary = function()
+{
+	this.notes.sort();
+	this.chords.sort();
+	this.keyChanges.sort();
+	this.meterChanges.sort();
+	this.forcedMeasures.sort();
+	this.setLengthAuto();
+	
+	var writer = new BinaryWriter();
+	
+	writer.writeInteger(0); // Version.
+	writer.writeRational(this.length)
+	writer.writeInteger(this.bpm);
+	
+	writer.writeInteger(this.notes.items.length);
+	for (var i = 0; i < this.notes.items.length; i++)
+	{
+		var note = this.notes.items[i];
+		
+		writer.writeRational(note.startTick);
+		writer.writeRational(note.endTick);
+		writer.writeInteger(note.trackIndex);
+		writer.writeInteger(note.midiPitch - 60); // Arbitrary bias to save bytes in the most common cases.
+	}
+	
+	writer.writeInteger(this.chords.items.length);
+	for (var i = 0; i < this.chords.items.length; i++)
+	{
+		var chord = this.chords.items[i];
+		
+		writer.writeRational(chord.startTick);
+		writer.writeRational(chord.endTick);
+		writer.writeInteger(chord.chordKindIndex);
+		writer.writeInteger(chord.rootMidiPitch);
+		writer.writeInteger(0); // Embelishment count.
+	}
+	
+	writer.writeInteger(this.keyChanges.items.length);
+	for (var i = 0; i < this.keyChanges.items.length; i++)
+	{
+		var keyCh = this.keyChanges.items[i];
+		
+		writer.writeRational(keyCh.tick);
+		writer.writeInteger(keyCh.scaleIndex);
+		writer.writeInteger(keyCh.tonicMidiPitch);
+	}
+	
+	writer.writeInteger(this.meterChanges.items.length);
+	for (var i = 0; i < this.meterChanges.items.length; i++)
+	{
+		var meterCh = this.meterChanges.items[i];
+		
+		writer.writeRational(meterCh.tick);
+		writer.writeInteger(meterCh.numerator);
+		writer.writeInteger(meterCh.denominator);
+	}
+	
+	var data = writer.data;
+	data = pako.deflateRaw(data, { to: "string" });
+	data = window.btoa(data);
+	return data;
+}
+
+
+// Loads the song data contained in the given string.
+// Will throw an exception on error.
+Song.prototype.loadBinary = function(base64str)
+{
+	this.clear();
+	
+	var data = window.atob(base64str);
+	data = pako.inflateRaw(data);
+	
+	var reader = new BinaryReader(data);
+	
+	reader.readInteger(); // Version.
+	reader.readRational(); // Length.
+	this.bpm = reader.readInteger();
+	
+	var noteNum = reader.readInteger();
+	for (var i = 0; i < noteNum; i++)
+	{
+		this.notes.insert(new SongNote(
+			reader.readRational(),
+			reader.readRational(),
+			reader.readInteger(),
+			reader.readInteger() + 60));
+	}
+	
+	var chordNum = reader.readInteger();
+	for (var i = 0; i < chordNum; i++)
+	{
+		this.chords.insert(new SongChord(
+			reader.readRational(),
+			reader.readRational(),
+			reader.readInteger(),
+			reader.readInteger(),
+			[]));
+			
+		reader.readInteger(); // Embelishment count.
+	}
+	
+	var keyChNum = reader.readInteger();
+	for (var i = 0; i < keyChNum; i++)
+	{
+		this.keyChanges.insert(new SongKeyChange(
+			reader.readRational(),
+			reader.readInteger(),
+			reader.readInteger()));
+	}
+	
+	var meterChNum = reader.readInteger();
+	for (var i = 0; i < meterChNum; i++)
+	{
+		this.meterChanges.insert(new SongMeterChange(
+			reader.readRational(),
+			reader.readInteger(),
+			reader.readInteger()));
 	}
 	
 	this.setLengthAuto();

@@ -67,11 +67,15 @@ function clearSongData()
 }
 
 
-function loadSongData(data, compressed)
+function loadSongData(data, binaryCompressed)
 {
 	try
 	{
-		g_Song.load(data, compressed);
+		if (binaryCompressed)
+			g_Song.loadBinary(data);
+		else
+			g_Song.loadJSON(data);
+		
 		document.getElementById("inputTempo").value = g_Song.bpm.toString();
 		g_Editor.setSong(g_Song);
 		g_Editor.cursorSetTickBoth(new Rational(0));
@@ -375,13 +379,13 @@ function handleButtonNew()
 
 function handleButtonGenerateLink()
 {
-	var songData = g_Song.save(true);
+	var songData = g_Song.saveBinary();
 	g_Editor.setUnsavedChanges(false);
 	refreshURL(songData);
 }
 
 
-function handleButtonLoadString(compressed)
+function handleButtonLoadString()
 {
 	if (!askUnsavedChanges())
 		return;
@@ -390,13 +394,35 @@ function handleButtonLoadString(compressed)
 	if (data == null)
 		return;
 	
-	loadSongData(data, compressed);
+	loadSongData(data, false);
 }
 
 
-function handleButtonSaveString(compressed)
+function handleButtonSaveString()
 {
-	var songData = g_Song.save(compressed);
+	var songData = g_Song.saveJSON();
+	var data = "data:text/plain," + encodeURIComponent(songData);
+	window.open(data);
+	g_Editor.setUnsavedChanges(false);
+}
+
+
+function handleButtonLoadStringCompressed()
+{
+	if (!askUnsavedChanges())
+		return;
+	
+	var data = window.prompt("Paste a saved compressed song data:", "");
+	if (data == null)
+		return;
+	
+	loadSongData(data, true);
+}
+
+
+function handleButtonSaveStringCompressed()
+{
+	var songData = g_Song.saveBinary();
 	var data = "data:text/plain," + encodeURIComponent(songData);
 	window.open(data);
 	g_Editor.setUnsavedChanges(false);
@@ -420,7 +446,7 @@ function handleButtonLoadDropbox()
 			xhr.onload = function()
 			{
 				if (xhr.status == 200)
-					loadSongData(xhr.response);
+					loadSongData(xhr.response, false);
 				else
 					window.alert("Error loading Dropbox file.");
 			};
@@ -433,7 +459,7 @@ function handleButtonLoadDropbox()
 // Still not working...
 function handleButtonSaveDropbox()
 {
-	var songData = g_Song.save();
+	var songData = g_Song.saveJSON();
 	var data = "data:text/plain," + encodeURIComponent(songData);
 	
 	Dropbox.save(
@@ -453,7 +479,7 @@ function handleButtonSaveAsDropbox()
 	if (filename == null)
 		return;
 	
-	var songData = g_Song.save();
+	var songData = g_Song.saveJSON();
 	var data = "data:text/plain," + encodeURIComponent(songData);
 	
 	Dropbox.save(
