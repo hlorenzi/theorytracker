@@ -338,54 +338,55 @@ Song.prototype.saveBinary = function()
 	
 	var writer = new BinaryWriter();
 	
-	writer.writeInteger(0); // Version.
-	writer.writeRational(this.length)
-	writer.writeInteger(this.bpm);
+	writer.writeInteger(0, false); // Version.
+	writer.writeRational(this.length, false)
+	writer.writeInteger(this.bpm, false);
 	
-	writer.writeInteger(this.notes.items.length);
+	writer.writeInteger(this.notes.items.length, false);
 	for (var i = 0; i < this.notes.items.length; i++)
 	{
 		var note = this.notes.items[i];
 		
-		writer.writeRational(note.startTick);
-		writer.writeRational(note.endTick);
-		writer.writeInteger(note.trackIndex);
+		writer.writeRational(note.startTick, false);
+		writer.writeRational(note.endTick, false);
+		writer.writeInteger(note.trackIndex, false);
 		writer.writeInteger(note.midiPitch - 60); // Arbitrary bias to save bytes in the most common cases.
 	}
 	
-	writer.writeInteger(this.chords.items.length);
+	writer.writeInteger(this.chords.items.length, false);
 	for (var i = 0; i < this.chords.items.length; i++)
 	{
 		var chord = this.chords.items[i];
 		
-		writer.writeRational(chord.startTick);
-		writer.writeRational(chord.endTick);
-		writer.writeInteger(chord.chordKindIndex);
-		writer.writeInteger(chord.rootMidiPitch);
-		writer.writeInteger(0); // Embelishment count.
+		writer.writeRational(chord.startTick, false);
+		writer.writeRational(chord.endTick, false);
+		writer.writeInteger(chord.chordKindIndex, false);
+		writer.writeInteger(chord.rootMidiPitch, false);
+		writer.writeInteger(0, false); // Embelishment count.
 	}
 	
-	writer.writeInteger(this.keyChanges.items.length);
+	writer.writeInteger(this.keyChanges.items.length, false);
 	for (var i = 0; i < this.keyChanges.items.length; i++)
 	{
 		var keyCh = this.keyChanges.items[i];
 		
-		writer.writeRational(keyCh.tick);
-		writer.writeInteger(keyCh.scaleIndex);
-		writer.writeInteger(keyCh.tonicMidiPitch);
+		writer.writeRational(keyCh.tick, false);
+		writer.writeInteger(keyCh.scaleIndex, false);
+		writer.writeInteger(keyCh.tonicMidiPitch, false);
 	}
 	
-	writer.writeInteger(this.meterChanges.items.length);
+	writer.writeInteger(this.meterChanges.items.length, false);
 	for (var i = 0; i < this.meterChanges.items.length; i++)
 	{
 		var meterCh = this.meterChanges.items[i];
 		
-		writer.writeRational(meterCh.tick);
-		writer.writeInteger(meterCh.numerator);
-		writer.writeInteger(meterCh.denominator);
+		writer.writeRational(meterCh.tick, false);
+		writer.writeInteger(meterCh.numerator, false);
+		writer.writeInteger(meterCh.denominator, false);
 	}
 	
-	var data = writer.data;
+	var data = writer.finish();
+	//data = byteArrayToString(data);
 	data = pako.deflateRaw(data, { to: "string" });
 	data = window.btoa(data);
 	return data;
@@ -403,49 +404,49 @@ Song.prototype.loadBinary = function(base64str)
 	
 	var reader = new BinaryReader(data);
 	
-	reader.readInteger(); // Version.
-	reader.readRational(); // Length.
-	this.bpm = reader.readInteger();
+	reader.readInteger(false); // Version.
+	reader.readRational(false); // Length.
+	this.bpm = reader.readInteger(false);
 	
-	var noteNum = reader.readInteger();
+	var noteNum = reader.readInteger(false);
 	for (var i = 0; i < noteNum; i++)
 	{
 		this.notes.insert(new SongNote(
-			reader.readRational(),
-			reader.readRational(),
-			reader.readInteger(),
+			reader.readRational(false),
+			reader.readRational(false),
+			reader.readInteger(false),
 			reader.readInteger() + 60));
 	}
 	
-	var chordNum = reader.readInteger();
+	var chordNum = reader.readInteger(false);
 	for (var i = 0; i < chordNum; i++)
 	{
 		this.chords.insert(new SongChord(
-			reader.readRational(),
-			reader.readRational(),
-			reader.readInteger(),
-			reader.readInteger(),
+			reader.readRational(false),
+			reader.readRational(false),
+			reader.readInteger(false),
+			reader.readInteger(false),
 			[]));
 			
-		reader.readInteger(); // Embelishment count.
+		reader.readInteger(false); // Embelishment count.
 	}
 	
-	var keyChNum = reader.readInteger();
+	var keyChNum = reader.readInteger(false);
 	for (var i = 0; i < keyChNum; i++)
 	{
 		this.keyChanges.insert(new SongKeyChange(
-			reader.readRational(),
-			reader.readInteger(),
-			reader.readInteger()));
+			reader.readRational(false),
+			reader.readInteger(false),
+			reader.readInteger(false)));
 	}
 	
-	var meterChNum = reader.readInteger();
+	var meterChNum = reader.readInteger(false);
 	for (var i = 0; i < meterChNum; i++)
 	{
 		this.meterChanges.insert(new SongMeterChange(
-			reader.readRational(),
-			reader.readInteger(),
-			reader.readInteger()));
+			reader.readRational(false),
+			reader.readInteger(false),
+			reader.readInteger(false)));
 	}
 	
 	this.setLengthAuto();

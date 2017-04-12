@@ -11,34 +11,77 @@ function byteArrayToString(array)
 
 function BinaryWriter()
 {
+	this.currentByte = 0;
+	this.currentBitNum = 0;
 	this.data = [];
 }
 
 
-BinaryWriter.prototype.writeInteger = function(value)
+BinaryWriter.prototype.writeBit = function(bit)
 {
-	var negative = (value < 0);
+	this.currentByte = (this.currentByte << 1) | (bit & 0x1);
+	this.currentBitNum += 1;
 	
-	if (negative)
-		value = -value;
-	
-	this.data.push((negative ? 0x40 : 0) | (value & 0x3f));
-	value >>= 6;
-	
-	var spliceAt = this.data.length - 1;	
-	while (value > 0)
+	if (this.currentBitNum >= 8)
 	{
-		this.data.splice(spliceAt, 0, 0x80 | (value & 0x7f));
-		value >>= 7;
+		this.data.push(this.currentByte);
+		this.currentByte = 0;
+		this.currentBitNum = 0;
 	}
 }
 
 
-BinaryWriter.prototype.writeRational = function(rational)
+BinaryWriter.prototype.finish = function()
 {
-	this.writeInteger(rational.integer);
-	this.writeInteger(rational.numerator);
-	this.writeInteger(rational.denominator);
+	while (this.currentBitNum > 0)
+		this.writeBit(0);
+	
+	return this.data;
+}
+
+
+BinaryWriter.prototype.writeInteger = function(value, canBeNegative = true, blockSize = 5)
+{
+	if (canBeNegative)
+	{
+		if (value < 0)
+		{
+			this.writeBit(1);
+			value = -value;
+		}
+		else
+			this.writeBit(0);
+	}
+	
+	while (true)
+	{
+		for (var i = 0; i < blockSize; i++)
+		{
+			this.writeBit(value & 0x1);
+			value >>= 1;
+		}
+		
+		this.writeBit(value > 0 ? 1 : 0);
+		if (value == 0)
+			break;
+	}
+}
+
+
+BinaryWriter.prototype.writeRational = function(rational, canBeNegative = true)
+{
+	if (rational.numerator == 0)
+	{
+		this.writeBit(0);
+		this.writeInteger(rational.integer, canBeNegative);
+	}
+	else
+	{
+		this.writeBit(1);
+		this.writeInteger(rational.integer, canBeNegative);
+		this.writeInteger(rational.numerator, false);
+		this.writeInteger(rational.denominator, false);
+	}
 }
 
 
@@ -46,42 +89,66 @@ function BinaryReader(data)
 {
 	this.data = data;
 	this.index = 0;
+	this.currentBitNum = 8;
 }
 
 
-BinaryReader.prototype.readInteger = function()
+BinaryReader.prototype.readBit = function()
 {
-	var value = 0;
-	while (true)
+	if (this.index >= this.data.length)
+		return 0;
+	
+	this.currentBitNum -= 1;
+	var bit = (this.data[this.index] >> this.currentBitNum) & 0x1;
+	
+	if (this.currentBitNum <= 0)
 	{
-		if (this.index >= this.data.length)
-			throw "unexpected end of binary stream";
-		
-		var block = this.data[this.index];
 		this.index += 1;
-		
-		
-		if ((block & 0x80) == 0)
-		{
-			value = (value << 6) | (block & 0x3f);
-			
-			if ((block & 0x40) != 0)
-				value = -value;
-			
-			break;
-		}
-		else
-			value = (value << 7) | (block & 0x7f);
+		this.currentBitNum = 8;
 	}
 	
-	return value;
+	return bit;
 }
 
 
-BinaryReader.prototype.readRational = function()
+BinaryReader.prototype.readInteger = function(canBeNegative = true, blockSize = 5)
 {
-	return new Rational(
-		this.readInteger(),
-		this.readInteger(),
-		this.readInteger());
+	var sign = 1;
+	if (canBeNegative)
+	{
+		if (this.readBit() == 1)
+			sign = -1;
+	}
+	
+	var value = 0;
+	var index = 0;
+	while (true)
+	{
+		for (var i = 0; i < blockSize; i++)
+		{
+			value |= (this.readBit() << index);
+			index += 1;
+		}
+		
+		if (this.readBit() == 0)
+			break;
+	}
+	
+	return value * sign;
+}
+
+
+BinaryReader.prototype.readRational = function(canBeNegative = true)
+{
+	if (this.readBit() == 0)
+	{
+		return new Rational(this.readInteger(canBeNegative));
+	}
+	else
+	{
+		return new Rational(
+			this.readInteger(canBeNegative),
+			this.readInteger(false),
+			this.readInteger(false));
+	}
 }

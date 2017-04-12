@@ -74,42 +74,13 @@ function testIntegerBinaryIO()
 	{
 		var writer = new BinaryWriter();
 		writer.writeInteger(num);
-		var reader = new BinaryReader(writer.data);
+		var reader = new BinaryReader(writer.finish());
 		var readNum = reader.readInteger();
 		console.assert(num == readNum, "integer binary io roundtrip (", num, " != ", readNum, ")");
 	};
 	
-	test(0);
-	
-	test(1);
-	test(2);
-	test(10);
-	test(0x7f);
-	test(0x80);
-	test(0x81);
-	test(0xff);
-	test(0x100);
-	test(0x101);
-	test(0xfff);
-	test(0xffff);
-	test(0xfffff);
-	test(0xffffff);
-	test(0xfffffff);
-	
-	test(-1);
-	test(-2);
-	test(-10);
-	test(-0x7f);
-	test(-0x80);
-	test(-0x81);
-	test(-0xff);
-	test(-0x100);
-	test(-0x101);
-	test(-0xfff);
-	test(-0xffff);
-	test(-0xfffff);
-	test(-0xffffff);
-	test(-0xfffffff);
+	for (var i = -0xfff; i <= 0xfff; i++)
+		test(i);
 }
 
 
@@ -120,7 +91,7 @@ function testRationalBinaryIO()
 	{
 		var writer = new BinaryWriter();
 		writer.writeRational(rational);
-		var reader = new BinaryReader(writer.data);
+		var reader = new BinaryReader(writer.finish());
 		var readRational = reader.readRational();
 		console.assert(rational.compare(readRational) == 0, "rational binary io roundtrip (", rational.toString(), " != ", readRational.toString(), ")");
 	};
