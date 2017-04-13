@@ -38,7 +38,9 @@ BinaryWriter.prototype.writeRational = function(rational)
 {
 	this.writeInteger(rational.integer);
 	this.writeInteger(rational.numerator);
-	this.writeInteger(rational.denominator);
+	
+	if (rational.numerator != 0)
+		this.writeInteger(rational.denominator);
 }
 
 
@@ -60,7 +62,6 @@ BinaryReader.prototype.readInteger = function()
 		var block = this.data[this.index];
 		this.index += 1;
 		
-		
 		if ((block & 0x80) == 0)
 		{
 			value = (value << 6) | (block & 0x3f);
@@ -80,8 +81,11 @@ BinaryReader.prototype.readInteger = function()
 
 BinaryReader.prototype.readRational = function()
 {
-	return new Rational(
-		this.readInteger(),
-		this.readInteger(),
-		this.readInteger());
+	var integer = this.readInteger();
+	var numerator = this.readInteger();
+	var denominator = 1;
+	if (numerator != 0)
+		denominator = this.readInteger();
+	
+	return new Rational(integer, numerator, denominator);
 }

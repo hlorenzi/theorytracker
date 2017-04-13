@@ -197,19 +197,33 @@ Song.prototype.saveJSON = function()
 	json += "  \"length\": " + this.length.toString() + ",\n";
 	json += "  \"bpm\": " + this.bpm + ",\n";
 	
-	json += "  \"notes\": [\n";
+	json += "  \"tracks\": [\n";
 	
-	for (var i = 0; i < this.notes.items.length; i++)
+	var trackNum = 1;
+	for (var j = 0; j < trackNum; j++) // For each note track (currently only one is available).
 	{
-		var note = this.notes.items[i];
+		json += "    {\n";
+		json += "      \"notes\": [\n";
 		
-		json += "    ";
-		json += "[ " + note.startTick.toString() + ", ";
-		json += note.endTick.toString() + ", ";
-		json += note.trackIndex.toString() + ", ";
-		json += note.midiPitch.toString() + " ]";
+		for (var i = 0; i < this.notes.items.length; i++)
+		{
+			var note = this.notes.items[i];
+			
+			json += "        ";
+			json += "[ " + note.startTick.toString() + ", ";
+			json += (note.endTick.clone().subtract(note.startTick)).toString() + ", ";
+			json += note.midiPitch.toString() + " ]";
+			
+			if (i < this.notes.items.length - 1)
+				json += ",";
+			
+			json += "\n";
+		}
 		
-		if (i < this.notes.items.length - 1)
+		json += "      ]\n";
+		
+		json += "    }";
+		if (j < trackNum - 1)
 			json += ",";
 		
 		json += "\n";
@@ -224,7 +238,7 @@ Song.prototype.saveJSON = function()
 		
 		json += "    ";
 		json += "[ " + chord.startTick.toString() + ", ";
-		json += chord.endTick.toString() + ", ";
+		json += (chord.endTick.clone().subtract(chord.startTick)).toString() + ", ";
 		json += chord.chordKindIndex.toString() + ", ";
 		json += chord.rootMidiPitch.toString() + ", ";
 		json += "[] ]";//chord.embelishments.toString() + " ]";
@@ -285,21 +299,31 @@ Song.prototype.loadJSON = function(jsonStr)
 	
 	var song = JSON.parse(jsonStr);
 	this.bpm = song.bpm;
+	console.log(song);
 	
-	for (var i = 0; i < song.notes.length; i++)
+	for (var j = 0; j < song.tracks.length; j++)
 	{
-		this.notes.insert(new SongNote(
-			Rational.fromArray(song.notes[i][0]),
-			Rational.fromArray(song.notes[i][1]),
-			song.notes[i][2],
-			song.notes[i][3]));
+		var track = song.tracks[j];
+		
+		for (var i = 0; i < track.notes.length; i++)
+		{
+			var startTick = Rational.fromArray(track.notes[i][0]);
+			
+			this.notes.insert(new SongNote(
+				startTick,
+				Rational.fromArray(track.notes[i][1]).add(startTick),
+				j,
+				track.notes[i][2]));
+		}
 	}
 	
 	for (var i = 0; i < song.chords.length; i++)
 	{
+		var startTick = Rational.fromArray(song.chords[i][0]);
+		
 		this.chords.insert(new SongChord(
-			Rational.fromArray(song.chords[i][0]),
-			Rational.fromArray(song.chords[i][1]),
+			startTick,
+			Rational.fromArray(song.chords[i][1]).add(startTick),
 			song.chords[i][2],
 			song.chords[i][3],
 			[]));
@@ -338,33 +362,86 @@ Song.prototype.saveBinary = function()
 	
 	var writer = new BinaryWriter();
 	
+	// Write header.
 	writer.writeInteger(0); // Version.
 	writer.writeRational(this.length)
 	writer.writeInteger(this.bpm);
 	
-	writer.writeInteger(this.notes.items.length);
-	for (var i = 0; i < this.notes.items.length; i++)
+	// Write note tracks.
+	var trackNum = 1;
+	writer.writeInteger(trackNum);
+	for (var j = 0; j < trackNum; j++)
 	{
-		var note = this.notes.items[i];
+		// Write note data as an structure-of-arrays.
+		writer.writeInteger(this.notes.items.length);
 		
-		writer.writeRational(note.startTick);
-		writer.writeRational(note.endTick);
-		writer.writeInteger(note.trackIndex);
-		writer.writeInteger(note.midiPitch - 60); // Arbitrary bias to save bytes in the most common cases.
+		for (var i = 0; i < this.notes.items.length; i++)
+			writer.writeInteger(this.notes.items[i].startTick.integer);
+		
+		for (var i = 0; i < this.notes.items.length; i++)
+			writer.writeInteger(this.notes.items[i].startTick.numerator);
+		
+		for (var i = 0; i < this.notes.items.length; i++)
+		{
+			if (this.notes.items[i].startTick.numerator != 0)
+				writer.writeInteger(this.notes.items[i].startTick.denominator);
+		}
+		
+		for (var i = 0; i < this.notes.items.length; i++)
+			writer.writeInteger(this.notes.items[i].endTick.clone().subtract(this.notes.items[i].startTick).integer);
+		
+		for (var i = 0; i < this.notes.items.length; i++)
+			writer.writeInteger(this.notes.items[i].endTick.clone().subtract(this.notes.items[i].startTick).numerator);
+		
+		for (var i = 0; i < this.notes.items.length; i++)
+		{
+			var duration = this.notes.items[i].endTick.clone().subtract(this.notes.items[i].startTick);
+			if (duration.numerator != 0)
+				writer.writeInteger(duration.denominator);
+		}
+		
+		for (var i = 0; i < this.notes.items.length; i++)
+			writer.writeInteger(this.notes.items[i].midiPitch - 60); // Arbitrary bias to save bytes in the most common cases.
 	}
 	
+	// Write chord data as an structure-of-arrays.
 	writer.writeInteger(this.chords.items.length);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].startTick.integer);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].startTick.numerator);
+	
 	for (var i = 0; i < this.chords.items.length; i++)
 	{
-		var chord = this.chords.items[i];
-		
-		writer.writeRational(chord.startTick);
-		writer.writeRational(chord.endTick);
-		writer.writeInteger(chord.chordKindIndex);
-		writer.writeInteger(chord.rootMidiPitch);
-		writer.writeInteger(0); // Embelishment count.
+		if (this.chords.items[i].startTick.numerator != 0)
+			writer.writeInteger(this.chords.items[i].startTick.denominator);
 	}
 	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].endTick.clone().subtract(this.chords.items[i].startTick).integer);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].endTick.clone().subtract(this.chords.items[i].startTick).numerator);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+	{
+		var duration = this.chords.items[i].endTick.clone().subtract(this.chords.items[i].startTick);
+		if (duration.numerator != 0)
+			writer.writeInteger(duration.denominator);
+	}
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].chordKindIndex);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].rootMidiPitch);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(0); // Embelishment count.
+	
+	// Write key change data.
 	writer.writeInteger(this.keyChanges.items.length);
 	for (var i = 0; i < this.keyChanges.items.length; i++)
 	{
@@ -375,6 +452,7 @@ Song.prototype.saveBinary = function()
 		writer.writeInteger(keyCh.tonicMidiPitch);
 	}
 	
+	// Write meter change data.
 	writer.writeInteger(this.meterChanges.items.length);
 	for (var i = 0; i < this.meterChanges.items.length; i++)
 	{
@@ -385,6 +463,7 @@ Song.prototype.saveBinary = function()
 		writer.writeInteger(meterCh.denominator);
 	}
 	
+	// Compress data.
 	var data = writer.data;
 	data = pako.deflateRaw(data, { to: "string" });
 	data = window.btoa(data);
@@ -398,38 +477,114 @@ Song.prototype.loadBinary = function(base64str)
 {
 	this.clear();
 	
+	// Uncompress data.
 	var data = window.atob(base64str);
 	data = pako.inflateRaw(data);
 	
 	var reader = new BinaryReader(data);
 	
+	// Read header.
 	reader.readInteger(); // Version.
 	reader.readRational(); // Length.
 	this.bpm = reader.readInteger();
 	
-	var noteNum = reader.readInteger();
-	for (var i = 0; i < noteNum; i++)
+	// Read note tracks.
+	var trackNum = reader.readInteger();
+	for (var j = 0; j < trackNum; j++)
 	{
-		this.notes.insert(new SongNote(
-			reader.readRational(),
-			reader.readRational(),
-			reader.readInteger(),
-			reader.readInteger() + 60));
+		// Read note data as structure-of-arrays.
+		var noteNum = reader.readInteger();
+		
+		var noteData = [];
+		
+		for (var i = 0; i < noteNum; i++)
+			noteData[i] = [ reader.readInteger(), 0, 1, 0, 0, 1 ];
+			
+		for (var i = 0; i < noteNum; i++)
+			noteData[i][1] = reader.readInteger();
+		
+		for (var i = 0; i < noteNum; i++)
+		{
+			if (noteData[i][1] != 0)
+				noteData[i][2] = reader.readInteger();
+		}
+		
+		for (var i = 0; i < noteNum; i++)
+			noteData[i][3] = reader.readInteger();
+			
+		for (var i = 0; i < noteNum; i++)
+			noteData[i][4] = reader.readInteger();
+		
+		for (var i = 0; i < noteNum; i++)
+		{
+			if (noteData[i][4] != 0)
+				noteData[i][5] = reader.readInteger();
+		}
+		
+		for (var i = 0; i < noteNum; i++)
+		{
+			var startTick = new Rational(noteData[i][0], noteData[i][1], noteData[i][2]);
+			var duration = new Rational(noteData[i][3], noteData[i][4], noteData[i][5]);
+			
+			this.notes.insert(new SongNote(
+				startTick,
+				duration.add(startTick),
+				j,
+				reader.readInteger() + 60));
+		}
 	}
 	
+	// Read chord data as structure-of-arrays.
 	var chordNum = reader.readInteger();
+	
+	var chordData = [];
+	
+	for (var i = 0; i < chordNum; i++)
+		chordData[i] = [ reader.readInteger(), 0, 1, 0, 0, 1, 0, 0 ];
+		
+	for (var i = 0; i < chordNum; i++)
+		chordData[i][1] = reader.readInteger();
+	
 	for (var i = 0; i < chordNum; i++)
 	{
-		this.chords.insert(new SongChord(
-			reader.readRational(),
-			reader.readRational(),
-			reader.readInteger(),
-			reader.readInteger(),
-			[]));
-			
-		reader.readInteger(); // Embelishment count.
+		if (chordData[i][1] != 0)
+			chordData[i][2] = reader.readInteger();
 	}
 	
+	for (var i = 0; i < chordNum; i++)
+		chordData[i][3] = reader.readInteger();
+	
+	for (var i = 0; i < chordNum; i++)
+		chordData[i][4] = reader.readInteger();
+	
+	for (var i = 0; i < chordNum; i++)
+	{
+		if (chordData[i][4] != 0)
+			chordData[i][5] = reader.readInteger();
+	}
+	
+	for (var i = 0; i < chordNum; i++)
+		chordData[i][6] = reader.readInteger();
+	
+	for (var i = 0; i < chordNum; i++)
+		chordData[i][7] = reader.readInteger();
+	
+	for (var i = 0; i < chordNum; i++)
+	{
+		var startTick = new Rational(chordData[i][0], chordData[i][1], chordData[i][2]);
+		var duration = new Rational(chordData[i][3], chordData[i][4], chordData[i][5]);
+		
+		reader.readInteger(); // Embelishment count.
+		
+		this.chords.insert(new SongChord(
+			startTick,
+			duration.add(startTick),
+			chordData[i][6],
+			chordData[i][7],
+			[]));
+	}
+	
+	// Read key change data.
 	var keyChNum = reader.readInteger();
 	for (var i = 0; i < keyChNum; i++)
 	{
@@ -439,6 +594,7 @@ Song.prototype.loadBinary = function(base64str)
 			reader.readInteger()));
 	}
 	
+	// Read meter change data.
 	var meterChNum = reader.readInteger();
 	for (var i = 0; i < meterChNum; i++)
 	{
