@@ -17,7 +17,7 @@ body
 #divToolbox
 {
 	width: 100%;
-	height: 130px;
+	height: 150px;
 	padding-top: 5px;
 	padding-bottom: 5px;
 	padding-left: 5px;
@@ -29,13 +29,13 @@ body
 
 #tableToolboxMainLayout
 {
-	height: 120px;
+	height: 140px;
 }
 
 #divEditor
 {
 	width: 100%;
-	height: calc(100% - 130px);
+	height: calc(100% - 150px);
 	overflow-x: hidden;
 	overflow-y: scroll;
 }
@@ -216,17 +216,20 @@ body
 	stroke-width: 2px;
 }
 
-.editorDegree
+.editorOctaveLine
 {
-	stroke-width: 0px;
-	fill: #888;
+	stroke: #aaa;
+	stroke-width: 2px;
 }
 
-.editorDegreeSelected
+.editorNote
+{
+	stroke-width: 0px;
+}
+
+.editorNoteSelected
 {
 	stroke-width: 2px;
-	stroke: #888;
-	fill: #eee;
 }
 
 .editorChordBackground
@@ -235,7 +238,17 @@ body
 	fill: white;
 }
 
-.editorChordLabel
+.editorChordOrnament
+{
+	stroke-width: 0px;
+}
+
+.editorChordOrnamentSelected
+{
+	stroke-width: 2px;
+}
+
+.editorChordRomanLabel
 {
 	fill: black;
 	font-family: Verdana, sans-serif;
@@ -244,7 +257,7 @@ body
 	alignment-baseline: central;
 }
 
-.editorChordLabelSuperscript
+.editorChordRomanLabelSuperscript
 {
 	fill: black;
 	font-family: Verdana, sans-serif;
@@ -254,32 +267,23 @@ body
 	baseline-shift: super;
 }
 
-.editorMeterHandle
+.editorChordAbsoluteLabel
 {
-	fill: #0af;
-	stroke-width: 0px;
-}
-
-.editorMeterHandleSelected
-{
-	stroke: #0af;
-	stroke-width: 2px;
-	fill: #aef;
-}
-
-.editorMeterLine
-{
-	stroke: #0af;
-	stroke-width: 2px;
-}
-
-.editorMeterLabel
-{
-	fill: #0af;
+	fill: black;
 	font-family: Verdana, sans-serif;
-	font-size: 12px;
-	text-anchor: left;
-	alignment-baseline: middle;
+	font-size: 10px;
+	text-anchor: middle;
+	alignment-baseline: central;
+}
+
+.editorChordAbsoluteLabelSuperscript
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 8px;
+	text-anchor: middle;
+	alignment-baseline: central;
+	baseline-shift: super;
 }
 
 .editorKeyHandle
@@ -306,7 +310,44 @@ body
 	fill: #f04;
 	font-family: Verdana, sans-serif;
 	font-size: 12px;
-	text-anchor: left;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorScaleLabel
+{
+	fill: #000;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorMeterHandle
+{
+	fill: #0af;
+	stroke-width: 0px;
+}
+
+.editorMeterHandleSelected
+{
+	stroke: #0af;
+	stroke-width: 2px;
+	fill: #aef;
+}
+
+.editorMeterLine
+{
+	stroke: #0af;
+	stroke-width: 2px;
+}
+
+.editorMeterLabel
+{
+	fill: #0af;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: start;
 	alignment-baseline: middle;
 }
 

@@ -1,9 +1,9 @@
-function SongChord(startTick, endTick, chordKindIndex, rootPitch, embelishments, editorData = null)
+function SongChord(startTick, endTick, chordKindIndex, rootMidiPitch, embelishments, editorData = null)
 {
 	this.startTick      = startTick;
 	this.endTick        = endTick;
 	this.chordKindIndex = chordKindIndex;
-	this.rootPitch      = rootPitch;
+	this.rootMidiPitch  = rootMidiPitch;
 	this.embelishments  = embelishments;
 	this.editorData     = editorData;
 }
@@ -15,6 +15,6 @@ SongChord.prototype.clone = function()
 		this.startTick.clone(),
 		this.endTick.clone(),
 		this.chordKindIndex,
-		this.rootPitch,
+		this.rootMidiPitch,
 		this.embelishments);
 }

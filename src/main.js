@@ -4,29 +4,97 @@ var g_Synth = null;
 
 var g_MainTabIndex = 0;
 var g_CurrentKey = null;
+var g_UpdateURLTimeout = null;
 
 
 function main()
 {
+	test();
+	
 	g_Synth = new Synth();
+	
+	g_Song = new Song();
 	
 	var elemSvgEditor = document.getElementById("svgEditor");
 	g_Editor = new Editor(elemSvgEditor, g_Synth);
-	
-	g_Song = new Song();
 	g_Editor.setSong(g_Song);
 	g_Editor.refresh();
-	
 	g_Editor.callbackTogglePlay = refreshButtonPlay;
 	g_Editor.callbackCursorChange = callbackCursorChange;
+	g_Editor.usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
+	g_Editor.useChordPatterns = document.getElementById("checkboxChordPatterns").checked;
 	
-	window.onresize = function() { g_Editor.refresh(); };
-	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
-		
 	refreshButtonPlay(false);
 	refreshMainTabs();
 	refreshSelectBoxes();
 	callbackCursorChange(new Rational(0));
+	
+	window.onresize = function() { g_Editor.refresh(); };
+	window.onbeforeunload = eventBeforeUnload;
+	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
+	document.getElementById("divToolbox").style.visibility = "visible";
+	
+	var urlSong = getURLQueryParameter("song");
+	if (urlSong != null)
+		loadSongData(urlSong, true);
+}
+
+
+function eventBeforeUnload()
+{
+	return (g_Editor.unsavedChanges ? "Discard unsaved changes?" : null);
+}
+
+
+function askUnsavedChanges()
+{
+	if (g_Editor.unsavedChanges)
+		return window.confirm("Discard unsaved changes?");
+	else
+		return true;
+}
+
+
+function clearSongData()
+{
+	g_Song.clear();
+	g_Song.sanitize();
+	document.getElementById("inputTempo").value = g_Song.bpm.toString();
+	g_Editor.setSong(g_Song);
+	g_Editor.cursorSetTickBoth(new Rational(0));
+	g_Editor.refresh();
+	g_Editor.setUnsavedChanges(false);
+}
+
+
+function loadSongData(data, binaryCompressed)
+{
+	try
+	{
+		if (binaryCompressed)
+			g_Song.loadBinary(data);
+		else
+			g_Song.loadJSON(data);
+		
+		document.getElementById("inputTempo").value = g_Song.bpm.toString();
+		g_Editor.setSong(g_Song);
+		g_Editor.cursorSetTickBoth(new Rational(0));
+		g_Editor.refresh();
+		g_Editor.setUnsavedChanges(false);
+	}
+	catch (err)
+	{
+		window.alert("Error loading song data.");
+		clearSongData();
+	}
+}
+
+
+function refreshURL(songData)
+{
+	var urlWithoutQuery = [location.protocol, "//", location.host, location.pathname].join("");
+	var newUrl = urlWithoutQuery + (songData == null ? "" : "?song=" + encodeURIComponent(songData));
+	window.location = newUrl;
 }
 
 
@@ -52,13 +120,12 @@ function refreshMainTabs()
 function refreshSelectBoxes()
 {
 	var selectKeyPitch = document.getElementById("selectKeyPitch");
-	for (var i = -8; i <= 8; i++)
+	for (var i = 0; i < 12; i++)
 	{
 		var option = document.createElement("option");
 		option.innerHTML = Theory.getIndependentPitchLabel(i);
 		selectKeyPitch.appendChild(option);
 	}
-	selectKeyPitch.selectedIndex = 8;
 	
 	var selectKeyScale = document.getElementById("selectKeyScale");
 	for (var i = 0; i < Theory.scales.length; i++)
@@ -86,6 +153,22 @@ function refreshSelectBoxes()
 	}
 	selectMeterDenominator.selectedIndex = 2;
 	
+	var selectSnap = document.getElementById("selectSnap");
+	for (var i = 0; i < Theory.allowedSnaps.length; i++)
+	{
+		if (Theory.allowedSnaps[i].startGroup != undefined)
+		{
+			var group = document.createElement("optgroup");
+			group.label = "-- " + Theory.allowedSnaps[i].startGroup + " --";
+			selectSnap.appendChild(group);
+		}
+		
+		var option = document.createElement("option");
+		option.innerHTML = Theory.allowedSnaps[i].snap.toUserString();
+		selectSnap.appendChild(option);
+	}
+	selectSnap.selectedIndex = 0;
+	
 	
 	var selectChordKinds = document.getElementById("selectChordKinds");
 	
@@ -107,8 +190,8 @@ function refreshSelectBoxes()
 		var labelMain = document.createElement("span");
 		var labelSuperscript = document.createElement("sup");
 		
-		labelMain.innerHTML = Theory.getChordLabelMain(0, i, 0, []);
-		labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(0, i, 0, []);
+		labelMain.innerHTML = Theory.getChordRomanLabelMain(0, 0, i, 0, []);
+		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(0, 0, i, 0, []);
 		
 		option.appendChild(labelMain);
 		labelMain.appendChild(labelSuperscript);
@@ -157,9 +240,16 @@ function handleInputTempo()
 }
 
 
+function handleSelectSnap()
+{
+	var snapIndex = document.getElementById("selectSnap").selectedIndex;
+	g_Editor.setCursorSnap(Theory.allowedSnaps[snapIndex].snap);
+}
+
+
 function handleButtonInsertKeyChange()
 {
-	var pitch = document.getElementById("selectKeyPitch").selectedIndex - 8;
+	var pitch = document.getElementById("selectKeyPitch").selectedIndex;
 	var scaleIndex = document.getElementById("selectKeyScale").selectedIndex;
 	g_Editor.insertKeyChange(scaleIndex, pitch);
 }
@@ -179,24 +269,20 @@ function handleSelectChordKindsChange()
 {
 	var selectedIndex = document.getElementById("selectChordKinds").selectedIndex;
 	
-	var tonic = g_CurrentKey.tonicPitch;
+	var tonic = g_CurrentKey.tonicMidiPitch;
 	var scale = Theory.scales[g_CurrentKey.scaleIndex];
 	
 	// In Key
 	if (selectedIndex == 0)
 	{
-		for (var i = 0; i < 21; i++)
+		for (var i = 0; i < 7; i++)
 		{
-			let degree = i % 7;
-			let count = 3 + Math.floor(i / 7);
-
-			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, degree, count);
-			var pitch = Theory.getPitchForScaleInterval(g_CurrentKey.scaleIndex, 0, degree);
+			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, i);
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			
@@ -206,36 +292,39 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degreeColor = Theory.getPitchColor(g_CurrentKey.scaleIndex, pitch, g_Editor.usePopularNotation);
-			button.style.borderTop = "4px solid " + degreeColor[0];
-			button.style.borderBottom = "4px solid " + degreeColor[0];
+			var degree = Theory.getPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
+			var degreeColor = Theory.getDegreeColor(degree);
+			button.style.borderTop = "4px solid " + degreeColor;
+			button.style.borderBottom = "4px solid " + degreeColor;
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootPitch = pitch;
+			button.rootMidiPitch = (scale.pitches[i] + g_CurrentKey.tonicMidiPitch) % 12;
 			button.onclick = function()
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootPitch + g_CurrentKey.tonicPitch, []);
+				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
 			};
+		}
+		
+		for (var i = 7; i < 12; i++)
+		{
+			var button = document.getElementById("buttonChord" + i);
+			button.style.visibility = "hidden";
 		}
 	}
 	
 	else
 	{
 		var chordKindIndex = selectedIndex - 1;
-		var buttonAssignment = [		// // //
-			 7,  9, 11,  6,  8, 10, 12,
-			 0,  2,  4, -1,  1,  3,  5,
-			-7, -5, -3, -8, -6, -4, -2,
-		];
+		var buttonAssignment = [0, 2, 4, 5, 7, 9, 11, 1, 3, 6, 8, 10];
 		
-		for (var i = 0; i < buttonAssignment.length; i++)
+		for (var i = 0; i < 12; i++)
 		{
 			var pitch = buttonAssignment[i];
 			
 			var labelMain = document.createElement("span");
 			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordLabelMain(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordLabelSuperscript(g_CurrentKey.scaleIndex, chordKindIndex, pitch, [], g_Editor.usePopularNotation);
+			labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
+			labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
 			
 			var button = document.getElementById("buttonChord" + i);
 			
@@ -245,17 +334,18 @@ function handleSelectChordKindsChange()
 			button.appendChild(labelMain);
 			labelMain.appendChild(labelSuperscript);
 			
-			var degreeColor = Theory.getPitchColor(g_CurrentKey.scaleIndex, pitch, g_Editor.usePopularNotation);
-			button.style.borderTop = "4px solid " + degreeColor[0];
-			button.style.borderBottom = "4px solid " + degreeColor[0];
+			var degree = Theory.getPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, pitch + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
+			var degreeColor = Theory.getDegreeColor(degree);
+			button.style.borderTop = "4px solid " + degreeColor;
+			button.style.borderBottom = "4px solid " + degreeColor;
 		
 			button.style.visibility = "visible";
 			
 			button.chordKindIndex = chordKindIndex;
-			button.rootPitch = pitch;
+			button.rootMidiPitch = (pitch + g_CurrentKey.tonicMidiPitch) % 12;
 			button.onclick = function()
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootPitch + g_CurrentKey.tonicPitch, []);
+				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
 			};
 		}
 	}
@@ -264,48 +354,88 @@ function handleSelectChordKindsChange()
 
 function handleCheckboxPopularNotation()
 {
-	var usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
-	g_Editor.usePopularNotation = usePopularNotation;
+	g_Editor.usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
 	g_Editor.refresh();
 	refreshKeyDependentItems();
 }
 
 
-function handleButtonLoadLocal()
+function handleCheckboxChordPatterns()
 {
+	g_Editor.useChordPatterns = document.getElementById("checkboxChordPatterns").checked;
+}
+
+
+function handleButtonNew()
+{
+	if (!askUnsavedChanges())
+		return;
+	
+	clearSongData();
+	g_Editor.setUnsavedChanges(false);
+	refreshURL(null);
+}
+
+
+function handleButtonGenerateLink()
+{
+	var songData = g_Song.saveBinary();
+	g_Editor.setUnsavedChanges(false);
+	refreshURL(songData);
+}
+
+
+function handleButtonLoadString()
+{
+	if (!askUnsavedChanges())
+		return;
+	
 	var data = window.prompt("Paste a saved song data:", "");
 	if (data == null)
 		return;
 	
-	try
-	{
-		g_Song.load(data);
-	}
-	catch (err)
-	{
-		window.alert("Error loading song data.");
-		g_Song.clear();
-		g_Song.sanitize();
-	}
-	
-	document.getElementById("inputTempo").value = g_Song.bpm.toString();
-	g_Editor.setSong(g_Song);
-	g_Editor.cursorSetTickBoth(new Rational(0));
-	g_Editor.refresh();
+	loadSongData(data, false);
 }
 
 
-function handleButtonSaveLocal()
+function handleButtonSaveString()
 {
-	var songData = g_Song.save();
+	var songData = g_Song.saveJSON();
 	var data = "data:text/plain," + encodeURIComponent(songData);
 	window.open(data);
+	g_Editor.setUnsavedChanges(false);
+}
+
+
+function handleButtonLoadStringCompressed()
+{
+	if (!askUnsavedChanges())
+		return;
+	
+	var data = window.prompt("Paste a saved compressed song data:", "");
+	if (data == null)
+		return;
+	
+	loadSongData(data, true);
+}
+
+
+function handleButtonSaveStringCompressed()
+{
+	var songData = g_Song.saveBinary();
+	var data = "data:text/plain," + encodeURIComponent(songData);
+	window.open(data);
+	g_Editor.setUnsavedChanges(false);
 }
 
 
 function handleButtonLoadDropbox()
 {
-	Dropbox.choose({
+	if (!askUnsavedChanges())
+		return;
+	
+	Dropbox.choose(
+	{
 		linkType: "direct",
 		multiselect: false,
 		success: function(files)
@@ -316,30 +446,9 @@ function handleButtonLoadDropbox()
 			xhr.onload = function()
 			{
 				if (xhr.status == 200)
-				{
-					try
-					{
-						g_Song.load(xhr.response);
-					}
-					catch (err)
-					{
-						window.alert("Error loading song data.");
-						g_Song.clear();
-						g_Song.sanitize();
-					}
-				}
+					loadSongData(xhr.response, false);
 				else
-				{
-					console.log(xhr);
 					window.alert("Error loading Dropbox file.");
-					g_Song.clear();
-					g_Song.sanitize();
-				}
-				
-				document.getElementById("inputTempo").value = g_Song.bpm.toString();
-				g_Editor.setSong(g_Song);
-				g_Editor.cursorSetTickBoth(new Rational(0));
-				g_Editor.refresh();
 			};
 			xhr.send();
 		}
@@ -350,14 +459,14 @@ function handleButtonLoadDropbox()
 // Still not working...
 function handleButtonSaveDropbox()
 {
-	var songData = g_Song.save();
-	var data = "data:," + encodeURIComponent(songData);
+	var songData = g_Song.saveJSON();
+	var data = "data:text/plain," + encodeURIComponent(songData);
 	
 	Dropbox.save(
 		data,
 		"song.txt",
 		{
-			success: function() { window.alert("Successfully saved file to Dropbox."); },
+			success: function() { window.alert("Successfully saved file to Dropbox."); g_Editor.setUnsavedChanges(false); },
 			error: function(msg) { window.alert("Error saving file to Dropbox.\n\nError message: " + msg); }
 		});
 }
@@ -370,14 +479,33 @@ function handleButtonSaveAsDropbox()
 	if (filename == null)
 		return;
 	
-	var songData = g_Song.save();
-	var data = "data:," + encodeURIComponent(songData);
+	var songData = g_Song.saveJSON();
+	var data = "data:text/plain," + encodeURIComponent(songData);
 	
 	Dropbox.save(
 		data,
 		filename,
 		{
-			success: function() { window.alert("Successfully saved file to Dropbox."); },
+			success: function() { window.alert("Successfully saved file to Dropbox."); g_Editor.setUnsavedChanges(false); },
 			error: function(msg) { window.alert("Error saving file to Dropbox.\n\nError message: " + msg); }
 		});
+}
+
+
+function getURLQueryParameter(name)
+{
+	var url = window.location.search;
+	
+	name = name.replace(/[\[\]]/g, "\\$&");
+	
+	var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+	var results = regex.exec(url);
+	
+	if (!results)
+		return null;
+	
+	if (!results[2])
+		return "";
+	
+	return decodeURIComponent(results[2].replace(/\+/g, " "));
 }

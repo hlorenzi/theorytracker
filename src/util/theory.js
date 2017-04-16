@@ -1,16 +1,15 @@
 var Theory = {};
 
 
-// // //
 Theory.scales =
 [
-	{ pitches: [ 0,  2,  4, -1,  1,  3,  5], name: "Major" },
-	{ pitches: [ 2,  4, -1,  1,  3,  5,  0], name: "Dorian" },
-	{ pitches: [ 4, -1,  1,  3,  5,  0,  2], name: "Phrygian" },
-	{ pitches: [-1,  1,  3,  5,  0,  2,  4], name: "Lydian" },
-	{ pitches: [ 1,  3,  5,  0,  2,  4, -1], name: "Mixolydian" },
-	{ pitches: [ 3,  5,  0,  2,  4, -1,  1], name: "Natural Minor" },
-	{ pitches: [ 5,  0,  2,  4, -1,  1,  3], name: "Locrian" }
+	{ pitches: [0, 2, 4, 5, 7, 9, 11], name: "Major" },
+	{ pitches: [0, 2, 3, 5, 7, 9, 10], name: "Dorian" },
+	{ pitches: [0, 1, 3, 5, 7, 8, 10], name: "Phrygian" },
+	{ pitches: [0, 2, 4, 6, 7, 9, 11], name: "Lydian" },
+	{ pitches: [0, 2, 4, 5, 7, 9, 10], name: "Mixolydian" },
+	{ pitches: [0, 2, 3, 5, 7, 8, 10], name: "Natural Minor" },
+	{ pitches: [0, 1, 3, 5, 6, 8, 10], name: "Locrian" }
 ];
 
 
@@ -27,50 +26,60 @@ Theory.meterDenominators =
 ];
 
 
-// // //
 Theory.chordKinds =
 [
 	/*
 		`code` is what the compiler expects to parse.
 		`symbol` dictates roman numeral analysis representation as follows:
 			[isLowercase, complement, superscriptComplement]
-		// // //
-		`ext` indicates the upper structure index
 	*/
 	
-	{ pitches: [0,  4,  1],         code: "",      symbol: [false, "",     "" ],     name: "Major", startGroup: "Triads" },
-	{ pitches: [0, -3,  1],         code: "m",     symbol: [true,  "",     "" ],     name: "Minor" },
-	{ pitches: [0,  4,  8],         code: "+",     symbol: [false, "+",    "" ],     name: "Augmented" },
-	{ pitches: [0, -3, -6],         code: "o",     symbol: [true,  "",     "o"],     name: "Diminished" },
+	{ pitches: [0, 4, 7],         code: "",      symbol: [false, "",     "" ],     name: "Major", startGroup: "Triads" },
+	{ pitches: [0, 3, 7],         code: "m",     symbol: [true,  "",     "" ],     name: "Minor" },
+	{ pitches: [0, 4, 8],         code: "+",     symbol: [false, "+",    "" ],     name: "Augmented" },
+	{ pitches: [0, 3, 6],         code: "o",     symbol: [true,  "",     "o"],     name: "Diminished" },
 	
-	{ pitches: [0,  0,  1,  0],     code: "5",     symbol: [false, "",     "5"],     name: "Power", ext: 3 },
+	{ pitches: [0, 0, 7, 12],     code: "5",     symbol: [false, "",     "5"],     name: "Power" },
 	
-	{ pitches: [0,  4,  1,  3],     code: "6",     symbol: [false, "",     "6"],     name: "Major Sixth", startGroup: "Sixths" },
-	{ pitches: [0, -3,  1,  3],     code: "m6",    symbol: [true,  "",     "6"],     name: "Minor Sixth" },
+	{ pitches: [0, 4, 7,  9],     code: "6",     symbol: [false, "",     "6"],     name: "Major Sixth", startGroup: "Sixths" },
+	{ pitches: [0, 3, 7,  9],     code: "m6",    symbol: [true,  "",     "6"],     name: "Minor Sixth" },
 	
-	{ pitches: [0,  4,  1, -2],     code: "7",     symbol: [false, "",     "7"],     name: "Dominant Seventh", startGroup: "Sevenths" },
-	{ pitches: [0,  4,  1,  5],     code: "maj7",  symbol: [false, "",     "M7"],    name: "Major Seventh" },
-	{ pitches: [0, -3,  1, -2],     code: "m7",    symbol: [true,  "",     "7"],     name: "Minor Seventh" },
-	{ pitches: [0, -3,  1,  5],     code: "mmaj7", symbol: [true,  "",     "M7"],    name: "Minor-Major Seventh" },
-	{ pitches: [0,  4,  8, -2],     code: "+7",    symbol: [false, "+",    "7"],     name: "Augmented Seventh" },
-	{ pitches: [0,  4,  8,  5],     code: "+maj7", symbol: [false, "+",    "M7"],    name: "Augmented Major Seventh" },
-	{ pitches: [0, -3, -6, -9],     code: "o7",    symbol: [true,  "",     "o7"],    name: "Diminished Seventh" },
-	{ pitches: [0, -3, -6, -2],     code: "%7",    symbol: [true,  "",     "ø7"],    name: "Half-Diminished Seventh" },
+	{ pitches: [0, 4, 7, 10],     code: "7",     symbol: [false, "",     "7"],     name: "Dominant Seventh", startGroup: "Sevenths" },
+	{ pitches: [0, 4, 7, 11],     code: "maj7",  symbol: [false, "",     "M7"],    name: "Major Seventh" },
+	{ pitches: [0, 3, 7, 10],     code: "m7",    symbol: [true,  "",     "7"],     name: "Minor Seventh" },
+	{ pitches: [0, 3, 7, 11],     code: "mmaj7", symbol: [true,  "",     "M7"],    name: "Minor-Major Seventh" },
+	{ pitches: [0, 4, 8, 10],     code: "+7",    symbol: [false, "+",    "7"],     name: "Augmented Seventh" },
+	{ pitches: [0, 4, 8, 11],     code: "+maj7", symbol: [false, "+",    "M7"],    name: "Augmented Major Seventh" },
+	{ pitches: [0, 3, 6,  9],     code: "o7",    symbol: [true,  "",     "o7"],    name: "Diminished Seventh" },
+	{ pitches: [0, 3, 6, 10],     code: "%7",    symbol: [true,  "",     "ø7"],    name: "Half-Diminished Seventh" },
 	
-	{ pitches: [0,  4,  1, -2,  2], code: "9",     symbol: [false, "",     "9"],     name: "Dominant Ninth", ext: 4, startGroup: "Ninths" },
-	{ pitches: [0,  4,  1,  5,  2], code: "maj9",  symbol: [false, "",     "M9"],    name: "Major Ninth", ext: 4 },
-	{ pitches: [0, -3,  1, -2,  2], code: "m9",    symbol: [true,  "",     "9"],     name: "Minor Ninth", ext: 4 },
-	{ pitches: [0, -3,  1,  5,  2], code: "mmaj9", symbol: [true, "",      "M9"],    name: "Minor-Major Ninth", ext: 4 },
-	{ pitches: [0,  4,  8, -2,  2], code: "+9",    symbol: [false, "+",    "9"],     name: "Augmented Ninth", ext: 4 },
-	{ pitches: [0,  4,  8,  5,  2], code: "+maj9", symbol: [false, "+",    "M9"],    name: "Augmented Major Ninth", ext: 4 },
-	{ pitches: [0, -3, -6, -9,  2], code: "o9",    symbol: [true,  "",     "o9"],    name: "Diminished Ninth", ext: 4 },
-	{ pitches: [0, -3, -6, -9, -5], code: "ob9",   symbol: [true,  "",     "o♭9"],   name: "Diminished Minor Ninth", ext: 4 },
-	{ pitches: [0, -3, -6, -2,  2], code: "%9",    symbol: [true,  "",     "ø9"],    name: "Half-Diminished Ninth", ext: 4 },
-	{ pitches: [0, -3, -6, -2, -5], code: "%b9",   symbol: [true,  "",     "ø♭9"],   name: "Half-Diminished Minor Ninth", ext: 4 },
+	{ pitches: [0, 4, 7, 10, 14], code: "9",     symbol: [false, "",     "9"],     name: "Dominant Ninth", startGroup: "Ninths" },
+	{ pitches: [0, 4, 7, 11, 14], code: "maj9",  symbol: [false, "",     "M9"],    name: "Major Ninth" },
+	{ pitches: [0, 3, 7, 10, 14], code: "m9",    symbol: [true,  "",     "9"],     name: "Minor Ninth" },
+	{ pitches: [0, 3, 7, 11, 14], code: "mmaj9", symbol: [true, "",      "M9"],    name: "Minor-Major Ninth" },
+	{ pitches: [0, 4, 8, 10, 14], code: "+9",    symbol: [false, "+",    "9"],     name: "Augmented Ninth" },
+	{ pitches: [0, 4, 8, 11, 14], code: "+maj9", symbol: [false, "+",    "M9"],    name: "Augmented Major Ninth" },
+	{ pitches: [0, 3, 6,  9, 14], code: "o9",    symbol: [true,  "",     "o9"],    name: "Diminished Ninth" },
+	{ pitches: [0, 3, 6,  9, 13], code: "ob9",   symbol: [true,  "",     "o♭9"],   name: "Diminished Minor Ninth" },
+	{ pitches: [0, 3, 6, 10, 14], code: "%9",    symbol: [true,  "",     "ø9"],    name: "Half-Diminished Ninth" },
+	{ pitches: [0, 3, 6, 10, 13], code: "%b9",   symbol: [true,  "",     "ø♭9"],   name: "Half-Diminished Minor Ninth" }
+];
 
-	{ pitches: [0,  4, -6, -2],     code: "7b5",   symbol: [false, "",     "7♭5"],   name: "Dominant Seventh Flat Fifth", startGroup: "Altered" },
-	{ pitches: [0,  4,  1, -2, -5], code: "7b9",   symbol: [true,  "",     "7♭9"],   name: "Dominant Seventh Minor Ninth", ext: 4 },
-	{ pitches: [0, -3,  1, -2, -5], code: "m7b9",  symbol: [true,  "",     "m7♭9"],  name: "Minor Seventh Minor Ninth", ext: 4 },
+
+Theory.allowedSnaps =
+[
+	{ snap: new Rational(0, 1, 16), startGroup: "Regular" },
+	{ snap: new Rational(0, 1, 32) },
+	{ snap: new Rational(0, 1, 64) },
+	{ snap: new Rational(0, 1, 12), startGroup: "Triplets" },
+	{ snap: new Rational(0, 1, 24) },
+	{ snap: new Rational(0, 1, 48) },
+	{ snap: new Rational(0, 1, 20), startGroup: "Quintuplets" },
+	{ snap: new Rational(0, 1, 40) },
+	{ snap: new Rational(0, 1, 80) },
+	{ snap: new Rational(0, 1, 28), startGroup: "Septuplets" },
+	{ snap: new Rational(0, 1, 52) },
+	{ snap: new Rational(0, 1, 104) }
 ];
 
 
@@ -111,81 +120,122 @@ Theory.isValidMeterDenominator = function(denominator)
 }
 
 
-// // //
-Theory.getScaleDegree = function(pitch)
-{
-	return mod(pitch * 4, 7); // zero-based
-}
-
-
-Theory.getSharps = function(scaleIndex, pitch, usePopularNotation = true)
-{
-	if (!usePopularNotation)
-	{
-		var degree = Theory.getScaleDegree(pitch);
-		pitch -= Theory.getPitchForScaleInterval(scaleIndex, 0, degree);
-	}
-	return Math.floor((pitch + 1) / 7);
-}
-
-
-Theory.getSemitones = function(pitch)
-{
-	return mod(pitch * 7, 12);
-}
-
-
-Theory.getPitchForScaleInterval = function(scaleIndex, degreeLo, degreeHi)
-{
-	const pitches = Theory.scales[scaleIndex].pitches;
-	return pitches[mod(degreeHi, pitches.length)] - pitches[mod(degreeLo, pitches.length)];
-}
-
-
-Theory.getAccidentalString = function(offset)
-{
-	if (offset > 0)
-		return ("♯").repeat(offset);
-	if (offset < 0)
-		return ("♭").repeat(-offset);
-	return "";
-}
-
-
 Theory.getMeterLabel = function(numerator, denominator)
 {
 	return "" + numerator + " / " + denominator;
 }
 
 
-Theory.getIndependentPitchLabel = function(pitch)
-{
-	// // //
-	const labels = ["C", "D", "E", "F", "G", "A", "B"];
-	return labels[Theory.getScaleDegree(pitch)] + Theory.getAccidentalString(Theory.getSharps(0, pitch));
-}
-
-
-// // //
-Theory.getKeyLabel = function(scaleIndex, pitch)
+Theory.getPitchLabel = function(scaleIndex, tonicMidiPitch, midiPitch)
 {
 	// TODO: Take scale into consideration.
-	return Theory.getIndependentPitchLabel(pitch) + " " + Theory.scales[scaleIndex].name;
+	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"];
+	return labels[mod(midiPitch, 12)];
 }
 
 
-Theory.getChordRootLabel = function(scaleIndex, pitch, usePopularNotation = true)
+Theory.getRowPitch = function(scaleIndex, tonicMidiPitch, row, usePopularNotation = true)
 {
-	const labels = ["I", "II", "III", "IV", "V", "VI", "VII"];
-	const name = labels[Theory.getScaleDegree(pitch)];
-	const acc = Theory.getSharps(scaleIndex, pitch, usePopularNotation);
-	return Theory.getAccidentalString(acc) + name;
+	var tonicOffset = mod(Theory.getPitchDegree(scaleIndex, 0, tonicMidiPitch, usePopularNotation), 7);
+	var pitch = Theory.getDegreePitch(scaleIndex, tonicMidiPitch, row - tonicOffset, usePopularNotation);
+	return pitch;
 }
 
 
-Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, pitch, embelishments, usePopularNotation = true)
+Theory.getPitchRow = function(scaleIndex, tonicMidiPitch, midiPitch, usePopularNotation = true)
 {
-	var rootLabel = Theory.getChordRootLabel(scaleIndex, pitch, usePopularNotation);
+	var tonicOffset = mod(Theory.getPitchDegree(scaleIndex, 0, tonicMidiPitch, usePopularNotation), 7);
+	var degree = Theory.getPitchDegree(scaleIndex, tonicMidiPitch, midiPitch, usePopularNotation);
+	return degree + tonicOffset;
+}
+
+
+Theory.getDegreePitch = function(scaleIndex, tonicMidiPitch, degree, usePopularNotation = true)
+{
+	var scale = Theory.scales[scaleIndex];
+	if (usePopularNotation)
+		scale = Theory.scales[0];
+	
+	var pitch = scale.pitches[mod(Math.floor(degree), 7)];
+	if (Math.floor(degree) != degree)
+		pitch += 1;
+	
+	var octave = Math.floor(degree / 7);
+	
+	return pitch + octave * 12 + tonicMidiPitch;
+}
+
+
+Theory.getPitchDegree = function(scaleIndex, tonicMidiPitch, midiPitch, usePopularNotation = true)
+{
+	var relativePitch = mod(midiPitch - tonicMidiPitch, 12);
+	
+	var scale = Theory.scales[scaleIndex];
+	if (usePopularNotation)
+		scale = Theory.scales[0];
+	
+	var degree = 6.5;
+	for (var i = 0; i < scale.pitches.length; i++)
+	{
+		if (relativePitch == scale.pitches[i])
+		{
+			degree = i;
+			break;
+		}
+		
+		if (relativePitch < scale.pitches[i])
+		{
+			degree = (i + 7 - 0.5) % 7;
+			break;
+		}
+	}
+	
+	var octave = Math.floor((midiPitch - tonicMidiPitch) / 12);
+	return degree + octave * 7;
+}
+
+
+Theory.getIndependentPitchLabel = function(midiPitch)
+{
+	var labels = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"];
+	return labels[mod(midiPitch, 12)];
+}
+
+
+Theory.getKeyLabel = function(scaleIndex, tonicMidiPitch)
+{
+	// TODO: Take scale into consideration.
+	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+	return labels[mod(tonicMidiPitch, 12)] + " " + Theory.scales[scaleIndex].name;
+}
+
+
+Theory.getChordRomanRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation = true)
+{
+	if (usePopularNotation)
+	{
+		var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
+		return labels[mod(rootMidiPitch - tonicMidiPitch, 12)];
+	}
+	else
+	{
+		// FIXME: Compute correct Common Practice labels.
+		var labels = ["I", "II", "III", "IV", "V", "VI", "VII", "I"];
+		
+		var degree = mod(Theory.getPitchDegree(scaleIndex, tonicMidiPitch, rootMidiPitch, false), 7);
+		var degreeInteger = Math.floor(degree);
+		
+		if (degree == degreeInteger)
+			return labels[degreeInteger];
+		else
+			return "♭" + labels[degreeInteger + 1];
+	}
+}
+
+
+Theory.getChordRomanLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+{
+	var rootLabel = Theory.getChordRomanRootLabel(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation);
 	
 	if (Theory.chordKinds[chordKindIndex].symbol[0])
 		rootLabel = rootLabel.toLowerCase();
@@ -194,29 +244,52 @@ Theory.getChordLabelMain = function(scaleIndex, chordKindIndex, pitch, embelishm
 }
 
 
-Theory.getChordLabelSuperscript = function(scaleIndex, chordKindIndex, pitch, embelishments, usePopularNotation = true)
+Theory.getChordRomanLabelSuperscript = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
 {
 	return Theory.chordKinds[chordKindIndex].symbol[2];
 }
 
 
-Theory.calculateChordPitches = function(chordKindIndex, rootPitch, embelishments)
+Theory.getChordAbsoluteRootLabel = function(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation = true)
 {
-	let chord = Theory.chordKinds[chordKindIndex];
+	// TODO: Take scale into consideration.
+	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"];
+	return labels[mod(rootMidiPitch, 12)];
+}
+
+
+Theory.getChordAbsoluteLabelMain = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+{
+	var rootLabel = Theory.getChordAbsoluteRootLabel(scaleIndex, tonicMidiPitch, rootMidiPitch, usePopularNotation);
+	
+	if (Theory.chordKinds[chordKindIndex].symbol[0])
+		rootLabel += "m";
+	
+	return rootLabel + Theory.chordKinds[chordKindIndex].symbol[1];
+}
+
+
+Theory.getChordAbsoluteLabelSuperscript = function(scaleIndex, tonicMidiPitch, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+{
+	return Theory.chordKinds[chordKindIndex].symbol[2];
+}
+
+
+Theory.calculateChordPitches = function(chordKindIndex, rootMidiPitch, embelishments)
+{
+	var chord = Theory.chordKinds[chordKindIndex];
 	
 	var octave = 12 * 4;
-	let rootMidiPitch = Theory.getSemitones(rootPitch);		// // //
 	if (rootMidiPitch >= 6)
 		octave -= 12;
 	
-	let pitches = [];
-	for (let i = 1; i < chord.pitches.length; i++)
-	{
-		let pitch = chord.pitches[i];
-		pitches.push(Theory.getSemitones(rootPitch + pitch));
-	}
+	var pitches = [];
+	for (var i = 1; i < chord.pitches.length; i++)
+		pitches.push(rootMidiPitch + chord.pitches[i]);
+	
 	if (chord.pitches.length <= 3)
-		pitches.push(Theory.getSemitones(rootPitch + chord.pitches[0]));
+		pitches.push(rootMidiPitch + chord.pitches[0]);
+	
 	pitches = pitches.sort(function (x, y) { return x > y; });
 
 	let sum = pitches.reduce(function (x, y) { return x + y; }) / pitches.length;
@@ -232,43 +305,61 @@ Theory.calculateChordPitches = function(chordKindIndex, rootPitch, embelishments
 		pitches[0] += 12;
 		pitches[3] -= 12;
 	}
+	
 	pitches.unshift(octave + rootMidiPitch);
 	return pitches;
 }
 
 
-/*Theory.getChordBassPattern = function(meter)
+Theory.calculateChordStrummingPattern = function(numerator, denominator)
 {
-	// [ [ start beat, end beat, volume ], ... ]
-	switch (meter.numerator)
+	// [[beat kind, duration], ...]
+	// Beat kinds:
+	//   0: Full chord
+	//   1: Full chord minus bass
+	//   2: Only bass
+	var one   = [[0, new Rational(1)]];
+	var two   = [[0, new Rational(1)], [1, new Rational(0, 1, 2)], [2, new Rational(0, 1, 2)]];
+	var three = [[0, new Rational(1)], [1, new Rational(1)      ], [1, new Rational(1)      ]];
+	
+	switch (numerator)
 	{
-		case 3: return [ [ 0, 1.5, 1 ], [ 1.5, 2, 0.7 ] ];
-		case 4: return [ [ 0, 1.5, 1 ], [ 1.5, 2, 0.7 ], [ 2, 3.5, 1 ], [ 3.5, 4, 0.7 ] ];
-		default: return [ ];
+		case 2: return two;
+		case 3: return three;
+		case 4: return two.concat(two);
+		case 5: return three.concat(two);
+		case 6: return three.concat(three);
+		case 7: return three.concat(two).concat(two);
+		case 8: return two.concat(two).concat(two).concat(two);
+		case 9: return three.concat(three).concat(three);
+		
+		default:
+		{
+			var pattern = [];
+			for (var i = 0; i < numerator; i++)
+				pattern = pattern.concat(one);
+			return pattern;
+		}
 	}
 }
 
 
-Theory.getChordStackPattern = function(meter)
+Theory.findChordKindForDegree = function(scaleIndex, degree)
 {
-	// [ [ start beat, end beat, volume ], ... ]
-	switch (meter.numerator)
-	{
-		case 3: return [ [ 0, 1, 1 ], [ 1, 2, 0.7 ], [ 2, 3, 0.7 ] ];
-		case 4: return [ [ 0, 0.9, 1 ], [ 1, 1.9, 0.5 ], [ 2, 2.9, 0.7 ], [ 3, 3.9, 0.5 ] ];
-		default: return [ ];
-	}
-}*/
-
-
-Theory.findChordKindForDegree = function(scaleIndex, degree, count)
-{
-	var scale = Theory.scales[scaleIndex].pitches;
+	var scale = Theory.scales[scaleIndex];
 	
 	var chordPitches = [];
-	for (var i = 0; i < count; i++)
+	for (var i = 0; i < 3; i++)
 	{
-		chordPitches.push(scale[mod(degree + i * 2, scale.length)]);		// // //
+		var noteDegree = degree + i * 2;
+		
+		var nextPitch;
+		if (noteDegree >= 7)
+			nextPitch = scale.pitches[noteDegree % 7] + 12;
+		else
+			nextPitch = scale.pitches[noteDegree];
+		
+		chordPitches.push(nextPitch);
 	}
 	
 	return Theory.findChordKindIndex(chordPitches);
@@ -287,10 +378,8 @@ Theory.findChordKindIndex = function(relativePitches)
 		var match = true;
 		for (var j = 0; j < relativePitches.length; j++)
 		{
-			if (relativePitches[j] - relativePitches[0] != chordKind.pitches[j] - chordKind.pitches[0]) {
+			if (relativePitches[j] - relativePitches[0] != chordKind.pitches[j])
 				match = false;
-				break;
-			}
 		}
 		
 		if (match)
@@ -301,84 +390,54 @@ Theory.findChordKindIndex = function(relativePitches)
 }
 
 
-Theory.findPitchForSemitones = function(keyPitch, scaleIndex, semitones, downward)
-{
-	let scale = Theory.scales[scaleIndex];
-	let table = downward ? scale.midi.down : scale.midi.up;
-	return table[mod(semitones - Theory.getSemitones(keyPitch), 12)] + keyPitch;
-}
-
-
 Theory.playSampleNote = function(synth, midiPitch)
 {
-	synth.clear();
 	synth.stop();
-	synth.addNoteOn(0, 0, midiPitch, 1);
-	synth.addNoteOff(0.1, 0, midiPitch);
+	synth.addNoteEvent(0, 0, midiPitchToHertz(midiPitch), 1, 0.1);
 	synth.play();
 }
 
 
-Theory.playSampleChord = function(synth, chordKindIndex, rootPitch, embelishments)
+Theory.playSampleChord = function(synth, chordKindIndex, rootMidiPitch, embelishments)
 {
-	synth.clear();
 	synth.stop();
 	
-	var pitches = Theory.calculateChordPitches(chordKindIndex, rootPitch, embelishments);
+	var pitches = Theory.calculateChordPitches(chordKindIndex, rootMidiPitch, embelishments);
 	
 	for (var j = 0; j < pitches.length; j++)
-	{
-		synth.addNoteOn(0, 1, pitches[j], 1);
-		synth.addNoteOff(0.1, 1, pitches[j], 1);
-	}
+		synth.addNoteEvent(0, 0, midiPitchToHertz(pitches[j]), 1, 0.2);
 	
 	synth.play();
 }
 
 
-// // //
-Theory.getPitchColor = function(scaleIndex, pitch, usePopularNotation = true)
+Theory.getDegreeColor = function(degree)
 {
-	let step = Theory.getScaleDegree(pitch) * 2 + Math.sign(Theory.getSharps(scaleIndex, pitch, usePopularNotation));
-	switch (step)
+	switch (mod(degree, 7))
 	{
-		case  0: return ["#f00", "#fdd"];
-		case  2: return ["#f80", "#fed"];
-		case  4: return ["#fd0", "#fed"];
-		case  6: return ["#0d0", "#dfd"];
-		case  8: return ["#00f", "#ddf"];
-		case 10: return ["#80f", "#edf"];
-		case 12: return ["#f0f", "#fdf"];
-		
-		case  1: return ["#800", "#fdd"];
-		case  3: return ["#840", "#fed"];
-		case  5: return ["#860", "#fed"];
-		case  7: return ["#060", "#dfd"];
-		case  9: return ["#008", "#ddf"];
-		case 11: return ["#408", "#edf"];
-		case -1:
-		case 13: return ["#808", "#fdf"];
-		
-		default: return ["#888", "#eee"];
+		case 0: return "#f00";
+		case 1: return "#f80";
+		case 2: return "#fd0";
+		case 3: return "#0d0";
+		case 4: return "#00f";
+		case 5: return "#80f";
+		case 6: return "#f0f";
+		default: return "#888";
 	}
 }
 
 
-for (let i = 0; i < Theory.scales.length; i++)
+Theory.getDegreeColorAccent = function(degree)
 {
-	let scale = Theory.scales[i];
-	scale.midi = { up: [], down: [] };
-	for (let j = 0; j < scale.pitches.length; j++)
+	switch (mod(degree, 7))
 	{
-		let semitones = Theory.getSemitones(scale.pitches[j]);
-		scale.midi.up[semitones] = scale.pitches[j];
-		scale.midi.down[semitones] = scale.pitches[j];
-	}
-	for (let s = 0; s < 12; s++)
-	{
-		if (scale.midi.up[s] == undefined)
-			scale.midi.up[s] = scale.midi.up[mod(s - 1, 12)] + 7;
-		if (scale.midi.down[s] == undefined)
-			scale.midi.down[s] = scale.midi.down[mod(s + 1, 12)] - 7;
+		case 0: return "#fdd";
+		case 1: return "#fed";
+		case 2: return "#fed";
+		case 3: return "#dfd";
+		case 4: return "#ddf";
+		case 5: return "#edf";
+		case 6: return "#fdf";
+		default: return "#eee";
 	}
 }

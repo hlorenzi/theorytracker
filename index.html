@@ -17,7 +17,7 @@
 			<svg id="svgEditor"></svg>
 		</div>
 		
-		<div id="divToolbox">
+		<div id="divToolbox" style="visibility:hidden;">
 			<table id="tableToolboxMainLayout">
 				<tr>
 					<td class="toolboxGroup">
@@ -26,6 +26,9 @@
 						<br>
 						<span class="toolboxLabel">Tempo: </span>
 						<input id="inputTempo" class="toolboxInput" onInput="handleInputTempo();" value="120"></input>
+						<br>
+						<span class="toolboxLabel">Snap: </span>
+						<select id="selectSnap" class="toolboxButton" onInput="handleSelectSnap();"></select>
 					</td>
 					
 					<td></td>
@@ -51,13 +54,31 @@
 							<td id="tdTabFile">
 								<table><tr>
 									<td>
-										<table><tr>
+										<table>
+										<tr>
 											<td>
-												<span class="toolboxLabel">Local:</span>
 											</td>
 											<td>
-												<button class="toolboxButton" onClick="handleButtonLoadLocal();">Load</button>
-												<button class="toolboxButton" onClick="handleButtonSaveLocal();">Save</button>
+												<button class="toolboxButton" onClick="handleButtonNew();">New</button>
+												<button class="toolboxButton" onClick="handleButtonGenerateLink();">Generate Link</button>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<span class="toolboxLabel">String:</span>
+											</td>
+											<td>
+												<button class="toolboxButton" onClick="handleButtonLoadString();">Load</button>
+												<button class="toolboxButton" onClick="handleButtonSaveString();">Save</button>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<span class="toolboxLabel">String (Compr.):</span>
+											</td>
+											<td>
+												<button class="toolboxButton" onClick="handleButtonLoadStringCompressed();">Load</button>
+												<button class="toolboxButton" onClick="handleButtonSaveStringCompressed();">Save</button>
 											</td>
 										</tr>
 										<tr>
@@ -69,17 +90,25 @@
 												<button class="toolboxButton" onClick="handleButtonSaveDropbox();">Save</button>
 												<button class="toolboxButton" onClick="handleButtonSaveAsDropbox();">Save As</button>
 											</td>
-										</tr></table>
+										</tr>
+										</table>
 									</td>
 									
 									<td class="toolboxSeparator"></td>
 									
 									<td>
 										<table><tr>
-											<td>
-												<label class="toolboxGroup2">
-													<input type="checkbox" id="checkboxPopularNotation" class="toolboxCheckbox" onChange="handleCheckboxPopularNotation();" checked></input>
+											<td class="toolboxGroup2">
+												<label>
+													<input type="checkbox" id="checkboxPopularNotation" class="toolboxCheckbox" onChange="handleCheckboxPopularNotation();"></input>
 													<span class="toolboxLabel">Use Popular Notation</span>
+												</label>
+													
+												<br>
+													
+												<label>
+													<input type="checkbox" id="checkboxChordPatterns" class="toolboxCheckbox"  onChange="handleCheckboxChordPatterns();" checked></input>
+													<span class="toolboxLabel">Use Chord Patterns</span>
 												</label>
 											</td>
 										</tr></table>
@@ -137,15 +166,6 @@
 											<button id="buttonChord9" class="toolboxChord"></button>
 											<button id="buttonChord10" class="toolboxChord"></button>
 											<button id="buttonChord11" class="toolboxChord"></button>
-											<button id="buttonChord12" class="toolboxChord"></button>
-											<button id="buttonChord13" class="toolboxChord"></button><br>
-											<button id="buttonChord14" class="toolboxChord"></button>
-											<button id="buttonChord15" class="toolboxChord"></button>
-											<button id="buttonChord16" class="toolboxChord"></button>
-											<button id="buttonChord17" class="toolboxChord"></button>
-											<button id="buttonChord18" class="toolboxChord"></button>
-											<button id="buttonChord19" class="toolboxChord"></button>
-											<button id="buttonChord20" class="toolboxChord"></button>
 										</td>
 									</tr>
 								</table>								
@@ -163,6 +183,7 @@
 	<script src="src/util/list_by_point.js"></script>
 	<script src="src/util/list_by_range.js"></script>
 	<script src="src/util/theory.js"></script>
+	<script src="src/util/binaryio.js"></script>
 	
 	<script src="src/song/song.js"></script>
 	<script src="src/song/note.js"></script>
@@ -173,13 +194,14 @@
 	<script src="src/editor/editor.js"></script>
 	<script src="src/editor/editor_interaction.js"></script>
 	
-	<script src="src/synth/instrument_square.js"></script>
-	<script src="src/synth/instrument_triangle.js"></script>
-	<script src="src/synth/instrument_piano.js"></script>
+	<script src="src/synth/instrument.js"></script>
 	<script src="src/synth/synth.js"></script>
 	
 	<script src="src/main.js"></script>
 	
+	<script src="src/test/test.js"></script>
+	
+	<script src="src/pako/pako.js"></script>
 	<script src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="9h2eh3v67sgghpl"></script>
 
 </html>

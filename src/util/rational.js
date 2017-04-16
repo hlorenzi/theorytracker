@@ -1,5 +1,8 @@
 function Rational(integer = 0, numerator = 0, denominator = 1)
 {
+	if (denominator <= 0)
+		throw "Rational denominator must be larger than 0";
+	
 	this.integer = integer;
 	this.numerator = numerator;
 	this.denominator = denominator;

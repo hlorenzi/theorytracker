@@ -9,12 +9,15 @@ function Editor(svg, synth)
 	
 	this.song = null;
 	this.isPlaying = false;
+	this.unsavedChanges = false;
 	
 	this.blocks = [];
 	this.elements = [];
 	
 	this.mouseIsDown = false;
 	this.newElementDuration = new Rational(0, 1, 4);
+	this.newElementPitchOctave = 5;
+	this.newElementDegreeOctave = 5;
 	
 	this.cursorSnap = new Rational(0, 1, 16);
 	this.cursorVisible = true;
@@ -32,20 +35,31 @@ function Editor(svg, synth)
 	
 	this.margin = 20;
 	this.marginBetweenRows = 10;
-	this.wholeTickWidth = 100;
-	this.noteHeight = 5;
+	this.wholeTickWidth = 140;
+	this.noteHeight = 12;
 	this.noteSideMargin = 0.5;
 	this.chordHeight = 50;
 	this.chordSideMargin = 0.5;
 	this.chordOrnamentHeight = 5;
 	this.handleSize = 8;
+	this.scaleLabelsWidth = 32;
 	
 	this.usePopularNotation = true;
+	this.useChordPatterns = true;
 	
 	this.eventInit();
 	
 	this.callbackTogglePlay = null;
 	this.callbackCursorChange = null;
+	this.callbackSongChange = null;
+}
+
+
+Editor.prototype.setUnsavedChanges = function(unsavedChanges = true)
+{
+	this.unsavedChanges = unsavedChanges;
+	if (unsavedChanges && this.callbackSongChange != null)
+		this.callbackSongChange();
 }
 
 
@@ -98,7 +112,6 @@ Editor.prototype.togglePlay = function()
 	}
 	else
 	{
-		this.synth.clear();
 		this.synth.stop();
 		this.cursorHidePlayback();
 		this.cursorVisible = true;
@@ -112,11 +125,10 @@ Editor.prototype.togglePlay = function()
 
 Editor.prototype.play = function(startAtTick)
 {
-	this.synth.clear();
 	this.synth.stop();
 	
 	if (this.song != null)
-		this.song.feedSynth(this.synth, startAtTick);
+		this.song.feedSynth(this.synth, startAtTick, this.useChordPatterns);
 	
 	this.sliceOverlapping();
 	this.selectNone();
@@ -156,7 +168,30 @@ Editor.prototype.rewind = function()
 }
 
 
-Editor.prototype.insertNote = function(pitch, octave)		// // //
+Editor.prototype.setCursorSnap = function(newSnap)
+{
+	this.sliceOverlapping();
+	this.selectNone();
+	
+	this.cursorSnap = newSnap;
+	
+	// Re-align cursor.
+	var cursorTickFloat = this.cursorTick1.clone().min(this.cursorTick2).asFloat();
+	this.cursorSetTickBoth(Rational.fromFloat(cursorTickFloat, this.cursorSnap));
+	
+	// Re-align new element duration.
+	this.newElementDuration =
+		Rational.fromFloat(this.newElementDuration.asFloat(), this.cursorSnap);
+		
+	if (this.newElementDuration.compare(this.cursorSnap) < 0)
+		this.newElementDuration = this.cursorSnap.clone();
+	
+	
+	this.refresh();
+}
+
+
+Editor.prototype.insertNote = function(midiPitch)
 {
 	this.cursorSetTickAtSelectionEnd();
 	this.sliceOverlapping();
@@ -166,25 +201,23 @@ Editor.prototype.insertNote = function(pitch, octave)		// // //
 		this.cursorTick1.clone(),
 		this.cursorTick1.clone().add(this.newElementDuration),
 		0,
-		pitch, octave,
+		midiPitch,
 		{ selected: true });
 	
 	this.song.notes.insert(note);
 	
-	this.synth.clear();
-	this.synth.stop();
-	Theory.playSampleNote(this.synth, note.getMidiPitch(), octave);
-	this.synth.play();
+	Theory.playSampleNote(this.synth, midiPitch);
 	
 	this.cursorSetTrackBoth(0);
 	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
 	
 	this.autoExtendSongLength();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
-Editor.prototype.insertChord = function(chordKindIndex, rootPitch, embelishments)
+Editor.prototype.insertChord = function(chordKindIndex, rootMidiPitch, embelishments)
 {
 	this.cursorSetTickAtSelectionEnd();
 	this.sliceOverlapping();
@@ -194,22 +227,20 @@ Editor.prototype.insertChord = function(chordKindIndex, rootPitch, embelishments
 		this.cursorTick1.clone(),
 		this.cursorTick1.clone().add(this.newElementDuration),
 		chordKindIndex,
-		rootPitch,
+		rootMidiPitch % 12,
 		embelishments,
 		{ selected: true });
 	
 	this.song.chords.insert(chord);
 	
-	this.synth.clear();
-	this.synth.stop();
-	Theory.playSampleChord(this.synth, chordKindIndex, rootPitch, embelishments);
-	this.synth.play();
+	Theory.playSampleChord(this.synth, chordKindIndex, rootMidiPitch % 12, embelishments);
 	
 	this.cursorSetTrackBoth(1);
 	this.cursorSetTickBoth(this.cursorTick1.clone().add(this.newElementDuration));
 	
 	this.autoExtendSongLength();
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -218,9 +249,9 @@ Editor.prototype.insertNoteByDegree = function(degree)
 	this.cursorSetTickAtSelectionEnd();
 	
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
-	var pitch = Theory.scales[key.scaleIndex].pitches[degree];
+	var pitch = Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, degree, false);
 	
-	this.insertNote(pitch, 5);		// // //
+	this.insertNote(pitch);
 }
 
 
@@ -229,22 +260,22 @@ Editor.prototype.insertChordByDegree = function(degree)
 	this.cursorSetTickAtSelectionEnd();
 	
 	var key = this.song.keyChanges.findPrevious(this.cursorTick1);
+	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree);
+	var rootMidiPitch = mod(Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, degree, false), 12);
 	
-	var chordKindIndex = Theory.findChordKindForDegree(key.scaleIndex, degree, 3);
-	var rootPitch = Theory.getPitchForScaleInterval(key.scaleIndex, 0, degree);		// // //
-	
-	this.insertChord(chordKindIndex, rootPitch + key.tonicPitch, []);
+	this.insertChord(chordKindIndex, rootMidiPitch, []);
 }
 
 
-Editor.prototype.insertKeyChange = function(scaleIndex, tonicPitch)
+Editor.prototype.insertKeyChange = function(scaleIndex, tonicMidiPitch)
 {
 	this.selectNone();
 	this.eraseKeyChangesAt(this.cursorTick1, this.cursorTick1);
 	this.song.keyChanges.insert(
-		new SongKeyChange(this.cursorTick1.clone(), scaleIndex, tonicPitch, { selected: true }));
+		new SongKeyChange(this.cursorTick1.clone(), scaleIndex, tonicMidiPitch, { selected: true }));
 	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -256,6 +287,7 @@ Editor.prototype.insertMeterChange = function(numerator, denominator)
 		new SongMeterChange(this.cursorTick1.clone(), numerator, denominator, { selected: true }));
 	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
 	this.refresh();
+	this.setUnsavedChanges(true);
 }
 
 
@@ -405,6 +437,14 @@ Editor.prototype.refresh = function()
 	while (this.svg.lastChild)
 		this.svg.removeChild(this.svg.lastChild);
 	
+	// Add SVG fill patterns for scale degrees.
+	var degrees = [ 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5 ];
+	for (var i = 0; i < degrees.length; i++)
+	{
+		this.addSvgDegreePattern("pattern" + Math.floor(degrees[i] * 2),            degrees[i], false);
+		this.addSvgDegreePattern("pattern" + Math.floor(degrees[i] * 2) + "Accent", degrees[i], true);
+	}
+	
 	// Clear layout blocks.
 	this.blocks = [];
 	
@@ -443,6 +483,8 @@ Editor.prototype.refresh = function()
 
 Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 {
+	var that = this;
+	
 	// Calculate blocks.
 	// Break row only at measure separators or key/meter changes.
 	var calculatedBlocks = [];
@@ -451,6 +493,10 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	var currentKeyChange = this.song.keyChanges.findPrevious(rowTickStart);
 	var currentMeterChange = this.song.meterChanges.findPrevious(rowTickStart);
 	var currentMeasureStart = currentMeterChange.tick.clone();
+	
+	// Also find the lowest and highest pitch rows for notes in this row.
+	var pitchRowMin = Theory.getPitchRow(0, 0, 12 * 5,     that.usePopularNotation);
+	var pitchRowMax = Theory.getPitchRow(0, 0, 12 * 6 - 1, that.usePopularNotation);
 	
 	var x = this.margin;
 	while (true)
@@ -478,7 +524,10 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 		
 		var width = (nextBlockEnd.asFloat() - currentBlockStart.asFloat()) * this.wholeTickWidth;
 		
-		if (x + width + this.margin > this.width)
+		var drawScaleLabels = (currentKeyChange.tick.compare(currentBlockStart) == 0) || calculatedBlocks.length == 0;
+		var scaleLabelsOffset = (drawScaleLabels ? this.scaleLabelsWidth : 0);
+		
+		if (x + width + scaleLabelsOffset + this.margin > this.width)
 			break;
 		
 		var block =
@@ -486,16 +535,26 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 			tickStart: currentBlockStart.clone(),
 			tickEnd: nextBlockEnd.clone(),
 			measureStartTick: currentMeterChange.tick.clone(),
-			x: x,
+			x: x + scaleLabelsOffset,
 			y: rowYStart,
 			width: width,
 			key: currentKeyChange,
-			meter: currentMeterChange
+			meter: currentMeterChange,
+			drawScaleLabels: drawScaleLabels
 		};
 		
 		calculatedBlocks.push(block);
 		
-		x += width;
+		this.song.notes.enumerateOverlappingRange(block.tickStart, block.tickEnd, function (note)
+		{
+			var notePitchRow = Theory.getPitchRow(
+				block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
+			
+			pitchRowMin = Math.min(notePitchRow, pitchRowMin);
+			pitchRowMax = Math.max(notePitchRow, pitchRowMax);
+		});
+		
+		x += width + scaleLabelsOffset;
 		
 		currentBlockStart = nextBlockEnd;
 		
@@ -519,17 +578,6 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	var rowTickEnd = currentBlockStart;
 	var rowTickLength = rowTickEnd.clone().subtract(rowTickStart);
 	
-	// Find the lowest and highest pitches for notes in this row.
-	var midiPitchMin = this.defaultNoteMidiPitchMin;
-	var midiPitchMax = this.defaultNoteMidiPitchMax;
-	
-	this.song.notes.enumerateOverlappingRange(rowTickStart, rowTickEnd, function (note)
-	{
-		let midi = note.getMidiPitch();
-		midiPitchMin = Math.min(midi, midiPitchMin);
-		midiPitchMax = Math.max(midi, midiPitchMax);
-	});
-	
 	// Check if there are any key changes in this row.
 	var rowHasKeyChange = false;
 	this.song.keyChanges.enumerateOverlappingRange(rowTickStart, rowTickEnd, function (keyCh)
@@ -549,7 +597,7 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	{
 		var block = this.refreshBlock(
 			calculatedBlocks[i],
-			midiPitchMin, midiPitchMax,
+			pitchRowMin, pitchRowMax,
 			rowHasKeyChange, rowHasMeterChange);
 			
 		this.blocks.push(block);
@@ -574,7 +622,7 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 
 Editor.prototype.refreshBlock = function(
 	block,
-	midiPitchMin, midiPitchMax,
+	pitchRowMin, pitchRowMax,
 	rowHasKeyChange, rowHasMeterChange)
 {
 	var that = this;
@@ -590,14 +638,14 @@ Editor.prototype.refreshBlock = function(
 	block.trackMeterChangeYEnd   = block.trackMeterChangeYStart + (rowHasMeterChange ? 20 : 0);
 	
 	block.trackNoteYStart = block.trackMeterChangeYEnd;
-	block.trackNoteYEnd   = block.trackNoteYStart + (midiPitchMax + 1 - midiPitchMin) * this.noteHeight;
+	block.trackNoteYEnd   = block.trackNoteYStart + (pitchRowMax + 1 - pitchRowMin) * this.noteHeight;
 	
 	block.trackChordYStart = block.trackNoteYEnd;
 	block.trackChordYEnd   = block.trackChordYStart + this.chordHeight;
 	
 	block.height = block.trackChordYEnd;
 	
-	// Render the row's background.
+	// Render the block's background.
 	this.addSvgNode("editorBlockBackground", "rect",
 	{
 		x: block.x,
@@ -606,7 +654,7 @@ Editor.prototype.refreshBlock = function(
 		height: block.trackChordYEnd - block.trackNoteYStart
 	});
 	
-	// Render the beat indicators.
+	// Render beat indicators.
 	var beatTick = block.measureStartTick.clone();
 	while (true)
 	{
@@ -646,6 +694,22 @@ Editor.prototype.refreshBlock = function(
 		width: block.width,
 		height: block.trackChordYEnd - block.trackChordYStart
 	});
+	
+	// Render octave indicators.
+	for (var pitch = Theory.midiPitchMin + block.key.tonicMidiPitch; pitch <= Theory.midiPitchMax; pitch += 12)
+	{
+		var row = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+		if (row <= pitchRowMin || row > pitchRowMax)
+			continue;
+		
+		this.addSvgNode("editorOctaveLine", "line",
+		{
+			x1: block.x,
+			y1: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight,
+			x2: block.x + block.width,
+			y2: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight,
+		});
+	}
 		
 	// Render notes.
 	this.song.notes.enumerateOverlappingRange(block.tickStart, block.tickEnd, function (note)
@@ -656,10 +720,13 @@ Editor.prototype.refreshBlock = function(
 		noteXStart = Math.max(noteXStart, 0);
 		noteXEnd   = Math.min(noteXEnd,   block.width);
 		
-		var midiPitchOffset = note.getMidiPitch() - midiPitchMin;
-		var noteYTop = block.trackNoteYEnd - (midiPitchOffset + 1) * that.noteHeight;
+		var noteDegree = Theory.getPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
+		var noteColor = Theory.getDegreeColor(noteDegree);
+		var noteColorAccent = Theory.getDegreeColorAccent(noteDegree);
 		
-		var noteColor = Theory.getPitchColor(block.key.scaleIndex, note.pitch, that.usePopularNotation);
+		var noteRow = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, note.midiPitch, that.usePopularNotation);
+		var noteDegreeOffset = noteRow - pitchRowMin;
+		var noteYTop = block.trackNoteYEnd - (noteDegreeOffset + 1) * that.noteHeight;
 		
 		var noteX = block.x + noteXStart + that.noteSideMargin;
 		var noteY = block.y + noteYTop;
@@ -667,11 +734,12 @@ Editor.prototype.refreshBlock = function(
 		var noteH = that.noteHeight;
 			
 		var svgNote = that.addSvgNode(
-			"editorDegree" + (note.editorData.selected ? "Selected" : ""),
+			"editorNote" + (note.editorData.selected ? "Selected" : ""),
 			"rect", { x: noteX, y: noteY, width: noteW, height: noteH });
 			
-		svgNote.style.fill = noteColor[note.editorData.selected ? 1 : 0];
-		svgNote.style.stroke = noteColor[0];
+		svgNote.style.fill = "url(#pattern" + Math.floor(mod(noteDegree, 7) * 2) + 
+			(note.editorData.selected ? "Accent" : "") + ")";
+		svgNote.style.stroke = "url(#pattern" + Math.floor(mod(noteDegree, 7) * 2) + ")";
 		
 		block.elements.push({ note: note, x: noteX, y: noteY, width: noteW, height: noteH });
 	});
@@ -681,13 +749,13 @@ Editor.prototype.refreshBlock = function(
 	{
 		var chordXStart = chord.startTick.clone().subtract(block.tickStart).asFloat() * that.wholeTickWidth;
 		var chordXEnd   = chord.endTick  .clone().subtract(block.tickStart).asFloat() * that.wholeTickWidth;
-
-		let pitch = chord.rootPitch - block.key.tonicPitch;
 		
 		chordXStart = Math.max(chordXStart, 0);
 		chordXEnd   = Math.min(chordXEnd,   block.width);
 		
-		var chordColor = Theory.getPitchColor(block.key.scaleIndex, pitch, that.usePopularNotation);
+		var chordDegree = Theory.getPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, chord.rootMidiPitch, that.usePopularNotation);
+		var chordColor = Theory.getDegreeColor(chordDegree);
+		var chordColorAccent = Theory.getDegreeColorAccent(chordDegree);
 		
 		var chordX = block.x + chordXStart + that.chordSideMargin;
 		var chordY = block.y + block.trackChordYStart;
@@ -699,7 +767,8 @@ Editor.prototype.refreshBlock = function(
 			
 		block.elements.push({ chord: chord, x: chordX, y: chordY, width: chordW, height: chordH });
 		
-		var svgChordOrnament1 = that.addSvgNode("editorDegree" + (chord.editorData.selected ? "Selected" : ""),
+		var svgChordOrnament1 = that.addSvgNode(
+			"editorChordOrnament" + (chord.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
 				x: block.x + chordXStart + that.chordSideMargin,
@@ -708,7 +777,8 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 		
-		var svgChordOrnament2 = that.addSvgNode("editorDegree" + (chord.editorData.selected ? "Selected" : ""),
+		var svgChordOrnament2 = that.addSvgNode(
+			"editorChordOrnament" + (chord.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
 				x: block.x + chordXStart + that.chordSideMargin,
@@ -717,31 +787,60 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 			
-		svgChordOrnament1.style.fill = chordColor[chord.editorData.selected ? 1 : 0];
-		svgChordOrnament1.style.stroke = chordColor[0];
-		svgChordOrnament2.style.fill = chordColor[chord.editorData.selected ? 1 : 0];
-		svgChordOrnament2.style.stroke = chordColor[0];
+		svgChordOrnament1.style.fill = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + 
+			(chord.editorData.selected ? "Accent" : "") + ")";
+		svgChordOrnament1.style.stroke = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + ")";
 		
-		// Build and add the chord label.
-		var chordLabel = Theory.getChordLabelMain(
-			block.key.scaleIndex, chord.chordKindIndex, pitch, chord.embelishments, that.usePopularNotation); 
-		var chordLabelSuperscript = Theory.getChordLabelSuperscript(
-			block.key.scaleIndex, chord.chordKindIndex, pitch, chord.embelishments, that.usePopularNotation); 
+		svgChordOrnament2.style.fill = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + 
+			(chord.editorData.selected ? "Accent" : "") + ")";
+		svgChordOrnament2.style.stroke = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + ")";
 		
-		var svgChordLabel = that.addSvgTextComplemented(
-			"editorChordLabel",
-			"editorChordLabelSuperscript",
-			chordLabel,
-			chordLabelSuperscript,
+		// Build and add the roman chord label.
+		var chordRomanLabel = Theory.getChordRomanLabelMain(
+			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
+		var chordRomanLabelSuperscript = Theory.getChordRomanLabelSuperscript(
+			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
+		
+		var svgChordRomanLabel = that.addSvgTextComplemented(
+			"editorChordRomanLabel",
+			"editorChordRomanLabelSuperscript",
+			chordRomanLabel,
+			chordRomanLabelSuperscript,
 			{
 				x: block.x + chordXStart + (chordXEnd - chordXStart) / 2,
-				y: block.y + (block.trackChordYStart + block.trackChordYEnd) / 2
+				y: block.y + (block.trackChordYStart + block.trackChordYEnd) / 2 - 4
 			});
 		
 		// Narrow text if it overflows the space.
-		if (svgChordLabel.getComputedTextLength() > chordXEnd - chordXStart)
+		if (svgChordRomanLabel.getComputedTextLength() > chordXEnd - chordXStart)
 		{
-			editSvgNode(svgChordLabel,
+			editSvgNode(svgChordRomanLabel,
+			{
+				textLength: chordXEnd - chordXStart,
+				lengthAdjust: "spacingAndGlyphs"
+			});
+		}
+		
+		// Build and add the absolute chord label.
+		var chordAbsoluteLabel = Theory.getChordAbsoluteLabelMain(
+			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
+		var chordAbsoluteLabelSuperscript = Theory.getChordAbsoluteLabelSuperscript(
+			block.key.scaleIndex, block.key.tonicMidiPitch, chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments, that.usePopularNotation); 
+		
+		var svgChordAbsoluteLabel = that.addSvgTextComplemented(
+			"editorChordAbsoluteLabel",
+			"editorChordAbsoluteLabelSuperscript",
+			chordAbsoluteLabel,
+			chordAbsoluteLabelSuperscript,
+			{
+				x: block.x + chordXStart + (chordXEnd - chordXStart) / 2,
+				y: block.y + (block.trackChordYStart + block.trackChordYEnd) / 2 + 12
+			});
+		
+		// Narrow text if it overflows the space.
+		if (svgChordAbsoluteLabel.getComputedTextLength() > chordXEnd - chordXStart)
+		{
+			editSvgNode(svgChordAbsoluteLabel,
 			{
 				textLength: chordXEnd - chordXStart,
 				lengthAdjust: "spacingAndGlyphs"
@@ -785,7 +884,7 @@ Editor.prototype.refreshBlock = function(
 	// Render key change.
 	if (block.key.tick.compare(block.tickStart) == 0)
 	{
-		that.addSvgNode("editorKeyLine", "line",
+		this.addSvgNode("editorKeyLine", "line",
 		{
 			x1: block.x,
 			y1: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2,
@@ -793,7 +892,7 @@ Editor.prototype.refreshBlock = function(
 			y2: block.y + block.trackChordYEnd
 		});
 		
-		that.addSvgNode(
+		this.addSvgNode(
 			"editorKeyHandle" + (block.key.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
@@ -803,7 +902,7 @@ Editor.prototype.refreshBlock = function(
 				height: this.handleSize
 			});
 		
-		that.addSvgText("editorKeyLabel", block.key.getLabel(),
+		this.addSvgText("editorKeyLabel", block.key.getLabel(),
 		{
 			x: block.x + this.handleSize / 2 + 5,
 			y: block.y + (block.trackKeyChangeYStart + block.trackKeyChangeYEnd) / 2
@@ -819,10 +918,36 @@ Editor.prototype.refreshBlock = function(
 		});
 	}
 	
+	// Render scale labels.
+	if (block.drawScaleLabels)
+	{
+		var pitchMin = Theory.getRowPitch(block.key.scaleIndex, block.key.tonicMidiPitch, pitchRowMin, this.usePopularNotation);
+		var pitchMax = Theory.getRowPitch(block.key.scaleIndex, block.key.tonicMidiPitch, pitchRowMax, this.usePopularNotation);
+		
+		for (var pitch = pitchMin; pitch <= pitchMax; pitch++)
+		{
+			var degree = Theory.getPitchDegree(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+			if (Math.floor(degree) != degree)
+				continue;
+			
+			var row = Theory.getPitchRow(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+			if (row < pitchRowMin || row > pitchRowMax)
+				continue;
+			
+			var pitchLabel = Theory.getPitchLabel(block.key.scaleIndex, block.key.tonicMidiPitch, pitch, this.usePopularNotation);
+			
+			this.addSvgText("editorScaleLabel", (mod(degree, 7) + 1).toString() + " " + pitchLabel,
+			{
+				x: block.x - this.scaleLabelsWidth + 2,
+				y: block.y + block.trackNoteYEnd - (row - pitchRowMin + 0.5) * this.noteHeight
+			});
+		}
+	}
+	
 	// Render meter change.
 	if (block.meter.tick.compare(block.tickStart) == 0)
 	{
-		that.addSvgNode("editorMeterLine", "line",
+		this.addSvgNode("editorMeterLine", "line",
 		{
 			x1: block.x,
 			y1: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2,
@@ -830,7 +955,7 @@ Editor.prototype.refreshBlock = function(
 			y2: block.y + block.trackChordYEnd
 		});
 		
-		that.addSvgNode(
+		this.addSvgNode(
 			"editorMeterHandle" + (block.meter.editorData.selected ? "Selected" : ""),
 			"rect",
 			{
@@ -840,7 +965,7 @@ Editor.prototype.refreshBlock = function(
 				height: this.handleSize
 			});
 		
-		that.addSvgText("editorMeterLabel", block.meter.getLabel(),
+		this.addSvgText("editorMeterLabel", block.meter.getLabel(),
 		{
 			x: block.x + this.handleSize / 2 + 5,
 			y: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2
@@ -861,10 +986,58 @@ Editor.prototype.refreshBlock = function(
 }
 
 
+Editor.prototype.addSvgDegreePattern = function(name, degree, accentColor)
+{
+	var svgPattern = this.addSvgNode(null, "pattern",
+	{
+		id: name,
+		width: 10,
+		height: 10,
+		patternTransform: "rotate(30 0 0)",
+		patternUnits: "userSpaceOnUse"
+	});
+	
+	var svgPatternRect = makeSvgNode(null, "rect",
+	{
+		x: -5,
+		y: -5,
+		width: 20,
+		height: 20
+	});
+	
+	var color =
+		accentColor ?
+		Theory.getDegreeColorAccent(Math.floor(degree)) :
+		Theory.getDegreeColor(Math.floor(degree));
+		
+	svgPatternRect.style.fill = color;
+	svgPattern.appendChild(svgPatternRect);
+	
+	if (Math.floor(degree) != degree)
+	{
+		var svgPatternLine = makeSvgNode(null, "line",
+		{
+			x1: 0,
+			y1: -5,
+			x2: 0,
+			y2: 20
+		});
+		
+		var color2 =
+			accentColor ?
+			Theory.getDegreeColorAccent(mod(Math.floor(degree + 1), 7)) :
+			Theory.getDegreeColor(mod(Math.floor(degree + 1), 7));
+		
+		svgPatternLine.style.stroke = color2;
+		svgPatternLine.style.strokeWidth = 10;
+		svgPattern.appendChild(svgPatternLine);
+	}
+}
+
+
 Editor.prototype.addSvgNode = function(cl, kind, attributes)
 {
-	var node = makeSvgNode(kind, attributes);
-	node.setAttribute("class", cl);
+	var node = makeSvgNode(cl, kind, attributes);
 	this.svg.appendChild(node);
 	return node;
 }
@@ -872,8 +1045,7 @@ Editor.prototype.addSvgNode = function(cl, kind, attributes)
 
 Editor.prototype.addSvgText = function(cl, text, attributes)
 {
-	var node = makeSvgNode("text", attributes);
-	node.setAttribute("class", cl);
+	var node = makeSvgNode(cl, "text", attributes);
 	node.innerHTML = text;
 	this.svg.appendChild(node);
 	return node;
@@ -882,12 +1054,10 @@ Editor.prototype.addSvgText = function(cl, text, attributes)
 
 Editor.prototype.addSvgTextComplemented = function(cl, clSuperscript, text, textSuperscript, attributes)
 {
-	var nodeSuperscript = makeSvgNode("tspan", { "baseline-shift": "super" });
-	nodeSuperscript.setAttribute("class", clSuperscript);
+	var nodeSuperscript = makeSvgNode(clSuperscript, "tspan", { "baseline-shift": "super" });
 	nodeSuperscript.innerHTML = textSuperscript;
 	
-	var node = makeSvgNode("text", attributes);
-	node.setAttribute("class", cl);
+	var node = makeSvgNode(cl, "text", attributes);
 	node.innerHTML = text;
 	
 	node.appendChild(nodeSuperscript);
@@ -896,11 +1066,16 @@ Editor.prototype.addSvgTextComplemented = function(cl, clSuperscript, text, text
 }
 
 
-function makeSvgNode(kind, attributes)
+function makeSvgNode(cl, kind, attributes)
 {
 	var node = document.createElementNS("http://www.w3.org/2000/svg", kind);
+	
+	if (cl != null)
+		node.setAttribute("class", cl);
+	
 	for (var attr in attributes)
 		node.setAttributeNS(null, attr, attributes[attr]);
+	
 	return node;
 }
 
