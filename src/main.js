@@ -120,12 +120,13 @@ function refreshMainTabs()
 function refreshSelectBoxes()
 {
 	var selectKeyPitch = document.getElementById("selectKeyPitch");
-	for (var i = 0; i < 12; i++)
+	for (var i = 0; i < Theory.keyTonicPitches.length; i++)
 	{
 		var option = document.createElement("option");
-		option.innerHTML = Theory.getIndependentPitchLabel(i);
+		option.innerHTML = Theory.getPitchLabel(Theory.keyTonicPitches[i], Theory.keyAccidentalOffsets[i]);
 		selectKeyPitch.appendChild(option);
 	}
+	selectKeyPitch.selectedIndex = 8;
 	
 	var selectKeyScale = document.getElementById("selectKeyScale");
 	for (var i = 0; i < Theory.scales.length; i++)
@@ -249,9 +250,9 @@ function handleSelectSnap()
 
 function handleButtonInsertKeyChange()
 {
-	var pitch = document.getElementById("selectKeyPitch").selectedIndex;
+	var pitchIndex = document.getElementById("selectKeyPitch").selectedIndex;
 	var scaleIndex = document.getElementById("selectKeyScale").selectedIndex;
-	g_Editor.insertKeyChange(scaleIndex, pitch);
+	g_Editor.insertKeyChange(scaleIndex, Theory.keyTonicPitches[pitchIndex], Theory.keyAccidentalOffsets[pitchIndex]);
 }
 
 

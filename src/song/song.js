@@ -45,7 +45,7 @@ Song.prototype.sanitize = function()
 		this.length = new Rational(1);
 	
 	if (this.keyChanges.findAt(new Rational(0)) == null)
-		this.keyChanges.insert(new SongKeyChange(new Rational(0), 0, 0, { selected: false }));
+		this.keyChanges.insert(new SongKeyChange(new Rational(0), 0, 0, 0, { selected: false }));
 	
 	if (this.meterChanges.findAt(new Rational(0)) == null)
 		this.meterChanges.insert(new SongMeterChange(new Rational(0), 4, 4, { selected: false }));
@@ -259,7 +259,8 @@ Song.prototype.saveJSON = function()
 		json += "    ";
 		json += "[ " + keyCh.tick.toString() + ", ";
 		json += keyCh.scaleIndex.toString() + ", ";
-		json += keyCh.tonicMidiPitch.toString() + " ]";
+		json += keyCh.tonicMidiPitch.toString() + ", ";
+		json += keyCh.accidentalOffset.toString() + " ]";
 		
 		if (i < this.keyChanges.items.length - 1)
 			json += ",";
@@ -299,7 +300,6 @@ Song.prototype.loadJSON = function(jsonStr)
 	
 	var song = JSON.parse(jsonStr);
 	this.bpm = song.bpm;
-	console.log(song);
 	
 	for (var j = 0; j < song.tracks.length; j++)
 	{
@@ -334,7 +334,8 @@ Song.prototype.loadJSON = function(jsonStr)
 		this.keyChanges.insert(new SongKeyChange(
 			Rational.fromArray(song.keyChanges[i][0]),
 			song.keyChanges[i][1],
-			song.keyChanges[i][2]));
+			song.keyChanges[i][2],
+			song.keyChanges[i][3]));
 	}
 	
 	for (var i = 0; i < song.meterChanges.length; i++)
@@ -450,6 +451,7 @@ Song.prototype.saveBinary = function()
 		writer.writeRational(keyCh.tick);
 		writer.writeInteger(keyCh.scaleIndex);
 		writer.writeInteger(keyCh.tonicMidiPitch);
+		writer.writeInteger(keyCh.accidentalOffset);
 	}
 	
 	// Write meter change data.
@@ -590,6 +592,7 @@ Song.prototype.loadBinary = function(base64str)
 	{
 		this.keyChanges.insert(new SongKeyChange(
 			reader.readRational(),
+			reader.readInteger(),
 			reader.readInteger(),
 			reader.readInteger()));
 	}

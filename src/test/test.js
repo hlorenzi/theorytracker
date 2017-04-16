@@ -16,20 +16,24 @@ function testPitchDegrees()
 		// For each tonic pitch
 		for (var t = 0; t < 12; t++)
 		{
-			// For each absolute pitch
-			for (var p = Theory.midiPitchMin; p <= Theory.midiPitchMax; p++)
+			// For each accidental offset
+			for (var a = -1; a <= 1; a++)
 			{
-				// For each notation mode
-				for (var n = 0; n < 2; n++)
+				// For each absolute pitch
+				for (var p = Theory.midiPitchMin; p <= Theory.midiPitchMax; p++)
 				{
-					var pop = [false, true][n];
-					
-					var degree = Theory.getPitchDegree(s, t, p, pop);
-					var pitch  = Theory.getDegreePitch(s, t, degree, pop);
-					
-					console.assert(p == pitch,
-						"pitch-degree-pitch roundtrip (", p, " != ", pitch, ")",
-						" -- s(", s, ") t(", t, ") p(", p, ") degree(", degree, ") pitch(", pitch, "), n(", n, ")");
+					// For each notation mode
+					for (var n = 0; n < 2; n++)
+					{
+						var pop = [false, true][n];
+						
+						var degree = Theory.getPitchDegree(s, t, a, p, pop);
+						var pitch  = Theory.getDegreePitch(s, t, a, degree, pop);
+						
+						console.assert(p == pitch,
+							"pitch-degree-pitch roundtrip (", p, " != ", pitch, ")",
+							" -- s(", s, ") t(", t, ") a(", a, ") p(", p, ") degree(", degree, ") pitch(", pitch, "), n(", n, ")");
+					}
 				}
 			}
 		}
@@ -46,20 +50,24 @@ function testPitchRows()
 		// For each tonic pitch
 		for (var t = 0; t < 12; t++)
 		{
-			// For each absolute pitch
-			for (var p = Theory.midiPitchMin; p <= Theory.midiPitchMax; p++)
+			// For each accidental offset
+			for (var a = -1; a <= 1; a++)
 			{
-				// For each notation mode
-				for (var n = 0; n < 2; n++)
+				// For each absolute pitch
+				for (var p = Theory.midiPitchMin; p <= Theory.midiPitchMax; p++)
 				{
-					var pop = [false, true][n];
-					
-					var row   = Theory.getPitchRow(s, t, p, pop);
-					var pitch = Theory.getRowPitch(s, t, row, pop);
-					
-					console.assert(p == pitch,
-						"pitch-row-pitch roundtrip (", p, " != ", pitch, ")",
-						"-- s(", s, ") t(", t, ") p(", p, ") row(", row, ") pitch(", pitch, "), n(", n, ")");
+					// For each notation mode
+					for (var n = 0; n < 2; n++)
+					{
+						var pop = [false, true][n];
+						
+						var row   = Theory.getPitchRow(s, t, a, p, pop);
+						var pitch = Theory.getRowPitch(s, t, a, row, pop);
+						
+						console.assert(p == pitch,
+							"pitch-row-pitch roundtrip (", p, " != ", pitch, ")",
+							"-- s(", s, ") t(", t, ") a(", a, ") p(", p, ") row(", row, ") pitch(", pitch, "), n(", n, ")");
+					}
 				}
 			}
 		}
