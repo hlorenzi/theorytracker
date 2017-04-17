@@ -91,8 +91,7 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 		if (chord.endTick.compare(startTick) <= 0)
 			return;
 		
-		var pitches = Theory.calculateChordPitches(
-			chord.chordKindIndex, chord.rootMidiPitch, chord.embelishments);
+		var pitches = Theory.getChordPitches(chord);
 			
 		if (!useChordPatterns)
 		{
@@ -104,8 +103,7 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 		var meter = that.meterChanges.findPrevious(chord.startTick);
 		var meterBeatLength = meter.getBeatLength();
 		
-		var pattern = Theory.calculateChordStrummingPattern(
-			meter.numerator, meter.denominator);
+		var pattern = Theory.getChordStrummingPattern(meter);
 		
 		var tick = meter.tick.clone();
 		var skipTick = new Rational(0);
@@ -241,6 +239,7 @@ Song.prototype.saveJSON = function()
 		json += (chord.endTick.clone().subtract(chord.startTick)).toString() + ", ";
 		json += chord.chordKindIndex.toString() + ", ";
 		json += chord.rootMidiPitch.toString() + ", ";
+		json += chord.rootAccidentalOffset.toString() + ", ";
 		json += "[] ]";//chord.embelishments.toString() + " ]";
 		
 		if (i < this.chords.items.length - 1)
@@ -326,6 +325,7 @@ Song.prototype.loadJSON = function(jsonStr)
 			Rational.fromArray(song.chords[i][1]).add(startTick),
 			song.chords[i][2],
 			song.chords[i][3],
+			song.chords[i][4],
 			[]));
 	}
 	
@@ -440,6 +440,9 @@ Song.prototype.saveBinary = function()
 		writer.writeInteger(this.chords.items[i].rootMidiPitch);
 	
 	for (var i = 0; i < this.chords.items.length; i++)
+		writer.writeInteger(this.chords.items[i].rootAccidentalOffset);
+	
+	for (var i = 0; i < this.chords.items.length; i++)
 		writer.writeInteger(0); // Embelishment count.
 	
 	// Write key change data.
@@ -542,7 +545,7 @@ Song.prototype.loadBinary = function(base64str)
 	var chordData = [];
 	
 	for (var i = 0; i < chordNum; i++)
-		chordData[i] = [ reader.readInteger(), 0, 1, 0, 0, 1, 0, 0 ];
+		chordData[i] = [ reader.readInteger(), 0, 1, 0, 0, 1, 0, 0, 0 ];
 		
 	for (var i = 0; i < chordNum; i++)
 		chordData[i][1] = reader.readInteger();
@@ -572,6 +575,9 @@ Song.prototype.loadBinary = function(base64str)
 		chordData[i][7] = reader.readInteger();
 	
 	for (var i = 0; i < chordNum; i++)
+		chordData[i][8] = reader.readInteger();
+	
+	for (var i = 0; i < chordNum; i++)
 	{
 		var startTick = new Rational(chordData[i][0], chordData[i][1], chordData[i][2]);
 		var duration = new Rational(chordData[i][3], chordData[i][4], chordData[i][5]);
@@ -583,6 +589,7 @@ Song.prototype.loadBinary = function(base64str)
 			duration.add(startTick),
 			chordData[i][6],
 			chordData[i][7],
+			chordData[i][8],
 			[]));
 	}
 	

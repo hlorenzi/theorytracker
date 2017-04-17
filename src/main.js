@@ -191,8 +191,11 @@ function refreshSelectBoxes()
 		var labelMain = document.createElement("span");
 		var labelSuperscript = document.createElement("sup");
 		
-		labelMain.innerHTML = Theory.getChordRomanLabelMain(0, 0, i, 0, []);
-		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(0, 0, i, 0, []);
+		var key = { scaleIndex: 0, tonicMidiPitch: 0, accidentalOffset: 0 };
+		var chord = { chordKindIndex: i, rootMidiPitch: 0, rootAccidentalOffset: 0, embelishments: [] };
+		
+		labelMain.innerHTML = Theory.getChordRomanLabelMain(key, chord);
+		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(key, chord);
 		
 		option.appendChild(labelMain);
 		labelMain.appendChild(labelSuperscript);
@@ -269,44 +272,45 @@ function handleButtonInsertMeterChange()
 function handleSelectChordKindsChange()
 {
 	var selectedIndex = document.getElementById("selectChordKinds").selectedIndex;
-	
-	var tonic = g_CurrentKey.tonicMidiPitch;
 	var scale = Theory.scales[g_CurrentKey.scaleIndex];
+	
+	var refreshButton = function(buttonIndex, chord)
+	{
+		var labelMain = document.createElement("span");
+		var labelSuperscript = document.createElement("sup");
+		labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey, chord, g_Editor.usePopularNotation);
+		labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey, chord, g_Editor.usePopularNotation);
+		
+		var button = document.getElementById("buttonChord" + buttonIndex);
+		
+		while (button.firstChild != null)
+			button.removeChild(button.firstChild);
+		
+		button.appendChild(labelMain);
+		labelMain.appendChild(labelSuperscript);
+		
+		var degree = Theory.getPitchDegree(g_CurrentKey, chord.rootMidiPitch + chord.rootAccidentalOffset, g_Editor.usePopularNotation);
+		var degreeColor = Theory.getDegreeColor(degree);
+		button.style.visibility = "visible";
+		button.style.borderTop = "4px solid " + degreeColor;
+		button.style.borderBottom = "4px solid " + degreeColor;
+		
+		button.chord = chord
+		button.onclick = function()
+		{
+			g_Editor.insertChord(chord);
+		};
+	};
 	
 	// In Key
 	if (selectedIndex == 0)
 	{
 		for (var i = 0; i < 7; i++)
 		{
-			var chordKindIndex = Theory.findChordKindForDegree(g_CurrentKey.scaleIndex, i);
-			
-			var labelMain = document.createElement("span");
-			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
-			
-			var button = document.getElementById("buttonChord" + i);
-			
-			while (button.firstChild != null)
-				button.removeChild(button.firstChild);
-			
-			button.appendChild(labelMain);
-			labelMain.appendChild(labelSuperscript);
-			
-			var degree = Theory.getPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, scale.pitches[i] + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
-			var degreeColor = Theory.getDegreeColor(degree);
-			button.style.borderTop = "4px solid " + degreeColor;
-			button.style.borderBottom = "4px solid " + degreeColor;
-			
-			button.chordKindIndex = chordKindIndex;
-			button.rootMidiPitch = (scale.pitches[i] + g_CurrentKey.tonicMidiPitch) % 12;
-			button.onclick = function()
-			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
-			};
+			refreshButton(i, Theory.getChordForKeyDegree(g_CurrentKey, i));
 		}
 		
-		for (var i = 7; i < 12; i++)
+		for (var i = 7; i < 21; i++)
 		{
 			var button = document.getElementById("buttonChord" + i);
 			button.style.visibility = "hidden";
@@ -315,39 +319,18 @@ function handleSelectChordKindsChange()
 	
 	else
 	{
-		var chordKindIndex = selectedIndex - 1;
-		var buttonAssignment = [0, 2, 4, 5, 7, 9, 11, 1, 3, 6, 8, 10];
+		var pitches = [0, 2, 4, 5, 7, 9, 11];
 		
-		for (var i = 0; i < 12; i++)
+		for (var i = 0; i < 21; i++)
 		{
-			var pitch = buttonAssignment[i];
-			
-			var labelMain = document.createElement("span");
-			var labelSuperscript = document.createElement("sup");
-			labelMain.innerHTML = Theory.getChordRomanLabelMain(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
-			labelSuperscript.innerHTML = Theory.getChordRomanLabelSuperscript(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, chordKindIndex, pitch + g_CurrentKey.tonicMidiPitch, [], g_Editor.usePopularNotation);
-			
-			var button = document.getElementById("buttonChord" + i);
-			
-			while (button.firstChild != null)
-				button.removeChild(button.firstChild);
-			
-			button.appendChild(labelMain);
-			labelMain.appendChild(labelSuperscript);
-			
-			var degree = Theory.getPitchDegree(g_CurrentKey.scaleIndex, g_CurrentKey.tonicMidiPitch, pitch + g_CurrentKey.tonicMidiPitch, g_Editor.usePopularNotation);
-			var degreeColor = Theory.getDegreeColor(degree);
-			button.style.borderTop = "4px solid " + degreeColor;
-			button.style.borderBottom = "4px solid " + degreeColor;
-		
-			button.style.visibility = "visible";
-			
-			button.chordKindIndex = chordKindIndex;
-			button.rootMidiPitch = (pitch + g_CurrentKey.tonicMidiPitch) % 12;
-			button.onclick = function()
+			var chord =
 			{
-				g_Editor.insertChord(this.chordKindIndex, this.rootMidiPitch, []);
+				chordKindIndex: selectedIndex - 1,
+				rootMidiPitch: scale.pitches[i % 7] + g_CurrentKey.tonicMidiPitch + g_CurrentKey.accidentalOffset,
+				rootAccidentalOffset: Math.floor(i / 7) - 1
 			};
+			
+			refreshButton(i, chord);
 		}
 	}
 }

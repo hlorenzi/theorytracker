@@ -32,9 +32,3 @@ SongMeterChange.prototype.getBeatLength = function()
 		1,
 		this.denominator);
 }
-
-
-SongMeterChange.prototype.getLabel = function()
-{
-	return Theory.getMeterLabel(this.numerator, this.denominator);
-}

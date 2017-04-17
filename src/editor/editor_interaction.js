@@ -373,7 +373,7 @@ Editor.prototype.eventMouseDown = function(ev)
 			var key = this.song.keyChanges.findPrevious(elementAtMouse.note.startTick);
 			this.newElementPitchOctave = Math.floor(elementAtMouse.note.midiPitch / 12);
 			this.newElementDegreeOctave = 
-				Math.floor(Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, elementAtMouse.note.midiPitch, false) / 7);
+				Math.floor(Theory.getPitchDegree(key, elementAtMouse.note.midiPitch, false) / 7);
 			
 			Theory.playSampleNote(this.synth, elementAtMouse.note.midiPitch);
 		}
@@ -381,11 +381,7 @@ Editor.prototype.eventMouseDown = function(ev)
 		else if (elementAtMouse.chord != undefined)
 		{
 			elementAtMouse.chord.editorData.selected = !elementAtMouse.chord.editorData.selected;
-			Theory.playSampleChord(
-				this.synth,
-				elementAtMouse.chord.chordKindIndex,
-				elementAtMouse.chord.rootMidiPitch,
-				elementAtMouse.chord.embelishments);
+			Theory.playSampleChord(this.synth, elementAtMouse.chord);
 		}
 		
 		else if (elementAtMouse.keyChange != undefined)
@@ -836,7 +832,7 @@ Editor.prototype.performInsertPitchAction = function(midiPitch)
 	}
 	else
 	{
-		this.insertChord(0, midiPitch, []);
+		this.insertChord(0, midiPitch, 0, []);
 	}
 }
 
@@ -867,9 +863,9 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 	
 	var diatonicPitchChange = function(key, originalPitch)
 	{
-		var degree = Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, originalPitch, false);
+		var degree = Theory.getPitchDegree(key, originalPitch, false);
 		var newDegree = (step > 0 ? Math.floor(degree) : Math.ceil(degree)) + step;
-		return Theory.getDegreePitch(key.scaleIndex, key.tonicMidiPitch, newDegree, false);
+		return Theory.getDegreePitch(key, newDegree, false);
 	}
 	
 	for (var a = 0; a < Math.abs(amount); a++)
@@ -912,7 +908,7 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 				
 				that.newElementPitchOctave = Math.floor(note.midiPitch / 12);
 				that.newElementDegreeOctave = 
-					Math.floor(Theory.getPitchDegree(key.scaleIndex, key.tonicMidiPitch, note.midiPitch, false) / 7);
+					Math.floor(Theory.getPitchDegree(key, note.midiPitch, false) / 7);
 			}
 			noteToSample = note;
 		});
@@ -938,11 +934,7 @@ Editor.prototype.performElementPitchChange = function(amount, diatonic)
 			Theory.playSampleNote(this.synth, noteToSample.midiPitch);
 
 		if (chordToSample != null && noteToSample == null && a == Math.abs(amount) - 1)
-			Theory.playSampleChord(
-				this.synth,
-				chordToSample.chordKindIndex,
-				chordToSample.rootMidiPitch,
-				chordToSample.embelishments);
+			Theory.playSampleChord(this.synth, chordToSample);
 	}
 	
 	this.refresh();

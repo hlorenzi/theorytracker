@@ -19,6 +19,8 @@ function testPitchDegrees()
 			// For each accidental offset
 			for (var a = -1; a <= 1; a++)
 			{
+				var key = { scaleIndex: s, tonicMidiPitch: t, accidentalOffset: a };
+				
 				// For each absolute pitch
 				for (var p = Theory.midiPitchMin; p <= Theory.midiPitchMax; p++)
 				{
@@ -27,12 +29,12 @@ function testPitchDegrees()
 					{
 						var pop = [false, true][n];
 						
-						var degree = Theory.getPitchDegree(s, t, a, p, pop);
-						var pitch  = Theory.getDegreePitch(s, t, a, degree, pop);
+						var degree = Theory.getPitchDegree(key, p, pop);
+						var pitch  = Theory.getDegreePitch(key, degree, pop);
 						
 						console.assert(p == pitch,
 							"pitch-degree-pitch roundtrip (", p, " != ", pitch, ")",
-							" -- s(", s, ") t(", t, ") a(", a, ") p(", p, ") degree(", degree, ") pitch(", pitch, "), n(", n, ")");
+							" -- key(", key, ") p(", p, ") degree(", degree, ") pitch(", pitch, "), n(", n, ")");
 					}
 				}
 			}
@@ -53,6 +55,8 @@ function testPitchRows()
 			// For each accidental offset
 			for (var a = -1; a <= 1; a++)
 			{
+				var key = { scaleIndex: s, tonicMidiPitch: t, accidentalOffset: a };
+				
 				// For each absolute pitch
 				for (var p = Theory.midiPitchMin; p <= Theory.midiPitchMax; p++)
 				{
@@ -61,12 +65,12 @@ function testPitchRows()
 					{
 						var pop = [false, true][n];
 						
-						var row   = Theory.getPitchRow(s, t, a, p, pop);
-						var pitch = Theory.getRowPitch(s, t, a, row, pop);
+						var row   = Theory.getPitchRow(key, p, pop);
+						var pitch = Theory.getRowPitch(key, row, pop);
 						
 						console.assert(p == pitch,
 							"pitch-row-pitch roundtrip (", p, " != ", pitch, ")",
-							"-- s(", s, ") t(", t, ") a(", a, ") p(", p, ") row(", row, ") pitch(", pitch, "), n(", n, ")");
+							"-- key(", key, ") p(", p, ") row(", row, ") pitch(", pitch, "), n(", n, ")");
 					}
 				}
 			}

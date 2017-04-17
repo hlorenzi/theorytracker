@@ -132,15 +132,15 @@ Theory.isValidMeterDenominator = function(denominator)
 }
 
 
-Theory.getKeyLabel = function(scaleIndex, tonicMidiPitch, accidentalOffset)
+Theory.getKeyLabel = function(key)
 {
-	return Theory.getPitchLabel(tonicMidiPitch, accidentalOffset) + " " + Theory.scales[scaleIndex].name;
+	return Theory.getPitchLabel(key.tonicMidiPitch, key.accidentalOffset) + " " + Theory.scales[key.scaleIndex].name;
 }
 
 
-Theory.getMeterLabel = function(numerator, denominator)
+Theory.getMeterLabel = function(meter)
 {
-	return "" + numerator + " / " + denominator;
+	return "" + meter.numerator + " / " + meter.denominator;
 }
 
 
@@ -177,15 +177,15 @@ Theory.getPitchBaseLabelAndAccidentalOffset = function(midiPitch, accidentalOffs
 }
 
 
-Theory.getDegreeBaseLabelAndAccidentalOffset = function(scaleIndex, tonicMidiPitch, accidentalOffset, degree)
+Theory.getDegreeBaseLabelAndAccidentalOffset = function(key, degree)
 {
 	var pitches = [0, 2, 4, 5, 7, 9, 11];
 	
-	var degreeMidiPitch = Theory.getPitchForKeyDegree(scaleIndex, tonicMidiPitch, accidentalOffset, degree);
+	var degreeMidiPitch = Theory.getPitchForKeyDegree(key, degree);
 	
-	var tonicBase = Theory.getPitchBaseLabelAndAccidentalOffset(tonicMidiPitch, accidentalOffset);
-	var degreeLabelBase = mod(pitches[mod(tonicBase.label + degree, 7)] + tonicMidiPitch, 12);
-	var degreeAccidentalOffset = mod(accidentalOffset + degreeMidiPitch + tonicMidiPitch - degreeLabelBase + 6, 12) - 6;
+	var tonicBase = Theory.getPitchBaseLabelAndAccidentalOffset(key.tonicMidiPitch, key.accidentalOffset);
+	var degreeLabelBase = mod(pitches[mod(tonicBase.label + degree, 7)] + key.tonicMidiPitch, 12);
+	var degreeAccidentalOffset = mod(key.accidentalOffset + degreeMidiPitch + key.tonicMidiPitch - degreeLabelBase + 6, 12) - 6;
 	
 	return { label: mod(tonicBase.label + degree, 7), accidentalOffset: degreeAccidentalOffset };
 }
@@ -200,52 +200,52 @@ Theory.getPitchLabel = function(midiPitch, accidentalOffset = 0)
 }
 
 
-Theory.getDegreeLabel = function(scaleIndex, tonicMidiPitch, accidentalOffset, degree)
+Theory.getDegreeLabel = function(key, degree)
 {
-	var base = Theory.getDegreeBaseLabelAndAccidentalOffset(scaleIndex, tonicMidiPitch, accidentalOffset, degree);
+	var base = Theory.getDegreeBaseLabelAndAccidentalOffset(key, degree);
 	
 	var labels = ["C", "D", "E", "F", "G", "A", "B"];
 	return labels[base.label] + Theory.getAccidentalString(base.accidentalOffset);
 }
 
 
-Theory.getRowPitch = function(scaleIndex, tonicMidiPitch, accidentalOffset, row, usePopularNotation = true)
+Theory.getRowPitch = function(key, row, usePopularNotation = true)
 {
-	var tonicOffset = mod(Theory.getPitchDegree(scaleIndex, 0, 0, tonicMidiPitch, usePopularNotation), 7);
-	var pitch = Theory.getDegreePitch(scaleIndex, tonicMidiPitch, accidentalOffset, row - tonicOffset, usePopularNotation);
+	var tonicOffset = mod(Theory.getPitchDegree({ scaleIndex: key.scaleIndex, tonicMidiPitch: 0, accidentalOffset: 0 }, key.tonicMidiPitch, usePopularNotation), 7);
+	var pitch = Theory.getDegreePitch(key, row - tonicOffset, usePopularNotation);
 	return pitch;
 }
 
 
-Theory.getPitchRow = function(scaleIndex, tonicMidiPitch, accidentalOffset, midiPitch, usePopularNotation = true)
+Theory.getPitchRow = function(key, midiPitch, usePopularNotation = true)
 {
-	var tonicOffset = mod(Theory.getPitchDegree(scaleIndex, 0, 0, tonicMidiPitch, usePopularNotation), 7);
-	var degree = Theory.getPitchDegree(scaleIndex, tonicMidiPitch, accidentalOffset, midiPitch, usePopularNotation);
+	var tonicOffset = mod(Theory.getPitchDegree({ scaleIndex: key.scaleIndex, tonicMidiPitch: 0, accidentalOffset: 0 }, key.tonicMidiPitch, usePopularNotation), 7);
+	var degree = Theory.getPitchDegree(key, midiPitch, usePopularNotation);
 	return degree + tonicOffset;
 }
 
 
-Theory.getDegreePitch = function(scaleIndex, tonicMidiPitch, accidentalOffset, degree, usePopularNotation = true)
+Theory.getDegreePitch = function(key, degree, usePopularNotation = true)
 {
-	var scale = Theory.scales[scaleIndex];
+	var scale = Theory.scales[key.scaleIndex];
 	if (usePopularNotation)
 		scale = Theory.scales[0];
 	
-	var pitch = scale.pitches[mod(Math.floor(degree), 7)] + accidentalOffset;
+	var pitch = scale.pitches[mod(Math.floor(degree), 7)] + key.accidentalOffset;
 	if (Math.floor(degree) != degree)
 		pitch += 1;
 	
 	var octave = Math.floor(degree / 7);
 	
-	return pitch + octave * 12 + tonicMidiPitch;
+	return pitch + octave * 12 + key.tonicMidiPitch;
 }
 
 
-Theory.getPitchDegree = function(scaleIndex, tonicMidiPitch, accidentalOffset, midiPitch, usePopularNotation = true)
+Theory.getPitchDegree = function(key, midiPitch, usePopularNotation = true)
 {
-	var relativePitch = mod(midiPitch - tonicMidiPitch - accidentalOffset, 12);
+	var relativePitch = mod(midiPitch - key.tonicMidiPitch - key.accidentalOffset, 12);
 	
-	var scale = Theory.scales[scaleIndex];
+	var scale = Theory.scales[key.scaleIndex];
 	if (usePopularNotation)
 		scale = Theory.scales[0];
 	
@@ -265,96 +265,128 @@ Theory.getPitchDegree = function(scaleIndex, tonicMidiPitch, accidentalOffset, m
 		}
 	}
 	
-	var octave = Math.floor((midiPitch - tonicMidiPitch - accidentalOffset) / 12);
+	var octave = Math.floor((midiPitch - key.tonicMidiPitch - key.accidentalOffset) / 12);
 	return degree + octave * 7;
 }
 
 
-Theory.getPitchForKeyDegree = function(scaleIndex, tonicMidiPitch, accidentalOffset, degree)
+Theory.getPitchForKeyDegree = function(key, degree)
 {
-	return mod(Theory.scales[scaleIndex].pitches[mod(degree, 7)] + tonicMidiPitch, 12);
+	return mod(Theory.scales[key.scaleIndex].pitches[mod(degree, 7)] + key.tonicMidiPitch, 12);
 }
 
 
-Theory.getChordRomanRootLabel = function(scaleIndex, tonicMidiPitch, accidentalOffset, rootMidiPitch, usePopularNotation = true)
+Theory.getChordForKeyDegree = function(key, degree, options = null)
+{
+	return {
+		chordKindIndex: Theory.getChordKindForDegree(key, degree),
+		rootMidiPitch: mod(Theory.scales[key.scaleIndex].pitches[degree] + key.tonicMidiPitch + key.accidentalOffset, 12),
+		rootAccidentalOffset: 0,
+		embelishments: []
+	};
+}
+
+
+Theory.getChordRomanRootLabel = function(key, chord, usePopularNotation = true)
 {
 	if (usePopularNotation)
 	{
 		var labels = ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V", "♭VI", "VI", "♭VII", "VII"];
-		return labels[mod(rootMidiPitch - tonicMidiPitch - accidentalOffset, 12)];
+		return labels[mod(chord.rootMidiPitch + chord.rootAccidentalOffset - key.tonicMidiPitch - key.accidentalOffset, 12)];
 	}
 	else
 	{
-		// FIXME: Compute correct Common Practice labels.
-		var labels = ["I", "II", "III", "IV", "V", "VI", "VII", "I"];
+		var degree = Theory.getPitchDegree(key, chord.rootMidiPitch, usePopularNotation);
+		var offset = 0;
+			
+		if (Math.floor(degree) != degree)
+		{
+			degree = Math.floor(degree) + 1;
+			offset -= 1;
+		}
 		
-		var degree = mod(Theory.getPitchDegree(scaleIndex, tonicMidiPitch, accidentalOffset, rootMidiPitch, false), 7);
-		var degreeInteger = Math.floor(degree);
+		var base = Theory.getDegreeBaseLabelAndAccidentalOffset(key, degree);
 		
-		if (degree == degreeInteger)
-			return labels[degreeInteger];
-		else
-			return "♭" + labels[degreeInteger + 1];
+		var labels = ["I", "II", "III", "IV", "V", "VI", "VII"];
+		return Theory.getAccidentalString(offset + chord.rootAccidentalOffset) + labels[mod(degree, 7)];
 	}
 }
 
 
-Theory.getChordRomanLabelMain = function(scaleIndex, tonicMidiPitch, accidentalOffset, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+Theory.getChordRomanLabelMain = function(key, chord, usePopularNotation = true)
 {
-	var rootLabel = Theory.getChordRomanRootLabel(scaleIndex, tonicMidiPitch, accidentalOffset, rootMidiPitch, usePopularNotation);
+	var rootLabel = Theory.getChordRomanRootLabel(key, chord, usePopularNotation);
 	
-	if (Theory.chordKinds[chordKindIndex].symbol[0])
+	if (Theory.chordKinds[chord.chordKindIndex].symbol[0])
 		rootLabel = rootLabel.toLowerCase();
 	
-	return rootLabel + Theory.chordKinds[chordKindIndex].symbol[1];
+	return rootLabel + Theory.chordKinds[chord.chordKindIndex].symbol[1];
 }
 
 
-Theory.getChordRomanLabelSuperscript = function(scaleIndex, tonicMidiPitch, accidentalOffset, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+Theory.getChordRomanLabelSuperscript = function(key, chord, usePopularNotation = true)
 {
-	return Theory.chordKinds[chordKindIndex].symbol[2];
+	return Theory.chordKinds[chord.chordKindIndex].symbol[2];
 }
 
 
-Theory.getChordAbsoluteRootLabel = function(scaleIndex, tonicMidiPitch, accidentalOffset, rootMidiPitch, usePopularNotation = true)
+Theory.getChordAbsoluteRootLabel = function(key, chord, usePopularNotation = true)
 {
-	// TODO: Take scale into consideration.
-	var labels = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"];
-	return labels[mod(rootMidiPitch + accidentalOffset, 12)];
+	if (usePopularNotation)
+	{
+		var labels = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
+		return labels[mod(chord.rootMidiPitch + chord.rootAccidentalOffset, 12)];
+	}
+	else
+	{
+		var degree = Theory.getPitchDegree(key, chord.rootMidiPitch, usePopularNotation);
+		var offset = 0;
+			
+		if (Math.floor(degree) != degree)
+		{
+			degree = Math.floor(degree) + 1;
+			offset -= 1;
+		}
+		
+		var base = Theory.getDegreeBaseLabelAndAccidentalOffset(key, degree);
+		
+		var labels = ["C", "D", "E", "F", "G", "A", "B"];
+		return labels[mod(base.label, 7)] + Theory.getAccidentalString(offset + base.accidentalOffset + chord.rootAccidentalOffset);
+	}
 }
 
 
-Theory.getChordAbsoluteLabelMain = function(scaleIndex, tonicMidiPitch, accidentalOffset, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+Theory.getChordAbsoluteLabelMain = function(key, chord, usePopularNotation = true)
 {
-	var rootLabel = Theory.getChordAbsoluteRootLabel(scaleIndex, tonicMidiPitch, accidentalOffset, rootMidiPitch, usePopularNotation);
+	var rootLabel = Theory.getChordAbsoluteRootLabel(key, chord, usePopularNotation);
 	
-	if (Theory.chordKinds[chordKindIndex].symbol[0])
+	if (Theory.chordKinds[chord.chordKindIndex].symbol[0])
 		rootLabel += "m";
 	
-	return rootLabel + Theory.chordKinds[chordKindIndex].symbol[1];
+	return rootLabel + Theory.chordKinds[chord.chordKindIndex].symbol[1];
 }
 
 
-Theory.getChordAbsoluteLabelSuperscript = function(scaleIndex, tonicMidiPitch, accidentalOffset, chordKindIndex, rootMidiPitch, embelishments, usePopularNotation = true)
+Theory.getChordAbsoluteLabelSuperscript = function(key, chord, usePopularNotation = true)
 {
-	return Theory.chordKinds[chordKindIndex].symbol[2];
+	return Theory.chordKinds[chord.chordKindIndex].symbol[2];
 }
 
 
-Theory.calculateChordPitches = function(chordKindIndex, rootMidiPitch, embelishments)
+Theory.getChordPitches = function(chord)
 {
-	var chord = Theory.chordKinds[chordKindIndex];
+	var chordData = Theory.chordKinds[chord.chordKindIndex];
 	
 	var octave = 12 * 4;
-	if (rootMidiPitch >= 6)
+	if (chord.rootMidiPitch + chord.rootAccidentalOffset >= 6)
 		octave -= 12;
 	
 	var pitches = [];
-	for (var i = 1; i < chord.pitches.length; i++)
-		pitches.push(rootMidiPitch + chord.pitches[i]);
+	for (var i = 1; i < chordData.pitches.length; i++)
+		pitches.push(chord.rootMidiPitch + chord.rootAccidentalOffset + chordData.pitches[i]);
 	
-	if (chord.pitches.length <= 3)
-		pitches.push(rootMidiPitch + chord.pitches[0]);
+	if (chordData.pitches.length <= 3)
+		pitches.push(chord.rootMidiPitch + chord.rootAccidentalOffset + chordData.pitches[0]);
 	
 	pitches = pitches.sort(function (x, y) { return x > y; });
 
@@ -372,12 +404,12 @@ Theory.calculateChordPitches = function(chordKindIndex, rootMidiPitch, embelishm
 		pitches[3] -= 12;
 	}
 	
-	pitches.unshift(octave + rootMidiPitch);
+	pitches.unshift(octave + chord.rootMidiPitch + chord.rootAccidentalOffset);
 	return pitches;
 }
 
 
-Theory.calculateChordStrummingPattern = function(numerator, denominator)
+Theory.getChordStrummingPattern = function(meter)
 {
 	// [[beat kind, duration], ...]
 	// Beat kinds:
@@ -388,7 +420,7 @@ Theory.calculateChordStrummingPattern = function(numerator, denominator)
 	var two   = [[0, new Rational(1)], [1, new Rational(0, 1, 2)], [2, new Rational(0, 1, 2)]];
 	var three = [[0, new Rational(1)], [1, new Rational(1)      ], [1, new Rational(1)      ]];
 	
-	switch (numerator)
+	switch (meter.numerator)
 	{
 		case 2: return two;
 		case 3: return three;
@@ -410,9 +442,9 @@ Theory.calculateChordStrummingPattern = function(numerator, denominator)
 }
 
 
-Theory.findChordKindForDegree = function(scaleIndex, degree)
+Theory.getChordKindForDegree = function(key, degree)
 {
-	var scale = Theory.scales[scaleIndex];
+	var scale = Theory.scales[key.scaleIndex];
 	
 	var chordPitches = [];
 	for (var i = 0; i < 3; i++)
@@ -428,11 +460,11 @@ Theory.findChordKindForDegree = function(scaleIndex, degree)
 		chordPitches.push(nextPitch);
 	}
 	
-	return Theory.findChordKindIndex(chordPitches);
+	return Theory.getChordKindIndex(chordPitches);
 }
 
 
-Theory.findChordKindIndex = function(relativePitches)
+Theory.getChordKindIndex = function(relativePitches)
 {
 	for (var i = 0; i < Theory.chordKinds.length; i++)
 	{
@@ -464,11 +496,11 @@ Theory.playSampleNote = function(synth, midiPitch)
 }
 
 
-Theory.playSampleChord = function(synth, chordKindIndex, rootMidiPitch, embelishments)
+Theory.playSampleChord = function(synth, chord)
 {
 	synth.stop();
 	
-	var pitches = Theory.calculateChordPitches(chordKindIndex, rootMidiPitch, embelishments);
+	var pitches = Theory.getChordPitches(chord);
 	
 	for (var j = 0; j < pitches.length; j++)
 		synth.addNoteEvent(0, 0, midiPitchToHertz(pitches[j]), 1, 0.2);
