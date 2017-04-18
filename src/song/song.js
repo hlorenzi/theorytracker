@@ -437,10 +437,7 @@ Song.prototype.saveBinary = function()
 		writer.writeInteger(this.chords.items[i].chordKindIndex);
 	
 	for (var i = 0; i < this.chords.items.length; i++)
-		writer.writeInteger(this.chords.items[i].rootMidiPitch);
-	
-	for (var i = 0; i < this.chords.items.length; i++)
-		writer.writeInteger(this.chords.items[i].rootAccidentalOffset);
+		writer.writeInteger(this.chords.items[i].rootMidiPitch + this.chords.items[i].rootAccidentalOffset * 12);
 	
 	for (var i = 0; i < this.chords.items.length; i++)
 		writer.writeInteger(0); // Embelishment count.
@@ -453,8 +450,7 @@ Song.prototype.saveBinary = function()
 		
 		writer.writeRational(keyCh.tick);
 		writer.writeInteger(keyCh.scaleIndex);
-		writer.writeInteger(keyCh.tonicMidiPitch);
-		writer.writeInteger(keyCh.accidentalOffset);
+		writer.writeInteger(keyCh.tonicMidiPitch + keyCh.accidentalOffset * 12);
 	}
 	
 	// Write meter change data.
@@ -547,7 +543,7 @@ Song.prototype.loadBinary = function(base64str)
 	var chordData = [];
 	
 	for (var i = 0; i < chordNum; i++)
-		chordData[i] = [ reader.readInteger(), 0, 1, 0, 0, 1, 0, 0, 0 ];
+		chordData[i] = [ reader.readInteger(), 0, 1, 0, 0, 1, 0, 0 ];
 		
 	for (var i = 0; i < chordNum; i++)
 		chordData[i][1] = reader.readInteger();
@@ -577,9 +573,6 @@ Song.prototype.loadBinary = function(base64str)
 		chordData[i][7] = reader.readInteger();
 	
 	for (var i = 0; i < chordNum; i++)
-		chordData[i][8] = reader.readInteger();
-	
-	for (var i = 0; i < chordNum; i++)
 	{
 		var startTick = new Rational(chordData[i][0], chordData[i][1], chordData[i][2]);
 		var duration = new Rational(chordData[i][3], chordData[i][4], chordData[i][5]);
@@ -590,8 +583,8 @@ Song.prototype.loadBinary = function(base64str)
 			startTick,
 			duration.add(startTick),
 			chordData[i][6],
-			chordData[i][7],
-			chordData[i][8],
+			mod(chordData[i][7], 12),
+			Math.floor(chordData[i][7] / 12),
 			[]));
 	}
 	
@@ -599,11 +592,15 @@ Song.prototype.loadBinary = function(base64str)
 	var keyChNum = reader.readInteger();
 	for (var i = 0; i < keyChNum; i++)
 	{
+		var tick = reader.readRational();
+		var scaleIndex = reader.readInteger();
+		var tonicMidiPitchAndAccidentalOffset = reader.readInteger();
+		
 		this.keyChanges.insert(new SongKeyChange(
-			reader.readRational(),
-			reader.readInteger(),
-			reader.readInteger(),
-			reader.readInteger()));
+			tick,
+			scaleIndex,
+			mod(tonicMidiPitchAndAccidentalOffset, 12),
+			Math.floor(tonicMidiPitchAndAccidentalOffset / 12)));
 	}
 	
 	// Read meter change data.
