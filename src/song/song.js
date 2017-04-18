@@ -351,7 +351,7 @@ Song.prototype.loadJSON = function(jsonStr)
 }
 
 
-// Returns a compressed Base-64 string containing the song data.
+// Returns a URL-safe compressed Base-64 string containing the song data.
 Song.prototype.saveBinary = function()
 {
 	this.notes.sort();
@@ -472,6 +472,7 @@ Song.prototype.saveBinary = function()
 	var data = writer.data;
 	data = pako.deflateRaw(data, { to: "string" });
 	data = window.btoa(data);
+	data = urlSafeEncodeBase64(data);
 	return data;
 }
 
@@ -483,7 +484,8 @@ Song.prototype.loadBinary = function(base64str)
 	this.clear();
 	
 	// Uncompress data.
-	var data = window.atob(base64str);
+	var data = urlSafeDecodeBase64(base64str);
+	data = window.atob(data);
 	data = pako.inflateRaw(data);
 	
 	var reader = new BinaryReader(data);
