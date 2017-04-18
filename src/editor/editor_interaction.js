@@ -509,8 +509,9 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
-			// Left arrow
+			// Left arrow, A
 			case 37:
+			case 65:
 			{
 				if (this.isAnySelected() && !actionSelect)
 				{
@@ -529,8 +530,9 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
-			// Right arrow
+			// Right arrow, D
 			case 39:
+			case 68:
 			{
 				if (this.isAnySelected() && !actionSelect)
 				{
@@ -549,8 +551,9 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
-			// Up arrow
+			// Up arrow, W
 			case 38:
+			case 87:
 			{
 				if (this.isAnySelected() && !actionSelect)
 				{
@@ -565,8 +568,9 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
-			// Down arrow
+			// Down arrow, S
 			case 40:
+			case 83:
 			{
 				if (this.isAnySelected() && !actionSelect)
 				{
@@ -581,6 +585,28 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
+			// Dot
+			case 190:
+			{
+				if (this.isAnySelected() && !actionSelect)
+				{
+					this.cursorHide();
+					this.performElementPitchChange(actionSpeedUp ? 12 : 1, false);
+				}
+				break;
+			}
+			
+			// Comma
+			case 188:
+			{
+				if (this.isAnySelected() && !actionSelect)
+				{
+					this.cursorHide();
+					this.performElementPitchChange(actionSpeedUp ? -12 : -1, false);
+				}
+				break;
+			}
+			
 			// 1, 2, 3, 4, 5, 6, 7
 			case 49: { this.performInsertDegreeAction(0); break; }
 			case 50: { this.performInsertDegreeAction(1); break; }
@@ -590,6 +616,14 @@ Editor.prototype.eventKeyDown = function(ev)
 			case 54: { this.performInsertDegreeAction(5); break; }
 			case 55: { this.performInsertDegreeAction(6); break; }
 			
+			// H, J, K, L, Semicolon
+			case 72:  { this.performDurationAction(new Rational(1));  break; }
+			case 74:  { this.performDurationAction(new Rational(2));  break; }
+			case 75:  { this.performDurationAction(new Rational(4));  break; }
+			case 76:  { this.performDurationAction(new Rational(8));  break; }
+			case 186: { this.performDurationAction(new Rational(16)); break; }
+			
+			/*
 			//  S, D,    G, H, J,
 			// Z, X, C, V, B, N, M
 			case 90: { this.performInsertPitchAction(0);  break; }
@@ -604,6 +638,7 @@ Editor.prototype.eventKeyDown = function(ev)
 			case 78: { this.performInsertPitchAction(9);  break; }
 			case 74: { this.performInsertPitchAction(10); break; }
 			case 77: { this.performInsertPitchAction(11); break; }
+			*/
 			
 			// Else, skip preventDefault() below.
 			default: { return; }
@@ -1015,6 +1050,29 @@ Editor.prototype.performElementTimeChange = function(amount)
 	});
 	
 	this.song.sanitize();
+	this.refresh();
+	this.setUnsavedChanges(true);
+}
+
+
+Editor.prototype.performDurationAction = function(multiplier)
+{
+	var that = this;
+	
+	this.newElementDuration = this.cursorSnap.clone().multiply(multiplier);
+	
+	// Apply changes to elements.
+	this.enumerateSelectedNotes(function(note)
+	{
+		note.endTick = note.startTick.clone().add(that.newElementDuration);
+	});
+	
+	this.enumerateSelectedChords(function(chord)
+	{
+		chord.endTick = chord.startTick.clone().add(that.newElementDuration);
+	});
+	
+	
 	this.refresh();
 	this.setUnsavedChanges(true);
 }
