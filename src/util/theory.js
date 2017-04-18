@@ -3,13 +3,13 @@ var Theory = {};
 
 Theory.scales =
 [
-	{ pitches: [0, 2, 4, 5, 7, 9, 11], name: "Major" },
-	{ pitches: [0, 2, 3, 5, 7, 9, 10], name: "Dorian" },
-	{ pitches: [0, 1, 3, 5, 7, 8, 10], name: "Phrygian" },
-	{ pitches: [0, 2, 4, 6, 7, 9, 11], name: "Lydian" },
-	{ pitches: [0, 2, 4, 5, 7, 9, 10], name: "Mixolydian" },
-	{ pitches: [0, 2, 3, 5, 7, 8, 10], name: "Natural Minor" },
-	{ pitches: [0, 1, 3, 5, 6, 8, 10], name: "Locrian" }
+	{ pitches: [0, 2, 4, 5, 7, 9, 11], mode: 0, name: "Major" },
+	{ pitches: [0, 2, 3, 5, 7, 9, 10], mode: 1, name: "Dorian" },
+	{ pitches: [0, 1, 3, 5, 7, 8, 10], mode: 2, name: "Phrygian" },
+	{ pitches: [0, 2, 4, 6, 7, 9, 11], mode: 3, name: "Lydian" },
+	{ pitches: [0, 2, 4, 5, 7, 9, 10], mode: 4, name: "Mixolydian" },
+	{ pitches: [0, 2, 3, 5, 7, 8, 10], mode: 5, name: "Natural Minor" },
+	{ pitches: [0, 1, 3, 5, 6, 8, 10], mode: 6, name: "Locrian" }
 ];
 
 
@@ -152,12 +152,6 @@ Theory.getAccidentalString = function(accidentalOffset)
 	while (accidentalOffset <= -12)
 		accidentalOffset += 12;
 	
-	if (accidentalOffset == 2)
-		return "𝄪";
-	
-	if (accidentalOffset == -2)
-		return "𝄫";
-	
 	if (accidentalOffset > 0)
 		return "♯".repeat(accidentalOffset);
 	
@@ -211,6 +205,9 @@ Theory.getDegreeLabel = function(key, degree)
 
 Theory.getRowPitch = function(key, row, usePopularNotation = true)
 {
+	if (usePopularNotation)
+		return Theory.getRowPitch({ scaleIndex: 0, tonicMidiPitch: key.tonicMidiPitch + key.accidentalOffset, accidentalOffset: 0 }, row, false);
+	
 	var tonicOffset = mod(Theory.getPitchDegree({ scaleIndex: key.scaleIndex, tonicMidiPitch: 0, accidentalOffset: 0 }, key.tonicMidiPitch, usePopularNotation), 7);
 	var pitch = Theory.getDegreePitch(key, row - tonicOffset, usePopularNotation);
 	return pitch;
@@ -219,6 +216,9 @@ Theory.getRowPitch = function(key, row, usePopularNotation = true)
 
 Theory.getPitchRow = function(key, midiPitch, usePopularNotation = true)
 {
+	if (usePopularNotation)
+		return Theory.getPitchRow({ scaleIndex: 0, tonicMidiPitch: key.tonicMidiPitch + key.accidentalOffset, accidentalOffset: 0 }, midiPitch, false);
+	
 	var tonicOffset = mod(Theory.getPitchDegree({ scaleIndex: key.scaleIndex, tonicMidiPitch: 0, accidentalOffset: 0 }, key.tonicMidiPitch, usePopularNotation), 7);
 	var degree = Theory.getPitchDegree(key, midiPitch, usePopularNotation);
 	return degree + tonicOffset;
@@ -506,6 +506,15 @@ Theory.playSampleChord = function(synth, chord)
 		synth.addNoteEvent(0, 0, midiPitchToHertz(pitches[j]), 1, 0.2);
 	
 	synth.play();
+}
+
+
+Theory.getModeCycledDegree = function(key, degree, usePopularNotation = true)
+{
+	if (usePopularNotation)
+		return mod(degree, 7);
+	
+	return mod(degree + Theory.scales[key.scaleIndex].mode, 7);
 }
 
 

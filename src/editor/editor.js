@@ -718,8 +718,7 @@ Editor.prototype.refreshBlock = function(
 		noteXEnd   = Math.min(noteXEnd,   block.width);
 		
 		var noteDegree = Theory.getPitchDegree(block.key, note.midiPitch, that.usePopularNotation);
-		var noteColor = Theory.getDegreeColor(noteDegree);
-		var noteColorAccent = Theory.getDegreeColorAccent(noteDegree);
+		var noteCycledDegree = Theory.getModeCycledDegree(block.key, noteDegree, that.usePopularNotation);
 		
 		var noteRow = Theory.getPitchRow(block.key, note.midiPitch, that.usePopularNotation);
 		var noteDegreeOffset = noteRow - pitchRowMin;
@@ -734,9 +733,9 @@ Editor.prototype.refreshBlock = function(
 			"editorNote" + (note.editorData.selected ? "Selected" : ""),
 			"rect", { x: noteX, y: noteY, width: noteW, height: noteH });
 			
-		svgNote.style.fill = "url(#pattern" + Math.floor(mod(noteDegree, 7) * 2) + 
+		svgNote.style.fill = "url(#pattern" + Math.floor(mod(noteCycledDegree, 7) * 2) + 
 			(note.editorData.selected ? "Accent" : "") + ")";
-		svgNote.style.stroke = "url(#pattern" + Math.floor(mod(noteDegree, 7) * 2) + ")";
+		svgNote.style.stroke = "url(#pattern" + Math.floor(mod(noteCycledDegree, 7) * 2) + ")";
 		
 		block.elements.push({ note: note, x: noteX, y: noteY, width: noteW, height: noteH });
 	});
@@ -751,8 +750,7 @@ Editor.prototype.refreshBlock = function(
 		chordXEnd   = Math.min(chordXEnd,   block.width);
 		
 		var chordDegree = Theory.getPitchDegree(block.key, chord.rootMidiPitch + chord.rootAccidentalOffset, that.usePopularNotation);
-		var chordColor = Theory.getDegreeColor(chordDegree);
-		var chordColorAccent = Theory.getDegreeColorAccent(chordDegree);
+		var chordCycledDegree = Theory.getModeCycledDegree(block.key, chordDegree, that.usePopularNotation);
 		
 		var chordX = block.x + chordXStart + that.chordSideMargin;
 		var chordY = block.y + block.trackChordYStart;
@@ -784,13 +782,13 @@ Editor.prototype.refreshBlock = function(
 				height: that.chordOrnamentHeight
 			});
 			
-		svgChordOrnament1.style.fill = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + 
+		svgChordOrnament1.style.fill = "url(#pattern" + Math.floor(mod(chordCycledDegree, 7) * 2) + 
 			(chord.editorData.selected ? "Accent" : "") + ")";
-		svgChordOrnament1.style.stroke = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + ")";
+		svgChordOrnament1.style.stroke = "url(#pattern" + Math.floor(mod(chordCycledDegree, 7) * 2) + ")";
 		
-		svgChordOrnament2.style.fill = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + 
+		svgChordOrnament2.style.fill = "url(#pattern" + Math.floor(mod(chordCycledDegree, 7) * 2) + 
 			(chord.editorData.selected ? "Accent" : "") + ")";
-		svgChordOrnament2.style.stroke = "url(#pattern" + Math.floor(mod(chordDegree, 7) * 2) + ")";
+		svgChordOrnament2.style.stroke = "url(#pattern" + Math.floor(mod(chordCycledDegree, 7) * 2) + ")";
 		
 		// Build and add the roman chord label.
 		var chordRomanLabel = Theory.getChordRomanLabelMain(
@@ -918,20 +916,31 @@ Editor.prototype.refreshBlock = function(
 	// Render scale labels.
 	if (block.drawScaleLabels)
 	{
-		var pitchMin = Theory.getRowPitch(block.key, pitchRowMin, this.usePopularNotation);
-		var pitchMax = Theory.getRowPitch(block.key, pitchRowMax, this.usePopularNotation);
+		var labelKey = block.key;
+		if (this.usePopularNotation)
+		{
+			labelKey =
+			{
+				scaleIndex: 0,
+				tonicMidiPitch: block.key.tonicMidiPitch,
+				accidentalOffset: block.key.accidentalOffset
+			};
+		}
+		
+		var pitchMin = Theory.getRowPitch(labelKey, pitchRowMin, this.usePopularNotation);
+		var pitchMax = Theory.getRowPitch(labelKey, pitchRowMax, this.usePopularNotation);
 		
 		for (var pitch = pitchMin; pitch <= pitchMax; pitch++)
 		{
-			var degree = Theory.getPitchDegree(block.key, pitch, this.usePopularNotation);
+			var degree = Theory.getPitchDegree(labelKey, pitch, this.usePopularNotation);
 			if (Math.floor(degree) != degree)
 				continue;
 			
-			var row = Theory.getPitchRow(block.key, pitch, this.usePopularNotation);
+			var row = Theory.getPitchRow(labelKey, pitch, this.usePopularNotation);
 			if (row < pitchRowMin || row > pitchRowMax)
 				continue;
 			
-			var pitchLabel = Theory.getDegreeLabel(block.key, degree);
+			var pitchLabel = Theory.getDegreeLabel(labelKey, degree);
 			
 			this.addSvgText("editorScaleLabel", (mod(degree, 7) + 1).toString() + " " + pitchLabel,
 			{

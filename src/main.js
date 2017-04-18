@@ -290,7 +290,7 @@ function handleSelectChordKindsChange()
 		labelMain.appendChild(labelSuperscript);
 		
 		var degree = Theory.getPitchDegree(g_CurrentKey, chord.rootMidiPitch + chord.rootAccidentalOffset, g_Editor.usePopularNotation);
-		var degreeColor = Theory.getDegreeColor(degree);
+		var degreeColor = Theory.getDegreeColor(Theory.getModeCycledDegree(g_CurrentKey, degree, g_Editor.usePopularNotation));
 		button.style.visibility = "visible";
 		button.style.borderTop = "4px solid " + degreeColor;
 		button.style.borderBottom = "4px solid " + degreeColor;
