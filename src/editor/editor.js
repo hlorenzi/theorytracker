@@ -19,6 +19,9 @@ function Editor(svg, synth)
 	this.newElementPitchOctave = 5;
 	this.newElementDegreeOctave = 5;
 	
+	this.clipboardNotes  = [];
+	this.clipboardChords = [];
+	
 	this.cursorSnap = new Rational(0, 1, 16);
 	this.cursorVisible = true;
 	this.cursorTick1 = new Rational(0);

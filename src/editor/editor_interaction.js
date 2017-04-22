@@ -509,6 +509,36 @@ Editor.prototype.eventKeyDown = function(ev)
 				break;
 			}
 			
+			// C
+			case 67:
+			{
+				if (ev.ctrlKey)
+				{
+					this.performCopyAction(false);
+				}
+				break;
+			}
+			
+			// X
+			case 88:
+			{
+				if (ev.ctrlKey)
+				{
+					this.performCopyAction(true);
+				}
+				break;
+			}
+			
+			// V
+			case 86:
+			{
+				if (ev.ctrlKey)
+				{
+					this.performPasteAction();
+				}
+				break;
+			}
+			
 			// Left arrow, A
 			case 37:
 			case 65:
@@ -777,6 +807,90 @@ Editor.prototype.performBackEraseAction = function()
 	
 	this.cursorVisible = true;
 	this.selectNone();
+	this.refresh();
+	this.setUnsavedChanges(true);
+}
+
+
+Editor.prototype.performCopyAction = function(cut)
+{
+	var that = this;
+	
+	if (!this.isAnySelected())
+		return;
+	
+	// Find the starting time of selected elements.
+	var beginTime = this.song.length.clone();
+	this.enumerateSelectedNotes (function (note)  { beginTime.min(note.startTick);  });
+	this.enumerateSelectedChords(function (chord) { beginTime.min(chord.startTick); });
+	
+	// Copy elements to the clipboard.
+	this.clipboardNotes = [];
+	this.enumerateSelectedNotes(function (note)
+	{
+		var noteClone = note.clone();
+		noteClone.startTick.subtract(beginTime);
+		noteClone.endTick  .subtract(beginTime);
+		that.clipboardNotes.push(noteClone);
+	});
+	
+	this.clipboardChords = [];
+	this.enumerateSelectedChords(function (chord)
+	{
+		var chordClone = chord.clone();
+		chordClone.startTick.subtract(beginTime);
+		chordClone.endTick  .subtract(beginTime);
+		that.clipboardChords.push(chordClone);
+	});
+	
+	// Remove elements if cutting.
+	if (cut)
+	{
+		var notesToDelete = [];
+		this.enumerateSelectedNotes(function (note) { notesToDelete.push(note); });
+		this.song.notes.removeList(notesToDelete);
+		
+		var chordsToDelete = [];
+		this.enumerateSelectedChords(function (chord) { chordsToDelete.push(chord); });
+		this.song.chords.removeList(chordsToDelete);
+		
+		this.cursorHide();
+	}
+	
+	this.song.sanitize();
+	this.refresh();
+	this.setUnsavedChanges(true);
+}
+
+
+Editor.prototype.performPasteAction = function()
+{
+	var that = this;
+	
+	this.selectNone();
+	this.cursorHide();
+	this.cursorSetTickAtSelectionStart();
+	
+	// Paste elements from the clipboard.
+	for (var i = 0; i < this.clipboardNotes.length; i++)
+	{
+		var note = this.clipboardNotes[i].clone();
+		note.startTick.add(this.cursorTick1);
+		note.endTick  .add(this.cursorTick1);
+		note.editorData = { selected: true };
+		this.song.notes.insert(note);
+	}
+	
+	for (var i = 0; i < this.clipboardChords.length; i++)
+	{
+		var chord = this.clipboardChords[i].clone();
+		chord.startTick.add(this.cursorTick1);
+		chord.endTick  .add(this.cursorTick1);
+		chord.editorData = { selected: true };
+		this.song.chords.insert(chord);
+	}
+	
+	this.song.sanitize();
 	this.refresh();
 	this.setUnsavedChanges(true);
 }
