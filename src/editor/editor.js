@@ -654,6 +654,63 @@ Editor.prototype.refreshBlock = function(
 		height: block.trackChordYEnd - block.trackNoteYStart
 	});
 	
+	// Render perfect harmonies.
+	this.song.chords.enumerateOverlappingRange(block.tickStart, block.tickEnd, function (chord)
+	{
+		var chordXStart = chord.startTick.clone().subtract(block.tickStart).asFloat() * that.wholeTickWidth;
+		var chordXEnd   = chord.endTick  .clone().subtract(block.tickStart).asFloat() * that.wholeTickWidth;
+		
+		chordXStart = Math.max(chordXStart, 0);
+		chordXEnd   = Math.min(chordXEnd,   block.width);
+		
+		//var chordDegree = Theory.getPitchDegree(block.key, chord.rootMidiPitch + chord.rootAccidentalOffset, that.usePopularNotation);
+		//var chordCycledDegree = Theory.getModeCycledDegree(block.key, chordDegree, that.usePopularNotation);
+		
+		var chordRelPitches = Theory.chordKinds[chord.chordKindIndex].pitches;
+		
+		for (var p = 0; p < chordRelPitches.length; p++)
+		{
+			if (p >= 12)
+				break;
+			
+			var pitch =
+				chord.rootMidiPitch + chord.rootAccidentalOffset +
+				chordRelPitches[p];
+				
+			var degree = Theory.getPitchDegree(block.key, pitch, that.usePopularNotation);
+			var cycledDegree = Theory.getModeCycledDegree(block.key, degree, that.usePopularNotation);
+				
+			var relRow = Theory.getPitchRow(block.key, pitch, that.usePopularNotation);
+			
+			for (var octave = -1; octave <= 9; octave++)
+			{
+				var row = relRow + octave * 7;
+				
+				if (row < pitchRowMin)
+					continue;
+				
+				if (row > pitchRowMax)
+					break;
+				
+				var svgRowBkg = that.addSvgNode("editorNoteInChordBackground", "rect",
+				{
+					x: block.x + chordXStart,
+					y: block.y + block.trackNoteYEnd - (row - pitchRowMin + 1) * that.noteHeight,
+					width: chordXEnd - chordXStart,
+					height: that.noteHeight
+				});
+				
+				var colorIndex = Math.floor(mod(cycledDegree, 7) * 2);
+				svgRowBkg.style.fill = "url(#pattern" + colorIndex + ")";
+				
+				if (colorIndex >= 2 && colorIndex <= 4)
+					svgRowBkg.style.opacity = 0.175; // Bump up opacity for light colors
+				else
+					svgRowBkg.style.opacity = 0.075;
+			}
+		}
+	});
+	
 	// Render beat indicators.
 	var beatTick = block.measureStartTick.clone();
 	while (true)
@@ -707,10 +764,10 @@ Editor.prototype.refreshBlock = function(
 			x1: block.x,
 			y1: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight,
 			x2: block.x + block.width,
-			y2: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight,
+			y2: block.y + block.trackNoteYEnd - (row - pitchRowMin) * this.noteHeight
 		});
 	}
-		
+	
 	// Render notes.
 	this.song.notes.enumerateOverlappingRange(block.tickStart, block.tickEnd, function (note)
 	{

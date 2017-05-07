@@ -205,7 +205,7 @@ body
 
 .editorBlockFrame
 {
-	stroke: #666;
+	stroke: #333;
 	stroke-width: 2px;
 	fill: rgba(0, 0, 0, 0);
 }
@@ -218,7 +218,7 @@ body
 
 .editorOctaveLine
 {
-	stroke: #aaa;
+	stroke: #333;
 	stroke-width: 2px;
 }
 
@@ -230,6 +230,11 @@ body
 .editorNoteSelected
 {
 	stroke-width: 2px;
+}
+
+.editorNoteInChordBackground
+{
+	stroke-width: 0px;
 }
 
 .editorChordBackground
