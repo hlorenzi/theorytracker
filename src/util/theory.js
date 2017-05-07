@@ -434,7 +434,7 @@ Theory.getChordStrummingPattern = function(meter)
 		default:
 		{
 			var pattern = [];
-			for (var i = 0; i < numerator; i++)
+			for (var i = 0; i < meter.numerator; i++)
 				pattern = pattern.concat(one);
 			return pattern;
 		}
