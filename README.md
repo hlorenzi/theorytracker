@@ -8,13 +8,14 @@ It's currently a proof-of-concept, and, as such, it is
 very unoptimized performance-wise.
 
 Some editing tools are currently keyboard-only.  
-The bottommost two letter rows input absolute pitches.  
 The keys `1` to `7` input scale-aware pitches.  
 Use the arrow keys to move notes and the cursor around.  
 Move the cursor while holding down `Shift` to select an interval of notes.  
 Move a note while holding down `Ctrl` to change its duration.  
 Press `Enter` to unselect all notes.  
 Use the `Alt` key for faster steps while moving stuff around.  
+You can also click on elements with the mouse to select them.  
+Also, range-select elements by dragging the mouse.  
 
 In the future, it should support:
 
