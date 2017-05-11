@@ -79,12 +79,13 @@ function loadSongData(data, binaryCompressed)
 		document.getElementById("inputTempo").value = g_Song.bpm.toString();
 		g_Editor.setSong(g_Song);
 		g_Editor.cursorSetTickBoth(new Rational(0));
+		g_Editor.refreshHeader();
 		g_Editor.refresh();
 		g_Editor.setUnsavedChanges(false);
 	}
 	catch (err)
 	{
-		window.alert("Error loading song data.");
+		window.alert("Error loading song data.\n\nError: " + err.toString());
 		clearSongData();
 	}
 }

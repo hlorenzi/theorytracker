@@ -330,7 +330,10 @@ Editor.prototype.eventMouseMove = function(ev)
 		var elementAtMouse = this.getElementAt(mouseX, mouseY);
 		if (elementAtMouse != null)
 		{
-			if (elementAtMouse.note != undefined ||
+			if (elementAtMouse.title != undefined ||
+				elementAtMouse.album != undefined ||
+				elementAtMouse.authors != undefined ||
+				elementAtMouse.note != undefined ||
 				elementAtMouse.chord != undefined ||
 				elementAtMouse.keyChange != undefined ||
 				elementAtMouse.meterChange != undefined ||
@@ -366,7 +369,60 @@ Editor.prototype.eventMouseDown = function(ev)
 	{
 		this.cursorVisible = false;
 		
-		if (elementAtMouse.note != undefined)
+		if (elementAtMouse.title != undefined)
+		{
+			var newTitle = prompt(
+				"Type the title of the song.\n\n" +
+				"Separate alternate titles with semicolons.\n" +
+				"Only the first one will be shown.", (this.song.title == null ? "" : this.song.title));
+			if (newTitle != null)
+			{
+				newTitle = newTitle.trim();
+				if (newTitle == "")
+					newTitle = null;
+				
+				this.song.title = newTitle;
+				this.refreshHeader();
+			}
+		}
+		
+		else if (elementAtMouse.album != undefined)
+		{
+			var newAlbum = prompt(
+				"Type the album the song is from.\n\n" +
+				"Leave empty if not applicable.\n\n" +
+				"Separate alternate album names with semicolons.\n" +
+				"Only the first one will be shown.", (this.song.album == null ? "" : this.song.album));
+			if (newAlbum != null)
+			{
+				newAlbum = newAlbum.trim();
+				if (newAlbum == "")
+					newAlbum = null;
+				
+				this.song.album = newAlbum;
+				this.refreshHeader();
+			}
+		}
+		
+		else if (elementAtMouse.authors != undefined)
+		{
+			var newAuthors = prompt(
+				"Type the authors of the song.\n\n" +
+				"Separate authors with commas.\n\n" +
+				"Separate alternate author names with semicolons.\n" +
+				"Only the authors before the first semicolon will be shown.", (this.song.authors == null ? "" : this.song.authors));
+			if (newAuthors != null)
+			{
+				newAuthors = newAuthors.trim();
+				if (newAuthors == "")
+					newAuthors = null;
+				
+				this.song.authors = newAuthors;
+				this.refreshHeader();
+			}
+		}
+		
+		else if (elementAtMouse.note != undefined)
 		{
 			elementAtMouse.note.editorData.selected = !elementAtMouse.note.editorData.selected;
 			

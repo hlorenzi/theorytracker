@@ -191,6 +191,34 @@ body
 {
 }
 
+.editorLabelTitle
+{
+	fill: #000;
+	font-family: Verdana, sans-serif;
+	font-size: 22px;
+	font-weight: bold;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorLabelAlbum
+{
+	fill: #888;
+	font-family: Verdana, sans-serif;
+	font-size: 10px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorLabelAuthors
+{
+	fill: #000;
+	font-family: Verdana, sans-serif;
+	font-size: 10px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
 .editorBlockBackground
 {
 	stroke-width: 0px;

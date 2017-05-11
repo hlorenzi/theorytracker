@@ -15,6 +15,12 @@ function BinaryWriter()
 }
 
 
+BinaryWriter.prototype.writeByte = function(value)
+{
+	this.data.push(value & 0xff);
+}
+
+
 BinaryWriter.prototype.writeInteger = function(value)
 {
 	var negative = (value < 0);
@@ -44,10 +50,32 @@ BinaryWriter.prototype.writeRational = function(rational)
 }
 
 
+BinaryWriter.prototype.writeString = function(str)
+{
+	if (str == null)
+	{
+		this.writeInteger(0);
+	}
+	else
+	{
+		this.writeInteger(str.length);
+		for (var i = 0; i < str.length; i++)
+			this.writeInteger(str.charCodeAt(i));
+	}
+}
+
+
 function BinaryReader(data)
 {
 	this.data = data;
 	this.index = 0;
+}
+
+
+BinaryReader.prototype.readByte = function()
+{
+	this.index += 1;
+	return this.data[this.index - 1];
 }
 
 
@@ -88,4 +116,18 @@ BinaryReader.prototype.readRational = function()
 		denominator = this.readInteger();
 	
 	return new Rational(integer, numerator, denominator);
+}
+
+
+BinaryReader.prototype.readString = function()
+{
+	var length = this.readInteger();
+	if (length == 0)
+		return null;
+	
+	var encodedStr = "";
+	for (var i = 0; i < length; i++)
+		encodedStr += String.fromCharCode(this.readInteger());
+	
+	return encodedStr;
 }

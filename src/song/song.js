@@ -1,6 +1,13 @@
 function Song()
 {
+	this.CURRENT_TEXT_VERSION = 1;
+	this.CURRENT_BINARY_VERSION = 1;
+	
 	this.length = new Rational(4);
+	
+	this.title = null;
+	this.album = null;
+	this.authors = null;
 	
 	this.notes          = new ListByRange(function(item) { return { start: item.startTick, end: item.endTick }; });
 	this.chords         = new ListByRange(function(item) { return { start: item.startTick, end: item.endTick }; });
@@ -19,6 +26,9 @@ function Song()
 Song.prototype.clear = function()
 {
 	this.length = new Rational(4);	
+	this.title = null;
+	this.album = null;
+	this.authors = null;
 	this.notes.clear();
 	this.chords.clear();
 	this.keyChanges.clear();
@@ -191,8 +201,11 @@ Song.prototype.saveJSON = function()
 	this.setLengthAuto();
 	
 	var json = "{\n";
-	json += "  \"version\": 0,\n";
+	json += "  \"version\": " + this.CURRENT_TEXT_VERSION.toString() + ",\n";
 	json += "  \"length\": " + this.length.toString() + ",\n";
+	json += "  \"title\": " + JSON.stringify(this.title) + ",\n";
+	json += "  \"album\": " + JSON.stringify(this.album) + ",\n";
+	json += "  \"authors\": " + JSON.stringify(this.authors) + ",\n";
 	json += "  \"bpm\": " + this.bpm + ",\n";
 	
 	json += "  \"tracks\": [\n";
@@ -298,6 +311,17 @@ Song.prototype.loadJSON = function(jsonStr)
 	this.clear();
 	
 	var song = JSON.parse(jsonStr);
+	
+	if (song.version > this.CURRENT_TEXT_VERSION)
+		throw "unsupported version";
+	
+	if (song.version >= 1)
+	{
+		this.title = song.title;
+		this.album = song.album;
+		this.authors = song.authors;
+	}
+	
 	this.bpm = song.bpm;
 	
 	for (var j = 0; j < song.tracks.length; j++)
@@ -364,8 +388,11 @@ Song.prototype.saveBinary = function()
 	var writer = new BinaryWriter();
 	
 	// Write header.
-	writer.writeInteger(0); // Version.
-	writer.writeRational(this.length)
+	writer.writeInteger(this.CURRENT_BINARY_VERSION); // Version.
+	writer.writeString(this.title);
+	writer.writeString(this.album);
+	writer.writeString(this.authors);
+	writer.writeRational(this.length);
 	writer.writeInteger(this.bpm);
 	
 	// Write note tracks.
@@ -487,7 +514,18 @@ Song.prototype.loadBinary = function(base64str)
 	var reader = new BinaryReader(data);
 	
 	// Read header.
-	reader.readInteger(); // Version.
+	var version = reader.readInteger();
+	
+	if (version > this.CURRENT_BINARY_VERSION)
+		throw "unsupported version";
+	
+	if (version >= 1)
+	{
+		this.title = reader.readString();
+		this.album = reader.readString();
+		this.authors = reader.readString();
+	}
+	
 	reader.readRational(); // Length.
 	this.bpm = reader.readInteger();
 	

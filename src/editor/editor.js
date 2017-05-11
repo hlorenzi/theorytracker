@@ -13,6 +13,7 @@ function Editor(svg, synth)
 	
 	this.blocks = [];
 	this.elements = [];
+	this.globalElements = [];
 	
 	this.mouseIsDown = false;
 	this.newElementDuration = new Rational(0, 1, 4);
@@ -46,6 +47,10 @@ function Editor(svg, synth)
 	this.chordOrnamentHeight = 5;
 	this.handleSize = 8;
 	this.scaleLabelsWidth = 32;
+	
+	this.shownTitle = null;
+	this.shownAlbum = null;
+	this.shownAuthors = null;
 	
 	this.usePopularNotation = true;
 	this.useChordPatterns = true;
@@ -100,7 +105,24 @@ Editor.prototype.setSong = function(song)
 			item.editorData = { selected: false };
 	});
 	
+	this.refreshHeader();
 	this.refresh();
+}
+
+
+Editor.prototype.refreshHeader = function()
+{
+	this.shownTitle = "Title";
+	if (this.song.title != null)
+		this.shownTitle = this.song.title.split(";")[0];
+	
+	this.shownAlbum = "from Album";
+	if (this.song.album != null)
+		this.shownAlbum = "from " + this.song.album.split(";")[0];
+	
+	this.shownAuthors = "by Author";
+	if (this.song.authors != null)
+		this.shownAuthors = "by " + this.song.authors.split(";")[0];
 }
 
 
@@ -378,6 +400,22 @@ Editor.prototype.getBlockAtTick = function(tick)
 }
 
 
+Editor.prototype.getGlobalElementAt = function(x, y)
+{
+	for (var i = 0; i < this.globalElements.length; i++)
+	{
+		var elem = this.globalElements[i];
+		
+		if (x >= elem.x && y >= elem.y &&
+			x <= elem.x + elem.width &&
+			y <= elem.y + elem.height)
+			return elem;
+	}
+	
+	return null;
+}
+
+
 Editor.prototype.getElementInBlockAt = function(block, x, y)
 {
 	if (block == null)
@@ -399,6 +437,10 @@ Editor.prototype.getElementInBlockAt = function(block, x, y)
 
 Editor.prototype.getElementAt = function(x, y)
 {
+	var globalElem = this.getGlobalElementAt(x, y);
+	if (globalElem != null)
+		return globalElem;
+	
 	var blockIndex = this.getBlockIndexAt(x, y);
 	if (blockIndex == null)
 		return null;
@@ -446,16 +488,35 @@ Editor.prototype.refresh = function()
 		this.addSvgDegreePattern("pattern" + Math.floor(degrees[i] * 2) + "Accent", degrees[i], true);
 	}
 	
-	// Clear layout blocks.
+	// Clear layout.
 	this.blocks = [];
+	this.globalElements = [];
 	
 	// Early return if no song.
 	if (this.song == null)
 		return;
 	
+	// Render header.
+	var xHeader = this.margin + this.scaleLabelsWidth - 2;
+	var y = this.margin + 5;
+	
+	var svgTitle = this.addSvgText("editorLabelTitle", this.shownTitle, { x: xHeader, y: y });
+	var svgTitleWidth = svgTitle.getComputedTextLength() + 8;
+	
+	var svgAlbum = this.addSvgText("editorLabelAlbum", this.shownAlbum, { x: xHeader + svgTitleWidth, y: y + 3 });
+	var svgAlbumWidth = svgAlbum.getComputedTextLength();
+	
+	this.globalElements.push({ title: 0, x: xHeader, y: y - 11, width: svgTitleWidth, height: 22 });
+	this.globalElements.push({ album: 0, x: xHeader + svgTitleWidth, y: y - 11, width: svgAlbumWidth, height: 22 });
+	y += 22;
+	
+	var svgAuthors = this.addSvgText("editorLabelAuthors", this.shownAuthors, { x: xHeader, y: y });
+	var svgAuthorsWidth = svgAuthors.getComputedTextLength() + 8;
+	this.globalElements.push({ authors: 0, x: xHeader, y: y - 8, width: svgAuthorsWidth, height: 16 });
+	y += 16;
+	
 	// Keep creating rows while song is not over.
 	var tick = new Rational(0);
-	var y = this.margin;
 	while (tick.compare(this.song.length) < 0)
 	{
 		var row = this.refreshRow(tick, y);
