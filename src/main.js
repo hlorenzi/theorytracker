@@ -31,12 +31,29 @@ function main()
 	
 	window.onresize = function() { g_Editor.refresh(); };
 	window.onbeforeunload = eventBeforeUnload;
+	window.onmessage = eventMessage;
 	document.getElementById("inputTempo").onkeydown = function(ev) { ev.stopPropagation(); };
 	document.getElementById("divToolbox").style.visibility = "visible";
 	
 	var urlSong = getURLQueryParameter("song");
 	if (urlSong != null)
 		loadSongData(urlSong, true);
+}
+
+
+function eventMessage(ev)
+{
+	if (ev.data.kind == "request_songdata")
+	{
+		ev.source.postMessage(
+		{
+			kind: "reply_songdata",
+			param: ev.data.param,
+			song: g_Song.saveJSON()
+		}, ev.origin);
+		
+		ev.preventDefault();
+	}
 }
 
 
