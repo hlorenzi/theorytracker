@@ -54,6 +54,12 @@ function eventMessage(ev)
 		
 		ev.preventDefault();
 	}
+	
+	else if (ev.data.kind == "set_songdata")
+	{
+		loadSongData(ev.data.song, false);		
+		ev.preventDefault();
+	}
 }
 
 
