@@ -293,6 +293,18 @@ function handleButtonInsertMeterChange()
 }
 
 
+function handleButtonInsertMeasureBreak()
+{
+	g_Editor.insertMeasureBreak();
+}
+
+
+function handleButtonInsertLineBreak()
+{
+	g_Editor.insertLineBreak();
+}
+
+
 function handleSelectChordKindsChange()
 {
 	var selectedIndex = document.getElementById("selectChordKinds").selectedIndex;

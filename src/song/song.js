@@ -1,7 +1,7 @@
 function Song()
 {
-	this.CURRENT_TEXT_VERSION = 1;
-	this.CURRENT_BINARY_VERSION = 1;
+	this.CURRENT_TEXT_VERSION = 2;
+	this.CURRENT_BINARY_VERSION = 2;
 	
 	this.length = new Rational(4);
 	
@@ -112,10 +112,14 @@ Song.prototype.feedSynth = function(synth, startTick, useChordPatterns = true)
 			
 		var meter = that.meterChanges.findPrevious(chord.startTick);
 		var meterBeatLength = meter.getBeatLength();
+		var measureBreak = that.forcedMeasures.findPrevious(chord.startTick);
 		
 		var pattern = Theory.getChordStrummingPattern(meter);
 		
 		var tick = meter.tick.clone();
+		if (measureBreak != null)
+			tick.max(measureBreak.tick);
+		
 		var skipTick = new Rational(0);
 		var patternIndex = 0;
 		var mustPlayFirstBeat = false;
@@ -298,6 +302,23 @@ Song.prototype.saveJSON = function()
 		json += "\n";
 	}
 	
+	json += "  ],\n";
+	json += "  \"measureBreaks\": [\n";
+	
+	for (var i = 0; i < this.forcedMeasures.items.length; i++)
+	{
+		var measureBreak = this.forcedMeasures.items[i];
+		
+		json += "    ";
+		json += "[ " + measureBreak.tick.toString()  + ", ";
+		json += measureBreak.isLineBreak.toString()  + " ]";
+		
+		if (i < this.forcedMeasures.items.length - 1)
+			json += ",";
+		
+		json += "\n";
+	}
+	
 	json += "  ]\n}";
 	
 	return json;
@@ -368,6 +389,16 @@ Song.prototype.loadJSON = function(jsonStr)
 			Rational.fromArray(song.meterChanges[i][0]),
 			song.meterChanges[i][1],
 			song.meterChanges[i][2]));
+	}
+	
+	if (song.version >= 2)
+	{
+		for (var i = 0; i < song.measureBreaks.length; i++)
+		{
+			this.forcedMeasures.insert(new SongMeasureBreak(
+				Rational.fromArray(song.measureBreaks[i][0]),
+				song.measureBreaks[i][1]));
+		}
 	}
 	
 	this.setLengthAuto();
@@ -489,6 +520,16 @@ Song.prototype.saveBinary = function()
 		writer.writeRational(meterCh.tick);
 		writer.writeInteger(meterCh.numerator);
 		writer.writeInteger(meterCh.denominator);
+	}
+	
+	// Write measure break data.
+	writer.writeInteger(this.forcedMeasures.items.length);
+	for (var i = 0; i < this.forcedMeasures.items.length; i++)
+	{
+		var measureBreak = this.forcedMeasures.items[i];
+		
+		writer.writeRational(measureBreak.tick);
+		writer.writeInteger(measureBreak.isLineBreak ? 1 : 0);
 	}
 	
 	// Compress data.
@@ -649,6 +690,18 @@ Song.prototype.loadBinary = function(base64str)
 			reader.readRational(),
 			reader.readInteger(),
 			reader.readInteger()));
+	}
+	
+	// Read meter change data.
+	if (version >= 2)
+	{
+		var measureBreakNum = reader.readInteger();
+		for (var i = 0; i < measureBreakNum; i++)
+		{
+			this.forcedMeasures.insert(new SongMeasureBreak(
+				reader.readRational(),
+				reader.readInteger() == 1 ? true : false));
+		}
 	}
 	
 	this.setLengthAuto();

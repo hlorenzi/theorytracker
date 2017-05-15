@@ -314,6 +314,30 @@ Editor.prototype.insertMeterChange = function(numerator, denominator)
 }
 
 
+Editor.prototype.insertMeasureBreak = function()
+{
+	this.selectNone();
+	this.eraseForcedMeasuresAt(this.cursorTick1, this.cursorTick1);
+	this.song.forcedMeasures.insert(
+		new SongMeasureBreak(this.cursorTick1.clone(), false, { selected: true }));
+	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
+	this.refresh();
+	this.setUnsavedChanges(true);
+}
+
+
+Editor.prototype.insertLineBreak = function()
+{
+	this.selectNone();
+	this.eraseForcedMeasuresAt(this.cursorTick1, this.cursorTick1);
+	this.song.forcedMeasures.insert(
+		new SongMeasureBreak(this.cursorTick1.clone(), true, { selected: true }));
+	this.cursorSetTickBoth(this.cursorTick1.clone().min(this.cursorTick2));
+	this.refresh();
+	this.setUnsavedChanges(true);
+}
+
+
 Editor.prototype.updateSvgCursor = function(node, visible, tick, track1, track2)
 {
 	if (!visible)
@@ -554,7 +578,10 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 	var currentBlockStart = rowTickStart.clone();
 	var currentKeyChange = this.song.keyChanges.findPrevious(rowTickStart);
 	var currentMeterChange = this.song.meterChanges.findPrevious(rowTickStart);
+	var currentForcedMeasure = this.song.forcedMeasures.findPrevious(rowTickStart);
 	var currentMeasureStart = currentMeterChange.tick.clone();
+	if (currentForcedMeasure != null)
+		currentMeasureStart.max(currentForcedMeasure.tick);
 	
 	// Also find the lowest and highest pitch rows for notes in this row.
 	var pitchRowMin = Theory.getPitchRow({ scaleIndex: 0, tonicMidiPitch: 0, accidentalOffset: 0 }, 12 * 5,     that.usePopularNotation);
@@ -574,12 +601,16 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 		
 		var nextKeyChange = this.song.keyChanges.findNext(currentBlockStart);
 		var nextMeterChange = this.song.meterChanges.findNext(currentBlockStart);
+		var nextForcedMeasure = this.song.forcedMeasures.findNext(currentBlockStart);
 		
 		if (nextKeyChange != null && nextKeyChange.tick.compare(nextBlockEnd) < 0)
 			nextBlockEnd = nextKeyChange.tick.clone();
 		
 		if (nextMeterChange != null && nextMeterChange.tick.compare(nextBlockEnd) < 0)
 			nextBlockEnd = nextMeterChange.tick.clone();
+		
+		if (nextForcedMeasure != null && nextForcedMeasure.tick.compare(nextBlockEnd) < 0)
+			nextBlockEnd = nextForcedMeasure.tick.clone();
 		
 		if (this.song.length.compare(nextBlockEnd) < 0)
 			nextBlockEnd = this.song.length.clone();
@@ -596,12 +627,13 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 		{
 			tickStart: currentBlockStart.clone(),
 			tickEnd: nextBlockEnd.clone(),
-			measureStartTick: currentMeterChange.tick.clone(),
+			measureStartTick: currentMeasureStart,
 			x: x + scaleLabelsOffset,
 			y: rowYStart,
 			width: width,
 			key: currentKeyChange,
 			meter: currentMeterChange,
+			forcedMeasure: nextForcedMeasure,
 			drawScaleLabels: drawScaleLabels
 		};
 		
@@ -627,6 +659,19 @@ Editor.prototype.refreshRow = function(rowTickStart, rowYStart)
 			currentMeterChange = nextMeterChange;
 			currentMeasureStart = currentMeterChange.tick.clone();
 		}
+		
+		if (nextForcedMeasure != null && nextForcedMeasure.tick.compare(nextBlockEnd) == 0)
+		{
+			currentForcedMeasure = nextForcedMeasure;
+			currentMeasureStart = currentForcedMeasure.tick.clone();
+			
+			if (nextForcedMeasure.isLineBreak)
+				break;
+		}
+		
+		currentMeasureStart = currentMeterChange.tick.clone();
+		if (currentForcedMeasure != null)
+			currentMeasureStart.max(currentForcedMeasure.tick);
 		
 		if (this.song.length.compare(nextBlockEnd) == 0)
 			break;
@@ -687,7 +732,7 @@ Editor.prototype.refreshBlock = function(
 	rowHasKeyChange, rowHasMeterChange)
 {
 	var that = this;
-
+	
 	// Add block layout to master list.
 	// This is used for mouse interaction.
 	block.elements = [];
@@ -698,7 +743,10 @@ Editor.prototype.refreshBlock = function(
 	block.trackMeterChangeYStart = block.trackKeyChangeYEnd;
 	block.trackMeterChangeYEnd   = block.trackMeterChangeYStart + (rowHasMeterChange ? 20 : 0);
 	
-	block.trackNoteYStart = block.trackMeterChangeYEnd;
+	block.trackForcedMeasureYStart = block.trackMeterChangeYEnd;
+	block.trackForcedMeasureYEnd   = block.trackForcedMeasureYStart;
+	
+	block.trackNoteYStart = block.trackForcedMeasureYEnd;
 	block.trackNoteYEnd   = block.trackNoteYStart + (pitchRowMax + 1 - pitchRowMin) * this.noteHeight;
 	
 	block.trackChordYStart = block.trackNoteYEnd;
@@ -1105,6 +1153,38 @@ Editor.prototype.refreshBlock = function(
 			y: block.y + (block.trackMeterChangeYStart + block.trackMeterChangeYEnd) / 2 - 1 - this.handleSize / 2,
 			width: this.handleSize * 2,
 			height: this.handleSize * 2
+		});
+	}
+	
+	// Render forced measure.
+	if (block.forcedMeasure != null &&
+		block.forcedMeasure.tick.compare(block.tickEnd) == 0)
+	{
+		this.addSvgNode("editorForcedMeasureLine", "line",
+		{
+			x1: block.x + block.width,
+			y1: block.y + (block.trackForcedMeasureYStart + block.trackForcedMeasureYEnd) / 2,
+			x2: block.x + block.width,
+			y2: block.y + block.trackChordYEnd
+		});
+		
+		this.addSvgNode(
+			"editorForcedMeasureHandle" + (block.forcedMeasure.editorData.selected ? "Selected" : ""),
+			"rect",
+			{
+				x: block.x + block.width - this.handleSize / 2,
+				y: block.y + (block.trackForcedMeasureYStart + block.trackForcedMeasureYEnd) / 2 - 1 - this.handleSize,
+				width: this.handleSize,
+				height: this.handleSize
+			});
+		
+		block.elements.push(
+		{
+			forcedMeasure: block.forcedMeasure,
+			x: block.x + block.width - this.handleSize,
+			y: block.y + (block.trackForcedMeasureYStart + block.trackForcedMeasureYEnd) / 2 - 1 - this.handleSize,
+			width: this.handleSize * 2,
+			height: this.handleSize
 		});
 	}
 	
