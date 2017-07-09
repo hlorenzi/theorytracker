@@ -15,14 +15,16 @@ function main()
 	
 	g_Song = new Song();
 	
-	var elemSvgEditor = document.getElementById("svgEditor");
+	var elemSvgEditor = document.getElementById("editor");
 	g_Editor = new Editor(elemSvgEditor, g_Synth);
 	g_Editor.setSong(g_Song);
 	g_Editor.refresh();
 	g_Editor.callbackTogglePlay = refreshButtonPlay;
 	g_Editor.callbackCursorChange = callbackCursorChange;
-	g_Editor.usePopularNotation = document.getElementById("checkboxPopularNotation").checked;
-	g_Editor.useChordPatterns = document.getElementById("checkboxChordPatterns").checked;
+	g_Editor.usePopularNotation = false;//document.getElementById("checkboxPopularNotation").checked;
+	g_Editor.useChordPatterns = false;//document.getElementById("checkboxChordPatterns").checked;
+	
+	toolboxInit();
 	
 	refreshButtonPlay(false);
 	refreshMainTabs();

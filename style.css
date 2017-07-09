@@ -1,143 +1,223 @@
-html
+html, body
 {
+	width: 100%;
 	height: 100%;
-	min-height: 100%;
+	overflow: hidden;
+	
 	margin: 0;
+	border: 0;
 	padding: 0;
-	overflow: hidden;
+	
+	font-family: "Homenaje", sans-serif;
+	font-size: 1.25em;
 }
 
-body
+
+div
 {
-	height: 100%;
-	min-height: 100%;
 	margin: 0;
+	border: 0;
+	padding: 0;
 }
 
-#divToolbox
+
+.cell-stretch
 {
-	width: 100%;
-	height: 150px;
-	padding-top: 5px;
-	padding-bottom: 5px;
-	padding-left: 5px;
-	padding-right: 5px;
-	overflow: hidden;
-	background-color: #ddd;
-	text-align: center;
+	justify-self: stretch;
+	align-self: stretch;
 }
 
-#tableToolboxMainLayout
-{
-	height: 140px;
-}
 
-#divEditor
+.cell-scroll
 {
-	width: 100%;
-	height: calc(100% - 150px);
-	overflow-x: hidden;
+	justify-self: stretch;
+	align-self: stretch;
 	overflow-y: scroll;
 }
 
-#svgEditor
-{
-	width: 100%;
-}
 
-.toolboxGroup
+.toolbox-button
 {
-	padding-left: 10px;
-	padding-right: 10px;
-	background-color: #ccc;
-	border-radius: 5px;
-}
-
-.toolboxGroup2
-{
-	padding-left: 10px;
-	padding-right: 10px;
-	padding-top: 5px;
-	padding-bottom: 5px;
-	background-color: #bbb;
-	border-radius: 5px;
-}
-
-.toolboxSeparator
-{
-	border-left: 1px solid black;
-}
-
-.toolboxGroupMainTabs
-{
-	width: 100px;
-}
-
-.toolboxLabel
-{
-	margin-top: 5px;
-	margin-bottom: 5px;
-	font-family: Verdana, sans-serif;
-	font-size: 12px;
-}
-
-.toolboxButton
-{
-	padding-left: 10px;
-	padding-right: 10px;
-	padding-top: 2px;
-	padding-bottom: 2px;
-	background-color: #fff;
-	border: 0;
-	border-top: 2px solid #fff;
-	border-bottom: 2px solid black;
-	border-radius: 5px;
-	outline: none;
-	font-family: Verdana, sans-serif;
-	font-size: 12px;
-}
-
-.toolboxButton:hover
-{
-	cursor: pointer;
-}
-
-.toolboxButton:active
-{
-	cursor: pointer;
+	border: 0px solid black;
+	border-radius: 0.5em;
 	background-color: #ddd;
-	border: 0;
-	border-top: 2px solid black;
-	border-bottom: 2px solid #ddd;
+	box-shadow: 0 0.5em 0 0 #aaa;
+	outline: none;
 }
-
-.toolboxButtonPlay
+.toolbox-button:hover
 {
-	font-size: 24px;
-	width: 120px;
-	height: 60px;
+	cursor: pointer;
+	background-color: #eee;
+	box-shadow: 0 0.5em 0 0 #ccc;
 }
-
-.toolboxMainTabSelected
+.toolbox-button:active
 {
 	position: relative;
-	left: 10px;
-	padding-left: 10px;
-	padding-right: 10px;
-	padding-top: 2px;
-	padding-bottom: 2px;
+	top: 0.4em;
+	cursor: pointer;
 	background-color: #ccc;
-	border: 2px solid #ccc;
-	border-radius: 5px;
-	outline: none;
-	font-family: Verdana, sans-serif;
-	font-size: 12px;
+	box-shadow: 0 0.1em 0 0 #888;
 }
 
-.toolboxButtonRewind
+
+.toolbox-tab
 {
-	height: 40px;
+	border: 0px solid black;
+	border-radius: 0.5em;
+	background-color: #ddd;
+	box-shadow: 0 0.5em 0 0 #aaa;
+	outline: none;
 }
+.toolbox-tab:hover
+{
+	cursor: pointer;
+	background-color: #eee;
+	box-shadow: 0 0.5em 0 0 #ccc;
+}
+.toolbox-tab:active
+{
+	position: relative;
+	top: 0.4em;
+	cursor: pointer;
+	background-color: #ccc;
+	box-shadow: 0 0.1em 0 0 #888;
+}
+.toolbox-tab-label
+{
+	font-size: 1.5em;
+	font-family: "Homenaje", sans-serif;
+}
+.toolbox-tab-icon
+{
+	font-size: 1.5em;
+}
+.toolbox-tab-selected
+{
+	position: relative;
+	top: 1em;
+	height: 100%;
+	border: 0px solid black;
+	border-radius: 0.5em;
+	background-color: #eee;
+	box-shadow: 0 1em 0 0 #eee;
+	outline: none;
+}
+
+
+.toolbox-drawer
+{
+	width: calc(100% - 1em);
+	height: 100%;
+	background-color: #eee;
+	border-radius: 0.5em;
+	z-index: 1;
+	box-shadow: 0 0.15em 0 0 rgba(0, 0, 0, 0.3);
+}
+
+
+.toolbox-select
+{
+	border: 0px solid black;
+	border-radius: 0.25em;
+	background-color: #ddd;
+	box-shadow: 0 0.15em 0 0 #aaa;
+	outline: none;
+	font-family: "Homenaje", sans-serif;
+	font-size: 1em;
+}
+.toolbox-select:hover
+{
+	cursor: pointer;
+	background-color: #fdfdfd;
+	box-shadow: 0 0.15em 0 0 #ccc;
+}
+.toolbox-select:active
+{
+	position: relative;
+	top: 0.1em;
+	cursor: pointer;
+	background-color: #ccc;
+	box-shadow: 0 0.05em 0 0 #888;
+}
+
+
+.toolbox-chord
+{
+	width: 6em;
+	height: 4em;
+	border: 0px solid black;
+	border-radius: 0.5em;
+	background-color: white;
+	box-shadow: 0 0.3em 0 0 #aaa;
+	outline: none;
+}
+.toolbox-chord:hover
+{
+	cursor: pointer;
+	background-color: #fdfdfd;
+	box-shadow: 0 0.3em 0 0 #ccc;
+}
+.toolbox-chord:active
+{
+	position: relative;
+	top: 0.1em;
+	cursor: pointer;
+	background-color: #ccc;
+	box-shadow: 0 0.1em 0 0 #888;
+}
+.toolbox-chord-label
+{
+	font-size: 3em;
+	font-family: "Homenaje", sans-serif;
+}
+
+
+#main
+{
+	width: 100%;
+	height: calc(100% - 0.25em);
+	padding-top: 0.25em;
+	display: grid;
+	grid-template-columns: 100%;
+	grid-template-rows: 0fr 0fr 1fr;
+	grid-gap: 0.5em 0;
+	justify-items: center;
+	align-items: center;
+}
+
+
+#toolbox
+{
+	display: grid;
+	grid-template-columns: 0fr 0fr 1fr 0fr 0fr 0fr 0fr 0fr;
+	grid-template-rows: 0fr;
+	grid-gap: 0.25em 0.25em;
+	justify-items: center;
+	align-items: center;
+}
+
+
+#toolbox-drawer-notes-chords
+{
+	padding: 0.5em;
+	padding-top: 1em;
+	padding-bottom: 1em;
+	display: grid;
+	grid-template-columns: 0fr 0fr 0fr 0fr 0fr 0fr 0fr 0fr;
+	grid-template-rows: 0fr 0fr 0fr;
+	grid-gap: 0.25em 0.25em;
+	justify-items: center;
+	align-items: center;
+	justify-content: center;
+}
+
+
+#editor
+{
+	width: 100%;
+	height: 100%;
+}
+
 
 .toolboxChord
 {
@@ -158,12 +238,10 @@ body
 	font-size: 12px;
 	text-align: center;
 }
-
 .toolboxChord:hover
 {
 	cursor: pointer;
 }
-
 .toolboxChord:active
 {
 	cursor: pointer;
