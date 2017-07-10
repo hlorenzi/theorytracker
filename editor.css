@@ -1,0 +1,229 @@
+.editorLabelTitle
+{
+	fill: #000;
+	font-family: Verdana, sans-serif;
+	font-size: 22px;
+	font-weight: bold;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorLabelAlbum
+{
+	fill: #888;
+	font-family: Verdana, sans-serif;
+	font-size: 10px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorLabelAuthors
+{
+	fill: #000;
+	font-family: Verdana, sans-serif;
+	font-size: 10px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorBlockBackground
+{
+	stroke-width: 0px;
+	fill: #eee;
+}
+
+.editorBlockSelection
+{
+	stroke-width: 0px;
+	fill: rgba(0, 0, 255, 0.25);
+}
+
+.editorBlockFrame
+{
+	stroke: #333;
+	stroke-width: 2px;
+	fill: rgba(0, 0, 0, 0);
+}
+
+.editorBeat
+{
+	stroke: #fff;
+	stroke-width: 2px;
+}
+
+.editorOctaveLine
+{
+	stroke: #333;
+	stroke-width: 2px;
+}
+
+.editorNote
+{
+	stroke-width: 0px;
+}
+
+.editorNoteSelected
+{
+	stroke-width: 2px;
+}
+
+.editorNoteInChordBackground
+{
+	stroke-width: 0px;
+}
+
+.editorChordBackground
+{
+	stroke-width: 0px;
+	fill: white;
+}
+
+.editorChordOrnament
+{
+	stroke-width: 0px;
+}
+
+.editorChordOrnamentSelected
+{
+	stroke-width: 2px;
+}
+
+.editorChordRomanLabel
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 20px;
+	text-anchor: middle;
+	alignment-baseline: central;
+}
+
+.editorChordRomanLabelSuperscript
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 14px;
+	text-anchor: middle;
+	alignment-baseline: central;
+	baseline-shift: super;
+}
+
+.editorChordAbsoluteLabel
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 10px;
+	text-anchor: middle;
+	alignment-baseline: central;
+}
+
+.editorChordAbsoluteLabelSuperscript
+{
+	fill: black;
+	font-family: Verdana, sans-serif;
+	font-size: 8px;
+	text-anchor: middle;
+	alignment-baseline: central;
+	baseline-shift: super;
+}
+
+.editorKeyHandle
+{
+	fill: #f04;
+	stroke-width: 0px;
+}
+
+.editorKeyHandleSelected
+{
+	stroke: #f04;
+	stroke-width: 2px;
+	fill: #fad;
+}
+
+.editorKeyLine
+{
+	stroke: #f04;
+	stroke-width: 2px;
+}
+
+.editorKeyLabel
+{
+	fill: #f04;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorScaleLabel
+{
+	fill: #000;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorMeterHandle
+{
+	fill: #0af;
+	stroke-width: 0px;
+}
+
+.editorMeterHandleSelected
+{
+	stroke: #0af;
+	stroke-width: 2px;
+	fill: #aef;
+}
+
+.editorMeterLine
+{
+	stroke: #0af;
+	stroke-width: 2px;
+}
+
+.editorMeterLabel
+{
+	fill: #0af;
+	font-family: Verdana, sans-serif;
+	font-size: 12px;
+	text-anchor: start;
+	alignment-baseline: middle;
+}
+
+.editorForcedMeasureHandle
+{
+	fill: #000;
+	stroke-width: 0px;
+}
+
+.editorForcedMeasureHandleSelected
+{
+	stroke: #000;
+	stroke-width: 2px;
+	fill: #ddd;
+}
+
+.editorForcedMeasureLine
+{
+	stroke: #000;
+	stroke-width: 2px;
+}
+
+.editorCursor
+{
+	stroke: blue;
+	stroke-width: 2px;
+}
+
+.editorCursorGhost
+{
+	stroke: rgba(0, 0, 255, 0.25);
+	stroke-width: 2px;
+}
+
+.editorCursorPlayback
+{
+	stroke: red;
+	stroke-width: 2px;
+}
