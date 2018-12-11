@@ -54,8 +54,10 @@ function toolboxLoadString()
 function toolboxSaveString()
 {
 	var songData = g_Song.saveJSON();
-	var data = "data:text/plain," + encodeURIComponent(songData);
-	window.open(data);
+	var newWindow = window.open();
+	newWindow.document.write("<code style='white-space:pre'>");
+	newWindow.document.write(songData);
+	newWindow.document.write("</code>");
 	g_Editor.setUnsavedChanges(false);
 }
 
@@ -76,8 +78,10 @@ function toolboxLoadCompressed()
 function toolboxSaveCompressed()
 {
 	var songData = g_Song.saveBinary();
-	var data = "data:text/plain," + encodeURIComponent(songData);
-	window.open(data);
+	var newWindow = window.open();
+	newWindow.document.write("<code style='white-space:pre'>");
+	newWindow.document.write(songData);
+	newWindow.document.write("</code>");
 	g_Editor.setUnsavedChanges(false);
 }
 
