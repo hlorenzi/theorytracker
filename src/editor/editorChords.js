@@ -13,9 +13,6 @@ export class EditorChords
 		
 		this.hoverId = -1
 		
-		this.mouseDownRow = -1
-		this.mouseRow = -1
-		
 		this.dragData = new Map()
 	}
 	
@@ -142,9 +139,6 @@ export class EditorChords
 	
 	draw()
 	{
-		this.owner.ctx.fillStyle = "#111"
-		this.owner.ctx.fillRect(0, 0, this.area.w, this.area.h)
-		
 		for (const chord of this.owner.song.chords.enumerate())
 		{
 			if (!this.owner.selection.has(chord.id))

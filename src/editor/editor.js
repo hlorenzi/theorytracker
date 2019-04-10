@@ -1,4 +1,5 @@
-import { Song, Note, Chord } from "../song/song.js"
+import { Song, Note, Chord, MeterChange, KeyChange } from "../song/song.js"
+import { EditorMarkers } from "./editorMarkers.js"
 import { EditorNotes } from "./editorNotes.js"
 import { EditorChords } from "./editorChords.js"
 import { Rational } from "../util/rational.js"
@@ -32,6 +33,12 @@ export class Editor
 			.upsertChord(new Chord(new Range(new Rational(0, 4), new Rational(3, 4)), 0))
 			.upsertChord(new Chord(new Range(new Rational(4, 4), new Rational(7, 4)), 0))
 			.upsertChord(new Chord(new Range(new Rational(8, 4), new Rational(13, 4)), 0))
+			
+			.upsertMeterChange(new MeterChange(new Rational(0, 4), 4, 4))
+			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))
+			
+			.upsertKeyChange(new KeyChange(new Rational(0, 4), 0, [0, 1, 2]))
+			.upsertKeyChange(new KeyChange(new Rational(7, 4), 9, [0, 3, 5]))
 		
 		this.timeScale = 200
 		this.timeScroll = 0
@@ -39,6 +46,7 @@ export class Editor
 		this.selection = new Set()
 		
 		this.tracks = []
+		this.tracks.push(new EditorMarkers(this))
 		this.tracks.push(new EditorNotes(this))
 		this.tracks.push(new EditorChords(this))
 		this.refreshLayout()
@@ -71,8 +79,9 @@ export class Editor
 	
 	refreshLayout()
 	{
-		this.tracks[0].area = new Rect(50, 50, this.width - 100, this.height - 100 - 70)
-		this.tracks[1].area = new Rect(50, this.height - 50 - 60, this.width - 100, 60)
+		this.tracks[0].area = new Rect(0, 0, this.width, 44)
+		this.tracks[1].area = new Rect(0, 44, this.width, this.height - 44 - 60)
+		this.tracks[2].area = new Rect(0, this.height - 60, this.width, 60)
 	}
 	
 	
@@ -128,7 +137,7 @@ export class Editor
 		
 		if (this.mouseDownAction == Editor.ACTION_PAN)
 		{
-			
+			this.cursorShow = false
 		}
 		else if (this.mouseDownAction == Editor.ACTION_SELECTION_TIME)
 		{
@@ -253,13 +262,76 @@ export class Editor
 	{
 		this.ctx.save()
 		
-		this.ctx.fillStyle = "#eee"
+		this.ctx.fillStyle = "#111"
 		this.ctx.fillRect(0, 0, this.width, this.height)
+		
+		const screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }))
+		
+		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(screenRange))
+		{
+			if (curMeter == null)
+				continue
+			
+			const x = (curMeter.time.asFloat() - this.timeScroll) * this.timeScale
+			
+			this.ctx.strokeStyle = "#0cf"
+			this.ctx.lineCap = "square"
+			this.ctx.lineWidth = 1
+			
+			this.ctx.beginPath()
+			this.ctx.moveTo(x, 0)
+			this.ctx.lineTo(x, this.height)
+			this.ctx.stroke()
+			
+			const submeasureDuration = curMeter.getSubmeasureDuration()
+			
+			let time = curMeter.time.add(submeasureDuration)
+			let submeasureCount = 1
+			while (time.lessThan(screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
+			{
+				const submeasureX = (time.asFloat() - this.timeScroll) * this.timeScale
+				
+				if (time.greaterThan(screenRange.start))
+				{
+					this.ctx.strokeStyle = (submeasureCount % curMeter.numerator == 0 ? "#888" : "#444")
+					this.ctx.beginPath()
+					this.ctx.moveTo(submeasureX, 0)
+					this.ctx.lineTo(submeasureX, this.height)
+					this.ctx.stroke()
+				}
+				
+				submeasureCount++
+				time = time.add(submeasureDuration)
+			}
+		}
+		
+		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(screenRange))
+		{
+			const x = (keyChange.time.asFloat() - this.timeScroll) * this.timeScale
+			
+			this.ctx.strokeStyle = "#f0c"
+			this.ctx.lineCap = "square"
+			this.ctx.lineWidth = 1
+			
+			this.ctx.beginPath()
+			this.ctx.moveTo(x, 0)
+			this.ctx.lineTo(x, this.height)
+			this.ctx.stroke()
+		}
 		
 		for (const track of this.tracks)
 		{
 			this.ctx.save()
 			this.ctx.translate(track.area.x, track.area.y)
+			
+			this.ctx.strokeStyle = "#aaa"
+			this.ctx.lineCap = "square"
+			this.ctx.lineWidth = 1
+			
+			this.ctx.beginPath()
+			this.ctx.moveTo(0, 0)
+			this.ctx.lineTo(this.width, 0)
+			this.ctx.stroke()
 			
 			this.ctx.beginPath()
 			this.ctx.rect(0, 0, track.area.w, track.area.h)

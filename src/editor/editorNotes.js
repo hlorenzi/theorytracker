@@ -161,9 +161,6 @@ export class EditorNotes
 	
 	draw()
 	{
-		this.owner.ctx.fillStyle = "#111"
-		this.owner.ctx.fillRect(0, 0, this.area.w, this.area.h)
-		
 		for (const note of this.owner.song.notes.enumerate())
 		{
 			if (!this.owner.selection.has(note.id))

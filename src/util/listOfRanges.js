@@ -98,6 +98,41 @@ export class ListOfRanges
 	}
 	
 	
+	*enumerateAffectingRange(range)
+	{
+		yield this.findActiveAt(range.start)
+		
+		for (let i = 0; i < this.items.length; i++)
+		{
+			let item = this.items[i]
+			let itemRange = this.getRangeFn(item)
+			
+			if (itemRange.overlapsRange(range))
+				yield item
+		}
+	}
+	
+	
+	*enumerateAffectingRangePairwise(range)
+	{
+		let prevItem = this.findActiveAt(range.start)
+		
+		for (let i = 0; i < this.items.length; i++)
+		{
+			let item = this.items[i]
+			let itemRange = this.getRangeFn(item)
+			
+			if (itemRange.overlapsRange(range))
+			{
+				yield [prevItem, item]
+				prevItem = item
+			}
+		}
+		
+		yield [prevItem, null]
+	}
+	
+	
 	findAt(point)
 	{
 		for (let i = 0; i < this.items.length; i++)
