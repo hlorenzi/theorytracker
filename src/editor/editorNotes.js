@@ -15,6 +15,7 @@ export class EditorNotes
 		this.hoverId = -1
 		
 		this.mouseDownRow = -1
+		this.mouseDownRowScroll = 0
 		this.mouseRow = -1
 		
 		this.dragData = new Map()
@@ -30,15 +31,12 @@ export class EditorNotes
 	onMouseDown(ev, mouseDown, mousePos)
 	{
 		this.mouseRow = this.mouseDownRow = this.getRowAt(mousePos)
+		this.mouseDownRowScroll = this.rowScroll
 		
 		if (this.hoverId >= 0)
 		{
 			this.owner.selection.add(this.hoverId)
 			this.owner.mouseDownAction = this.owner.mouseHoverAction
-		}
-		else
-		{
-			this.owner.mouseDownAction = Editor.ACTION_SELECTION_TIME
 		}
 	}
 	
@@ -66,6 +64,18 @@ export class EditorNotes
 	
 	onMouseUp(ev, mouseDown, mousePos)
 	{
+	}
+	
+	
+	onMouseLeave()
+	{
+		this.hoverId = -1
+	}
+	
+	
+	onPan()
+	{
+		this.rowScroll = this.mouseDownRowScroll - (this.owner.mouseDownData.pos.y - this.owner.mousePos.y) / this.rowScale
 	}
 	
 	
@@ -190,7 +200,7 @@ export class EditorNotes
 	{
 		const timeOffsetFromScroll = note.range.start.asFloat() - this.owner.timeScroll
 		const noteX = timeOffsetFromScroll * this.owner.timeScale
-		const noteY = this.area.h - (note.pitch + 1) * this.rowScale
+		const noteY = this.area.h - (note.pitch + 1 - this.rowScroll) * this.rowScale
 		const noteW = note.range.duration.asFloat() * this.owner.timeScale
 		
 		return new Rect(noteX, noteY, noteW, this.rowScale)
