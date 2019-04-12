@@ -1,6 +1,7 @@
 import { ListOfRanges } from "../util/listOfRanges.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
+import { Key } from "../util/theory.js"
 
 
 export class Song
@@ -90,17 +91,19 @@ export class Note
 
 export class Chord
 {
-	constructor(range, pitch)
+	constructor(range, pitch, accidental, chordKind)
 	{
 		this.id = -1
 		this.range = range
 		this.pitch = pitch
+		this.accidental = accidental
+		this.chordKind = chordKind
 	}
 	
 	
 	withChanges(obj)
 	{
-		return Object.assign(new Chord(this.range, this.pitch), { id: this.id }, obj)
+		return Object.assign(new Chord(this.range, this.pitch, this.accidental, this.chordKind), { id: this.id }, obj)
 	}
 }
 
@@ -143,18 +146,17 @@ export class MeterChange
 
 export class KeyChange
 {
-	constructor(time, tonicPitch, scale)
+	constructor(time, key)
 	{
 		this.id = -1
 		this.time = time
-		this.tonicPitch = tonicPitch
-		this.scale = scale
+		this.key = key
 	}
 	
 	
 	withChanges(obj)
 	{
-		return Object.assign(new KeyChange(this.time, this.tonicPitch, this.scale), { id: this.id }, obj)
+		return Object.assign(new KeyChange(this.time, this.key), { id: this.id }, obj)
 	}
 	
 	

@@ -22,8 +22,11 @@ export class EditorMarkers
 	}
 	
 	
-	onMouseDown(ev, mouseDown, mousePos)
+	onMouseDown(ev, mouseDown, mouseRightButton, mousePos)
 	{
+		if (mouseRightButton)
+			return
+		
 		if (this.hoverId >= 0)
 		{
 			this.owner.selection.add(this.hoverId)
@@ -193,25 +196,25 @@ export class EditorMarkers
 	
 	draw()
 	{
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.enumerateOverlappingRange(this.owner.screenRange))
 		{
 			if (!this.owner.selection.has(meterChange.id))
 				this.drawMeterChange(meterChange)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.enumerateOverlappingRange(this.owner.screenRange))
 		{
 			if (!this.owner.selection.has(keyChange.id))
 				this.drawKeyChange(keyChange)
 		}
 		
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.enumerateOverlappingRange(this.owner.screenRange))
 		{
 			if (this.owner.selection.has(meterChange.id))
 				this.drawMeterChange(meterChange)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.enumerateOverlappingRange(this.owner.screenRange))
 		{
 			if (this.owner.selection.has(keyChange.id))
 				this.drawKeyChange(keyChange)
@@ -261,7 +264,7 @@ export class EditorMarkers
 		this.owner.ctx.font = "14px Verdana"
 		this.owner.ctx.textAlign = "left"
 		this.owner.ctx.textBaseline = "middle"
-		this.owner.ctx.fillText(keyChange.tonicPitch.toString(), rect.x + rect.w + 5, rect.y + rect.h / 2)
+		this.owner.ctx.fillText(keyChange.key.getName(), rect.x + rect.w + 5, rect.y + rect.h / 2)
 		
 		if (this.owner.selection.has(keyChange.id))
 		{

@@ -5,6 +5,7 @@ import { EditorChords } from "./editorChords.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
+import { Key, scales } from "../util/theory.js"
 
 
 export class Editor
@@ -25,20 +26,25 @@ export class Editor
 		this.height = parseInt(canvas.height)
 		
 		this.song = new Song()
-			.upsertNote(new Note(new Range(new Rational(0, 4), new Rational(1, 4)), 0))
-			.upsertNote(new Note(new Range(new Rational(1, 4), new Rational(2, 4)), 1))
-			.upsertNote(new Note(new Range(new Rational(2, 4), new Rational(3, 4)), 2))
-			.upsertNote(new Note(new Range(new Rational(3, 4), new Rational(4, 4)), 3))
+			.upsertNote(new Note(new Range(new Rational(0, 4), new Rational(1, 4)), 60))
+			.upsertNote(new Note(new Range(new Rational(1, 4), new Rational(2, 4)), 62))
+			.upsertNote(new Note(new Range(new Rational(2, 4), new Rational(3, 4)), 64))
+			.upsertNote(new Note(new Range(new Rational(3, 4), new Rational(4, 4)), 65))
+			.upsertNote(new Note(new Range(new Rational(4, 4), new Rational(5, 4)), 67))
+			.upsertNote(new Note(new Range(new Rational(5, 4), new Rational(6, 4)), 69))
+			.upsertNote(new Note(new Range(new Rational(6, 4), new Rational(7, 4)), 71))
+			.upsertNote(new Note(new Range(new Rational(7, 4), new Rational(8, 4)), 72))
 			
-			.upsertChord(new Chord(new Range(new Rational(0, 4), new Rational(3, 4)), 0))
-			.upsertChord(new Chord(new Range(new Rational(4, 4), new Rational(7, 4)), 0))
-			.upsertChord(new Chord(new Range(new Rational(8, 4), new Rational(13, 4)), 0))
+			.upsertChord(new Chord(new Range(new Rational(0, 4), new Rational(3, 4)), 0, 0, 0))
+			.upsertChord(new Chord(new Range(new Rational(4, 4), new Rational(7, 4)), 9, 0, 1))
+			.upsertChord(new Chord(new Range(new Rational(8, 4), new Rational(13, 4)), 2, 0, 2))
 			
 			.upsertMeterChange(new MeterChange(new Rational(0, 4), 4, 4))
 			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))
 			
-			.upsertKeyChange(new KeyChange(new Rational(0, 4), 0, [0, 1, 2]))
-			.upsertKeyChange(new KeyChange(new Rational(7, 4), 9, [0, 3, 5]))
+			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales.major.pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(9, 0, scales.minor.pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales.dorian.pitches)))
 		
 		this.timeScale = 200
 		this.timeScroll = 0
@@ -62,6 +68,8 @@ export class Editor
 		this.mouseTrack = -1
 		this.mouseHoverAction = 0
 		this.mouseDownAction = 0
+		
+		this.screenRange = new Range(new Rational(0), new Rational(0))
 		
 		canvas.onmousedown = (ev) => this.onMouseDown(ev)
 		window.onmousemove = (ev) => this.onMouseMove(ev)
@@ -132,7 +140,7 @@ export class Editor
 		for (const track of this.tracks)
 		{
 			if (track.area.contains(this.mousePos))
-				track.onMouseDown(ev, true, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
+				track.onMouseDown(ev, true, isRightMouseButton, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
 		}
 		
 		if (this.mouseDownAction == Editor.ACTION_PAN)
@@ -265,9 +273,9 @@ export class Editor
 		this.ctx.fillStyle = "#111"
 		this.ctx.fillRect(0, 0, this.width, this.height)
 		
-		const screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }))
+		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }))
 		
-		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(screenRange))
+		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
 		{
 			if (curMeter == null)
 				continue
@@ -287,11 +295,11 @@ export class Editor
 			
 			let time = curMeter.time.add(submeasureDuration)
 			let submeasureCount = 1
-			while (time.lessThan(screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
+			while (time.lessThan(this.screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
 			{
 				const submeasureX = (time.asFloat() - this.timeScroll) * this.timeScale
 				
-				if (time.greaterThan(screenRange.start))
+				if (time.greaterThan(this.screenRange.start))
 				{
 					this.ctx.strokeStyle = (submeasureCount % curMeter.numerator == 0 ? "#888" : "#444")
 					this.ctx.beginPath()
@@ -305,7 +313,7 @@ export class Editor
 			}
 		}
 		
-		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(screenRange))
+		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(this.screenRange))
 		{
 			const x = (keyChange.time.asFloat() - this.timeScroll) * this.timeScale
 			

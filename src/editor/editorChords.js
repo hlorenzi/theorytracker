@@ -1,5 +1,8 @@
+import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
 import { Rect } from "../util/rect.js"
+import { Range } from "../util/range.js"
+import { Key, scales, chordList, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getScaleOctaveForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -17,8 +20,11 @@ export class EditorChords
 	}
 	
 	
-	onMouseDown(ev, mouseDown, mousePos)
+	onMouseDown(ev, mouseDown, mouseRightButton, mousePos)
 	{
+		if (mouseRightButton)
+			return
+		
 		if (this.hoverId >= 0)
 		{
 			this.owner.selection.add(this.hoverId)
@@ -32,7 +38,7 @@ export class EditorChords
 		this.hoverId = -1
 		for (const chord of this.owner.song.chords.enumerate())
 		{
-			const rect = this.getChordRect(chord)
+			const rect = this.getChordRect(chord, 0, this.owner.width)
 			if (rect.contains(mousePos))
 			{
 				this.hoverId = chord.id
@@ -139,48 +145,91 @@ export class EditorChords
 	
 	draw()
 	{
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
 		{
-			if (!this.owner.selection.has(chord.id))
-				this.drawChord(chord)
-		}
-		
-		for (const chord of this.owner.song.chords.enumerate())
-		{
-			if (this.owner.selection.has(chord.id))
-				this.drawChord(chord)
+			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales.major.pitches))
+			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales.major.pitches))
+			
+			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
+			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
+			
+			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			{
+				if (!this.owner.selection.has(chord.id))
+					this.drawChord(chord, curKey.key, xStart, xEnd)
+			}
+			
+			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			{
+				if (this.owner.selection.has(chord.id))
+					this.drawChord(chord, curKey.key, xStart, xEnd)
+			}
 		}
 	}
 	
 	
-	drawChord(chord)
+	drawChord(chord, key, xStart, xEnd)
 	{
-		const rect = this.getChordRect(chord)
+		const rect = this.getChordRect(chord, xStart, xEnd)
+		
+		const scaleDegree = getScaleDegreeForPitch(key, chord.pitch + chord.accidental)
+		const scaleDegreeRotation = getColorRotationForScale(key.scalePitches)
+		const color = getColorForScaleDegree(scaleDegree + scaleDegreeRotation)
 		
 		this.owner.ctx.fillStyle = "#eee"
 		this.owner.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 		
-		this.owner.ctx.fillStyle = (this.hoverId == chord.id ? "#f80" : "#f00")
+		this.owner.ctx.fillStyle = color
 		this.owner.ctx.fillRect(rect.x, rect.y, rect.w, this.decorationHeight)
 		this.owner.ctx.fillRect(rect.x, rect.y + rect.h - this.decorationHeight, rect.w, this.decorationHeight)
+		
+		this.owner.ctx.fillStyle = "#000"
+		this.owner.ctx.font = "20px Verdana"
+		this.owner.ctx.textAlign = "center"
+		this.owner.ctx.textBaseline = "middle"
+		
+		const chordData = chordList[chord.chordKind]
+		
+		let mainStr = getRomanNumeralScaleDegreeStr(scaleDegree, chord.accidental)
+		if (chordData.symbol[0])
+			mainStr = mainStr.toLowerCase()
+		
+		this.owner.ctx.fillText(mainStr + chordData.symbol[1], rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w - 6)
 		
 		if (this.owner.selection.has(chord.id))
 		{
 			this.owner.ctx.globalAlpha = 0.5
 			this.owner.ctx.fillStyle = "#fff"
-			this.owner.ctx.fillRect(rect.x + 3, rect.y + 3, rect.w - 6, rect.h - 6)
+			this.owner.ctx.fillRect(rect.x + (rect.cutStart ? 0 : 3), rect.y + 3, rect.w - (rect.cutEnd ? 0 : 3) - (rect.cutStart ? 0 : 3), rect.h - 6)
+			
+			this.owner.ctx.globalAlpha = 1
+		}
+		
+		if (this.hoverId == chord.id)
+		{
+			this.owner.ctx.globalAlpha = 0.5
+			this.owner.ctx.fillStyle = "#fee"
+			this.owner.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 			
 			this.owner.ctx.globalAlpha = 1
 		}
 	}
 	
 	
-	getChordRect(chord)
+	getChordRect(chord, xStart, xEnd)
 	{
-		const timeOffsetFromScroll = chord.range.start.asFloat() - this.owner.timeScroll
-		const chordX = timeOffsetFromScroll * this.owner.timeScale
-		const chordW = chord.range.duration.asFloat() * this.owner.timeScale
+		const timeOffsetFromScroll1 = chord.range.start.asFloat() - this.owner.timeScroll
+		const timeOffsetFromScroll2 = chord.range.end  .asFloat() - this.owner.timeScroll
 		
-		return new Rect(chordX, 0, chordW, this.area.h)
+		const chordOrigX1 = timeOffsetFromScroll1 * this.owner.timeScale
+		const chordOrigX2 = timeOffsetFromScroll2 * this.owner.timeScale
+		const chordX1 = Math.max(chordOrigX1, xStart)
+		const chordX2 = Math.min(chordOrigX2, xEnd)
+		const chordW = chordX2 - chordX1
+		
+		const cutStart = chordOrigX1 < chordX1
+		const cutEnd   = chordOrigX2 > chordX2
+		
+		return Object.assign(new Rect(chordX1, 0, chordW, this.area.h), { cutStart, cutEnd })
 	}
 }
