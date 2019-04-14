@@ -2,7 +2,7 @@ import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
 import { Rect } from "../util/rect.js"
 import { Range } from "../util/range.js"
-import { Key, scales, chordList, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getScaleOctaveForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
+import { Key, scales, chordList, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -194,7 +194,17 @@ export class EditorChords
 		if (chordData.symbol[0])
 			mainStr = mainStr.toLowerCase()
 		
-		this.owner.ctx.fillText(mainStr + chordData.symbol[1], rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w - 6)
+		mainStr = mainStr + chordData.symbol[1]
+		
+		this.owner.ctx.fillText(mainStr, rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w - 6)
+		
+		if (chordData.symbol[2])
+		{
+			const mainStrWidth = this.owner.ctx.measureText(mainStr)
+			this.owner.ctx.font = "15px Verdana"
+			this.owner.ctx.textAlign = "left"
+			this.owner.ctx.fillText(chordData.symbol[2], rect.x + rect.w / 2 + mainStrWidth.width / 2, rect.y + rect.h / 2 - 8, rect.w - 6)
+		}
 		
 		if (this.owner.selection.has(chord.id))
 		{

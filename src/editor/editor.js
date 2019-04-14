@@ -36,8 +36,8 @@ export class Editor
 			.upsertNote(new Note(new Range(new Rational(7, 4), new Rational(8, 4)), 72))
 			
 			.upsertChord(new Chord(new Range(new Rational(0, 4), new Rational(3, 4)), 0, 0, 0))
-			.upsertChord(new Chord(new Range(new Rational(4, 4), new Rational(7, 4)), 9, 0, 1))
-			.upsertChord(new Chord(new Range(new Rational(8, 4), new Rational(13, 4)), 2, 0, 2))
+			.upsertChord(new Chord(new Range(new Rational(4, 4), new Rational(7, 4)), 9, 0, 2))
+			.upsertChord(new Chord(new Range(new Rational(8, 4), new Rational(13, 4)), 2, 0, 3))
 			
 			.upsertMeterChange(new MeterChange(new Rational(0, 4), 4, 4))
 			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))

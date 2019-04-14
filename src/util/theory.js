@@ -20,10 +20,10 @@ export const chords =
 {
 	// `symbol` = [isLowercase, complement, superscriptComplement]
 	
-	major:      { pitches: [0, 4, 7], code: "",  symbol: [false, "",  "" ], name: "Major", startGroup: "Triads" },
-	minor:      { pitches: [0, 3, 7], code: "m", symbol: [true,  "",  "" ], name: "Minor" },
-	augmented:  { pitches: [0, 4, 8], code: "+", symbol: [false, "+", "" ], name: "Augmented" },
-	diminished: { pitches: [0, 3, 6], code: "o", symbol: [true,  "",  "o"], name: "Diminished" },
+	major:      { pitches: [0, 4, 7], code: "",  symbol: [false, "", null], name: "Major", startGroup: "Triads" },
+	minor:      { pitches: [0, 3, 7], code: "m", symbol: [true,  "", null], name: "Minor" },
+	augmented:  { pitches: [0, 4, 8], code: "+", symbol: [false, "", "+"],  name: "Augmented" },
+	diminished: { pitches: [0, 3, 6], code: "o", symbol: [true,  "", "o"],  name: "Diminished" },
 	
 	power: { pitches: [0, 0, 7, 12], code: "5", symbol: [false, "", "5"], name: "Power" },
 	
@@ -165,13 +165,16 @@ export function getScaleDegreeForPitch(key, pitch)
 		}
 	}
 	
-	return degree
+	return degree + 7 * (Math.floor((pitch - (key.tonicPitch + key.tonicAccidental)) / 12) - 5)
 }
 
 
-export function getScaleOctaveForPitch(key, pitch)
+export function getPitchForScaleDegree(key, degree)
 {
-	return Math.floor((pitch - (key.tonicPitch + key.tonicAccidental)) / 12)
+	const degreeClamped = mod(degree, 7)
+	const degreeOctave = Math.floor(degree / 7) + 5
+	
+	return key.tonicPitch + key.tonicAccidental + key.scalePitches[Math.floor(degreeClamped)] + degreeOctave * 12
 }
 
 

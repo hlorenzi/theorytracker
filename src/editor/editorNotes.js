@@ -2,7 +2,7 @@ import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales, getTonicPitchRowOffset, getScaleDegreeForPitch, getScaleOctaveForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
+import { Key, scales, getTonicPitchRowOffset, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
 
 
 export class EditorNotes
@@ -161,7 +161,12 @@ export class EditorNotes
 				changes.range = noteOrigData.range.displace(timeOffset)
 			
 			if (this.owner.mouseDownAction & Editor.ACTION_DRAG_PITCH)
-				changes.pitch = noteOrigData.pitch + rowOffset
+			{
+				const keyChange = this.owner.song.keyChanges.findActiveAt(noteOrigData.range.start) || new KeyChange(noteOrigData.range.start, new Key(0, 0, scales.major.pitches))
+				const scaleDegree = getScaleDegreeForPitch(keyChange.key, noteOrigData.pitch)
+				const newPitch = getPitchForScaleDegree(keyChange.key, scaleDegree + rowOffset)
+				changes.pitch = newPitch
+			}
 			
 			if (this.owner.mouseDownAction & Editor.ACTION_STRETCH_TIME_START)
 				changes.range = noteOrigData.range.stretch(timeOffset, this.owner.mouseDownData.stretchRange.end, this.owner.mouseDownData.stretchRange.start).sorted()
@@ -247,9 +252,8 @@ export class EditorNotes
 	{
 		const tonicRowOffset = getTonicPitchRowOffset(key.tonicPitch + key.tonicAccidental)
 		const scaleDegree = getScaleDegreeForPitch(key, note.pitch)
-		const scaleOctave = getScaleOctaveForPitch(key, note.pitch)
 		
-		return (scaleOctave - 5) * 7 + tonicRowOffset + scaleDegree
+		return tonicRowOffset + scaleDegree
 	}
 	
 	
