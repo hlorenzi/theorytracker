@@ -178,6 +178,29 @@ export function getPitchForScaleDegree(key, degree)
 }
 
 
+export function getNameForPitch(key, pitch)
+{
+	const baseLabels = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6]
+	const baseAccidentals = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0]
+	const letterStrs = ["C", "D", "E", "F", "G", "A", "B"]
+	const letterPitches = [0, 2, 4, 5, 7, 9, 11]
+	
+	pitch = mod(pitch, 12)
+	const degree = mod(getScaleDegreeForPitch(key, pitch), 7)
+	
+	const keyLetter = baseLabels[key.tonicPitch]
+	const noteLetter = mod(keyLetter + Math.floor(degree), 7)
+	const accidental = mod(pitch - letterPitches[noteLetter] + 6, 12) - 6
+	
+	const accidentalStr = 
+		accidental == 0 ? "" :
+		accidental >  0 ? "♯".repeat(accidental) :
+		"♭".repeat(-accidental)
+	
+	return letterStrs[noteLetter] + accidentalStr
+}
+
+
 export function getColorForScaleDegree(degree)
 {
 	switch (mod(degree, 7))

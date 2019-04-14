@@ -43,7 +43,7 @@ export class Editor
 			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))
 			
 			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales.major.pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(9, 0, scales.minor.pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(5, 1, scales.minor.pitches)))
 			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales.dorian.pitches)))
 		
 		this.timeScale = 200
@@ -177,13 +177,15 @@ export class Editor
 		if (this.mouseDownAction & Editor.ACTION_PAN)
 			this.canvas.style.cursor = "default"
 		
+		this.toolboxRefreshFn()
 		this.draw()
 	}
 	
 	
 	onMouseMove(ev)
 	{
-		ev.preventDefault()
+		if (this.mouseDown)
+			ev.preventDefault()
 		
 		this.mousePos = this.getMousePos(ev)
 		this.mouseTime = this.getTimeAtPos(this.mousePos)
@@ -250,10 +252,10 @@ export class Editor
 	
 	onMouseUp(ev)
 	{
-		ev.preventDefault()
-		
 		if (!this.mouseDown)
 			return
+		
+		ev.preventDefault()
 		
 		this.mouseDown = false
 		this.mousePos = this.getMousePos(ev)
@@ -262,6 +264,7 @@ export class Editor
 		for (const track of this.tracks)
 			track.onMouseUp(ev, true, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
 		
+		this.toolboxRefreshFn()
 		this.draw()
 	}
 	
