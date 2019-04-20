@@ -48,6 +48,7 @@ export class Editor
 		
 		this.timeScale = 200
 		this.timeScroll = 0
+		this.timeSnap = new Rational(1, 16)
 		
 		this.selection = new Set()
 		
@@ -70,11 +71,14 @@ export class Editor
 		this.mouseHoverAction = 0
 		this.mouseDownAction = 0
 		
+		this.keyDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
+		
 		this.screenRange = new Range(new Rational(0), new Rational(0))
 		
 		canvas.onmousedown = (ev) => this.onMouseDown(ev)
 		window.onmousemove = (ev) => this.onMouseMove(ev)
 		window.onmouseup   = (ev) => this.onMouseUp  (ev)
+		window.onkeydown   = (ev) => this.onKeyDown  (ev)
 		
 		canvas.oncontextmenu = (ev) => { ev.preventDefault() }
 	}
@@ -140,6 +144,20 @@ export class Editor
 	}
 	
 	
+	getSelectionRange()
+	{
+		let range = null
+		for (const track of this.tracks)
+		{
+			const trackRange = track.getSelectedRange()
+			if (trackRange != null)
+				range = trackRange.merge(range)
+		}
+		
+		return range
+	}
+	
+	
 	getMousePos(ev)
 	{
 		const rect = this.canvas.getBoundingClientRect()
@@ -153,7 +171,7 @@ export class Editor
 	getTimeAtPos(pos)
 	{
 		const xOffset = (pos.x - this.tracks[0].area.x) / this.timeScale + this.timeScroll
-		return Rational.fromFloat(xOffset, new Rational(1, 16))
+		return Rational.fromFloat(xOffset, this.timeSnap)
 	}
 	
 	
@@ -196,19 +214,14 @@ export class Editor
 		}
 		else
 		{		
+			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
 			this.cursorShow = false
 			for (const track of this.tracks)
 				track.onDragStart({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
 			
 			if (this.mouseHoverAction & (Editor.ACTION_STRETCH_TIME_START | Editor.ACTION_STRETCH_TIME_END))
 			{
-				this.mouseDownData.stretchRange = null
-				for (const track of this.tracks)
-				{
-					const trackRange = track.getSelectedRange()
-					if (trackRange != null)
-						this.mouseDownData.stretchRange = trackRange.merge(this.mouseDownData.stretchRange)
-				}
+				this.mouseDownData.stretchRange = this.getSelectionRange()
 				
 				if (this.mouseDownData.stretchRange == null)
 					this.mouseDownAction = 0
@@ -307,6 +320,38 @@ export class Editor
 		
 		this.toolboxRefreshFn()
 		this.draw()
+	}
+	
+	
+	onKeyDown(ev)
+	{
+		let handled = false
+		
+		this.keyDownData = {}
+		this.keyDownData.stretchRange = this.getSelectionRange()
+		
+		for (const track of this.tracks)
+			handled |= track.onKeyDown(ev)
+		
+		if (handled)
+		{
+			switch (ev.key.toLowerCase())
+			{
+				case "backspace":
+				case "delete":
+				{
+					if (this.keyDownData.stretchRange != null)
+						this.cursorTime = Range.fromPoint(this.keyDownData.stretchRange.min())
+					
+					this.cursorShow = true
+					break
+				}
+			}
+			
+			ev.preventDefault()
+			this.toolboxRefreshFn()
+			this.draw()
+		}
 	}
 	
 	

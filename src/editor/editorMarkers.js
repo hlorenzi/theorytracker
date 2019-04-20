@@ -1,6 +1,8 @@
 import { Editor } from "./editor.js"
+import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
+import { Key, scales, getScaleDegreeForPitch, getPitchForScaleDegree } from "../util/theory.js"
 
 
 export class EditorMarkers
@@ -17,6 +19,7 @@ export class EditorMarkers
 		this.meterMarkerHeight = 22
 		
 		this.hoverId = -1
+		this.hoverRange = new Range(new Rational(0), new Rational(0))
 		
 		this.dragData = new Map()
 	}
@@ -31,6 +34,7 @@ export class EditorMarkers
 		{
 			this.owner.selection.add(this.hoverId)
 			this.owner.mouseDownAction = this.owner.mouseHoverAction
+			this.owner.cursorTime = Range.fromPoint(this.hoverRange.start)
 		}
 	}
 	
@@ -44,6 +48,7 @@ export class EditorMarkers
 			if (rect.contains(mousePos))
 			{
 				this.hoverId = meterChange.id
+				this.hoverRange = Range.fromPoint(meterChange.time)
 				this.owner.mouseHoverAction = Editor.ACTION_DRAG_TIME
 			}
 		}
@@ -54,6 +59,7 @@ export class EditorMarkers
 			if (rect.contains(mousePos))
 			{
 				this.hoverId = keyChange.id
+				this.hoverRange = Range.fromPoint(keyChange.time)
 				this.owner.mouseHoverAction = Editor.ACTION_DRAG_TIME
 			}
 		}
@@ -68,6 +74,67 @@ export class EditorMarkers
 	onMouseLeave()
 	{
 		this.hoverId = -1
+	}
+	
+	
+	onKeyDown(ev)
+	{
+		const key = ev.key.toLowerCase()
+		switch (key)
+		{
+			case "arrowright":
+			case "arrowleft":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? new Rational(1) : this.owner.timeSnap)
+				if (key == "arrowleft")
+					offset = offset.negate()
+				
+				this.alterSelectedKeyChanges((data, origData, changes) => changes.time = data.time.add(offset))
+				this.owner.cursorShow = false
+				return true
+			}
+			case ".":
+			case ">":
+			case ",":
+			case "<":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? 12 : 1)
+				if (key == "," || key == "<")
+					offset = -offset
+				
+				this.alterSelectedKeyChanges((data, origData, changes) => changes.key = data.key.withChanges({ tonicPitch: data.key.tonicPitch + offset }))
+				this.owner.cursorShow = false
+				return true
+			}
+			case "backspace":
+			case "delete":
+			{
+				for (const keyChange of this.owner.song.keyChanges.enumerate())
+				{
+					if (!this.owner.selection.has(keyChange.id))
+						continue
+					
+					this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
+				}
+				return true
+			}
+		}
+	}
+	
+	
+	alterSelectedKeyChanges(fn)
+	{
+		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		{
+			if (!this.owner.selection.has(keyChange.id))
+				continue
+			
+			const origData = this.dragData.get(keyChange.id)
+			
+			let changes = { }
+			fn(keyChange, origData, changes)
+			this.owner.song = this.owner.song.upsertKeyChange(keyChange.withChanges(changes))
+		}
 	}
 	
 	

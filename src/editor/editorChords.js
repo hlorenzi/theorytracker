@@ -1,8 +1,9 @@
 import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
-import { Rect } from "../util/rect.js"
+import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
-import { Key, scales, chords, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
+import { Rect } from "../util/rect.js"
+import { Key, scales, chords, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -15,6 +16,7 @@ export class EditorChords
 		this.decorationHeight = 10
 		
 		this.hoverId = -1
+		this.hoverRange = new Range(new Rational(0), new Rational(0))
 		
 		this.dragData = new Map()
 	}
@@ -29,6 +31,7 @@ export class EditorChords
 		{
 			this.owner.selection.add(this.hoverId)
 			this.owner.mouseDownAction = this.owner.mouseHoverAction
+			this.owner.cursorTime = Range.fromPoint(this.hoverRange.start)
 		}
 	}
 	
@@ -42,6 +45,7 @@ export class EditorChords
 			if (rect.contains(mousePos))
 			{
 				this.hoverId = chord.id
+				this.hoverRange = chord.range
 				
 				if (mousePos.x < rect.x + 8)
 					this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_START
@@ -62,6 +66,85 @@ export class EditorChords
 	onMouseLeave()
 	{
 		this.hoverId = -1
+	}
+	
+	
+	onKeyDown(ev)
+	{
+		const key = ev.key.toLowerCase()
+		switch (key)
+		{
+			case "arrowright":
+			case "arrowleft":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? new Rational(1) : this.owner.timeSnap)
+				if (key == "arrowleft")
+					offset = offset.negate()
+				
+				this.alterSelectedChords((data, origData, changes) => changes.range = data.range.displace(offset))
+				this.owner.cursorShow = false
+				return true
+			}
+			case "arrowup":
+			case "arrowdown":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? 7 : 1)
+				if (key == "arrowdown")
+					offset = -offset
+				
+				this.alterSelectedChords((data, origData, changes) =>
+				{
+					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales.major.pitches))
+					const scaleDegree = getScaleDegreeForPitch(keyChange.key, data.chord.rootPitch)
+					changes.chord = data.chord.withChanges({ rootPitch: getPitchForScaleDegree(keyChange.key, scaleDegree + offset) })
+				})
+				this.owner.cursorShow = false
+				return true
+			}
+			case ".":
+			case ">":
+			case ",":
+			case "<":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? 12 : 1)
+				if (key == "," || key == "<")
+					offset = -offset
+				
+				this.alterSelectedChords((data, origData, changes) => changes.chord = data.chord.withChanges({ rootPitch: data.chord.rootPitch + offset }))
+				this.owner.cursorShow = false
+				return true
+			}
+			case "backspace":
+			case "delete":
+			{
+				for (const chord of this.owner.song.chords.enumerate())
+				{
+					if (!this.owner.selection.has(chord.id))
+						continue
+					
+					this.owner.song = this.owner.song.upsertChord(chord, true)
+				}
+				return true
+			}
+		}
+		
+		return false
+	}
+	
+	
+	alterSelectedChords(fn)
+	{
+		for (const chord of this.owner.song.chords.enumerate())
+		{
+			if (!this.owner.selection.has(chord.id))
+				continue
+			
+			const origData = this.dragData.get(chord.id)
+			
+			let changes = { }
+			fn(chord, origData, changes)
+			this.owner.song = this.owner.song.upsertChord(chord.withChanges(changes))
+		}
 	}
 	
 	

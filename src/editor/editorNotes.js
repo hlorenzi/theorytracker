@@ -1,5 +1,6 @@
 import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
+import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
 import { Key, scales, getTonicPitchRowOffset, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
@@ -16,6 +17,7 @@ export class EditorNotes
 		this.rowScroll = 0
 		
 		this.hoverId = -1
+		this.hoverRange = new Range(new Rational(0), new Rational(0))
 		
 		this.mouseDownRow = -1
 		this.mouseDownRowScroll = 0
@@ -43,6 +45,7 @@ export class EditorNotes
 		{
 			this.owner.selection.add(this.hoverId)
 			this.owner.mouseDownAction = this.owner.mouseHoverAction
+			this.owner.cursorTime = Range.fromPoint(this.hoverRange.start)
 		}
 	}
 	
@@ -64,6 +67,7 @@ export class EditorNotes
 				if (rect.contains(mousePos))
 				{
 					this.hoverId = note.id
+					this.hoverRange = note.range
 					
 					if (mousePos.x < rect.x + 8 && !rect.cutStart)
 						this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_START
@@ -85,6 +89,92 @@ export class EditorNotes
 	onMouseLeave()
 	{
 		this.hoverId = -1
+	}
+	
+	
+	onKeyDown(ev)
+	{
+		const key = ev.key.toLowerCase()
+		switch (key)
+		{
+			case "arrowright":
+			case "arrowleft":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? new Rational(1) : this.owner.timeSnap)
+				if (key == "arrowleft")
+					offset = offset.negate()
+				
+				if (ev.ctrlKey)
+				{
+					if (offset.greaterThan(new Rational(0)) || this.owner.keyDownData.stretchRange.duration.greaterThan(this.owner.timeSnap))
+						this.alterSelectedNotes((data, origData, changes) => changes.range = data.range.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end).sorted())
+				}
+				else
+					this.alterSelectedNotes((data, origData, changes) => changes.range = data.range.displace(offset))
+				
+				this.owner.cursorShow = false
+				return true
+			}
+			case "arrowup":
+			case "arrowdown":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? 7 : 1)
+				if (key == "arrowdown")
+					offset = -offset
+				
+				this.alterSelectedNotes((data, origData, changes) =>
+				{
+					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales.major.pitches))
+					const scaleDegree = getScaleDegreeForPitch(keyChange.key, data.pitch)
+					changes.pitch = getPitchForScaleDegree(keyChange.key, scaleDegree + offset)
+				})
+				this.owner.cursorShow = false
+				return true
+			}
+			case ".":
+			case ">":
+			case ",":
+			case "<":
+			{
+				let offset = (ev.shiftKey && !this.owner.cursorShow ? 12 : 1)
+				if (key == "," || key == "<")
+					offset = -offset
+				
+				this.alterSelectedNotes((data, origData, changes) => changes.pitch = data.pitch + offset)
+				this.owner.cursorShow = false
+				return true
+			}
+			case "backspace":
+			case "delete":
+			{
+				for (const note of this.owner.song.notes.enumerate())
+				{
+					if (!this.owner.selection.has(note.id))
+						continue
+					
+					this.owner.song = this.owner.song.upsertNote(note, true)
+				}
+				return true
+			}
+		}
+		
+		return false
+	}
+	
+	
+	alterSelectedNotes(fn)
+	{
+		for (const note of this.owner.song.notes.enumerate())
+		{
+			if (!this.owner.selection.has(note.id))
+				continue
+			
+			const noteOrigData = this.dragData.get(note.id)
+			
+			let changes = { }
+			fn(note, noteOrigData, changes)
+			this.owner.song = this.owner.song.upsertNote(note.withChanges(changes))
+		}
 	}
 	
 	

@@ -1,4 +1,4 @@
-function mod(x, m)
+export function mod(x, m)
 {
 	return (x % m + m) % m
 }
@@ -168,7 +168,7 @@ export function getScaleDegreeForPitch(key, pitch)
 		}
 	}
 	
-	return degree + 7 * (Math.floor((pitch - (key.tonicPitch + key.tonicAccidental)) / 12) - 5)
+	return degree + 7 * (Math.floor((pitch - mod(key.tonicPitch + key.tonicAccidental, 12)) / 12) - 5)
 }
 
 
@@ -177,7 +177,7 @@ export function getPitchForScaleDegree(key, degree)
 	const degreeClamped = mod(degree, 7)
 	const degreeOctave = Math.floor(degree / 7) + 5
 	
-	return key.tonicPitch + key.tonicAccidental + key.scalePitches[Math.floor(degreeClamped)] + degreeOctave * 12
+	return mod(key.tonicPitch + key.tonicAccidental, 12) + key.scalePitches[Math.floor(degreeClamped)] + degreeOctave * 12
 }
 
 
@@ -237,6 +237,12 @@ export class Key
 	}
 	
 	
+	withChanges(obj)
+	{
+		return Object.assign(new Key(this.tonicPitch, this.tonicAccidental, this.scalePitches), obj)
+	}
+	
+	
 	getName()
 	{
 		const scaleRecord = getScaleRecordFromPitches(this.scalePitches) || { name: "Unknown Scale" }
@@ -254,6 +260,12 @@ export class Chord
 		this.rootAccidental = rootAccidental
 		this.kind = kind
 		this.modifiers = modifiers
+	}
+	
+	
+	withChanges(obj)
+	{
+		return Object.assign(new Chord(this.rootPitch, this.rootAccidental, this.kind, this.modifiers), obj)
 	}
 	
 	

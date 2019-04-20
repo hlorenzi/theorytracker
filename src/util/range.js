@@ -37,19 +37,15 @@ export class Range
 	}
 	
 	
-	max(point)
+	max()
 	{
-		return new Range(
-			this.start.max(point),
-			this.end.max(point))
+		return this.start.max(this.end)
 	}
 	
 	
-	min(point)
+	min()
 	{
-		return new Range(
-			this.start.min(point),
-			this.end.min(point))
+		return this.start.min(this.end)
 	}
 	
 	
