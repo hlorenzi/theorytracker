@@ -13,52 +13,45 @@ export const scales =
 	mixolydian: { pitches: [0, 2, 4, 5, 7, 9, 10], mode: 4, name: "Mixolydian" },
 	minor:      { pitches: [0, 2, 3, 5, 7, 8, 10], mode: 5, name: "Natural Minor" },
 	locrian:    { pitches: [0, 1, 3, 5, 6, 8, 10], mode: 6, name: "Locrian" },
+	
+	doubleHarmonic: { pitches: [0, 1, 4, 5, 7, 8, 11], mode: 0, name: "Double Harmonic Major" },
 }
 
 
 export const chords =
-{
-	// `symbol` = [isLowercase, complement, superscriptComplement]
-	
-	major:      { pitches: [0, 4, 7], code: "",  symbol: [false, "", null], name: "Major", startGroup: "Triads" },
-	minor:      { pitches: [0, 3, 7], code: "m", symbol: [true,  "", null], name: "Minor" },
-	augmented:  { pitches: [0, 4, 8], code: "+", symbol: [false, "", "+"],  name: "Augmented" },
-	diminished: { pitches: [0, 3, 6], code: "o", symbol: [true,  "", "o"],  name: "Diminished" },
-	
-	power: { pitches: [0, 0, 7, 12], code: "5", symbol: [false, "", "5"], name: "Power" },
-	
-	major6: { pitches: [0, 4, 7,  9], code: "6",  symbol: [false, "", "6"], name: "Major Sixth", startGroup: "Sixths" },
-	minor6: { pitches: [0, 3, 7,  9], code: "m6", symbol: [true,  "", "6"], name: "Minor Sixth" },
-	
-	dominant7:       { pitches: [0, 4, 7, 10], code: "7",     symbol: [false, "",  "7"],  name: "Dominant Seventh", startGroup: "Sevenths" },
-	major7:          { pitches: [0, 4, 7, 11], code: "maj7",  symbol: [false, "",  "M7"], name: "Major Seventh" },
-	minor7:          { pitches: [0, 3, 7, 10], code: "m7",    symbol: [true,  "",  "7"],  name: "Minor Seventh" },
-	minorMajor7:     { pitches: [0, 3, 7, 11], code: "mmaj7", symbol: [true,  "",  "M7"], name: "Minor-Major Seventh" },
-	augmented7:      { pitches: [0, 4, 8, 10], code: "+7",    symbol: [false, "+", "7"],  name: "Augmented Seventh" },
-	augmentedMajor7: { pitches: [0, 4, 8, 11], code: "+maj7", symbol: [false, "+", "M7"], name: "Augmented Major Seventh" },
-	diminished7:     { pitches: [0, 3, 6,  9], code: "o7",    symbol: [true,  "",  "o7"], name: "Diminished Seventh" },
-	halfDiminished7: { pitches: [0, 3, 6, 10], code: "%7",    symbol: [true,  "",  "ø7"], name: "Half-Diminished Seventh" },
-	
-	dominant9:            { pitches: [0, 4, 7, 10, 14], code: "9",     symbol: [false, "",  "9"],   name: "Dominant Ninth", startGroup: "Ninths" },
-	major9:               { pitches: [0, 4, 7, 11, 14], code: "maj9",  symbol: [false, "",  "M9"],  name: "Major Ninth" },
-	minor9:               { pitches: [0, 3, 7, 10, 14], code: "m9",    symbol: [true,  "",  "9"],   name: "Minor Ninth" },
-	minorMajor9:          { pitches: [0, 3, 7, 11, 14], code: "mmaj9", symbol: [true, "",   "M9"],  name: "Minor-Major Ninth" },
-	augmented9:           { pitches: [0, 4, 8, 10, 14], code: "+9",    symbol: [false, "+", "9"],   name: "Augmented Ninth" },
-	augmentedMajor9:      { pitches: [0, 4, 8, 11, 14], code: "+maj9", symbol: [false, "+", "M9"],  name: "Augmented Major Ninth" },
-	diminished9:          { pitches: [0, 3, 6,  9, 14], code: "o9",    symbol: [true,  "",  "o9"],  name: "Diminished Ninth" },
-	diminishedMinor9:     { pitches: [0, 3, 6,  9, 13], code: "ob9",   symbol: [true,  "",  "o♭9"], name: "Diminished Minor Ninth" },
-	halfDiminished9:      { pitches: [0, 3, 6, 10, 14], code: "%9",    symbol: [true,  "",  "ø9"],  name: "Half-Diminished Ninth" },
-	halfDiminishedMinor9: { pitches: [0, 3, 6, 10, 13], code: "%b9",   symbol: [true,  "",  "ø♭9"], name: "Half-Diminished Minor Ninth" },
-}
-
-
-export const chordList =
 [
-	chords.major, chords.minor, chords.augmented, chords.diminished, chords.power, chords.major6, chords.minor6,
-	chords.dominant7, chords.major7, chords.minor7, chords.minorMajor7, chords.augmented7, chords.augmentedMajor7,
-	chords.diminished7, chords.halfDiminished7,
-	chords.dominant9, chords.major9, chords.minor9, chords.minorMajor9, chords.augmented9, chords.augmentedMajor9,
-	chords.diminished9, chords.diminishedMinor9, chords.halfDiminished9, chords.halfDiminishedMinor9,
+	{ pitches: [0, 4, 7], code: "",  symbol: [false, "", null], name: "Major", startGroup: "Triads" },
+	{ pitches: [0, 3, 7], code: "m", symbol: [true,  "", null], name: "Minor" },
+	{ pitches: [0, 4, 8], code: "+", symbol: [false, "", "+"],  name: "Augmented" },
+	{ pitches: [0, 3, 6], code: "o", symbol: [true,  "", "o"],  name: "Diminished" },
+	{ pitches: [0, 2, 6], code: "oo", symbol: [true,  "", "oo"],  name: "Doubly-Diminished" },
+	{ pitches: [0, 4, 6], code: "b5", symbol: [false,  "", "(b5)"],  name: "Flat-Fifth" },
+	
+	{ pitches: [0, 0, 7, 12], code: "5", symbol: [false, "", "5"], name: "Power" },
+	
+	{ pitches: [0, 4, 7,  9], code: "6",  symbol: [false, "", "6"], name: "Major Sixth", startGroup: "Sixths" },
+	{ pitches: [0, 3, 7,  9], code: "m6", symbol: [true,  "", "6"], name: "Minor Sixth" },
+	
+	{ pitches: [0, 4, 7, 10], code: "7",     symbol: [false, "",  "7"],  name: "Dominant Seventh", startGroup: "Sevenths" },
+	{ pitches: [0, 4, 7, 11], code: "maj7",  symbol: [false, "",  "M7"], name: "Major Seventh" },
+	{ pitches: [0, 3, 7, 10], code: "m7",    symbol: [true,  "",  "7"],  name: "Minor Seventh" },
+	{ pitches: [0, 3, 7, 11], code: "mmaj7", symbol: [true,  "",  "M7"], name: "Minor-Major Seventh" },
+	{ pitches: [0, 4, 8, 10], code: "+7",    symbol: [false, "+", "7"],  name: "Augmented Seventh" },
+	{ pitches: [0, 4, 8, 11], code: "+maj7", symbol: [false, "+", "M7"], name: "Augmented Major Seventh" },
+	{ pitches: [0, 3, 6,  9], code: "o7",    symbol: [true,  "",  "o7"], name: "Diminished Seventh" },
+	{ pitches: [0, 3, 6, 10], code: "%7",    symbol: [true,  "",  "ø7"], name: "Half-Diminished Seventh" },
+	
+	{ pitches: [0, 4, 7, 10, 14], code: "9",     symbol: [false, "",  "9"],   name: "Dominant Ninth", startGroup: "Ninths" },
+	{ pitches: [0, 4, 7, 11, 14], code: "maj9",  symbol: [false, "",  "M9"],  name: "Major Ninth" },
+	{ pitches: [0, 3, 7, 10, 14], code: "m9",    symbol: [true,  "",  "9"],   name: "Minor Ninth" },
+	{ pitches: [0, 3, 7, 11, 14], code: "mmaj9", symbol: [true, "",   "M9"],  name: "Minor-Major Ninth" },
+	{ pitches: [0, 3, 7, 10, 13], code: "9?",    symbol: [true, "",   "9?"],  name: "???" },
+	{ pitches: [0, 4, 8, 10, 14], code: "+9",    symbol: [false, "+", "9"],   name: "Augmented Ninth" },
+	{ pitches: [0, 4, 8, 11, 14], code: "+maj9", symbol: [false, "+", "M9"],  name: "Augmented Major Ninth" },
+	{ pitches: [0, 3, 6,  9, 14], code: "o9",    symbol: [true,  "",  "o9"],  name: "Diminished Ninth" },
+	{ pitches: [0, 3, 6,  9, 13], code: "ob9",   symbol: [true,  "",  "o♭9"], name: "Diminished Minor Ninth" },
+	{ pitches: [0, 3, 6, 10, 14], code: "%9",    symbol: [true,  "",  "ø9"],  name: "Half-Diminished Ninth" },
+	{ pitches: [0, 3, 6, 10, 13], code: "%b9",   symbol: [true,  "",  "ø♭9"], name: "Half-Diminished Minor Ninth" },
 ]
 
 
@@ -75,6 +68,16 @@ export function getScaleRecordFromPitches(pitches)
 export function getChordRecordFromPitches(pitches)
 {
 	return Object.values(chords).find(chord =>
+	(
+		chord.pitches.length == pitches.length &&
+		chord.pitches.every((p, index) => p == pitches[index])
+	))
+}
+
+
+export function getChordKindFromPitches(pitches)
+{
+	return Object.values(chords).findIndex(chord =>
 	(
 		chord.pitches.length == pitches.length &&
 		chord.pitches.every((p, index) => p == pitches[index])
@@ -239,5 +242,88 @@ export class Key
 		const scaleRecord = getScaleRecordFromPitches(this.scalePitches) || { name: "Unknown Scale" }
 		
 		return getAbsolutePitchStr(this.tonicPitch, this.tonicAccidental) + " " + scaleRecord.name
+	}
+}
+
+
+export class Chord
+{
+	constructor(rootPitch, rootAccidental, kind, modifiers = {})
+	{
+		this.rootPitch = rootPitch
+		this.rootAccidental = rootAccidental
+		this.kind = kind
+		this.modifiers = modifiers
+	}
+	
+	
+	getNameBase(key)
+	{
+		const degree = getScaleDegreeForPitch(key, this.rootPitch)
+		const chordKind = chords[this.kind] || { symbol: [false, "", "?"] }
+		
+		let baseStr = getRomanNumeralScaleDegreeStr(degree, this.rootAccidental)
+		if (chordKind.symbol[0])
+			baseStr = baseStr.toLowerCase()
+		
+		return baseStr + chordKind.symbol[1]
+	}
+	
+	
+	getNameSup(key)
+	{
+		const chordKind = chords[this.kind] || { symbol: [false, "", "?"] }
+		
+		let supStr = chordKind.symbol[2] || ""
+		
+		if (this.modifiers)
+		{
+			if (this.modifiers.add9)
+				supStr += "(add9)"
+			
+			if (this.modifiers.add11)
+				supStr += "(add11)"
+			
+			if (this.modifiers.add13)
+				supStr += "(add13)"
+			
+			if (this.modifiers.no3)
+				supStr += "(no3)"
+			
+			if (this.modifiers.no5)
+				supStr += "(no5)"
+		}
+		
+		return supStr
+	}
+	
+	
+	getNameSub(key)
+	{
+		let subStr = ""
+		
+		if (this.modifiers)
+		{
+			if (this.modifiers.sus2)
+			{
+				if (this.modifiers.sus4)
+					subStr += "sus24"
+				else
+					subStr += "sus2"
+			}
+			else if (this.modifiers.sus4)
+				subStr += "sus4"
+		}
+		
+		return subStr
+	}
+	
+	
+	getColor(key)
+	{
+		const degree = getScaleDegreeForPitch(key, this.rootPitch)
+		const colorRotation = getColorRotationForScale(key.scalePitches)
+		const color = getColorForScaleDegree(colorRotation + degree)
+		return color
 	}
 }

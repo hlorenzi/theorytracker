@@ -89,21 +89,19 @@ export class Note
 }
 
 
-export class Chord
+export class SongChord
 {
-	constructor(range, pitch, accidental, chordKind)
+	constructor(range, chord)
 	{
 		this.id = -1
 		this.range = range
-		this.pitch = pitch
-		this.accidental = accidental
-		this.chordKind = chordKind
+		this.chord = chord
 	}
 	
 	
 	withChanges(obj)
 	{
-		return Object.assign(new Chord(this.range, this.pitch, this.accidental, this.chordKind), { id: this.id }, obj)
+		return Object.assign(new SongChord(this.range, this.chord), { id: this.id }, obj)
 	}
 }
 

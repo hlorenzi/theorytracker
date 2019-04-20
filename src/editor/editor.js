@@ -1,11 +1,11 @@
-import { Song, Note, Chord, MeterChange, KeyChange } from "../song/song.js"
+import { Song, Note, SongChord, MeterChange, KeyChange } from "../song/song.js"
 import { EditorMarkers } from "./editorMarkers.js"
 import { EditorNotes } from "./editorNotes.js"
 import { EditorChords } from "./editorChords.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales } from "../util/theory.js"
+import { Key, scales, Chord } from "../util/theory.js"
 
 
 export class Editor
@@ -35,16 +35,16 @@ export class Editor
 			.upsertNote(new Note(new Range(new Rational(6, 4), new Rational(7, 4)), 71))
 			.upsertNote(new Note(new Range(new Rational(7, 4), new Rational(8, 4)), 72))
 			
-			.upsertChord(new Chord(new Range(new Rational(0, 4), new Rational(3, 4)), 0, 0, 0))
-			.upsertChord(new Chord(new Range(new Rational(4, 4), new Rational(7, 4)), 9, 0, 2))
-			.upsertChord(new Chord(new Range(new Rational(8, 4), new Rational(13, 4)), 2, 0, 3))
+			.upsertChord(new SongChord(new Range(new Rational(0, 4), new Rational(3, 4)), new Chord(0, 0, 0)))
+			.upsertChord(new SongChord(new Range(new Rational(4, 4), new Rational(7, 4)), new Chord(9, 0, 2)))
+			.upsertChord(new SongChord(new Range(new Rational(8, 4), new Rational(13, 4)), new Chord(2, 0, 3)))
 			
 			.upsertMeterChange(new MeterChange(new Rational(0, 4), 4, 4))
 			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))
 			
 			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales.major.pitches)))
 			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(5, 1, scales.minor.pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales.dorian.pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales.doubleHarmonic.pitches)))
 		
 		this.timeScale = 200
 		this.timeScroll = 0
@@ -60,6 +60,7 @@ export class Editor
 		this.cursorTime = new Range(new Rational(0), new Rational(0))
 		this.cursorTrack = { start: 0, end: 0 }
 		this.cursorShow = true
+		this.insertionDuration = new Rational(1, 4)
 		
 		this.mouseDown = false
 		this.mouseDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
@@ -90,6 +91,46 @@ export class Editor
 		this.tracks[0].area = new Rect(0, 0, this.width, 44)
 		this.tracks[1].area = new Rect(0, 44, this.width, this.height - 44 - 60)
 		this.tracks[2].area = new Rect(0, this.height - 60, this.width, 60)
+	}
+	
+	
+	insertNoteAtCursor(pitch)
+	{
+		const time = this.cursorTime.start.min(this.cursorTime.end)
+		const duration = this.insertionDuration
+		
+		const id = this.song.nextId
+		this.song = this.song.upsertNote(new Note(Range.fromStartDuration(time, duration), 60 + pitch))
+		
+		this.cursorTime = Range.fromPoint(time.add(duration))
+		this.cursorTrack = { start: 1, end: 1 }
+		this.cursorShow = false
+		
+		this.selectionClear()
+		this.selection.add(id)
+		
+		this.toolboxRefreshFn()
+		this.draw()
+	}
+	
+	
+	insertChordAtCursor(chord)
+	{
+		const time = this.cursorTime.start.min(this.cursorTime.end)
+		const duration = this.insertionDuration
+		
+		const id = this.song.nextId
+		this.song = this.song.upsertChord(new SongChord(Range.fromStartDuration(time, duration), chord))
+		
+		this.cursorTime = Range.fromPoint(time.add(duration))
+		this.cursorTrack = { start: 2, end: 2 }
+		this.cursorShow = false
+		
+		this.selectionClear()
+		this.selection.add(id)
+		
+		this.toolboxRefreshFn()
+		this.draw()
 	}
 	
 	

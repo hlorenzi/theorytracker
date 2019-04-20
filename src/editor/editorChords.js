@@ -2,7 +2,7 @@ import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
 import { Rect } from "../util/rect.js"
 import { Range } from "../util/range.js"
-import { Key, scales, chordList, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
+import { Key, scales, chords, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -172,7 +172,7 @@ export class EditorChords
 	{
 		const rect = this.getChordRect(chord, xStart, xEnd)
 		
-		const scaleDegree = getScaleDegreeForPitch(key, chord.pitch + chord.accidental)
+		const scaleDegree = getScaleDegreeForPitch(key, chord.chord.rootPitch + chord.chord.rootAccidental)
 		const scaleDegreeRotation = getColorRotationForScale(key.scalePitches)
 		const color = getColorForScaleDegree(scaleDegree + scaleDegreeRotation)
 		
@@ -188,9 +188,9 @@ export class EditorChords
 		this.owner.ctx.textAlign = "center"
 		this.owner.ctx.textBaseline = "middle"
 		
-		const chordData = chordList[chord.chordKind]
+		const chordData = chords[chord.chord.kind]
 		
-		let mainStr = getRomanNumeralScaleDegreeStr(scaleDegree, chord.accidental)
+		let mainStr = getRomanNumeralScaleDegreeStr(scaleDegree, chord.chord.rootAccidental)
 		if (chordData.symbol[0])
 			mainStr = mainStr.toLowerCase()
 		
