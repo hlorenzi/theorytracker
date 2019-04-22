@@ -64,14 +64,19 @@ export class EditorNotes
 			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
 			{
 				const rect = this.getNoteRect(note, curKey.key, xStart, xEnd)
-				if (rect.contains(mousePos))
+				
+				const margin = 4 + (rect.w < 16 ? 16 - rect.w : 0)
+				const stretchMargin = 12
+				
+				const rectWithMargin = new Rect(rect.x - margin, rect.y, rect.w + margin * 2, rect.h)
+				if (rectWithMargin.contains(mousePos))
 				{
 					this.hoverId = note.id
 					this.hoverRange = note.range
 					
-					if (mousePos.x < rect.x + 8 && !rect.cutStart)
+					if (mousePos.x < rectWithMargin.x + stretchMargin && !rect.cutStart)
 						this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_START
-					else if (mousePos.x > rect.x + rect.w - 8 && !rect.cutEnd)
+					else if (mousePos.x > rectWithMargin.x + rectWithMargin.w - stretchMargin && !rect.cutEnd)
 						this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_END
 					else
 						this.owner.mouseHoverAction = Editor.ACTION_DRAG_TIME | Editor.ACTION_DRAG_PITCH
@@ -153,6 +158,7 @@ export class EditorNotes
 						continue
 					
 					this.owner.song = this.owner.song.upsertNote(note, true)
+					this.owner.selection.delete(note.id)
 				}
 				return true
 			}
@@ -181,6 +187,22 @@ export class EditorNotes
 	onPan()
 	{
 		this.rowScroll = this.mouseDownRowScroll - (this.owner.mouseDownData.pos.y - this.owner.mousePos.y) / this.rowScale
+	}
+	
+	
+	getPreviousAnchor(time)
+	{
+		const prev = this.owner.song.notes.findPrevious(time)
+		if (!prev)
+			return null
+		
+		return prev.range.end
+	}
+	
+	
+	getPreviousDeletionAnchor(time)
+	{
+		return this.owner.song.notes.findPreviousDeletionAnchor(time)
 	}
 	
 	

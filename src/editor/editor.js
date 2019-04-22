@@ -49,6 +49,7 @@ export class Editor
 		this.timeScale = 200
 		this.timeScroll = 0
 		this.timeSnap = new Rational(1, 16)
+		this.timeSnapBase = new Rational(1, 16)
 		
 		this.selection = new Set()
 		
@@ -64,6 +65,7 @@ export class Editor
 		this.insertionDuration = new Rational(1, 4)
 		
 		this.mouseDown = false
+		this.mouseDownDate = new Date()
 		this.mouseDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
 		this.mousePos = { x: -1, y: -1 }
 		this.mouseTime = new Rational(0)
@@ -75,10 +77,14 @@ export class Editor
 		
 		this.screenRange = new Range(new Rational(0), new Rational(0))
 		
+		this.doubleClickThreshold = 250
+		
 		canvas.onmousedown = (ev) => this.onMouseDown(ev)
 		window.onmousemove = (ev) => this.onMouseMove(ev)
 		window.onmouseup   = (ev) => this.onMouseUp  (ev)
 		window.onkeydown   = (ev) => this.onKeyDown  (ev)
+		
+		canvas.onwheel = (ev) => this.onMouseWheel(ev)
 		
 		canvas.oncontextmenu = (ev) => { ev.preventDefault() }
 	}
@@ -138,9 +144,29 @@ export class Editor
 	}
 	
 	
+	*enumerateTracksUnderCursor()
+	{
+		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
+		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
+		
+		if (trackMin >= 0 && trackMax >= 0)
+			for (let t = trackMin; t <= trackMax; t++)
+				yield this.tracks[t]
+	}
+	
+	
 	selectionClear()
 	{
 		this.selection.clear()
+	}
+	
+	
+	selectUnderCursor()
+	{
+		this.selectionClear()
+		
+		for (const track of this.enumerateTracksUnderCursor())
+			track.onSelectRange(this.cursorTime.sorted())
 	}
 	
 	
@@ -158,6 +184,24 @@ export class Editor
 	}
 	
 	
+	getSelectionTrackRange()
+	{
+		let max = null
+		let min = null
+		for (let t = 0; t < this.tracks.length; t++)
+		{
+			const trackRange = this.tracks[t].getSelectedRange()
+			if (trackRange != null)
+			{
+				max = (max == null ? t : Math.max(max, t))
+				min = (min == null ? t : Math.min(min, t))
+			}
+		}
+		
+		return (max == null || min == null ? null : { start: min, end: max })
+	}
+	
+	
 	getMousePos(ev)
 	{
 		const rect = this.canvas.getBoundingClientRect()
@@ -168,10 +212,11 @@ export class Editor
 	}
 	
 	
-	getTimeAtPos(pos)
+	getTimeAtPos(pos, snap = null)
 	{
+		snap = snap || this.timeSnap
 		const xOffset = (pos.x - this.tracks[0].area.x) / this.timeScale + this.timeScroll
-		return Rational.fromFloat(xOffset, this.timeSnap)
+		return Rational.fromFloat(xOffset, snap)
 	}
 	
 	
@@ -183,8 +228,10 @@ export class Editor
 			return
 		
 		const isRightMouseButton = (ev.button != 0)
+		const prevMouseDownDate = this.mouseDownDate
 		
 		this.mouseDown = true
+		this.mouseDownDate = new Date()
 		this.mousePos = this.getMousePos(ev)
 		this.mouseTime = this.getTimeAtPos(this.mousePos)
 		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
@@ -209,8 +256,20 @@ export class Editor
 		else if (this.mouseDownAction == Editor.ACTION_SELECTION_TIME)
 		{
 			this.cursorShow = true
-			this.cursorTime = new Range(this.mouseTime, this.mouseTime, false, false)
 			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
+			
+			if (this.mouseDownDate.getTime() - prevMouseDownDate.getTime() > this.doubleClickThreshold)
+				this.cursorTime = new Range(this.mouseTime, this.mouseTime, false, false)
+			else
+			{
+				const anchorPoint = this.tracks[this.mouseDownData.track].getPreviousAnchor(this.cursorTime.min())
+				
+				if (anchorPoint != null)
+				{
+					this.cursorTime = Range.fromPoint(anchorPoint, false, false)
+					this.mouseDownAction = 0
+				}
+			}
 		}
 		else
 		{		
@@ -260,14 +319,7 @@ export class Editor
 				if (this.mouseTrack >= 0)
 					this.cursorTrack = { ...this.cursorTrack, end: this.mouseTrack }
 				
-				const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
-				const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
-				
-				this.selectionClear()
-				
-				if (trackMin >= 0 && trackMax >= 0)
-					for (let t = trackMin; t <= trackMax; t++)
-						this.tracks[t].onSelectRange(this.cursorTime.sorted())
+				this.selectUnderCursor()				
 			}
 			else
 			{
@@ -323,25 +375,161 @@ export class Editor
 	}
 	
 	
+	onMouseWheel(ev)
+	{
+		const snap = new Rational(1, 1024)
+		const prevMouseTime = this.getTimeAtPos(this.mousePos, snap)
+		
+		this.timeScale *= (ev.deltaY > 0 ? 0.8 : 1.25)
+		this.timeScale = Math.max(4, Math.min(2048, this.timeScale))
+		
+		const newMouseTime = this.getTimeAtPos(this.mousePos, snap)
+		
+		this.timeScroll -= (newMouseTime.subtract(prevMouseTime).asFloat())
+		
+		const timeSnapAdjustThresholdUpper = 24
+		const timeSnapAdjustThresholdLower = 8
+		this.timeSnap = this.timeSnapBase
+		
+		if (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
+			while (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
+				this.timeSnap = this.timeSnap.divide(new Rational(2))
+			
+		else if (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
+			while (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
+				this.timeSnap = this.timeSnap.divide(new Rational(1, 2))
+		
+		this.draw()
+	}
+	
+	
 	onKeyDown(ev)
 	{
-		let handled = false
-		
 		this.keyDownData = {}
 		this.keyDownData.stretchRange = this.getSelectionRange()
 		
-		for (const track of this.tracks)
-			handled |= track.onKeyDown(ev)
+		const selectionEmpty = (this.selection.size == 0)
+		const selectionTrackRange = this.getSelectionTrackRange()
+		
+		let handled = false
+		
+		const key = ev.key.toLowerCase()
+		switch (key)
+		{
+			case "arrowright":
+			case "arrowleft":
+			{
+				if (!this.cursorShow)
+					break
+				
+				const offset = (key == "arrowright" ? this.timeSnap : this.timeSnap.negate())
+				
+				if (ev.shiftKey)
+				{
+					this.cursorTime = new Range(this.cursorTime.start, this.cursorTime.end.add(offset), false, false)
+					this.selectUnderCursor()
+					handled = true
+				}
+				else if (selectionEmpty)
+				{
+					const start  = (key == "arrowright" ? this.cursorTime.max() : this.cursorTime.min())
+					this.cursorTime = Range.fromPoint(start.add(offset), false, false)
+					this.cursorTrack = { start: this.cursorTrack.end, end: this.cursorTrack.end }
+					handled = true
+				}
+				break
+			}
+			case "arrowup":
+			case "arrowdown":
+			{
+				if (!this.cursorShow)
+					break
+				
+				const offset = (key == "arrowdown" ? 1 : -1)
+				
+				if (ev.shiftKey)
+				{
+					const track = Math.max(0, Math.min(this.tracks.length - 1, this.cursorTrack.end + offset))
+					this.cursorTrack = { start: this.cursorTrack.start, end: track }
+					this.selectUnderCursor()
+					handled = true
+				}
+				else if (selectionEmpty)
+				{
+					const start = (key == "arrowdown" ? Math.max : Math.min)(this.cursorTrack.start, this.cursorTrack.end)
+					const track = Math.max(0, Math.min(this.tracks.length - 1, start + offset))
+					this.cursorTime = Range.fromPoint(this.cursorTime.end, false, false)
+					this.cursorTrack = { start: track, end: track }
+					handled = true
+				}
+				break
+			}
+			case "enter":
+			case "escape":
+			{
+				const range = this.getSelectionRange()
+				const trackRange = this.getSelectionTrackRange()
+				if (range != null && trackRange != null)
+				{
+					this.cursorTime = Range.fromPoint(range.end, false, false)
+					this.cursorTrack = trackRange
+				}
+				else
+				{
+					this.cursorTime = Range.fromPoint(this.cursorTime.max(), false, false)
+				}
+				
+				this.selectionClear()
+				this.cursorShow = true
+				handled = true
+				break
+			}
+			case "backspace":
+			{
+				if (!selectionEmpty)
+					break
+				
+				let anchorPoint = null
+				for (const track of this.enumerateTracksUnderCursor())
+					anchorPoint = Rational.max(anchorPoint, track.getPreviousDeletionAnchor(this.cursorTime.min()))
+				
+				if (anchorPoint != null)
+				{
+					this.cursorTime = Range.fromPoint(anchorPoint, false, false)
+					handled = true
+				}
+				break
+			}
+		}
+		
+		if (!handled)
+			for (const track of this.tracks)
+				handled |= track.onKeyDown(ev)
 		
 		if (handled)
 		{
 			switch (ev.key.toLowerCase())
 			{
+				case "arrowright":
+				case "arrowleft":
+				{
+					if (this.cursorShow)
+						break
+					
+					const newSelectionRange = this.getSelectionRange()
+					if (newSelectionRange != null)
+						this.cursorTime = Range.fromPoint(newSelectionRange.max(), false, false)
+					
+					break
+				}
 				case "backspace":
 				case "delete":
 				{
 					if (this.keyDownData.stretchRange != null)
-						this.cursorTime = Range.fromPoint(this.keyDownData.stretchRange.min())
+						this.cursorTime = Range.fromPoint(this.keyDownData.stretchRange.min(), false, false)
+					
+					if (selectionTrackRange != null)
+						this.cursorTrack = selectionTrackRange
 					
 					this.cursorShow = true
 					break
@@ -362,7 +550,7 @@ export class Editor
 		this.ctx.fillStyle = "#111"
 		this.ctx.fillRect(0, 0, this.width, this.height)
 		
-		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }))
+		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
 		
 		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
 		{
@@ -381,16 +569,18 @@ export class Editor
 			this.ctx.stroke()
 			
 			const submeasureDuration = curMeter.getSubmeasureDuration()
-			
+			const submeasureBigEnough = submeasureDuration.asFloat() * this.timeScale > 8
+				
 			let time = curMeter.time.add(submeasureDuration)
 			let submeasureCount = 1
 			while (time.lessThan(this.screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
 			{
 				const submeasureX = (time.asFloat() - this.timeScroll) * this.timeScale
+				const isMeasure = submeasureCount % curMeter.numerator == 0
 				
-				if (time.greaterThan(this.screenRange.start))
+				if (time.greaterThan(this.screenRange.start) && (isMeasure || submeasureBigEnough))
 				{
-					this.ctx.strokeStyle = (submeasureCount % curMeter.numerator == 0 ? "#888" : "#444")
+					this.ctx.strokeStyle = (isMeasure ? "#888" : "#444")
 					this.ctx.beginPath()
 					this.ctx.moveTo(submeasureX, 0)
 					this.ctx.lineTo(submeasureX, this.height)
@@ -401,6 +591,9 @@ export class Editor
 				time = time.add(submeasureDuration)
 			}
 		}
+		
+		if (this.cursorShow)
+			this.drawCursorRect()
 		
 		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(this.screenRange))
 		{
@@ -440,15 +633,15 @@ export class Editor
 		
 		if (this.cursorShow)
 		{
-			this.drawCursorBeam(this.cursorTime.start)
-			this.drawCursorBeam(this.cursorTime.end)
+			this.drawCursorBeam(this.cursorTime.min(), true)
+			this.drawCursorBeam(this.cursorTime.max(), false)
 		}
 		
 		this.ctx.restore()
 	}
 	
 	
-	drawCursorBeam(time)
+	drawCursorBeam(time, sideToRight)
 	{
 		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
 		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
@@ -465,10 +658,42 @@ export class Editor
 		this.ctx.lineCap = "round"
 		this.ctx.lineWidth = 3
 		
+		const headSize = 7 * (sideToRight ? 1 : -1)
+		
 		this.ctx.beginPath()
-		this.ctx.moveTo(this.tracks[trackMin].area.x + x, this.tracks[trackMin].area.y)
+		this.ctx.moveTo(this.tracks[trackMin].area.x + x + headSize, this.tracks[trackMin].area.y)
+		this.ctx.lineTo(this.tracks[trackMin].area.x + x, this.tracks[trackMin].area.y)
 		this.ctx.lineTo(this.tracks[trackMax].area.x + x, this.tracks[trackMax].area.y + this.tracks[trackMax].area.h)
+		this.ctx.lineTo(this.tracks[trackMin].area.x + x + headSize, this.tracks[trackMax].area.y + this.tracks[trackMax].area.h)
 		this.ctx.stroke()
+		
+		this.ctx.restore()
+	}
+	
+	
+	drawCursorRect()
+	{
+		const timeMin = this.cursorTime.min()
+		const timeMax = this.cursorTime.max()
+		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
+		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
+		
+		if (trackMin < 0 || trackMax < 0)
+			return
+		
+		this.ctx.save()
+		
+		const xMin = (timeMin.asFloat() - this.timeScroll) * this.timeScale
+		const xMax = (timeMax.asFloat() - this.timeScroll) * this.timeScale
+		
+		this.ctx.fillStyle = "#0af"
+		this.ctx.globalAlpha = 0.15
+		
+		this.ctx.fillRect(
+			this.tracks[trackMin].area.x + xMin,
+			this.tracks[trackMin].area.y,
+			xMax - xMin,
+			this.tracks[trackMax].area.y + this.tracks[trackMax].area.h - this.tracks[trackMin].area.y)
 		
 		this.ctx.restore()
 	}

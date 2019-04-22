@@ -150,6 +150,36 @@ export class Rational
 	{
 		return this.compare(other) >= 0
 	}
+	
+	
+	static max(a, b)
+	{
+		if (a == null && b == null)
+			return null
+		
+		if (a == null)
+			return b
+		
+		if (b == null)
+			return a
+		
+		return a.max(b)
+	}
+	
+	
+	static min(a, b)
+	{
+		if (a == null && b == null)
+			return null
+		
+		if (a == null)
+			return b
+		
+		if (b == null)
+			return a
+		
+		return a.min(b)
+	}
 
 
 	max(other)

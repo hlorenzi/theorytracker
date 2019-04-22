@@ -89,7 +89,20 @@ export class EditorMarkers
 				if (key == "arrowleft")
 					offset = offset.negate()
 				
-				this.alterSelectedKeyChanges((data, origData, changes) => changes.time = data.time.add(offset))
+				if (ev.ctrlKey)
+				{
+					if (offset.greaterThan(new Rational(0)) || this.owner.keyDownData.stretchRange.duration.greaterThan(this.owner.timeSnap))
+					{
+						this.alterSelectedKeyChanges  ((data, origData, changes) => changes.time = data.time.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end))
+						this.alterSelectedMeterChanges((data, origData, changes) => changes.time = data.time.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end))
+					}
+				}
+				else
+				{
+					this.alterSelectedKeyChanges  ((data, origData, changes) => changes.time = data.time.add(offset))
+					this.alterSelectedMeterChanges((data, origData, changes) => changes.time = data.time.add(offset))
+				}
+				
 				this.owner.cursorShow = false
 				return true
 			}
@@ -111,11 +124,22 @@ export class EditorMarkers
 			{
 				for (const keyChange of this.owner.song.keyChanges.enumerate())
 				{
-					if (!this.owner.selection.has(keyChange.id))
-						continue
-					
-					this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
+					if (this.owner.selection.has(keyChange.id))
+					{
+						this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
+						this.owner.selection.delete(keyChange.id)
+					}
 				}
+				
+				for (const meterChange of this.owner.song.meterChanges.enumerate())
+				{
+					if (this.owner.selection.has(meterChange.id))
+					{
+						this.owner.song = this.owner.song.upsertMeterChange(meterChange, true)
+						this.owner.selection.delete(meterChange.id)
+					}
+				}
+				
 				return true
 			}
 		}
@@ -138,8 +162,45 @@ export class EditorMarkers
 	}
 	
 	
+	alterSelectedMeterChanges(fn)
+	{
+		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		{
+			if (!this.owner.selection.has(meterChange.id))
+				continue
+			
+			const origData = this.dragData.get(meterChange.id)
+			
+			let changes = { }
+			fn(meterChange, origData, changes)
+			this.owner.song = this.owner.song.upsertMeterChange(meterChange.withChanges(changes))
+		}
+	}
+	
+	
 	onPan()
 	{
+	}
+	
+	
+	getPreviousAnchor(time)
+	{
+		const prevKeyChange = this.owner.song.keyChanges.findPrevious(time)
+		const prevMeterChange = this.owner.song.meterChanges.findPrevious(time)
+		
+		const anchor1 = (prevKeyChange   == null ? null : prevKeyChange  .time)
+		const anchor2 = (prevMeterChange == null ? null : prevMeterChange.time)
+		
+		return Rational.max(anchor1, anchor2)
+	}
+	
+	
+	getPreviousDeletionAnchor(time)
+	{
+		const anchor1 = this.owner.song.keyChanges  .findPreviousDeletionAnchor(time)
+		const anchor2 = this.owner.song.meterChanges.findPreviousDeletionAnchor(time)
+		
+		return Rational.max(anchor1, anchor2)
 	}
 	
 	

@@ -196,6 +196,35 @@ export class ListOfRanges
 	}
 	
 	
+	findPreviousDeletionAnchor(fromPoint)
+	{
+		const anchor = this.findPrevious(fromPoint)
+		if (anchor == null)
+			return null
+		
+		const anchorRange = this.getRangeFn(anchor)
+		
+		if (anchorRange.end.compare(fromPoint) != 0)
+			return anchorRange.end
+		
+		let nearestPoint = anchorRange.start
+		
+		for (let i = 0; i < this.items.length; i++)
+		{
+			let item = this.items[i]
+			let itemRange = this.getRangeFn(item)
+			
+			if (itemRange.end.compare(anchorRange.end) != 0)
+				continue
+			
+			if (itemRange.start.compare(nearestPoint) > 0)
+				nearestPoint = itemRange.start
+		}
+		
+		return nearestPoint
+	}
+	
+	
 	findNextNotEqual(fromPoint)
 	{
 		let nearestItem = null

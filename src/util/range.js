@@ -10,9 +10,9 @@ export class Range
 	}
 	
 	
-	static fromPoint(p)
+	static fromPoint(p, startInclusive = true, endInclusive = true)
 	{
-		return new Range(p, p, true, true)
+		return new Range(p, p, startInclusive, endInclusive)
 	}
 	
 	

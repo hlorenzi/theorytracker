@@ -42,14 +42,19 @@ export class EditorChords
 		for (const chord of this.owner.song.chords.enumerate())
 		{
 			const rect = this.getChordRect(chord, 0, this.owner.width)
-			if (rect.contains(mousePos))
+			
+			const margin = 4 + (rect.w < 16 ? 16 - rect.w : 0)
+			const stretchMargin = 12
+			
+			const rectWithMargin = new Rect(rect.x - margin, rect.y, rect.w + margin * 2, rect.h)
+			if (rectWithMargin.contains(mousePos))
 			{
 				this.hoverId = chord.id
 				this.hoverRange = chord.range
 				
-				if (mousePos.x < rect.x + 8)
+				if (mousePos.x < rectWithMargin.x + stretchMargin)
 					this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_START
-				else if (mousePos.x > rect.x + rect.w - 8)
+				else if (mousePos.x > rectWithMargin.x + rectWithMargin.w - stretchMargin)
 					this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_END
 				else
 					this.owner.mouseHoverAction = Editor.ACTION_DRAG_TIME
@@ -81,7 +86,14 @@ export class EditorChords
 				if (key == "arrowleft")
 					offset = offset.negate()
 				
-				this.alterSelectedChords((data, origData, changes) => changes.range = data.range.displace(offset))
+				if (ev.ctrlKey)
+				{
+					if (offset.greaterThan(new Rational(0)) || this.owner.keyDownData.stretchRange.duration.greaterThan(this.owner.timeSnap))
+						this.alterSelectedChords((data, origData, changes) => changes.range = data.range.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end).sorted())
+				}
+				else
+					this.alterSelectedChords((data, origData, changes) => changes.range = data.range.displace(offset))
+				
 				this.owner.cursorShow = false
 				return true
 			}
@@ -123,6 +135,7 @@ export class EditorChords
 						continue
 					
 					this.owner.song = this.owner.song.upsertChord(chord, true)
+					this.owner.selection.delete(chord.id)
 				}
 				return true
 			}
@@ -150,6 +163,22 @@ export class EditorChords
 	
 	onPan()
 	{
+	}
+	
+	
+	getPreviousAnchor(time)
+	{
+		const prev = this.owner.song.chords.findPrevious(time)
+		if (!prev)
+			return null
+		
+		return prev.range.end
+	}
+	
+	
+	getPreviousDeletionAnchor(time)
+	{
+		return this.owner.song.chords.findPreviousDeletionAnchor(time)
 	}
 	
 	
