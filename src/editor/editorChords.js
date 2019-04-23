@@ -126,7 +126,6 @@ export class EditorChords
 				this.owner.cursorShow = false
 				return true
 			}
-			case "backspace":
 			case "delete":
 			{
 				for (const chord of this.owner.song.chords.enumerate())
@@ -163,6 +162,48 @@ export class EditorChords
 	
 	onPan()
 	{
+	}
+	
+	
+	sanitizeSelection()
+	{
+		for (const selectedChord of this.owner.song.chords.enumerate())
+		{
+			if (!this.owner.selection.has(selectedChord.id))
+				continue
+			
+			this.owner.song = this.owner.song.upsertChord(selectedChord, true)
+		
+			for (const chord of this.owner.song.chords.enumerateOverlappingRange(selectedChord.range))
+			{
+				const slices = chord.range.slice(selectedChord.range)
+				if (slices.length == 1 && chord.range.start.compare(slices[0].start) == 0 && chord.range.end.compare(slices[0].end) == 0)
+					continue
+				
+				this.owner.song = this.owner.song.upsertChord(chord, true)
+				
+				for (const slice of slices)
+					this.owner.song = this.owner.song.upsertChord(chord.withChanges({ id: -1, range: slice }))
+			}
+			
+			this.owner.song = this.owner.song.upsertChord(selectedChord)
+		}
+	}
+	
+	
+	deleteRange(range)
+	{
+		for (const chord of this.owner.song.chords.enumerateOverlappingRange(range))
+		{
+			const slices = chord.range.slice(range)
+			if (slices.length == 1 && chord.range.start.compare(slices[0].start) == 0 && chord.range.end.compare(slices[0].end) == 0)
+				continue
+			
+			this.owner.song = this.owner.song.upsertChord(chord, true)
+			
+			for (const slice of slices)
+				this.owner.song = this.owner.song.upsertChord(chord.withChanges({ id: -1, range: slice }))
+		}
 	}
 	
 	
@@ -289,11 +330,11 @@ export class EditorChords
 		const color = getColorForScaleDegree(scaleDegree + scaleDegreeRotation)
 		
 		this.owner.ctx.fillStyle = "#eee"
-		this.owner.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, rect.h)
 		
 		this.owner.ctx.fillStyle = color
-		this.owner.ctx.fillRect(rect.x, rect.y, rect.w, this.decorationHeight)
-		this.owner.ctx.fillRect(rect.x, rect.y + rect.h - this.decorationHeight, rect.w, this.decorationHeight)
+		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, this.decorationHeight)
+		this.owner.ctx.fillRect(rect.x + 1, rect.y + rect.h - this.decorationHeight, rect.w - 2, this.decorationHeight)
 		
 		this.owner.ctx.fillStyle = "#000"
 		this.owner.ctx.font = "20px Verdana"

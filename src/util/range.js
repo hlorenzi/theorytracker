@@ -90,7 +90,7 @@ export class Range
 	}
 	
 	
-	sliceBy(slice)
+	slice(slice)
 	{
 		if (slice.start.compare(this.start) <= 0)
 		{

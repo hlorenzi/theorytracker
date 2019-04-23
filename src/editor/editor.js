@@ -73,11 +73,19 @@ export class Editor
 		this.mouseHoverAction = 0
 		this.mouseDownAction = 0
 		
+		this.wheelDate = new Date()
+		
 		this.keyDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
+		this.curSanitizationMode = "ok"
+		this.curSanitizationSelectionSize = 0
 		
 		this.screenRange = new Range(new Rational(0), new Rational(0))
 		
 		this.doubleClickThreshold = 250
+		this.mouseEdgeScrollThreshold = 60
+		this.mouseEdgeScrollSpeed = 1
+		this.cursorEdgeScrollThreshold = new Rational(4)
+		this.cursorEdgeScrollSpeed = 16
 		
 		canvas.onmousedown = (ev) => this.onMouseDown(ev)
 		window.onmousemove = (ev) => this.onMouseMove(ev)
@@ -87,6 +95,25 @@ export class Editor
 		canvas.onwheel = (ev) => this.onMouseWheel(ev)
 		
 		canvas.oncontextmenu = (ev) => { ev.preventDefault() }
+	}
+	
+	
+	resize(w, h)
+	{
+		const prevTimeAtCenter = this.getTimeAtPos({ x: this.width / 2, y: 0 }, new Rational(1, 2048))
+		
+		this.canvas.width = w
+		this.canvas.height = h
+		
+		this.width = w
+		this.height = h
+		
+		const newTimeAtCenter = this.getTimeAtPos({ x: this.width / 2, y: 0 }, new Rational(1, 2048))
+		
+		this.timeScroll += prevTimeAtCenter.subtract(newTimeAtCenter).asFloat()
+		
+		this.refreshLayout()
+		this.draw()
 	}
 	
 	
@@ -115,6 +142,7 @@ export class Editor
 		this.cursorTime = Range.fromPoint(time.add(duration))
 		this.cursorTrack = { start: 1, end: 1 }
 		this.cursorShow = false
+		this.scrollTimeIntoView(this.cursorTime.start)
 		
 		this.selectionClear()
 		this.selection.add(id)
@@ -135,12 +163,23 @@ export class Editor
 		this.cursorTime = Range.fromPoint(time.add(duration))
 		this.cursorTrack = { start: 2, end: 2 }
 		this.cursorShow = false
+		this.scrollTimeIntoView(this.cursorTime.start)
 		
 		this.selectionClear()
 		this.selection.add(id)
 		
 		this.toolboxRefreshFn()
 		this.draw()
+	}
+	
+	
+	scrollTimeIntoView(time)
+	{
+		if (time.compare(this.screenRange.end.subtract(this.timeSnap.multiply(this.cursorEdgeScrollThreshold))) > 0)
+			this.timeScroll = time.subtract(this.screenRange.duration).subtract(this.timeSnap).asFloat() + this.timeSnap.asFloat() * this.cursorEdgeScrollSpeed
+			
+		else if (time.compare(this.screenRange.start.add(this.timeSnap.multiply(this.cursorEdgeScrollThreshold))) < 0)
+			this.timeScroll = time.asFloat() - this.timeSnap.asFloat() * this.cursorEdgeScrollSpeed
 	}
 	
 	
@@ -155,8 +194,26 @@ export class Editor
 	}
 	
 	
+	sanitizeSelection(ignore = null)
+	{
+		if (this.curSanitizationMode == "ok")
+			return
+		
+		if (this.curSanitizationMode == ignore &&
+			this.curSanitizationSelectionSize == this.selection.size)
+			return
+		 
+		this.curSanitizationMode = "ok"
+		this.curSanitizationSelectionSize = this.selection.size
+		
+		for (const track of this.tracks)
+			track.sanitizeSelection()
+	}
+	
+	
 	selectionClear()
 	{
+		this.sanitizeSelection()
 		this.selection.clear()
 	}
 	
@@ -164,6 +221,9 @@ export class Editor
 	selectUnderCursor()
 	{
 		this.selectionClear()
+		
+		if (this.cursorTime.start.compare(this.cursorTime.end) == 0)
+			return
 		
 		for (const track of this.enumerateTracksUnderCursor())
 			track.onSelectRange(this.cursorTime.sorted())
@@ -240,6 +300,7 @@ export class Editor
 		
 		const hoveringSelected = this.tracks.reduce((accum, track) => accum || track.hasSelectedAt({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y }), false)
 		
+		this.sanitizeSelection("mouse")
 		if (!ev.ctrlKey && !hoveringSelected && !isRightMouseButton)
 			this.selectionClear()
 		
@@ -267,6 +328,7 @@ export class Editor
 				if (anchorPoint != null)
 				{
 					this.cursorTime = Range.fromPoint(anchorPoint, false, false)
+					this.scrollTimeIntoView(anchorPoint)
 					this.mouseDownAction = 0
 				}
 			}
@@ -290,6 +352,7 @@ export class Editor
 		if (this.mouseDownAction & Editor.ACTION_PAN)
 			this.canvas.style.cursor = "default"
 		
+		this.sanitizeSelection("mouse")
 		this.toolboxRefreshFn()
 		this.draw()
 	}
@@ -300,6 +363,7 @@ export class Editor
 		if (this.mouseDown)
 			ev.preventDefault()
 		
+		const mousePosPrev = this.mousePos
 		this.mousePos = this.getMousePos(ev)
 		this.mouseTime = this.getTimeAtPos(this.mousePos)
 		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
@@ -319,10 +383,16 @@ export class Editor
 				if (this.mouseTrack >= 0)
 					this.cursorTrack = { ...this.cursorTrack, end: this.mouseTrack }
 				
-				this.selectUnderCursor()				
+				this.selectUnderCursor()
+				
+				if (this.mousePos.x > this.width - this.mouseEdgeScrollThreshold)// && this.mousePos.x > mousePosPrev.x)
+					this.timeScroll += this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
+				else if (this.mousePos.x < this.mouseEdgeScrollThreshold)// && this.mousePos.x < mousePosPrev.x)
+					this.timeScroll -= this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
 			}
 			else
 			{
+				this.curSanitizationMode = "mouse"
 				for (const track of this.tracks)
 					track.onDrag({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
 			}
@@ -343,7 +413,7 @@ export class Editor
 		
 		if (this.mouseDown && (this.mouseDownAction & Editor.ACTION_PAN))
 			this.canvas.style.cursor = "default"
-		else if (this.mouseHoverAction & (Editor.ACTION_DRAG_TIME | Editor.ACTION_DRAG_TIME))
+		else if (this.mouseHoverAction & (Editor.ACTION_DRAG_TIME | Editor.ACTION_DRAG_PITCH))
 			this.canvas.style.cursor = "move"
 		else if (this.mouseHoverAction & (Editor.ACTION_STRETCH_TIME_START | Editor.ACTION_STRETCH_TIME_END))
 			this.canvas.style.cursor = "col-resize"
@@ -377,27 +447,37 @@ export class Editor
 	
 	onMouseWheel(ev)
 	{
-		const snap = new Rational(1, 1024)
-		const prevMouseTime = this.getTimeAtPos(this.mousePos, snap)
+		ev.preventDefault()
 		
-		this.timeScale *= (ev.deltaY > 0 ? 0.8 : 1.25)
-		this.timeScale = Math.max(4, Math.min(2048, this.timeScale))
-		
-		const newMouseTime = this.getTimeAtPos(this.mousePos, snap)
-		
-		this.timeScroll -= (newMouseTime.subtract(prevMouseTime).asFloat())
-		
-		const timeSnapAdjustThresholdUpper = 24
-		const timeSnapAdjustThresholdLower = 8
-		this.timeSnap = this.timeSnapBase
-		
-		if (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
-			while (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
-				this.timeSnap = this.timeSnap.divide(new Rational(2))
+		if (Math.abs(ev.deltaX) > 0)
+		{
+			this.timeScroll += 0.01 * ev.deltaX
+			this.wheelDate = new Date()
+		}
+		else if (new Date().getTime() - this.wheelDate.getTime() > 250)
+		{
+			const snap = new Rational(1, 1024)
+			const prevMouseTime = this.getTimeAtPos(this.mousePos, snap)
 			
-		else if (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
-			while (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
-				this.timeSnap = this.timeSnap.divide(new Rational(1, 2))
+			this.timeScale *= (ev.deltaY > 0 ? 0.8 : 1.25)
+			this.timeScale = Math.max(4, Math.min(2048, this.timeScale))
+			
+			const newMouseTime = this.getTimeAtPos(this.mousePos, snap)
+			
+			this.timeScroll -= (newMouseTime.subtract(prevMouseTime).asFloat())
+			
+			const timeSnapAdjustThresholdUpper = 24
+			const timeSnapAdjustThresholdLower = 8
+			this.timeSnap = this.timeSnapBase
+			
+			if (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
+				while (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
+					this.timeSnap = this.timeSnap.divide(new Rational(2))
+				
+			else if (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
+				while (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
+					this.timeSnap = this.timeSnap.divide(new Rational(1, 2))
+		}
 		
 		this.draw()
 	}
@@ -405,6 +485,8 @@ export class Editor
 	
 	onKeyDown(ev)
 	{
+		this.sanitizeSelection("keyboard")
+		
 		this.keyDownData = {}
 		this.keyDownData.stretchRange = this.getSelectionRange()
 		
@@ -422,12 +504,13 @@ export class Editor
 				if (!this.cursorShow)
 					break
 				
-				const offset = (key == "arrowright" ? this.timeSnap : this.timeSnap.negate())
+				const offset = (key == "arrowright" ? this.timeSnap : this.timeSnap.negate()).multiply(new Rational(ev.ctrlKey ? 16 : 1))
 				
 				if (ev.shiftKey)
 				{
 					this.cursorTime = new Range(this.cursorTime.start, this.cursorTime.end.add(offset), false, false)
 					this.selectUnderCursor()
+					this.scrollTimeIntoView(this.cursorTime.end)
 					handled = true
 				}
 				else if (selectionEmpty)
@@ -435,6 +518,7 @@ export class Editor
 					const start  = (key == "arrowright" ? this.cursorTime.max() : this.cursorTime.min())
 					this.cursorTime = Range.fromPoint(start.add(offset), false, false)
 					this.cursorTrack = { start: this.cursorTrack.end, end: this.cursorTrack.end }
+					this.scrollTimeIntoView(this.cursorTime.start)
 					handled = true
 				}
 				break
@@ -480,35 +564,56 @@ export class Editor
 				}
 				
 				this.selectionClear()
+				this.scrollTimeIntoView(this.cursorTime.max())
 				this.cursorShow = true
 				handled = true
 				break
 			}
 			case "backspace":
 			{
-				if (!selectionEmpty)
+				if (!this.cursorShow)
 					break
 				
-				let anchorPoint = null
-				for (const track of this.enumerateTracksUnderCursor())
-					anchorPoint = Rational.max(anchorPoint, track.getPreviousDeletionAnchor(this.cursorTime.min()))
-				
-				if (anchorPoint != null)
+				if (this.cursorTime.start.compare(this.cursorTime.end) != 0)
 				{
-					this.cursorTime = Range.fromPoint(anchorPoint, false, false)
+					for (const track of this.enumerateTracksUnderCursor())
+						track.deleteRange(new Range(this.cursorTime.min(), this.cursorTime.max(), true, true))
+					
+					this.cursorTime = Range.fromPoint(this.cursorTime.min(), false, false)
+					this.scrollTimeIntoView(this.cursorTime.start)
 					handled = true
+				}
+				else
+				{				
+					let anchorPoint = null
+					for (const track of this.enumerateTracksUnderCursor())
+						anchorPoint = Rational.max(anchorPoint, track.getPreviousDeletionAnchor(this.cursorTime.min()))
+					
+					if (anchorPoint != null)
+					{
+						for (const track of this.enumerateTracksUnderCursor())
+							track.deleteRange(new Range(anchorPoint, this.cursorTime.min(), true, true))
+						
+						this.cursorTime = Range.fromPoint(anchorPoint, false, false)
+						this.scrollTimeIntoView(anchorPoint)
+						handled = true
+					}
 				}
 				break
 			}
 		}
 		
+		this.sanitizeSelection("keyboard")
 		if (!handled)
+		{
+			this.curSanitizationMode = "keyboard"
 			for (const track of this.tracks)
 				handled |= track.onKeyDown(ev)
+		}
 		
 		if (handled)
 		{
-			switch (ev.key.toLowerCase())
+			switch (key)
 			{
 				case "arrowright":
 				case "arrowleft":
@@ -518,15 +623,20 @@ export class Editor
 					
 					const newSelectionRange = this.getSelectionRange()
 					if (newSelectionRange != null)
+					{
 						this.cursorTime = Range.fromPoint(newSelectionRange.max(), false, false)
+						this.scrollTimeIntoView(key == "arrowleft" && !ev.ctrlKey ? newSelectionRange.min() : newSelectionRange.max())
+					}
 					
 					break
 				}
-				case "backspace":
 				case "delete":
 				{
 					if (this.keyDownData.stretchRange != null)
+					{
 						this.cursorTime = Range.fromPoint(this.keyDownData.stretchRange.min(), false, false)
+						this.scrollTimeIntoView(this.cursorTime.start)
+					}
 					
 					if (selectionTrackRange != null)
 						this.cursorTrack = selectionTrackRange

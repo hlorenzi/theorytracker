@@ -119,7 +119,6 @@ export class EditorMarkers
 				this.owner.cursorShow = false
 				return true
 			}
-			case "backspace":
 			case "delete":
 			{
 				for (const keyChange of this.owner.song.keyChanges.enumerate())
@@ -180,6 +179,69 @@ export class EditorMarkers
 	
 	onPan()
 	{
+	}
+	
+	
+	sanitizeSelection()
+	{
+		for (const selectedKeyChange of this.owner.song.keyChanges.enumerate())
+		{
+			if (!this.owner.selection.has(selectedKeyChange.id))
+				continue
+			
+			this.owner.song = this.owner.song.upsertKeyChange(selectedKeyChange, true)
+		
+			for (const keyChange of this.owner.song.keyChanges.enumerate())
+			{
+				if (keyChange.time.compare(selectedKeyChange.time) == 0)
+					this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
+			}
+			
+			this.owner.song = this.owner.song.upsertKeyChange(selectedKeyChange)
+		}
+		
+		for (const selectedMeterChange of this.owner.song.meterChanges.enumerate())
+		{
+			if (!this.owner.selection.has(selectedMeterChange.id))
+				continue
+			
+			this.owner.song = this.owner.song.upsertMeterChange(selectedMeterChange, true)
+		
+			for (const meterChange of this.owner.song.meterChanges.enumerate())
+			{
+				if (meterChange.time.compare(selectedMeterChange.time) == 0)
+					this.owner.song = this.owner.song.upsertMeterChange(meterChange, true)
+			}
+			
+			this.owner.song = this.owner.song.upsertMeterChange(selectedMeterChange)
+		}
+	}
+	
+	
+	deleteRange(range)
+	{
+		const pointIsContained = (p) =>
+		{
+			if (range.start.compare(range.end) == 0)
+				return true
+			
+			if (range.start.compare(p) < 0 && range.end.compare(p) > 0)
+				return true
+			
+			return false
+		}
+		
+		for (const keyChange of this.owner.song.keyChanges.enumerateOverlappingRange(range))
+		{
+			if (pointIsContained(keyChange.time))
+				this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
+		}
+		
+		for (const meterChange of this.owner.song.meterChanges.enumerateOverlappingRange(range))
+		{
+			if (pointIsContained(meterChange.time))
+				this.owner.song = this.owner.song.upsertMeterChange(meterChange, true)
+		}
 	}
 	
 	

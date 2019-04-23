@@ -8,7 +8,7 @@
 	</head>
 	
 	
-	<body style="text-align:center;">
+	<body>
 		<canvas id="canvasMain" width="960" height="540"></canvas>
 		<br>
 		<div id="divToolbox"></div>
@@ -16,6 +16,30 @@
 	
 	
 	<style>
+		html, body
+		{
+			margin: 0;
+			padding: 0;
+			border: 0;
+		}
+		
+		body
+		{
+			text-align: center;
+			overflow: hidden;
+		}
+		
+		#canvasMain
+		{
+			width: 100vw;
+			height: calc(100vh - 16em);
+		}
+		
+		#divToolbox
+		{
+			width: 100vw;
+			height: 16em;
+		}
 	</style>
 	
 

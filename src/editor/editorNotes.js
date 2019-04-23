@@ -66,7 +66,7 @@ export class EditorNotes
 				const rect = this.getNoteRect(note, curKey.key, xStart, xEnd)
 				
 				const margin = 4 + (rect.w < 16 ? 16 - rect.w : 0)
-				const stretchMargin = 12
+				const stretchMargin = 8
 				
 				const rectWithMargin = new Rect(rect.x - margin, rect.y, rect.w + margin * 2, rect.h)
 				if (rectWithMargin.contains(mousePos))
@@ -149,7 +149,6 @@ export class EditorNotes
 				this.owner.cursorShow = false
 				return true
 			}
-			case "backspace":
 			case "delete":
 			{
 				for (const note of this.owner.song.notes.enumerate())
@@ -187,6 +186,51 @@ export class EditorNotes
 	onPan()
 	{
 		this.rowScroll = this.mouseDownRowScroll - (this.owner.mouseDownData.pos.y - this.owner.mousePos.y) / this.rowScale
+	}
+	
+	
+	sanitizeSelection()
+	{
+		for (const selectedNote of this.owner.song.notes.enumerate())
+		{
+			if (!this.owner.selection.has(selectedNote.id))
+				continue
+			
+			this.owner.song = this.owner.song.upsertNote(selectedNote, true)
+		
+			for (const note of this.owner.song.notes.enumerateOverlappingRange(selectedNote.range))
+			{
+				if (note.pitch != selectedNote.pitch)
+					continue
+				
+				const slices = note.range.slice(selectedNote.range)
+				if (slices.length == 1 && note.range.start.compare(slices[0].start) == 0 && note.range.end.compare(slices[0].end) == 0)
+					continue
+				
+				this.owner.song = this.owner.song.upsertNote(note, true)
+				
+				for (const slice of slices)
+					this.owner.song = this.owner.song.upsertNote(note.withChanges({ id: -1, range: slice }))
+			}
+			
+			this.owner.song = this.owner.song.upsertNote(selectedNote)
+		}
+	}
+	
+	
+	deleteRange(range)
+	{
+		for (const note of this.owner.song.notes.enumerateOverlappingRange(range))
+		{
+			const slices = note.range.slice(range)
+			if (slices.length == 1 && note.range.start.compare(slices[0].start) == 0 && note.range.end.compare(slices[0].end) == 0)
+				continue
+			
+			this.owner.song = this.owner.song.upsertNote(note, true)
+			
+			for (const slice of slices)
+				this.owner.song = this.owner.song.upsertNote(note.withChanges({ id: -1, range: slice }))
+		}
 	}
 	
 	
@@ -338,7 +382,7 @@ export class EditorNotes
 		const color = getColorForScaleDegree(scaleDegree + scaleDegreeRotation)
 		
 		this.owner.ctx.fillStyle = color
-		this.owner.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, rect.h)
 		
 		if (this.owner.selection.has(note.id))
 		{

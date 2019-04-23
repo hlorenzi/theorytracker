@@ -17,5 +17,14 @@ document.body.onload = function()
 	}
 	
 	gEditor.toolboxRefreshFn()
-	gEditor.draw()
+	onResize()
+	
+	document.body.onresize = (ev) => onResize()
+}
+
+
+function onResize()
+{
+	const rect = document.getElementById("canvasMain").getBoundingClientRect()
+	gEditor.resize(rect.width, rect.height)
 }
