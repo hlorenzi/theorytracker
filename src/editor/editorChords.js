@@ -106,7 +106,7 @@ export class EditorChords
 				
 				this.alterSelectedChords((data, origData, changes) =>
 				{
-					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales.major.pitches))
+					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales[0].pitches))
 					const scaleDegree = getScaleDegreeForPitch(keyChange.key, data.chord.rootPitch)
 					changes.chord = data.chord.withChanges({ rootPitch: getPitchForScaleDegree(keyChange.key, scaleDegree + offset) })
 				})
@@ -300,8 +300,8 @@ export class EditorChords
 	{
 		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
 		{
-			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales.major.pitches))
-			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales.major.pitches))
+			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
+			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
 			
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
@@ -359,7 +359,9 @@ export class EditorChords
 			this.owner.ctx.fillText(chordData.symbol[2], rect.x + rect.w / 2 + mainStrWidth.width / 2, rect.y + rect.h / 2 - 8, rect.w - 6)
 		}
 		
-		if (this.owner.selection.has(chord.id))
+		const playbackOverlaps = (this.owner.playing && chord.range.overlapsPoint(this.owner.playbackTimeRational))
+		
+		if (playbackOverlaps || (!this.owner.playing && this.owner.selection.has(chord.id)))
 		{
 			this.owner.ctx.globalAlpha = 0.5
 			this.owner.ctx.fillStyle = "#fff"
@@ -368,7 +370,7 @@ export class EditorChords
 			this.owner.ctx.globalAlpha = 1
 		}
 		
-		if (this.hoverId == chord.id)
+		if (playbackOverlaps || this.hoverId == chord.id)
 		{
 			this.owner.ctx.globalAlpha = 0.5
 			this.owner.ctx.fillStyle = "#fee"

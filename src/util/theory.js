@@ -1,3 +1,6 @@
+import { Rational } from "./rational.js"
+
+
 export function mod(x, m)
 {
 	return (x % m + m) % m
@@ -5,53 +8,53 @@ export function mod(x, m)
 
 
 export const scales =
-{
-	major:      { pitches: [0, 2, 4, 5, 7, 9, 11], mode: 0, name: "Major" },
-	dorian:     { pitches: [0, 2, 3, 5, 7, 9, 10], mode: 1, name: "Dorian" },
-	phrygian:   { pitches: [0, 1, 3, 5, 7, 8, 10], mode: 2, name: "Phrygian" },
-	lydian:     { pitches: [0, 2, 4, 6, 7, 9, 11], mode: 3, name: "Lydian" },
-	mixolydian: { pitches: [0, 2, 4, 5, 7, 9, 10], mode: 4, name: "Mixolydian" },
-	minor:      { pitches: [0, 2, 3, 5, 7, 8, 10], mode: 5, name: "Natural Minor" },
-	locrian:    { pitches: [0, 1, 3, 5, 6, 8, 10], mode: 6, name: "Locrian" },
+[
+	{ pitches: [0, 2, 4, 5, 7, 9, 11], mode: 0, name: "Major" },
+	{ pitches: [0, 2, 3, 5, 7, 9, 10], mode: 1, name: "Dorian" },
+	{ pitches: [0, 1, 3, 5, 7, 8, 10], mode: 2, name: "Phrygian" },
+	{ pitches: [0, 2, 4, 6, 7, 9, 11], mode: 3, name: "Lydian" },
+	{ pitches: [0, 2, 4, 5, 7, 9, 10], mode: 4, name: "Mixolydian" },
+	{ pitches: [0, 2, 3, 5, 7, 8, 10], mode: 5, name: "Natural Minor" },
+	{ pitches: [0, 1, 3, 5, 6, 8, 10], mode: 6, name: "Locrian" },
 	
-	doubleHarmonic: { pitches: [0, 1, 4, 5, 7, 8, 11], mode: 0, name: "Double Harmonic Major" },
-}
+	{ pitches: [0, 1, 4, 5, 7, 8, 11], mode: 0, name: "Double Harmonic Major" },
+]
 
 
 export const chords =
 [
-	{ pitches: [0, 4, 7], code: "",  symbol: [false, "", null], name: "Major", startGroup: "Triads" },
-	{ pitches: [0, 3, 7], code: "m", symbol: [true,  "", null], name: "Minor" },
-	{ pitches: [0, 4, 8], code: "+", symbol: [false, "", "+"],  name: "Augmented" },
-	{ pitches: [0, 3, 6], code: "o", symbol: [true,  "", "o"],  name: "Diminished" },
-	{ pitches: [0, 2, 6], code: "oo", symbol: [true,  "", "oo"],  name: "Doubly-Diminished" },
-	{ pitches: [0, 4, 6], code: "b5", symbol: [false,  "", "(b5)"],  name: "Flat-Fifth" },
+	{ pitches: [0, 4, 7], id: "M", symbol: [false, "", null], name: "Major", startGroup: "Triads" },
+	{ pitches: [0, 3, 7], id: "m", symbol: [true,  "", null], name: "Minor" },
+	{ pitches: [0, 4, 8], id: "+", symbol: [false, "", "+"],  name: "Augmented" },
+	{ pitches: [0, 3, 6], id: "o", symbol: [true,  "", "o"],  name: "Diminished" },
+	{ pitches: [0, 2, 6], id: "oo", symbol: [true,  "", "oo"],  name: "Doubly-Diminished" },
+	{ pitches: [0, 4, 6], id: "b5", symbol: [false,  "", "(b5)"],  name: "Flat-Fifth" },
 	
-	{ pitches: [0, 0, 7, 12], code: "5", symbol: [false, "", "5"], name: "Power" },
+	{ pitches: [0, 0, 7, 12], id: "5", symbol: [false, "", "5"], name: "Power" },
 	
-	{ pitches: [0, 4, 7,  9], code: "6",  symbol: [false, "", "6"], name: "Major Sixth", startGroup: "Sixths" },
-	{ pitches: [0, 3, 7,  9], code: "m6", symbol: [true,  "", "6"], name: "Minor Sixth" },
+	{ pitches: [0, 4, 7,  9], id: "6",  symbol: [false, "", "6"], name: "Major Sixth", startGroup: "Sixths" },
+	{ pitches: [0, 3, 7,  9], id: "m6", symbol: [true,  "", "6"], name: "Minor Sixth" },
 	
-	{ pitches: [0, 4, 7, 10], code: "7",     symbol: [false, "",  "7"],  name: "Dominant Seventh", startGroup: "Sevenths" },
-	{ pitches: [0, 4, 7, 11], code: "maj7",  symbol: [false, "",  "M7"], name: "Major Seventh" },
-	{ pitches: [0, 3, 7, 10], code: "m7",    symbol: [true,  "",  "7"],  name: "Minor Seventh" },
-	{ pitches: [0, 3, 7, 11], code: "mmaj7", symbol: [true,  "",  "M7"], name: "Minor-Major Seventh" },
-	{ pitches: [0, 4, 8, 10], code: "+7",    symbol: [false, "+", "7"],  name: "Augmented Seventh" },
-	{ pitches: [0, 4, 8, 11], code: "+maj7", symbol: [false, "+", "M7"], name: "Augmented Major Seventh" },
-	{ pitches: [0, 3, 6,  9], code: "o7",    symbol: [true,  "",  "o7"], name: "Diminished Seventh" },
-	{ pitches: [0, 3, 6, 10], code: "%7",    symbol: [true,  "",  "ø7"], name: "Half-Diminished Seventh" },
+	{ pitches: [0, 4, 7, 10], id: "7",     symbol: [false, "",  "7"],  name: "Dominant Seventh", startGroup: "Sevenths" },
+	{ pitches: [0, 4, 7, 11], id: "maj7",  symbol: [false, "",  "M7"], name: "Major Seventh" },
+	{ pitches: [0, 3, 7, 10], id: "m7",    symbol: [true,  "",  "7"],  name: "Minor Seventh" },
+	{ pitches: [0, 3, 7, 11], id: "mmaj7", symbol: [true,  "",  "M7"], name: "Minor-Major Seventh" },
+	{ pitches: [0, 4, 8, 10], id: "+7",    symbol: [false, "+", "7"],  name: "Augmented Seventh" },
+	{ pitches: [0, 4, 8, 11], id: "+maj7", symbol: [false, "+", "M7"], name: "Augmented Major Seventh" },
+	{ pitches: [0, 3, 6,  9], id: "o7",    symbol: [true,  "",  "o7"], name: "Diminished Seventh" },
+	{ pitches: [0, 3, 6, 10], id: "%7",    symbol: [true,  "",  "ø7"], name: "Half-Diminished Seventh" },
 	
-	{ pitches: [0, 4, 7, 10, 14], code: "9",     symbol: [false, "",  "9"],   name: "Dominant Ninth", startGroup: "Ninths" },
-	{ pitches: [0, 4, 7, 11, 14], code: "maj9",  symbol: [false, "",  "M9"],  name: "Major Ninth" },
-	{ pitches: [0, 3, 7, 10, 14], code: "m9",    symbol: [true,  "",  "9"],   name: "Minor Ninth" },
-	{ pitches: [0, 3, 7, 11, 14], code: "mmaj9", symbol: [true, "",   "M9"],  name: "Minor-Major Ninth" },
-	{ pitches: [0, 3, 7, 10, 13], code: "9?",    symbol: [true, "",   "9?"],  name: "???" },
-	{ pitches: [0, 4, 8, 10, 14], code: "+9",    symbol: [false, "+", "9"],   name: "Augmented Ninth" },
-	{ pitches: [0, 4, 8, 11, 14], code: "+maj9", symbol: [false, "+", "M9"],  name: "Augmented Major Ninth" },
-	{ pitches: [0, 3, 6,  9, 14], code: "o9",    symbol: [true,  "",  "o9"],  name: "Diminished Ninth" },
-	{ pitches: [0, 3, 6,  9, 13], code: "ob9",   symbol: [true,  "",  "o♭9"], name: "Diminished Minor Ninth" },
-	{ pitches: [0, 3, 6, 10, 14], code: "%9",    symbol: [true,  "",  "ø9"],  name: "Half-Diminished Ninth" },
-	{ pitches: [0, 3, 6, 10, 13], code: "%b9",   symbol: [true,  "",  "ø♭9"], name: "Half-Diminished Minor Ninth" },
+	{ pitches: [0, 4, 7, 10, 14], id: "9",     symbol: [false, "",  "9"],   name: "Dominant Ninth", startGroup: "Ninths" },
+	{ pitches: [0, 4, 7, 11, 14], id: "maj9",  symbol: [false, "",  "M9"],  name: "Major Ninth" },
+	{ pitches: [0, 3, 7, 10, 14], id: "m9",    symbol: [true,  "",  "9"],   name: "Minor Ninth" },
+	{ pitches: [0, 3, 7, 11, 14], id: "mmaj9", symbol: [true, "",   "M9"],  name: "Minor-Major Ninth" },
+	{ pitches: [0, 3, 7, 10, 13], id: "9?",    symbol: [true, "",   "9?"],  name: "???" },
+	{ pitches: [0, 4, 8, 10, 14], id: "+9",    symbol: [false, "+", "9"],   name: "Augmented Ninth" },
+	{ pitches: [0, 4, 8, 11, 14], id: "+maj9", symbol: [false, "+", "M9"],  name: "Augmented Major Ninth" },
+	{ pitches: [0, 3, 6,  9, 14], id: "o9",    symbol: [true,  "",  "o9"],  name: "Diminished Ninth" },
+	{ pitches: [0, 3, 6,  9, 13], id: "ob9",   symbol: [true,  "",  "o♭9"], name: "Diminished Minor Ninth" },
+	{ pitches: [0, 3, 6, 10, 14], id: "%9",    symbol: [true,  "",  "ø9"],  name: "Half-Diminished Ninth" },
+	{ pitches: [0, 3, 6, 10, 13], id: "%b9",   symbol: [true,  "",  "ø♭9"], name: "Half-Diminished Minor Ninth" },
 ]
 
 
@@ -75,9 +78,15 @@ export function getChordRecordFromPitches(pitches)
 }
 
 
+export function getChordKindFromId(id)
+{
+	return chords.findIndex(chord => chord.id == id)
+}
+
+
 export function getChordKindFromPitches(pitches)
 {
-	return Object.values(chords).findIndex(chord =>
+	return chords.findIndex(chord =>
 	(
 		chord.pitches.length == pitches.length &&
 		chord.pitches.every((p, index) => p == pitches[index])
@@ -227,6 +236,39 @@ export function getColorRotationForScale(pitches)
 }
 
 
+export function getChordStrummingPattern(meter)
+{
+	// [[beat kind, duration], ...]
+	// Beat kinds:
+	//   0: Full chord
+	//   1: Full chord minus bass
+	//   2: Only bass
+	const one   = [[0, new Rational(1)]]
+	const two   = [[0, new Rational(1)], [1, new Rational(1, 2)], [2, new Rational(1, 2)]]
+	const three = [[0, new Rational(1)], [1, new Rational(1)   ], [1, new Rational(1)   ]]
+	
+	switch (meter.numerator)
+	{
+		case 2: return two
+		case 3: return three
+		case 4: return two.concat(two)
+		case 5: return three.concat(two)
+		case 6: return three.concat(three)
+		case 7: return three.concat(two).concat(two)
+		case 8: return two.concat(two).concat(two).concat(two)
+		case 9: return three.concat(three).concat(three)
+		
+		default:
+		{
+			let pattern = []
+			for (let i = 0; i < meter.numerator; i++)
+				pattern = pattern.concat(one)
+			return pattern
+		}
+	}
+}
+
+
 export class Key
 {
 	constructor(tonicPitch, tonicAccidental, scalePitches)
@@ -337,5 +379,63 @@ export class Chord
 		const colorRotation = getColorRotationForScale(key.scalePitches)
 		const color = getColorForScaleDegree(colorRotation + degree)
 		return color
+	}
+	
+	
+	getPitches()
+	{
+		const chordData = chords[this.kind]
+		
+		const rootPitch = mod(this.rootPitch + this.rootAccidental, 12)
+		
+		let octave = 12 * 4
+		if (rootPitch >= 6)
+			octave -= 12
+		
+		let pitches = []
+		for (let i = 1; i < chordData.pitches.length; i++)
+			pitches.push(rootPitch + chordData.pitches[i])
+		
+		if (chordData.pitches.length <= 3)
+			pitches.push(rootPitch + chordData.pitches[0])
+		
+		pitches = pitches.sort((x, y) => (x > y))
+
+		let sum = pitches.reduce((x, y) => (x + y)) / pitches.length
+		while (sum < 60)
+		{
+			const x = pitches.shift()
+			pitches.push(x + 12)
+			sum += 12 / pitches.length
+		}
+		
+		if (pitches.length >= 4)
+		{
+			pitches[0] += 12
+			pitches[3] -= 12
+		}
+		
+		pitches.unshift(octave + rootPitch)
+		return pitches
+	}
+	
+	
+	getKindId()
+	{
+		return chords[this.kind].id
+	}
+	
+	
+	getModifierArray()
+	{
+		let array = []
+		
+		for (const key of Object.keys(this.modifiers))
+		{
+			if (this.modifiers[key])
+				array.push(key)
+		}
+		
+		return array
 	}
 }

@@ -231,4 +231,21 @@ export class Rational
 		else
 			return integer.toString() + " + " + numerator.toString() + "/" + this.denominator.toString()
 	}
+	
+	
+	toJSONString()
+	{
+		function mod(x, m)
+		{
+			return (x % m + m) % m
+		}
+		
+		return "[" + Math.floor(this.numerator / this.denominator) + "," + mod(this.numerator, this.denominator) + "," + this.denominator + "]"
+	}
+	
+	
+	static fromArray(array)
+	{
+		return new Rational(array[0] * array[2] + array[1], array[2])
+	}
 }

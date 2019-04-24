@@ -55,8 +55,8 @@ export class EditorNotes
 		this.hoverId = -1
 		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
 		{
-			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales.major.pitches))
-			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales.major.pitches))
+			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
+			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
 			
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
@@ -129,7 +129,7 @@ export class EditorNotes
 				
 				this.alterSelectedNotes((data, origData, changes) =>
 				{
-					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales.major.pitches))
+					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales[0].pitches))
 					const scaleDegree = getScaleDegreeForPitch(keyChange.key, data.pitch)
 					changes.pitch = getPitchForScaleDegree(keyChange.key, scaleDegree + offset)
 				})
@@ -318,7 +318,7 @@ export class EditorNotes
 			
 			if (this.owner.mouseDownAction & Editor.ACTION_DRAG_PITCH)
 			{
-				const keyChange = this.owner.song.keyChanges.findActiveAt(noteOrigData.range.start) || new KeyChange(noteOrigData.range.start, new Key(0, 0, scales.major.pitches))
+				const keyChange = this.owner.song.keyChanges.findActiveAt(noteOrigData.range.start) || new KeyChange(noteOrigData.range.start, new Key(0, 0, scales[0].pitches))
 				const scaleDegree = getScaleDegreeForPitch(keyChange.key, noteOrigData.pitch)
 				const newPitch = getPitchForScaleDegree(keyChange.key, scaleDegree + rowOffset)
 				changes.pitch = newPitch
@@ -339,8 +339,8 @@ export class EditorNotes
 	{
 		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
 		{
-			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales.major.pitches))
-			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales.major.pitches))
+			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
+			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
 			
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
@@ -384,7 +384,9 @@ export class EditorNotes
 		this.owner.ctx.fillStyle = color
 		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, rect.h)
 		
-		if (this.owner.selection.has(note.id))
+		const playbackOverlaps = (this.owner.playing && note.range.overlapsPoint(this.owner.playbackTimeRational))
+		
+		if (playbackOverlaps || (!this.owner.playing && this.owner.selection.has(note.id)))
 		{
 			this.owner.ctx.globalAlpha = 0.5
 			this.owner.ctx.fillStyle = "#fff"
@@ -393,7 +395,7 @@ export class EditorNotes
 			this.owner.ctx.globalAlpha = 1
 		}
 		
-		if (this.hoverId == note.id)
+		if (playbackOverlaps || this.hoverId == note.id)
 		{
 			this.owner.ctx.globalAlpha = 0.5
 			this.owner.ctx.fillStyle = "#fee"

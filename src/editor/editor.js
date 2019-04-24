@@ -42,9 +42,9 @@ export class Editor
 			.upsertMeterChange(new MeterChange(new Rational(0, 4), 4, 4))
 			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))
 			
-			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales.major.pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(5, 1, scales.minor.pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales.doubleHarmonic.pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales[0].pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(5, 1, scales[5].pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales[7].pitches)))
 		
 		this.timeScale = 200
 		this.timeScroll = 0
@@ -60,9 +60,13 @@ export class Editor
 		this.refreshLayout()
 		
 		this.cursorTime = new Range(new Rational(0), new Rational(0))
-		this.cursorTrack = { start: 0, end: 0 }
+		this.cursorTrack = { start: 1, end: 1 }
 		this.cursorShow = true
 		this.insertionDuration = new Rational(1, 4)
+		
+		this.playing = false
+		this.playbackTime = 0
+		this.playbackTimeRational = new Rational(0)
 		
 		this.mouseDown = false
 		this.mouseDownDate = new Date()
@@ -120,6 +124,43 @@ export class Editor
 	setSong(song)
 	{
 		this.song = song
+		this.toolboxRefreshFn()
+		this.draw()
+	}
+	
+	
+	setPlayback(playing)
+	{
+		this.playing = playing
+		this.playbackTime = this.cursorTime.min().asFloat()
+		this.scrollTimeIntoView(this.cursorTime.min())
+		
+		this.toolboxRefreshFn()
+		this.draw()
+		
+		this.onPlaybackToggle(this.playing)
+	}
+	
+	
+	rewind()
+	{
+		this.selectionClear()
+		
+		this.cursorTime = new Range(new Rational(0), new Rational(0))
+		this.cursorShow = true
+		this.playbackTime = 0
+		this.playbackTimeRational = new Rational(0)
+		
+		if (this.playing)
+		{
+			this.setPlayback(false)
+			this.setPlayback(true)
+		}
+		else
+			this.scrollTimeIntoView(this.cursorTime.start)
+		
+		this.toolboxRefreshFn()
+		this.draw()
 	}
 	
 	
@@ -180,6 +221,18 @@ export class Editor
 			
 		else if (time.compare(this.screenRange.start.add(this.timeSnap.multiply(this.cursorEdgeScrollThreshold))) < 0)
 			this.timeScroll = time.asFloat() - this.timeSnap.asFloat() * this.cursorEdgeScrollSpeed
+	}
+	
+	
+	scrollPlaybackIntoView(time)
+	{
+		const margin = this.timeSnap.multiply(new Rational(16))
+		
+		if (time.compare(this.screenRange.end.subtract(margin)) > 0)
+			this.timeScroll = time.subtract(margin).asFloat()
+			
+		else if (time.compare(this.screenRange.start.add(margin)) < 0)
+			this.timeScroll = time.subtract(margin).asFloat()
 	}
 	
 	
@@ -368,6 +421,14 @@ export class Editor
 		this.mouseTime = this.getTimeAtPos(this.mousePos)
 		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
 		
+		const edgeAutoScroll = () =>
+		{
+			if (this.mousePos.x > this.width - this.mouseEdgeScrollThreshold)// && this.mousePos.x > mousePosPrev.x)
+				this.timeScroll += this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
+			else if (this.mousePos.x < this.mouseEdgeScrollThreshold)// && this.mousePos.x < mousePosPrev.x)
+				this.timeScroll -= this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
+		}
+		
 		if (this.mouseDown)
 		{
 			if (this.mouseDownAction == Editor.ACTION_PAN)
@@ -384,17 +445,15 @@ export class Editor
 					this.cursorTrack = { ...this.cursorTrack, end: this.mouseTrack }
 				
 				this.selectUnderCursor()
-				
-				if (this.mousePos.x > this.width - this.mouseEdgeScrollThreshold)// && this.mousePos.x > mousePosPrev.x)
-					this.timeScroll += this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
-				else if (this.mousePos.x < this.mouseEdgeScrollThreshold)// && this.mousePos.x < mousePosPrev.x)
-					this.timeScroll -= this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
+				edgeAutoScroll()
 			}
 			else
 			{
 				this.curSanitizationMode = "mouse"
 				for (const track of this.tracks)
 					track.onDrag({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
+				
+				edgeAutoScroll()
 			}
 		}
 		else
@@ -548,6 +607,12 @@ export class Editor
 				}
 				break
 			}
+			case " ":
+			{
+				this.setPlayback(!this.playing)
+				handled = true
+				break
+			}
 			case "enter":
 			case "escape":
 			{
@@ -661,6 +726,7 @@ export class Editor
 		this.ctx.fillRect(0, 0, this.width, this.height)
 		
 		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
+		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, new Rational(1, 64))
 		
 		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
 		{
@@ -702,7 +768,7 @@ export class Editor
 			}
 		}
 		
-		if (this.cursorShow)
+		if (this.cursorShow && !this.playing)
 			this.drawCursorRect()
 		
 		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(this.screenRange))
@@ -741,11 +807,14 @@ export class Editor
 			this.ctx.restore()
 		}
 		
-		if (this.cursorShow)
+		if (this.cursorShow && !this.playing)
 		{
 			this.drawCursorBeam(this.cursorTime.min(), true)
 			this.drawCursorBeam(this.cursorTime.max(), false)
 		}
+		
+		if (this.playing)
+			this.drawPlaybackBeam(this.playbackTime)
 		
 		this.ctx.restore()
 	}
@@ -804,6 +873,29 @@ export class Editor
 			this.tracks[trackMin].area.y,
 			xMax - xMin,
 			this.tracks[trackMax].area.y + this.tracks[trackMax].area.h - this.tracks[trackMin].area.y)
+		
+		this.ctx.restore()
+	}
+	
+	
+	drawPlaybackBeam(time)
+	{
+		const trackMin = 0
+		const trackMax = this.tracks.length - 1
+		
+		this.ctx.save()
+		
+		const offset = time - this.timeScroll
+		const x = offset * this.timeScale
+		
+		this.ctx.strokeStyle = "#f00"
+		this.ctx.lineCap = "round"
+		this.ctx.lineWidth = 3
+		
+		this.ctx.beginPath()
+		this.ctx.moveTo(this.tracks[trackMin].area.x + x, this.tracks[trackMin].area.y)
+		this.ctx.lineTo(this.tracks[trackMax].area.x + x, this.tracks[trackMax].area.y + this.tracks[trackMax].area.h)
+		this.ctx.stroke()
 		
 		this.ctx.restore()
 	}

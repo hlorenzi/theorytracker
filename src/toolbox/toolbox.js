@@ -1,7 +1,31 @@
 import React from "react"
-import { KeyChange } from "../song/song.js"
+import { Song, KeyChange } from "../song/song.js"
 import { Key, scales, Chord, chords, getScaleDegreeForPitch, getPitchForScaleDegree, getNameForPitch, getColorForScaleDegree, getColorRotationForScale, getChordKindFromPitches, getRomanNumeralScaleDegreeStr } from "../util/theory.js"
 import { Rational } from "../util/rational.js"
+
+
+function PlaybackToolbox(props)
+{
+	return <div style={{ display:"grid", gridTemplate:"0fr 0fr / 0fr 0fr 0fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
+		<button style={{ width:"4em", height:"4em" }} onClick={() => props.onPlaybackToggle()}>
+			<span style={{ fontSize:"3em" }}>{ props.editor.playing ? "■" : "▶" }</span>
+		</button>
+		<button style={{ width:"4.5em", height:"3em" }} onClick={() => props.onRewind()}>
+			<span style={{ fontSize:"2em" }}>◀◀</span>
+		</button>
+		<div>
+			BPM: <input type="number" value={props.editor.song.baseBpm} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
+		</div>
+		
+		<button onClick={() => props.onSaveJSON()}>
+			[Debug] Save JSON
+		</button>
+		
+		<button onClick={() => props.onLoadJSON()}>
+			[Debug] Load JSON
+		</button>
+	</div>
+}
 
 
 function LengthToolbox(props)
@@ -236,19 +260,54 @@ function ChordToolbox(props)
 
 export default function Toolbox(props)
 {
-	const keyChange = props.editor.song.keyChanges.findActiveAt(props.editor.cursorTime.start) || new KeyChange(new Rational(0), new Key(0, 0, scales.major.pitches))
+	const keyChange = props.editor.song.keyChanges.findActiveAt(props.editor.cursorTime.start) || new KeyChange(new Rational(0), new Key(0, 0, scales[0].pitches))
 	
+	const onSaveJSON = () => saveJSON(props.editor.song)
+	const onLoadJSON = () => loadJSON(props.editor)
+	const onPlaybackToggle = () => props.editor.setPlayback(!props.editor.playing)
+	const onRewind = () => props.editor.rewind()
+	const onSetBpm = (bpm) => props.editor.setSong(props.editor.song.withChanges({ baseBpm: bpm }))
 	const onSelectNote = (pitch) => props.editor.insertNoteAtCursor(pitch)
 	const onSelectChord = (chord) => props.editor.insertChordAtCursor(chord)
 	
 	const callbacks =
 	{
+		onSaveJSON,
+		onLoadJSON,
+		onPlaybackToggle,
+		onRewind,
+		onSetBpm,
 		onSelectNote,
 		onSelectChord,
 	}
 	
 	return <div style={{ fontFamily:"Verdana", fontSize:"18px" }}>
-		{ props.editor.cursorTrack.start != 1 ? null : <NoteToolbox songKey={ keyChange.key } {...callbacks}/> }
-		{ props.editor.cursorTrack.start != 2 ? null : <ChordToolbox songKey={ keyChange.key } {...callbacks}/> }
+		<div style={{ display:"grid", gridTemplate:"0fr / 0fr 1fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"top", justifyItems:"center" }}>
+			<PlaybackToolbox editor={ props.editor } {...callbacks}/>
+			{ props.editor.cursorTrack.start != 1 ? null : <NoteToolbox songKey={ keyChange.key } {...callbacks}/> }
+			{ props.editor.cursorTrack.start != 2 ? null : <ChordToolbox songKey={ keyChange.key } {...callbacks}/> }
+		</div>
 	</div>
+}
+
+
+function saveJSON(song)
+{
+	const songData = song.getJSON()
+	const newWindow = window.open()
+	newWindow.document.write("<code style='white-space:pre'>")
+	newWindow.document.write(songData)
+	newWindow.document.write("</code>")
+}
+
+
+function loadJSON(editor)
+{
+	const str = window.prompt("Paste JSON song data:", "")
+	if (str == null)
+		return
+	
+	const json = JSON.parse(str)
+	editor.setSong(Song.fromJSON(json))
+	editor.rewind()
 }
