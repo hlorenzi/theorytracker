@@ -68,7 +68,10 @@ function onPlaybackStep(timestamp)
 		
 		gSynth.process(deltaTime / 1000)
 		gEditor.playbackTime += deltaTime / 1000 * measuresPerSecond
-		gEditor.scrollPlaybackIntoView(gEditor.playbackTimeRational)
+		
+		if (gEditor.playing)
+			gEditor.scrollPlaybackIntoView(gEditor.playbackTimeRational)
+		
 		gEditor.draw()
 	}
 	

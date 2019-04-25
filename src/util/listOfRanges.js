@@ -22,6 +22,12 @@ export class ListOfRanges
 	}
 	
 	
+	get length()
+	{
+		return this.items.length
+	}
+	
+	
 	add(item)
 	{
 		return this.clonedWithItems([ ...this.items, item ])

@@ -2,6 +2,7 @@ import { ListOfRanges } from "../util/listOfRanges.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Key, scales, Chord, getChordKindFromId } from "../util/theory.js"
+import { MidiFile } from "../util/midi.js"
 
 
 export class Song
@@ -228,6 +229,111 @@ export class Song
 				meterChange[1],
 				meterChange[2]))
 		
+		return song
+	}
+	
+	
+	static fromMIDI(bytes)
+	{
+		const midi = MidiFile.fromBytes(bytes)
+		console.log(midi)
+		
+		const findFirstEvent = (kind) =>
+		{
+			for (const track of midi.tracks)
+				for (const ev of track.events)
+					if (ev.kind == kind)
+						return ev
+					
+			return null
+		}
+		
+		let song = new Song()
+		
+		const tempoEv = findFirstEvent("setTempo")
+		const msPerQuarterNote = (tempoEv ? tempoEv.msPerQuarterNote : 500000)
+		song.baseBpm = Math.round(60 * 1000 * 1000 / msPerQuarterNote)
+		
+		for (const track of midi.tracks)
+		{
+			for (const noteOn of track.events)
+			{
+				if (noteOn.kind != "noteOn" || noteOn.channel == 9)
+					continue
+				
+				let noteOff = null
+				for (const ev of track.events)
+				{
+					if (ev.kind != "noteOff" || ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
+						continue
+					
+					if (noteOff == null || ev.time < noteOff.time)
+					{
+						noteOff = ev
+						break
+					}
+				}
+				
+				for (const ev of track.events)
+				{
+					if (ev.kind != "noteOn" || ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
+						continue
+					
+					if (noteOff == null || ev.time < noteOff.time)
+					{
+						noteOff = ev
+						break
+					}
+				}
+				
+				if (!noteOff)
+					continue
+				
+				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				
+				song = song.upsertNote(new Note(new Range(onTick, offTick), noteOn.key))
+			}
+		}
+		
+		for (const track of midi.tracks)
+		{
+			for (const ev of track.events)
+			{
+				if (ev.kind != "setKeySignature")
+					continue
+				
+				const tonicPitches     = [ 0,  7,  2,  9,  4, 11, 5, 0, 7, 2, 9, 4, 11, 5, 0, 7, 2, 9, 4, 11]
+				const tonicAccidentals = [-1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0,  0, 1, 1, 1, 1, 1, 1,  1]
+				const index = ev.accidentals + 7 + (ev.scale == 0 ? 0 : 2)
+				
+				if (index < 0 || index >= tonicPitches.length)
+					continue
+				
+				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				song = song.upsertKeyChange(new KeyChange(time, new Key(tonicPitches[index], tonicAccidentals[index], scales[ev.scale == 0 ? 0 : 5].pitches)))
+			}
+		}
+		
+		for (const track of midi.tracks)
+		{
+			for (const ev of track.events)
+			{
+				if (ev.kind != "setTimeSignature")
+					continue
+				
+				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				song = song.upsertMeterChange(new MeterChange(time, ev.numerator, ev.denominator))
+			}
+		}
+		
+		if (!song.keyChanges.findActiveAt(new Rational(0)))
+			song = song.upsertKeyChange(new KeyChange(new Rational(0), new Key(0, 0, scales[0].pitches)))
+		
+		if (!song.meterChanges.findActiveAt(new Rational(0)))
+			song = song.upsertMeterChange(new MeterChange(new Rational(0), 4, 4))
+		
+		console.log(song)
 		return song
 	}
 }

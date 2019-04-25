@@ -133,7 +133,9 @@ export class Editor
 	{
 		this.playing = playing
 		this.playbackTime = this.cursorTime.min().asFloat()
-		this.scrollTimeIntoView(this.cursorTime.min())
+		
+		if (playing)
+			this.scrollTimeIntoView(this.cursorTime.min())
 		
 		this.toolboxRefreshFn()
 		this.draw()

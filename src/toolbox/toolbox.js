@@ -24,6 +24,10 @@ function PlaybackToolbox(props)
 		<button onClick={() => props.onLoadJSON()}>
 			[Debug] Load JSON
 		</button>
+		
+		<div>
+			Load MIDI: <input type="file" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
+		</div>
 	</div>
 }
 
@@ -264,6 +268,7 @@ export default function Toolbox(props)
 	
 	const onSaveJSON = () => saveJSON(props.editor.song)
 	const onLoadJSON = () => loadJSON(props.editor)
+	const onLoadMIDI = (elem) => loadMIDI(props.editor, elem)
 	const onPlaybackToggle = () => props.editor.setPlayback(!props.editor.playing)
 	const onRewind = () => props.editor.rewind()
 	const onSetBpm = (bpm) => props.editor.setSong(props.editor.song.withChanges({ baseBpm: bpm }))
@@ -274,6 +279,7 @@ export default function Toolbox(props)
 	{
 		onSaveJSON,
 		onLoadJSON,
+		onLoadMIDI,
 		onPlaybackToggle,
 		onRewind,
 		onSetBpm,
@@ -310,4 +316,20 @@ function loadJSON(editor)
 	const json = JSON.parse(str)
 	editor.setSong(Song.fromJSON(json))
 	editor.rewind()
+}
+
+
+function loadMIDI(editor, elem)
+{
+	if (elem.files.length != 1)
+		return
+	
+	let reader = new FileReader()
+	reader.readAsArrayBuffer(elem.files[0])
+	reader.onload = () => 
+	{
+		const bytes = new Uint8Array(reader.result)		
+		editor.setSong(Song.fromMIDI(bytes))
+		editor.rewind()
+	}
 }
