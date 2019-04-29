@@ -75,6 +75,9 @@ function onPlaybackStep(timestamp)
 		gEditor.draw()
 	}
 	
+	if (gEditor.playbackTime > gEditor.song.range.end.asFloat())
+		gEditor.setPlayback(false)
+	
 	if (gEditor.playing)
 		window.requestAnimationFrame(onPlaybackStep)
 }

@@ -11,6 +11,7 @@ export class Song
 	{
 		this.nextId = 1
 		this.baseBpm = 120
+		this.range = new Range(new Rational(0), new Rational(0))
 		this.notes = new ListOfRanges(n => n.range)
 		this.chords = new ListOfRanges(n => n.range)
 		this.meterChanges = new ListOfRanges(n => n.getTimeAsRange())
@@ -42,11 +43,20 @@ export class Song
 			nextId++
 		}
 		
+		let range = this.range
+		if (!remove)
+		{
+			if (elem.range)
+				range = range.merge(elem.range)
+			else if (elem.time)
+				range = range.merge(Range.fromPoint(elem.time))
+		}
+		
 		let list = this[listField].removeById(elem.id)
 		if (!remove)
 			list = list.add(elem)
 		
-		return this.withChanges({ nextId, [listField]: list })
+		return this.withChanges({ nextId, range, [listField]: list })
 	}
 	
 	
@@ -289,8 +299,8 @@ export class Song
 				if (!noteOff)
 					continue
 				
-				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
-				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
+				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
 				
 				song = song.upsertNote(new Note(new Range(onTick, offTick), noteOn.key))
 			}
@@ -310,7 +320,7 @@ export class Song
 				if (index < 0 || index >= tonicPitches.length)
 					continue
 				
-				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
 				song = song.upsertKeyChange(new KeyChange(time, new Key(tonicPitches[index], tonicAccidentals[index], scales[ev.scale == 0 ? 0 : 5].pitches)))
 			}
 		}
@@ -322,7 +332,7 @@ export class Song
 				if (ev.kind != "setTimeSignature")
 					continue
 				
-				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 256))
+				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
 				song = song.upsertMeterChange(new MeterChange(time, ev.numerator, ev.denominator))
 			}
 		}

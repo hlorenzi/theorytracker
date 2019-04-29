@@ -727,6 +727,15 @@ export class Editor
 		this.ctx.fillStyle = "#111"
 		this.ctx.fillRect(0, 0, this.width, this.height)
 		
+		const songStartX = (this.song.range.start.asFloat() - this.timeScroll) * this.timeScale
+		const songEndX   = (this.song.range.end  .asFloat() - this.timeScroll) * this.timeScale
+		
+		this.ctx.fillStyle = "#383838"
+		if (songStartX > 0)
+			this.ctx.fillRect(0, 0, songStartX, this.height)
+		if (songEndX < this.width)
+			this.ctx.fillRect(songEndX, 0, this.width - songEndX, this.height)
+		
 		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
 		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, new Rational(1, 64))
 		

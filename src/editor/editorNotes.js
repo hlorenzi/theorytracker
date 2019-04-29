@@ -3,7 +3,7 @@ import { Editor } from "./editor.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales, getTonicPitchRowOffset, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
+import { Key, scales, getTonicPitchRowOffset, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree, getFillStyleForScaleDegree } from "../util/theory.js"
 
 
 export class EditorNotes
@@ -358,6 +358,35 @@ export class EditorNotes
 				this.owner.ctx.stroke()
 			}
 			
+			this.owner.ctx.globalAlpha = 0.1
+			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			{
+				const pitches = chord.chord.getPitches()
+				
+				const chordXStart = Math.max(xStart, (chord.range.start.asFloat() - this.owner.timeScroll) * this.owner.timeScale)
+				const chordXEnd   = Math.min(xEnd,   (chord.range.end  .asFloat() - this.owner.timeScroll) * this.owner.timeScale)
+				
+				for (const pitch of pitches)
+				{
+					const noteRow = this.getNoteRow(60 + pitch, curKey.key)
+					const scaleDegree = getScaleDegreeForPitch(curKey.key, pitch)
+					const scaleDegreeRotation = getColorRotationForScale(curKey.key.scalePitches)
+					const fillStyle = getFillStyleForScaleDegree(this.owner.ctx, scaleDegree + scaleDegreeRotation)
+					
+					for (let i = -4; i <= 4; i++)
+					{
+						const h = this.rowScale
+						const y = this.area.h / 2 + (this.rowScroll - noteRow - 1 + i * 7) * this.rowScale + this.rowScale / 2
+						
+						this.owner.ctx.fillStyle = fillStyle
+						this.owner.ctx.fillRect(chordXStart, y - h / 2, chordXEnd - chordXStart, h)
+						this.owner.ctx.fillStyle = "#fff"
+						this.owner.ctx.fillRect(chordXStart, y - h / 2, chordXEnd - chordXStart, h)
+					}
+				}
+			}
+			this.owner.ctx.globalAlpha = 1
+			
 			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
 			{
 				if (!this.owner.selection.has(note.id))
@@ -379,10 +408,9 @@ export class EditorNotes
 		
 		const scaleDegree = getScaleDegreeForPitch(key, note.pitch)
 		const scaleDegreeRotation = getColorRotationForScale(key.scalePitches)
-		const color = getColorForScaleDegree(scaleDegree + scaleDegreeRotation)
 		
-		this.owner.ctx.fillStyle = color
-		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, rect.h)
+		this.owner.ctx.fillStyle = getFillStyleForScaleDegree(this.owner.ctx, scaleDegree + scaleDegreeRotation)
+		this.owner.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 		
 		const playbackOverlaps = (this.owner.playing && note.range.overlapsPoint(this.owner.playbackTimeRational))
 		
@@ -406,10 +434,10 @@ export class EditorNotes
 	}
 	
 	
-	getNoteRow(note, key)
+	getNoteRow(pitch, key)
 	{
 		const tonicRowOffset = getTonicPitchRowOffset(key.tonicPitch + key.tonicAccidental)
-		const scaleDegree = getScaleDegreeForPitch(key, note.pitch)
+		const scaleDegree = getScaleDegreeForPitch(key, pitch)
 		
 		return tonicRowOffset + scaleDegree
 	}
@@ -417,19 +445,24 @@ export class EditorNotes
 	
 	getNoteRect(note, key, xStart, xEnd)
 	{
-		const noteRow = this.getNoteRow(note, key)
+		const noteRow = this.getNoteRow(note.pitch, key)
 		
 		const timeOffsetFromScroll1 = note.range.start.asFloat() - this.owner.timeScroll
 		const timeOffsetFromScroll2 = note.range.end  .asFloat() - this.owner.timeScroll
 		const noteOrigX1 = timeOffsetFromScroll1 * this.owner.timeScale
 		const noteOrigX2 = timeOffsetFromScroll2 * this.owner.timeScale
-		const noteX1 = Math.max(noteOrigX1, xStart)
-		const noteX2 = Math.min(noteOrigX2, xEnd)
-		const noteW = noteX2 - noteX1
 		const noteY = this.area.h / 2 - (noteRow + 1 - this.rowScroll) * this.rowScale
+		
+		let noteX1 = Math.max(noteOrigX1, xStart)
+		let noteX2 = Math.min(noteOrigX2, xEnd)
 		
 		const cutStart = noteOrigX1 < noteX1
 		const cutEnd   = noteOrigX2 > noteX2
+		
+		if (!cutStart) noteX1 += 1
+		if (!cutEnd)   noteX2 -= 1
+		
+		const noteW = noteX2 - noteX1
 		
 		return Object.assign(new Rect(noteX1, noteY, noteW, this.rowScale), { cutStart, cutEnd })
 	}

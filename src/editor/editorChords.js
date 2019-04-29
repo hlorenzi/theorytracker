@@ -3,7 +3,7 @@ import { Editor } from "./editor.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales, chords, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree } from "../util/theory.js"
+import { Key, scales, chords, drawChordOnCanvas, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree, getFillStyleForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -324,60 +324,11 @@ export class EditorChords
 	drawChord(chord, key, xStart, xEnd)
 	{
 		const rect = this.getChordRect(chord, xStart, xEnd)
-		
-		const scaleDegree = getScaleDegreeForPitch(key, chord.chord.rootPitch + chord.chord.rootAccidental)
-		const scaleDegreeRotation = getColorRotationForScale(key.scalePitches)
-		const color = getColorForScaleDegree(scaleDegree + scaleDegreeRotation)
-		
-		this.owner.ctx.fillStyle = "#eee"
-		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, rect.h)
-		
-		this.owner.ctx.fillStyle = color
-		this.owner.ctx.fillRect(rect.x + 1, rect.y, rect.w - 2, this.decorationHeight)
-		this.owner.ctx.fillRect(rect.x + 1, rect.y + rect.h - this.decorationHeight, rect.w - 2, this.decorationHeight)
-		
-		this.owner.ctx.fillStyle = "#000"
-		this.owner.ctx.font = "20px Verdana"
-		this.owner.ctx.textAlign = "center"
-		this.owner.ctx.textBaseline = "middle"
-		
-		const chordData = chords[chord.chord.kind]
-		
-		let mainStr = getRomanNumeralScaleDegreeStr(scaleDegree, chord.chord.rootAccidental)
-		if (chordData.symbol[0])
-			mainStr = mainStr.toLowerCase()
-		
-		mainStr = mainStr + chordData.symbol[1]
-		
-		this.owner.ctx.fillText(mainStr, rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w - 6)
-		
-		if (chordData.symbol[2])
-		{
-			const mainStrWidth = this.owner.ctx.measureText(mainStr)
-			this.owner.ctx.font = "15px Verdana"
-			this.owner.ctx.textAlign = "left"
-			this.owner.ctx.fillText(chordData.symbol[2], rect.x + rect.w / 2 + mainStrWidth.width / 2, rect.y + rect.h / 2 - 8, rect.w - 6)
-		}
-		
 		const playbackOverlaps = (this.owner.playing && chord.range.overlapsPoint(this.owner.playbackTimeRational))
-		
-		if (playbackOverlaps || (!this.owner.playing && this.owner.selection.has(chord.id)))
-		{
-			this.owner.ctx.globalAlpha = 0.5
-			this.owner.ctx.fillStyle = "#fff"
-			this.owner.ctx.fillRect(rect.x + (rect.cutStart ? 0 : 3), rect.y + 3, rect.w - (rect.cutEnd ? 0 : 3) - (rect.cutStart ? 0 : 3), rect.h - 6)
+		const selected = (playbackOverlaps || (!this.owner.playing && this.owner.selection.has(chord.id)))
+		const hovering = (playbackOverlaps || this.hoverId == chord.id)
 			
-			this.owner.ctx.globalAlpha = 1
-		}
-		
-		if (playbackOverlaps || this.hoverId == chord.id)
-		{
-			this.owner.ctx.globalAlpha = 0.5
-			this.owner.ctx.fillStyle = "#fee"
-			this.owner.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
-			
-			this.owner.ctx.globalAlpha = 1
-		}
+		drawChordOnCanvas(this.owner.ctx, rect, chord.chord, key, selected, hovering)
 	}
 	
 	
@@ -388,12 +339,17 @@ export class EditorChords
 		
 		const chordOrigX1 = timeOffsetFromScroll1 * this.owner.timeScale
 		const chordOrigX2 = timeOffsetFromScroll2 * this.owner.timeScale
-		const chordX1 = Math.max(chordOrigX1, xStart)
-		const chordX2 = Math.min(chordOrigX2, xEnd)
-		const chordW = chordX2 - chordX1
+		
+		let chordX1 = Math.max(chordOrigX1, xStart)
+		let chordX2 = Math.min(chordOrigX2, xEnd)
 		
 		const cutStart = chordOrigX1 < chordX1
 		const cutEnd   = chordOrigX2 > chordX2
+		
+		if (!cutStart) chordX1 += 1
+		if (!cutEnd)   chordX2 -= 1
+		
+		const chordW = chordX2 - chordX1
 		
 		return Object.assign(new Rect(chordX1, 0, chordW, this.area.h), { cutStart, cutEnd })
 	}

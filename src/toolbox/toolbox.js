@@ -1,32 +1,39 @@
 import React from "react"
 import { Song, KeyChange } from "../song/song.js"
-import { Key, scales, Chord, chords, getScaleDegreeForPitch, getPitchForScaleDegree, getNameForPitch, getColorForScaleDegree, getColorRotationForScale, getChordKindFromPitches, getRomanNumeralScaleDegreeStr } from "../util/theory.js"
+import { Key, scales, Chord, chords, drawChordOnCanvas, getScaleDegreeForPitch, getPitchForScaleDegree, getNameForPitch, getColorForScaleDegree, getColorRotationForScale, getChordKindFromPitches, getRomanNumeralScaleDegreeStr } from "../util/theory.js"
 import { Rational } from "../util/rational.js"
+import { Rect } from "../util/rect.js"
 
 
 function PlaybackToolbox(props)
 {
-	return <div style={{ display:"grid", gridTemplate:"0fr 0fr / 0fr 0fr 0fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
-		<button style={{ width:"4em", height:"4em" }} onClick={() => props.onPlaybackToggle()}>
-			<span style={{ fontSize:"3em" }}>{ props.editor.playing ? "■" : "▶" }</span>
-		</button>
-		<button style={{ width:"4.5em", height:"3em" }} onClick={() => props.onRewind()}>
-			<span style={{ fontSize:"2em" }}>◀◀</span>
-		</button>
-		<div>
-			BPM: <input type="number" value={props.editor.song.baseBpm} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
+	return <div style={{ display:"grid", gridTemplate:"0fr 0fr / 0fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
+		<div style={{ display:"grid", gridTemplate:"0fr / 0fr 0fr 0fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
+			<button style={{ width:"4em", height:"4em" }} onClick={() => props.onPlaybackToggle()}>
+				<span style={{ fontSize:"3em" }}>{ props.editor.playing ? "■" : "▶" }</span>
+			</button>
+			<button style={{ width:"4.5em", height:"3em" }} onClick={() => props.onRewind()}>
+				<span style={{ fontSize:"2em" }}>◀◀</span>
+			</button>
+			<div>
+				BPM: <input type="number" value={props.editor.song.baseBpm} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
+			</div>
 		</div>
 		
-		<button onClick={() => props.onSaveJSON()}>
-			[Debug] Save JSON
-		</button>
-		
-		<button onClick={() => props.onLoadJSON()}>
-			[Debug] Load JSON
-		</button>
-		
 		<div>
-			Load MIDI: <input type="file" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
+			<button onClick={() => props.onSaveJSON()}>
+				[Debug] Save JSON
+			</button>
+			<br/>
+			
+			<button onClick={() => props.onLoadJSON()}>
+				[Debug] Load JSON
+			</button>
+			<br/>
+			
+			<div>
+				Load MIDI: <input type="file" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
+			</div>
 		</div>
 	</div>
 }
@@ -92,6 +99,16 @@ function ChordToolbox(props)
 	
 	const ChordButton = (props2) =>
 	{
+		const ref = React.createRef()
+		
+		React.useEffect(() =>
+		{
+			const ctx = ref.current.getContext("2d")
+			drawChordOnCanvas(ctx, new Rect(0, 0, 80, 58), props2.chord, props.songKey, false, false)
+		})
+		
+		return <canvas ref={ref} width="80" height="58" onClick={ () => props.onSelectChord(props2.chord) } style={{ width:"80px", height:"58px", margin:"0.1em" }}/>
+		
 		const color = props2.chord.getColor(props.songKey)
 		const baseStr = props2.chord.getNameBase(props.songKey)
 		const supStr = props2.chord.getNameSup(props.songKey)

@@ -30,7 +30,7 @@ export const chords =
 	{ pitches: [0, 2, 6], id: "oo", symbol: [true,  "", "oo"],  name: "Doubly-Diminished" },
 	{ pitches: [0, 4, 6], id: "b5", symbol: [false,  "", "(b5)"],  name: "Flat-Fifth" },
 	
-	{ pitches: [0, 0, 7, 12], id: "5", symbol: [false, "", "5"], name: "Power" },
+	{ pitches: [0, 7], id: "5", symbol: [false, "", "5"], name: "Power" },
 	
 	{ pitches: [0, 4, 7,  9], id: "6",  symbol: [false, "", "6"], name: "Major Sixth", startGroup: "Sixths" },
 	{ pitches: [0, 3, 7,  9], id: "m6", symbol: [true,  "", "6"], name: "Minor Sixth" },
@@ -190,7 +190,7 @@ export function getPitchForScaleDegree(key, degree)
 }
 
 
-export function getNameForPitch(key, pitch)
+export function getNameForPitch(key, pitch, accidental = 0)
 {
 	const baseLabels = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6]
 	const baseAccidentals = [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0]
@@ -202,7 +202,7 @@ export function getNameForPitch(key, pitch)
 	
 	const keyLetter = baseLabels[key.tonicPitch]
 	const noteLetter = mod(keyLetter + Math.floor(degree), 7)
-	const accidental = mod(pitch - letterPitches[noteLetter] + 6, 12) - 6
+	accidental += mod(pitch - letterPitches[noteLetter] + 6, 12) - 6
 	
 	const accidentalStr = 
 		accidental == 0 ? "" :
@@ -233,6 +233,47 @@ export function getColorRotationForScale(pitches)
 {
 	const scale = getScaleRecordFromPitches(pitches)
 	return scale.mode
+}
+
+
+const fillPatterns = new Map()
+export function getFillStyleForScaleDegree(ctx, degree)
+{
+	if (Math.floor(degree) == degree)
+		return getColorForScaleDegree(degree)
+	
+	if (fillPatterns.has(degree))
+		return fillPatterns.get(degree)
+	
+	const colorBefore = getColorForScaleDegree(Math.floor(degree))
+	const colorAfter  = getColorForScaleDegree(Math.ceil(degree))
+	
+	const canvas = document.createElement("canvas")
+	canvas.width = "24"
+	canvas.height = "24"
+	canvas.style.display = "none"
+	document.body.appendChild(canvas)
+	
+	let ctxPatt = canvas.getContext("2d")
+	ctxPatt.fillStyle = colorBefore
+	ctxPatt.fillRect(0, 0, 24, 24)
+	
+	ctxPatt.fillStyle = colorAfter
+	ctxPatt.beginPath()
+	ctxPatt.moveTo(12, 0)
+	ctxPatt.lineTo(24, 0)
+	ctxPatt.lineTo(0, 24)
+	ctxPatt.lineTo(-12, 24)
+	
+	ctxPatt.moveTo(24 + 12, 0)
+	ctxPatt.lineTo(24 + 24, 0)
+	ctxPatt.lineTo(24 + 0, 24)
+	ctxPatt.lineTo(24 - 12, 24)
+	ctxPatt.fill()
+	
+	const pattern = ctx.createPattern(canvas, "repeat")
+	fillPatterns.set(degree, pattern)
+	return pattern
 }
 
 
@@ -269,11 +310,77 @@ export function getChordStrummingPattern(meter)
 }
 
 
+export function drawChordOnCanvas(ctx, rect, chord, key, selected, hovering)
+{
+	const decorationHeight = 8
+	
+	const scaleDegreeLabel = getScaleDegreeForPitch(key, chord.rootPitch)
+	const scaleDegreeColor = getScaleDegreeForPitch(key, chord.rootPitch + chord.rootAccidental)
+	const scaleDegreeRotation = getColorRotationForScale(key.scalePitches)
+	
+	ctx.fillStyle = "#eee"
+	ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+	
+	ctx.fillStyle = chord.getFillStyle(ctx, key)
+	ctx.fillRect(rect.x, rect.y, rect.w, decorationHeight)
+	ctx.fillRect(rect.x, rect.y + rect.h - decorationHeight, rect.w, decorationHeight)
+	
+	const nameBase = chord.getNameBase(key)
+	const nameSup = chord.getNameSup(key)
+	const nameSub = chord.getNameSub(key)
+	const nameRootPitch = getNameForPitch(key, chord.rootPitch, chord.rootAccidental)
+	
+	ctx.fillStyle = "#000"
+	ctx.textAlign = "left"
+	ctx.textBaseline = "middle"
+	
+	ctx.font = "20px Verdana"
+	const nameBaseW = ctx.measureText(nameBase).width
+	ctx.font = "15px Verdana"
+	const nameSupW = ctx.measureText(nameSup).width
+	const nameSubW = ctx.measureText(nameSub).width
+	const nameTotalW = nameBaseW + nameSupW + nameSubW
+	
+	const nameScale = Math.min(1, (rect.w - 6) / nameTotalW)
+	
+	if (nameScale > 0)
+	{
+		ctx.font = "20px Verdana"
+		ctx.fillText(nameBase, rect.x + rect.w / 2 + nameScale * (-nameTotalW / 2), rect.y + rect.h / 2 - 4, nameScale * nameBaseW)
+		ctx.font = "15px Verdana"
+		ctx.fillText(nameSup, rect.x + rect.w / 2 + nameScale * (-nameTotalW / 2 + nameBaseW), rect.y + rect.h / 2 - 4 - 8, nameScale * nameSupW)
+		ctx.fillText(nameSub, rect.x + rect.w / 2 + nameScale * (-nameTotalW / 2 + nameBaseW + nameSupW), rect.y + rect.h / 2 - 4 + 8, nameScale * nameSubW)
+		
+		ctx.font = "12px Verdana"
+		ctx.textAlign = "center"
+		ctx.fillText(nameRootPitch, rect.x + rect.w / 2, rect.y + rect.h / 2 + 16, rect.w - 6)
+	}
+	
+	if (selected)
+	{
+		ctx.globalAlpha = 0.5
+		ctx.fillStyle = "#fff"
+		ctx.fillRect(rect.x + (rect.cutStart ? 0 : 3), rect.y + 3, rect.w - (rect.cutEnd ? 0 : 3) - (rect.cutStart ? 0 : 3), rect.h - 6)
+		
+		ctx.globalAlpha = 1
+	}
+	
+	if (hovering)
+	{
+		ctx.globalAlpha = 0.5
+		ctx.fillStyle = "#fee"
+		ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+		
+		ctx.globalAlpha = 1
+	}
+}
+
+
 export class Key
 {
 	constructor(tonicPitch, tonicAccidental, scalePitches)
 	{
-		this.tonicPitch = tonicPitch
+		this.tonicPitch = mod(tonicPitch, 12)
 		this.tonicAccidental = tonicAccidental
 		this.scalePitches = scalePitches
 	}
@@ -298,7 +405,7 @@ export class Chord
 {
 	constructor(rootPitch, rootAccidental, kind, modifiers = {})
 	{
-		this.rootPitch = rootPitch
+		this.rootPitch = mod(rootPitch, 12)
 		this.rootAccidental = rootAccidental
 		this.kind = kind
 		this.modifiers = modifiers
@@ -373,12 +480,11 @@ export class Chord
 	}
 	
 	
-	getColor(key)
+	getFillStyle(ctx, key)
 	{
-		const degree = getScaleDegreeForPitch(key, this.rootPitch)
+		const degree = getScaleDegreeForPitch(key, this.rootPitch + this.rootAccidental)
 		const colorRotation = getColorRotationForScale(key.scalePitches)
-		const color = getColorForScaleDegree(colorRotation + degree)
-		return color
+		return getFillStyleForScaleDegree(ctx, colorRotation + degree)
 	}
 	
 	
@@ -388,16 +494,36 @@ export class Chord
 		
 		const rootPitch = mod(this.rootPitch + this.rootAccidental, 12)
 		
+		let pitches = []
+		for (let i = 0; i < chordData.pitches.length; i++)
+			pitches.push(rootPitch + chordData.pitches[i])
+		
+		if (this.modifiers.sus2)
+			pitches[1] = rootPitch + 2
+		
+		if (this.modifiers.sus4)
+		{
+			if (this.modifiers.sus2)
+				pitches.splice(2, 0, rootPitch + 5)
+			else
+				pitches[1] = rootPitch + 5
+		}
+		
+		return pitches
+	}
+	
+	
+	getStrummingPitches()
+	{
+		const rootPitch = mod(this.rootPitch + this.rootAccidental, 12)
+		const pitches = this.getPitches()
+		
 		let octave = 12 * 4
 		if (rootPitch >= 6)
 			octave -= 12
 		
-		let pitches = []
-		for (let i = 1; i < chordData.pitches.length; i++)
-			pitches.push(rootPitch + chordData.pitches[i])
-		
-		if (chordData.pitches.length <= 3)
-			pitches.push(rootPitch + chordData.pitches[0])
+		if (pitches.length <= 3)
+			pitches.push(rootPitch + 12)
 		
 		pitches = pitches.sort((x, y) => (x > y))
 
