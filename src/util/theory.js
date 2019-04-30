@@ -516,14 +516,16 @@ export class Chord
 	getStrummingPitches()
 	{
 		const rootPitch = mod(this.rootPitch + this.rootAccidental, 12)
-		const pitches = this.getPitches()
+		let pitches = this.getPitches()
 		
 		let octave = 12 * 4
 		if (rootPitch >= 6)
 			octave -= 12
 		
+		pitches = pitches.map(p => p + octave)
+		
 		if (pitches.length <= 3)
-			pitches.push(rootPitch + 12)
+			pitches.push(pitches[0] + 12)
 		
 		pitches = pitches.sort((x, y) => (x > y))
 

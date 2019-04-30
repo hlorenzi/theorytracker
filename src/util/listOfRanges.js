@@ -58,7 +58,7 @@ export class ListOfRanges
 	
 	findById(id)
 	{
-		return this.find(item => item.id == id)
+		return this.items.find(item => item.id == id)
 	}
 	
 	

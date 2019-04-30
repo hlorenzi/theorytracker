@@ -27,6 +27,12 @@ export class Synth
 		
 		this.instruments = [piano, piano]
 	}
+	
+	
+	isFinished()
+	{
+		return this.noteEvents.length == 0 && this.playingNotes.length == 0
+	}
 
 
 	play()
@@ -64,7 +70,7 @@ export class Synth
 				
 			noteData.process = (deltaTime) =>
 			{
-				this.instruments[ev.instrumentIndex].processNote(noteData, deltaTime)
+				return this.instruments[ev.instrumentIndex].processNote(noteData, deltaTime)
 			}
 			
 			noteData.stop = () =>

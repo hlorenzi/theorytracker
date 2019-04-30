@@ -120,6 +120,7 @@ export class EditorMarkers
 				return true
 			}
 			case "delete":
+			case "backspace":
 			{
 				for (const keyChange of this.owner.song.keyChanges.enumerate())
 				{

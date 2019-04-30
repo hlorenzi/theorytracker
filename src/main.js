@@ -12,12 +12,13 @@ let gEditor = null
 let gSynth = null
 let gPlaybackInterval = null
 let gPrevPlaybackTimestamp = -1
+let gPrevPlaySampleTimestamp = -1
 
 
 document.body.onload = function()
 {
 	gSynth = new Synth()
-	gEditor = new Editor(document.getElementById("canvasMain"))
+	gEditor = new Editor(document.getElementById("canvasMain"), gSynth)
 	
 	gEditor.toolboxRefreshFn = () =>
 	{
@@ -25,6 +26,7 @@ document.body.onload = function()
 	}
 	
 	gEditor.onPlaybackToggle = onPlaybackToggle
+	gEditor.onPlaySample = onPlaySample
 	
 	gEditor.toolboxRefreshFn()
 	onResize()
@@ -40,8 +42,43 @@ function onResize()
 }
 
 
+function onPlaySample()
+{
+	if (gPlaybackInterval)
+	{
+		window.cancelAnimationFrame(gPlaybackInterval)
+		gPlaybackInterval = null
+	}
+	
+	gSynth.play()
+	gPrevPlaybackTimestamp = -1
+	gPlaybackInterval = window.requestAnimationFrame(onPlaySampleStep)
+}
+
+
+function onPlaySampleStep(timestamp)
+{
+	const deltaTime = (gPrevPlaySampleTimestamp < 0 ? 0 : timestamp - gPrevPlaySampleTimestamp)
+	gPrevPlaySampleTimestamp = timestamp
+	
+	if (deltaTime > 0 && deltaTime < 250)
+		gSynth.process(deltaTime / 1000)
+	
+	if (!gSynth.isFinished())
+		gPlaybackInterval = window.requestAnimationFrame(onPlaySampleStep)
+}
+
+
 function onPlaybackToggle(playing)
 {
+	if (gPlaybackInterval)
+	{
+		window.cancelAnimationFrame(gPlaybackInterval)
+		gPlaybackInterval = null
+	}
+	
+	gSynth.stopAll()
+	
 	if (playing)
 	{
 		feedSongToSynth(gEditor.song, gSynth, Rational.fromFloat(gEditor.playbackTime, new Rational(1, 2048)))
@@ -49,10 +86,6 @@ function onPlaybackToggle(playing)
 		
 		gPrevPlaybackTimestamp = -1
 		gPlaybackInterval = window.requestAnimationFrame(onPlaybackStep)
-	}
-	else
-	{
-		gSynth.stopAll()
 	}
 }
 
@@ -79,7 +112,7 @@ function onPlaybackStep(timestamp)
 		gEditor.setPlayback(false)
 	
 	if (gEditor.playing)
-		window.requestAnimationFrame(onPlaybackStep)
+		gPlaybackInterval = window.requestAnimationFrame(onPlaybackStep)
 }
 
 
@@ -129,7 +162,7 @@ function feedSongToSynth(song, synth, startTick, useChordPatterns = true)
 		if (chord.range.end.compare(startTick) <= 0)
 			continue
 		
-		const pitches = chord.chord.getPitches()
+		const pitches = chord.chord.getStrummingPitches()
 			
 		if (!useChordPatterns)
 		{

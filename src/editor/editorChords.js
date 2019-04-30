@@ -32,6 +32,10 @@ export class EditorChords
 			this.owner.selection.add(this.hoverId)
 			this.owner.mouseDownAction = this.owner.mouseHoverAction
 			this.owner.cursorTime = Range.fromPoint(this.hoverRange.start)
+			
+			const chord = this.owner.song.chords.findById(this.hoverId)
+			this.owner.playChordSample(chord.chord)
+			this.owner.insertionDuration = chord.range.duration
 		}
 	}
 	
@@ -89,7 +93,11 @@ export class EditorChords
 				if (ev.ctrlKey)
 				{
 					if (offset.greaterThan(new Rational(0)) || this.owner.keyDownData.stretchRange.duration.greaterThan(this.owner.timeSnap))
-						this.alterSelectedChords((data, origData, changes) => changes.range = data.range.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end).sorted())
+						this.alterSelectedChords((data, origData, changes) =>
+						{
+							changes.range = data.range.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end).sorted()
+							this.owner.insertionDuration = changes.range.duration
+						})
 				}
 				else
 					this.alterSelectedChords((data, origData, changes) => changes.range = data.range.displace(offset))
@@ -127,6 +135,7 @@ export class EditorChords
 				return true
 			}
 			case "delete":
+			case "backspace":
 			{
 				for (const chord of this.owner.song.chords.enumerate())
 				{
@@ -290,6 +299,8 @@ export class EditorChords
 			
 			if (this.owner.mouseDownAction & Editor.ACTION_STRETCH_TIME_END)
 				changes.range = origData.range.stretch(timeOffset, this.owner.mouseDownData.stretchRange.start, this.owner.mouseDownData.stretchRange.end).sorted()
+			
+			this.owner.insertionDuration = (changes.range || noteOrigData.range).duration
 			
 			this.owner.song = this.owner.song.upsertChord(chord.withChanges(changes))
 		}

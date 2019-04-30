@@ -46,6 +46,11 @@ export class EditorNotes
 			this.owner.selection.add(this.hoverId)
 			this.owner.mouseDownAction = this.owner.mouseHoverAction
 			this.owner.cursorTime = Range.fromPoint(this.hoverRange.start)
+			
+			const note = this.owner.song.notes.findById(this.hoverId)
+			this.owner.playNoteSample(note.pitch)
+			this.owner.insertionDuration = note.range.duration
+			this.owner.insertionPitch = note.pitch
 		}
 	}
 	
@@ -112,7 +117,11 @@ export class EditorNotes
 				if (ev.ctrlKey)
 				{
 					if (offset.greaterThan(new Rational(0)) || this.owner.keyDownData.stretchRange.duration.greaterThan(this.owner.timeSnap))
-						this.alterSelectedNotes((data, origData, changes) => changes.range = data.range.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end).sorted())
+						this.alterSelectedNotes((data, origData, changes) =>
+						{
+							changes.range = data.range.stretch(offset, this.owner.keyDownData.stretchRange.start, this.owner.keyDownData.stretchRange.end).sorted()
+							this.owner.insertionDuration = changes.range.duration
+						})
 				}
 				else
 					this.alterSelectedNotes((data, origData, changes) => changes.range = data.range.displace(offset))
@@ -132,6 +141,7 @@ export class EditorNotes
 					const keyChange = this.owner.song.keyChanges.findActiveAt(data.range.start) || new KeyChange(data.range.start, new Key(0, 0, scales[0].pitches))
 					const scaleDegree = getScaleDegreeForPitch(keyChange.key, data.pitch)
 					changes.pitch = getPitchForScaleDegree(keyChange.key, scaleDegree + offset)
+					this.owner.insertionPitch = changes.pitch
 				})
 				this.owner.cursorShow = false
 				return true
@@ -150,6 +160,7 @@ export class EditorNotes
 				return true
 			}
 			case "delete":
+			case "backspace":
 			{
 				for (const note of this.owner.song.notes.enumerate())
 				{
@@ -329,6 +340,9 @@ export class EditorNotes
 			
 			if (this.owner.mouseDownAction & Editor.ACTION_STRETCH_TIME_END)
 				changes.range = noteOrigData.range.stretch(timeOffset, this.owner.mouseDownData.stretchRange.start, this.owner.mouseDownData.stretchRange.end).sorted()
+			
+			this.owner.insertionDuration = (changes.range || noteOrigData.range).duration
+			this.owner.insertionPitch = changes.pitch || noteOrigData.pitch
 			
 			this.owner.song = this.owner.song.upsertNote(note.withChanges(changes))
 		}

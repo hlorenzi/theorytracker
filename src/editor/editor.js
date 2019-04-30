@@ -18,12 +18,14 @@ export class Editor
 	static ACTION_STRETCH_TIME_END   = 0x80
 	
 	
-	constructor(canvas)
+	constructor(canvas, synth)
 	{
 		this.canvas = canvas
 		this.ctx = canvas.getContext("2d")
 		this.width = parseInt(canvas.width)
 		this.height = parseInt(canvas.height)
+		
+		this.synth = synth
 		
 		this.song = new Song()
 			.upsertNote(new Note(new Range(new Rational(0, 4), new Rational(1, 4)), 60))
@@ -63,6 +65,7 @@ export class Editor
 		this.cursorTrack = { start: 1, end: 1 }
 		this.cursorShow = true
 		this.insertionDuration = new Rational(1, 4)
+		this.insertionPitch = 60
 		
 		this.playing = false
 		this.playbackTime = 0
@@ -144,6 +147,36 @@ export class Editor
 	}
 	
 	
+	playNoteSample(pitch)
+	{
+		const midiPitchToHertz = (midiPitch) =>
+		{
+			return Math.pow(2, (midiPitch - 69) / 12) * 440
+		}
+		
+		this.synth.stopAll()
+		this.synth.addNoteEvent(0, 0, midiPitchToHertz(pitch), 1, 0.5)
+		this.onPlaySample()
+	}
+	
+	
+	playChordSample(chord)
+	{
+		const midiPitchToHertz = (midiPitch) =>
+		{
+			return Math.pow(2, (midiPitch - 69) / 12) * 440
+		}
+		
+		this.synth.stopAll()
+		
+		const pitches = chord.getStrummingPitches()
+		for (const pitch of pitches)
+			this.synth.addNoteEvent(0, 0, midiPitchToHertz(pitch), 1, 0.5)
+		
+		this.onPlaySample()
+	}
+	
+	
 	rewind()
 	{
 		this.selectionClear()
@@ -176,11 +209,29 @@ export class Editor
 	
 	insertNoteAtCursor(pitch)
 	{
+		const mod = (x, m) => (x % m + m) % m
+		
+		pitch = mod(pitch, 12)
+
+		let minDistance = 10000
+		let selectedOctave = 0
+		for (let octave = -1; octave <= 7; octave++)
+		{
+			const dist = Math.abs(this.insertionPitch - (pitch + octave * 12))
+			if (dist < minDistance)
+			{
+				minDistance = dist
+				selectedOctave = octave
+			}
+		}
+		
+		const finalPitch = selectedOctave * 12 + pitch
+		
 		const time = this.cursorTime.start.min(this.cursorTime.end)
 		const duration = this.insertionDuration
 		
 		const id = this.song.nextId
-		this.song = this.song.upsertNote(new Note(Range.fromStartDuration(time, duration), 60 + pitch))
+		this.song = this.song.upsertNote(new Note(Range.fromStartDuration(time, duration), finalPitch))
 		
 		this.cursorTime = Range.fromPoint(time.add(duration))
 		this.cursorTrack = { start: 1, end: 1 }
@@ -190,6 +241,9 @@ export class Editor
 		this.selectionClear()
 		this.selection.add(id)
 		
+		this.insertionPitch = finalPitch
+		
+		this.playNoteSample(finalPitch)
 		this.toolboxRefreshFn()
 		this.draw()
 	}
@@ -211,6 +265,7 @@ export class Editor
 		this.selectionClear()
 		this.selection.add(id)
 		
+		this.playChordSample(chord)
 		this.toolboxRefreshFn()
 		this.draw()
 	}
@@ -670,6 +725,8 @@ export class Editor
 			}
 		}
 		
+		const handledHere = handled
+		
 		this.sanitizeSelection("keyboard")
 		if (!handled)
 		{
@@ -698,7 +755,11 @@ export class Editor
 					break
 				}
 				case "delete":
+				case "backspace":
 				{
+					if (key == "backspace" && handledHere)
+						break
+					
 					if (this.keyDownData.stretchRange != null)
 					{
 						this.cursorTime = Range.fromPoint(this.keyDownData.stretchRange.min(), false, false)
