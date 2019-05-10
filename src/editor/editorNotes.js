@@ -476,7 +476,7 @@ export class EditorNotes
 		if (!cutStart) noteX1 += 1
 		if (!cutEnd)   noteX2 -= 1
 		
-		const noteW = noteX2 - noteX1
+		const noteW = Math.max(2, noteX2 - noteX1)
 		
 		return Object.assign(new Rect(noteX1, noteY, noteW, this.rowScale), { cutStart, cutEnd })
 	}

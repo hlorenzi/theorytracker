@@ -360,7 +360,7 @@ export class EditorChords
 		if (!cutStart) chordX1 += 1
 		if (!cutEnd)   chordX2 -= 1
 		
-		const chordW = chordX2 - chordX1
+		const chordW = Math.max(2, chordX2 - chordX1)
 		
 		return Object.assign(new Rect(chordX1, 0, chordW, this.area.h), { cutStart, cutEnd })
 	}

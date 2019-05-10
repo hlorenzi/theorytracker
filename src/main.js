@@ -81,7 +81,7 @@ function onPlaybackToggle(playing)
 	
 	if (playing)
 	{
-		feedSongToSynth(gEditor.song, gSynth, Rational.fromFloat(gEditor.playbackTime, new Rational(1, 2048)))
+		feedSongToSynth(gEditor.song, gSynth, Rational.fromFloat(gEditor.playbackTime, 2048))
 		gSynth.play()
 		
 		gPrevPlaybackTimestamp = -1

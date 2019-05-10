@@ -11,20 +11,12 @@ export class Rational
 	}
 	
 	
-	static fromFloat(floatValue, rationalFracStep)
+	static fromFloat(floatValue, maxDenominator)
 	{
-		let result = new Rational(Math.floor(floatValue))
+		const integer = Math.floor(floatValue)
+		const frac = floatValue - integer
 		
-		while (true)
-		{
-			let closer = result.add(rationalFracStep)
-			if (closer.asFloat() > floatValue)
-				break
-			
-			result = closer
-		}
-		
-		return result
+		return new Rational(integer * maxDenominator + Math.floor(frac * maxDenominator), maxDenominator)
 	}
 	
 	

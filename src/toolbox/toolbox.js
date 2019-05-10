@@ -32,7 +32,7 @@ function PlaybackToolbox(props)
 			<br/>
 			
 			<div>
-				Load MIDI: <input type="file" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
+				Load MIDI: <input type="file" accept=".mid" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
 			</div>
 		</div>
 	</div>

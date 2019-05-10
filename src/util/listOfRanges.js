@@ -42,6 +42,9 @@ export class ListOfRanges
 	
 	removeById(id)
 	{
+		if (id == null || id < 0)
+			return this
+		
 		return this.remove(item => item.id == id)
 	}
 	
@@ -68,6 +71,22 @@ export class ListOfRanges
 		{
 			return this.getRangeFn(a).start.compare(this.getRangeFn(b).start);
 		})
+	}
+	
+	
+	calcTotalRange()
+	{
+		if (this.items.length == 0)
+			return null
+		
+		let range = null
+		this.items.forEach(item =>
+		{
+			const itemRange = this.getRangeFn(item)
+			range = itemRange.merge(range)
+		})
+		
+		return range
 	}
 	
 	

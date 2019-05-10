@@ -181,10 +181,10 @@ export class Editor
 	{
 		this.selectionClear()
 		
-		this.cursorTime = new Range(new Rational(0), new Rational(0))
+		this.cursorTime = Range.fromPoint(this.song.range.start)
 		this.cursorShow = true
-		this.playbackTime = 0
-		this.playbackTimeRational = new Rational(0)
+		this.playbackTime = this.cursorTime.start.asFloat()
+		this.playbackTimeRational = this.cursorTime.start
 		
 		if (this.playing)
 		{
@@ -231,7 +231,9 @@ export class Editor
 		const duration = this.insertionDuration
 		
 		const id = this.song.nextId
-		this.song = this.song.upsertNote(new Note(Range.fromStartDuration(time, duration), finalPitch))
+		this.song = this.song
+			.upsertNote(new Note(Range.fromStartDuration(time, duration), finalPitch))
+			.withRefreshedRange()
 		
 		this.cursorTime = Range.fromPoint(time.add(duration))
 		this.cursorTrack = { start: 1, end: 1 }
@@ -242,6 +244,9 @@ export class Editor
 		this.selection.add(id)
 		
 		this.insertionPitch = finalPitch
+		
+		this.curSanitizationMode = "input"
+		this.sanitizeSelection()
 		
 		this.playNoteSample(finalPitch)
 		this.toolboxRefreshFn()
@@ -255,8 +260,10 @@ export class Editor
 		const duration = this.insertionDuration
 		
 		const id = this.song.nextId
-		this.song = this.song.upsertChord(new SongChord(Range.fromStartDuration(time, duration), chord))
-		
+		this.song = this.song
+			.upsertChord(new SongChord(Range.fromStartDuration(time, duration), chord))
+			.withRefreshedRange()
+			
 		this.cursorTime = Range.fromPoint(time.add(duration))
 		this.cursorTrack = { start: 2, end: 2 }
 		this.cursorShow = false
@@ -264,6 +271,9 @@ export class Editor
 		
 		this.selectionClear()
 		this.selection.add(id)
+		
+		this.curSanitizationMode = "input"
+		this.sanitizeSelection()
 		
 		this.playChordSample(chord)
 		this.toolboxRefreshFn()
@@ -318,6 +328,8 @@ export class Editor
 		
 		for (const track of this.tracks)
 			track.sanitizeSelection()
+		
+		this.song = this.song.withRefreshedRange()
 	}
 	
 	
@@ -386,7 +398,7 @@ export class Editor
 	{
 		snap = snap || this.timeSnap
 		const xOffset = (pos.x - this.tracks[0].area.x) / this.timeScale + this.timeScroll
-		return Rational.fromFloat(xOffset, snap)
+		return Rational.fromFloat(xOffset, snap.denominator)
 	}
 	
 	
@@ -567,7 +579,7 @@ export class Editor
 		
 		if (Math.abs(ev.deltaX) > 0)
 		{
-			this.timeScroll += 0.01 * ev.deltaX
+			this.timeScroll += 0.01 / (this.timeScale / 100) * ev.deltaX
 			this.wheelDate = new Date()
 		}
 		else if (new Date().getTime() - this.wheelDate.getTime() > 250)
@@ -798,7 +810,7 @@ export class Editor
 			this.ctx.fillRect(songEndX, 0, this.width - songEndX, this.height)
 		
 		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
-		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, new Rational(1, 64))
+		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, 64)
 		
 		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
 		{

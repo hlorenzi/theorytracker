@@ -11,7 +11,7 @@ export class Song
 	{
 		this.nextId = 1
 		this.baseBpm = 120
-		this.range = new Range(new Rational(0), new Rational(0))
+		this.range = new Range(new Rational(0), new Rational(4))
 		this.notes = new ListOfRanges(n => n.range)
 		this.chords = new ListOfRanges(n => n.range)
 		this.meterChanges = new ListOfRanges(n => n.getTimeAsRange())
@@ -24,6 +24,7 @@ export class Song
 		let song = new Song()
 		song.nextId = this.nextId
 		song.baseBpm = this.baseBpm
+		song.range = this.range
 		song.notes = this.notes
 		song.chords = this.chords
 		song.meterChanges = this.meterChanges
@@ -33,36 +34,79 @@ export class Song
 	}
 	
 	
+	withRefreshedRange()
+	{
+		let song = this.withChanges({})
+		
+		song.range = new Range(new Rational(0), new Rational(4))
+		song.range = song.range.merge(this.notes.calcTotalRange())
+		song.range = song.range.merge(this.chords.calcTotalRange())
+		song.range = song.range.merge(this.meterChanges.calcTotalRange())
+		song.range = song.range.merge(this.keyChanges.calcTotalRange())
+		
+		return song
+	}
+	
+	
 	_upsertElement(listField, elem, remove = false)
 	{
 		let nextId = this.nextId
+		let list = this[listField]
 		
 		if (elem.id < 0)
 		{
 			elem = elem.withChanges({ id: nextId })
 			nextId++
 		}
-		
-		let range = this.range
-		if (!remove)
+		else
 		{
-			if (elem.range)
-				range = range.merge(elem.range)
-			else if (elem.time)
-				range = range.merge(Range.fromPoint(elem.time))
+			list = list.removeById(elem.id)
 		}
 		
-		let list = this[listField].removeById(elem.id)
 		if (!remove)
 			list = list.add(elem)
 		
-		return this.withChanges({ nextId, range, [listField]: list })
+		return this.withChanges({ nextId, [listField]: list })
+	}
+	
+	
+	_upsertElements(listField, elems, remove = false)
+	{
+		let nextId = this.nextId
+		let list = this[listField]
+		
+		let newElems = []
+		for (let i = 0; i < elems.length; i++)
+		{
+			const elem = elems[i]
+			if (elem.id < 0)
+			{
+				newElems.push(elem.withChanges({ id: nextId }))
+				nextId++
+			}
+			else
+			{
+				newElems.push(elem)
+				list = list.removeById(elem.id)
+			}
+		}
+		
+		if (!remove)
+			list = list.addArray(newElems)
+		
+		return this.withChanges({ nextId, [listField]: list })
 	}
 	
 	
 	upsertNote(note, remove = false)
 	{
 		return this._upsertElement("notes", note, remove)
+	}
+	
+	
+	upsertNotes(notes, remove = false)
+	{
+		return this._upsertElements("notes", notes, remove)
 	}
 	
 	
@@ -239,7 +283,7 @@ export class Song
 				meterChange[1],
 				meterChange[2]))
 		
-		return song
+		return song.withRefreshedRange()
 	}
 	
 	
@@ -264,6 +308,7 @@ export class Song
 		const msPerQuarterNote = (tempoEv ? tempoEv.msPerQuarterNote : 500000)
 		song.baseBpm = Math.round(60 * 1000 * 1000 / msPerQuarterNote)
 		
+		let notesToAdd = []
 		for (const track of midi.tracks)
 		{
 			for (const noteOn of track.events)
@@ -274,19 +319,10 @@ export class Song
 				let noteOff = null
 				for (const ev of track.events)
 				{
-					if (ev.kind != "noteOff" || ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
+					if (ev.kind != "noteOn" && ev.kind != "noteOff")
 						continue
 					
-					if (noteOff == null || ev.time < noteOff.time)
-					{
-						noteOff = ev
-						break
-					}
-				}
-				
-				for (const ev of track.events)
-				{
-					if (ev.kind != "noteOn" || ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
+					if (ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
 						continue
 					
 					if (noteOff == null || ev.time < noteOff.time)
@@ -299,12 +335,14 @@ export class Song
 				if (!noteOff)
 					continue
 				
-				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
-				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
+				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, 27720)
+				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, 27720)
 				
-				song = song.upsertNote(new Note(new Range(onTick, offTick), noteOn.key))
+				notesToAdd.push(new Note(new Range(onTick, offTick), noteOn.key))
 			}
 		}
+		
+		song = song.upsertNotes(notesToAdd)
 		
 		for (const track of midi.tracks)
 		{
@@ -320,7 +358,7 @@ export class Song
 				if (index < 0 || index >= tonicPitches.length)
 					continue
 				
-				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
+				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, 27720)
 				song = song.upsertKeyChange(new KeyChange(time, new Key(tonicPitches[index], tonicAccidentals[index], scales[ev.scale == 0 ? 0 : 5].pitches)))
 			}
 		}
@@ -332,7 +370,7 @@ export class Song
 				if (ev.kind != "setTimeSignature")
 					continue
 				
-				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, new Rational(1, 27720))
+				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, 27720)
 				song = song.upsertMeterChange(new MeterChange(time, ev.numerator, ev.denominator))
 			}
 		}
@@ -344,7 +382,7 @@ export class Song
 			song = song.upsertMeterChange(new MeterChange(new Rational(0), 4, 4))
 		
 		console.log(song)
-		return song
+		return song.withRefreshedRange()
 	}
 }
 
