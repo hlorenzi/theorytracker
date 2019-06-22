@@ -102,7 +102,7 @@ export class EditorNotes
 	}
 	
 	
-	onKeyDown(ev)
+	onKeyDown(ev, trackIsSelected)
 	{
 		const key = ev.key.toLowerCase()
 		switch (key)
@@ -170,6 +170,22 @@ export class EditorNotes
 					this.owner.song = this.owner.song.upsertNote(note, true)
 					this.owner.selection.delete(note.id)
 				}
+				return true
+			}
+			case "1":
+			case "2":
+			case "3":
+			case "4":
+			case "5":
+			case "6":
+			case "7":
+			{
+				if (!trackIsSelected)
+					break
+				
+				const degree = key.charCodeAt(0) - "1".charCodeAt(0)
+				const keyChange = this.owner.song.keyChanges.findActiveAt(this.owner.cursorTime.start) || new KeyChange(this.owner.cursorTime.start, new Key(0, 0, scales[0].pitches))
+				this.owner.insertNoteAtCursor(keyChange.key.tonicPitch + keyChange.key.tonicAccidental + keyChange.key.scalePitches[degree])
 				return true
 			}
 		}

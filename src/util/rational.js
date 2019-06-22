@@ -26,6 +26,18 @@ export class Rational
 	}
 	
 	
+	get integer()
+	{
+		return Math.floor(this.numerator / this.denominator)
+	}
+	
+	
+	get numeratorWithoutInteger()
+	{
+		return this.numerator % this.denominator
+	}
+	
+	
 	negate()
 	{
 		return new Rational(

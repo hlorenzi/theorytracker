@@ -3,7 +3,7 @@ import { Editor } from "./editor.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales, chords, drawChordOnCanvas, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree, getFillStyleForScaleDegree } from "../util/theory.js"
+import { Key, scales, Chord, chords, drawChordOnCanvas, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree, getFillStyleForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -78,7 +78,7 @@ export class EditorChords
 	}
 	
 	
-	onKeyDown(ev)
+	onKeyDown(ev, trackIsSelected)
 	{
 		const key = ev.key.toLowerCase()
 		switch (key)
@@ -145,6 +145,24 @@ export class EditorChords
 					this.owner.song = this.owner.song.upsertChord(chord, true)
 					this.owner.selection.delete(chord.id)
 				}
+				return true
+			}
+			case "1":
+			case "2":
+			case "3":
+			case "4":
+			case "5":
+			case "6":
+			case "7":
+			{
+				if (!trackIsSelected)
+					break
+				
+				const degree = key.charCodeAt(0) - "1".charCodeAt(0)
+				const keyChange = this.owner.song.keyChanges.findActiveAt(this.owner.cursorTime.start) || new KeyChange(this.owner.cursorTime.start, new Key(0, 0, scales[0].pitches))
+				const rootPitch = keyChange.key.tonicPitch + keyChange.key.tonicAccidental + keyChange.key.scalePitches[degree]
+				const chord = new Chord(rootPitch, 0, 0, {})
+				this.owner.insertChordAtCursor(chord)
 				return true
 			}
 		}

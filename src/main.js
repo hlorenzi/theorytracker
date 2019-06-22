@@ -2,8 +2,8 @@ import React from "react"
 import ReactDOM from "react-dom"
 import { Editor } from "./editor/editor.js"
 import { Synth } from "./synth/synth.js"
-import { MeterChange } from "./song/song.js"
-import Toolbox from "./toolbox/toolbox.js"
+import { Song, MeterChange } from "./song/song.js"
+import { Toolbox, askBeforeUnload } from "./toolbox/toolbox.js"
 import { Rational } from "./util/rational.js"
 import { getChordStrummingPattern } from "./util/theory.js"
 
@@ -28,10 +28,34 @@ document.body.onload = function()
 	gEditor.onPlaybackToggle = onPlaybackToggle
 	gEditor.onPlaySample = onPlaySample
 	
+	const urlSong = getURLQueryParameter("song")
+	if (urlSong != null)
+		gEditor.setSong(Song.fromCompressedURLSafe(urlSong))
+	
 	gEditor.toolboxRefreshFn()
 	onResize()
 	
+	window.onbeforeunload = () => (askBeforeUnload ? "Discard unsaved changes?" : null)
 	document.body.onresize = (ev) => onResize()
+}
+
+
+function getURLQueryParameter(name)
+{
+	const url = window.location.search
+	
+	name = name.replace(/[\[\]]/g, "\\$&")
+	
+	const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)")
+	const results = regex.exec(url)
+	
+	if (!results)
+		return null
+	
+	if (!results[2])
+		return ""
+	
+	return decodeURIComponent(results[2].replace(/\+/g, " "))
 }
 
 

@@ -303,6 +303,15 @@ export class Editor
 	}
 	
 	
+	isTrackUnderCursor(trackIndex)
+	{
+		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
+		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
+		
+		return trackIndex >= trackMin && trackIndex <= trackMax
+	}
+	
+	
 	*enumerateTracksUnderCursor()
 	{
 		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
@@ -405,6 +414,7 @@ export class Editor
 	onMouseDown(ev)
 	{
 		ev.preventDefault()
+		document.activeElement.blur()
 		
 		if (this.mouseDown)
 			return
@@ -743,8 +753,8 @@ export class Editor
 		if (!handled)
 		{
 			this.curSanitizationMode = "keyboard"
-			for (const track of this.tracks)
-				handled |= track.onKeyDown(ev)
+			for (let t = 0; t < this.tracks.length; t++)
+				handled |= this.tracks[t].onKeyDown(ev, this.isTrackUnderCursor(t))
 		}
 		
 		if (handled)

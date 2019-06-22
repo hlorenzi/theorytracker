@@ -16,22 +16,36 @@ function PlaybackToolbox(props)
 				<span style={{ fontSize:"2em" }}>◀◀</span>
 			</button>
 			<div>
-				BPM: <input type="number" value={props.editor.song.baseBpm} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
+				BPM: <input type="number" value={props.editor.song.baseBpm} onKeyDown={(ev) => ev.stopPropagation()} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
 			</div>
 		</div>
 		
 		<div>
-			<button onClick={() => props.onSaveJSON()}>
-				[Debug] Save JSON
+			<button onClick={() => props.onNew()}>
+				New
+			</button>
+			
+			<button onClick={() => props.onGenerateURL()}>
+				Save to URL
 			</button>
 			<br/>
 			
-			<button onClick={() => props.onLoadJSON()}>
-				[Debug] Load JSON
+			<button onClick={() => props.onSaveJSONString()}>
+				Save JSON
+			</button>
+			
+			<button onClick={() => props.onLoadJSONString()}>
+				Load JSON
 			</button>
 			<br/>
+			<br/>
 			
-			<div>
+			<div style={{ fontSize:"12px" }}>
+				Load JSON: <input type="file" accept=".json,.txt" onChange={(ev) => props.onLoadJSON(ev.target)}/>
+			</div>
+			<br/>
+			
+			<div style={{ fontSize:"12px" }}>
 				Load MIDI: <input type="file" accept=".mid" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
 			</div>
 		</div>
@@ -279,12 +293,15 @@ function ChordToolbox(props)
 }
 
 
-export default function Toolbox(props)
+export function Toolbox(props)
 {
 	const keyChange = props.editor.song.keyChanges.findActiveAt(props.editor.cursorTime.start) || new KeyChange(new Rational(0), new Key(0, 0, scales[0].pitches))
 	
-	const onSaveJSON = () => saveJSON(props.editor.song)
-	const onLoadJSON = () => loadJSON(props.editor)
+	const onNew = () => generateBlankURL()
+	const onGenerateURL = () => generateURL(props.editor.song)
+	const onSaveJSONString = () => saveJSONString(props.editor.song)
+	const onLoadJSONString = () => loadJSONString(props.editor)
+	const onLoadJSON = (elem) => loadJSON(props.editor, elem)
 	const onLoadMIDI = (elem) => loadMIDI(props.editor, elem)
 	const onPlaybackToggle = () => props.editor.setPlayback(!props.editor.playing)
 	const onRewind = () => props.editor.rewind()
@@ -294,7 +311,10 @@ export default function Toolbox(props)
 	
 	const callbacks =
 	{
-		onSaveJSON,
+		onNew,
+		onGenerateURL,
+		onSaveJSONString,
+		onLoadJSONString,
 		onLoadJSON,
 		onLoadMIDI,
 		onPlaybackToggle,
@@ -314,7 +334,25 @@ export default function Toolbox(props)
 }
 
 
-function saveJSON(song)
+export let askBeforeUnload = true
+
+
+function generateBlankURL()
+{
+	askBeforeUnload = true
+	window.location = location.protocol + "//" + location.host + location.pathname
+}
+
+
+function generateURL(song)
+{
+	askBeforeUnload = false
+	const songData = song.toCompressedURLSafe()
+	window.location = location.protocol + "//" + location.host + location.pathname + "?song=" + songData
+}
+
+
+function saveJSONString(song)
 {
 	const songData = song.getJSON()
 	const newWindow = window.open()
@@ -324,7 +362,7 @@ function saveJSON(song)
 }
 
 
-function loadJSON(editor)
+function loadJSONString(editor)
 {
 	const str = window.prompt("Paste JSON song data:", "")
 	if (str == null)
@@ -333,6 +371,22 @@ function loadJSON(editor)
 	const json = JSON.parse(str)
 	editor.setSong(Song.fromJSON(json))
 	editor.rewind()
+}
+
+
+function loadJSON(editor, elem)
+{
+	if (elem.files.length != 1)
+		return
+	
+	let reader = new FileReader()
+	reader.readAsText(elem.files[0])
+	reader.onload = () => 
+	{
+		const json = JSON.parse(reader.result)
+		editor.setSong(Song.fromJSON(json))
+		editor.rewind()
+	}
 }
 
 
@@ -345,7 +399,7 @@ function loadMIDI(editor, elem)
 	reader.readAsArrayBuffer(elem.files[0])
 	reader.onload = () => 
 	{
-		const bytes = new Uint8Array(reader.result)		
+		const bytes = new Uint8Array(reader.result)
 		editor.setSong(Song.fromMIDI(bytes))
 		editor.rewind()
 	}

@@ -3,6 +3,7 @@ import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Key, scales, Chord, getChordKindFromId } from "../util/theory.js"
 import { MidiFile } from "../util/midi.js"
+import { URLBinaryEncoder, URLBinaryDecoder } from "../util/urlBinaryEncoder.js"
 
 
 export class Song
@@ -282,6 +283,261 @@ export class Song
 				Rational.fromArray(meterChange[0]),
 				meterChange[1],
 				meterChange[2]))
+		
+		return song.withRefreshedRange()
+	}
+	
+	
+	toCompressedURLSafe()
+	{
+		const song = this.withRefreshedRange()
+		
+		const w = new URLBinaryEncoder()
+
+		// Write header.
+		w.writeInteger(3) // Version
+		w.writeInteger(this.baseBpm)
+		
+		// Write note tracks.
+		const trackNum = 1
+		w.writeInteger(trackNum)
+		for (var j = 0; j < trackNum; j++)
+		{
+			// Write note data as a structure-of-arrays.
+			w.writeInteger(this.notes.items.length)
+
+			for (const note of this.notes.enumerate())
+				w.writeInteger(note.range.start.numerator)
+
+			for (const note of this.notes.enumerate())
+				w.writeInteger(note.range.start.denominator)
+
+			for (const note of this.notes.enumerate())
+				w.writeInteger(note.range.duration.numerator)
+
+			for (const note of this.notes.enumerate())
+				w.writeInteger(note.range.duration.denominator)
+
+			for (const note of this.notes.enumerate())
+				w.writeInteger(note.pitch - 60)
+		}
+
+		// Write chord data as a structure-of-arrays.
+		w.writeInteger(this.chords.items.length)
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.range.start.numerator)
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.range.start.denominator)
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.range.duration.numerator)
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.range.duration.denominator)
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.chord.rootPitch)
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.chord.rootAccidental)
+
+		for (const chord of this.chords.enumerate())
+			w.writeString(chord.chord.getKindId())
+
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.chord.getModifierArray().length)
+
+		for (const chord of this.chords.enumerate())
+			for (const mod of chord.chord.getModifierArray())
+				w.writeString(mod)
+		
+		// Write key change data as a structure-of-arrays.
+		w.writeInteger(this.keyChanges.items.length)
+
+		for (const keyChange of this.keyChanges.enumerate())
+			w.writeInteger(keyChange.time.numerator)
+
+		for (const keyChange of this.keyChanges.enumerate())
+			w.writeInteger(keyChange.time.denominator)
+
+		for (const keyChange of this.keyChanges.enumerate())
+			w.writeInteger(keyChange.key.tonicPitch)
+
+		for (const keyChange of this.keyChanges.enumerate())
+			w.writeInteger(keyChange.key.tonicAccidental)
+
+		for (const keyChange of this.keyChanges.enumerate())
+			w.writeInteger(keyChange.key.scalePitches.length)
+
+		for (const keyChange of this.keyChanges.enumerate())
+			for (const p of keyChange.key.scalePitches)
+				w.writeInteger(p)
+		
+		// Write meter change data as a structure-of-arrays.
+		w.writeInteger(this.meterChanges.items.length)
+
+		for (const meterChange of this.meterChanges.enumerate())
+			w.writeInteger(meterChange.time.numerator)
+
+		for (const meterChange of this.meterChanges.enumerate())
+			w.writeInteger(meterChange.time.denominator)
+
+		for (const meterChange of this.meterChanges.enumerate())
+			w.writeInteger(meterChange.numerator)
+
+		for (const meterChange of this.meterChanges.enumerate())
+			w.writeInteger(meterChange.denominator)
+		
+		
+		return w.getCompressedURLSafe()
+	}
+	
+	
+	static fromCompressedURLSafe(str)
+	{
+		let song = new Song()
+		
+		const r = new URLBinaryDecoder(str)
+		
+		// Read header.
+		const version = r.readInteger()
+		song.baseBpm = r.readInteger()
+
+		// Read note tracks.
+		const trackNum = r.readInteger()
+		for (let j = 0; j < trackNum; j++)
+		{
+			// Read note data as structure-of-arrays.
+			const noteNum = r.readInteger()
+			
+			let noteData = []
+			
+			for (let i = 0; i < noteNum; i++)
+				noteData[i] = [ r.readInteger(), 1, 0, 1 ]
+				
+			for (let i = 0; i < noteNum; i++)
+				noteData[i][1] = r.readInteger()
+			
+			for (let i = 0; i < noteNum; i++)
+				noteData[i][2] = r.readInteger()
+			
+			for (let i = 0; i < noteNum; i++)
+				noteData[i][3] = r.readInteger()
+				
+			for (let i = 0; i < noteNum; i++)
+			{
+				const start = new Rational(noteData[i][0], noteData[i][1])
+				const duration = new Rational(noteData[i][2], noteData[i][3])
+					
+				song = song.upsertNote(new Note(
+					Range.fromStartDuration(start, duration),
+					r.readInteger() + 60))
+			}
+		}
+	
+		// Read chord data as structure-of-arrays.
+		const chordNum = r.readInteger()
+		
+		let chordData = []
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i] = [ r.readInteger(), 0, 0, 0, 0, 0, null, 0, {} ] // range.start.numerator
+			
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][1] = r.readInteger() // range.start.denominator
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][2] = r.readInteger() // range.end.numerator
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][3] = r.readInteger() // range.end.denominator
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][4] = r.readInteger() // chord.tonicPitch
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][5] = r.readInteger() // chord.tonicAccidental
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][6] = r.readString() // chord.getKindId()
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][7] = r.readInteger() // chord.getModifierArray().length
+		
+		for (let i = 0; i < chordNum; i++)
+			for (let mod = 0; mod < chordData[i][7]; mod++)
+				chordData[i][8][r.readString()] = true // chord.getModifierArray()[mod]
+			
+		for (let i = 0; i < chordNum; i++)
+		{
+			const start = new Rational(chordData[i][0], chordData[i][1])
+			const duration = new Rational(chordData[i][2], chordData[i][3])
+				
+			song = song.upsertChord(new SongChord(
+				Range.fromStartDuration(start, duration),
+				new Chord(chordData[i][4], chordData[i][5], getChordKindFromId(chordData[i][6]), chordData[i][8])))
+		}
+		
+		// Read key change data as structure-of-arrays.
+		const keyChangeNum = r.readInteger()
+		
+		let keyChangeData = []
+		
+		for (let i = 0; i < keyChangeNum; i++)
+			keyChangeData[i] = [ r.readInteger(), 0, 0, 0, 0, [] ] // time.numerator
+			
+		for (let i = 0; i < keyChangeNum; i++)
+			keyChangeData[i][1] = r.readInteger() // time.denominator
+		
+		for (let i = 0; i < keyChangeNum; i++)
+			keyChangeData[i][2] = r.readInteger() // key.tonicPitch
+		
+		for (let i = 0; i < keyChangeNum; i++)
+			keyChangeData[i][3] = r.readInteger() // key.tonicAccidental
+		
+		for (let i = 0; i < keyChangeNum; i++)
+			keyChangeData[i][4] = r.readInteger() // key.scalePitches.length
+		
+		for (let i = 0; i < keyChangeNum; i++)
+			for (let p = 0; p < keyChangeData[i][4]; p++)
+				keyChangeData[i][5].push(r.readInteger()) // key.scalePitches[p]
+			
+		for (let i = 0; i < keyChangeNum; i++)
+		{
+			const time = new Rational(keyChangeData[i][0], keyChangeData[i][1])
+				
+			song = song.upsertKeyChange(new KeyChange(
+				time,
+				new Key(keyChangeData[i][2], keyChangeData[i][3], keyChangeData[i][5])))
+		}
+		
+		// Read meter change data as structure-of-arrays.
+		const meterChangeNum = r.readInteger()
+		
+		let meterChangeData = []
+		
+		for (let i = 0; i < meterChangeNum; i++)
+			meterChangeData[i] = [ r.readInteger(), 0, 0, 0, 0, [] ] // time.numerator
+			
+		for (let i = 0; i < meterChangeNum; i++)
+			meterChangeData[i][1] = r.readInteger() // time.denominator
+		
+		for (let i = 0; i < meterChangeNum; i++)
+			meterChangeData[i][2] = r.readInteger() // numerator
+		
+		for (let i = 0; i < meterChangeNum; i++)
+			meterChangeData[i][3] = r.readInteger() // denominator
+		
+		for (let i = 0; i < meterChangeNum; i++)
+		{
+			const time = new Rational(meterChangeData[i][0], meterChangeData[i][1])
+				
+			song = song.upsertMeterChange(new MeterChange(
+				time,
+				meterChangeData[i][2], meterChangeData[i][3]))
+		}
 		
 		return song.withRefreshedRange()
 	}
