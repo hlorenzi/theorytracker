@@ -1,3 +1,6 @@
+import { mod } from "./math.js"
+
+
 export class Rational
 {
 	constructor(numerator = 0, denominator = 1)
@@ -20,6 +23,12 @@ export class Rational
 	}
 	
 	
+	static fromIntegerPlusRational(integer, numeratorWithoutInteger, denominator)
+	{
+		return new Rational(integer * denominator + numeratorWithoutInteger, denominator)
+	}
+	
+	
 	asFloat()
 	{
 		return this.numerator / this.denominator
@@ -34,7 +43,7 @@ export class Rational
 	
 	get numeratorWithoutInteger()
 	{
-		return this.numerator % this.denominator
+		return mod(this.numerator, this.denominator)
 	}
 	
 	
@@ -84,6 +93,15 @@ export class Rational
 		return new Rational(
 			this.numerator * other.denominator,
 			this.denominator * other.numerator)
+	}
+	
+	
+	quantize(maxDenominator)
+	{
+		if (this.denominator <= maxDenominator)
+			return this
+		
+		return new Rational(Math.round(this.numerator / this.denominator * maxDenominator), maxDenominator)
 	}
 	
 	

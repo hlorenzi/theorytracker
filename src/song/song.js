@@ -1,7 +1,7 @@
 import { ListOfRanges } from "../util/listOfRanges.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
-import { Key, scales, Chord, getChordKindFromId } from "../util/theory.js"
+import { Key, scales, Meter, Chord, getChordKindFromId } from "../util/theory.js"
 import { MidiFile } from "../util/midi.js"
 import { URLBinaryEncoder, URLBinaryDecoder } from "../util/urlBinaryEncoder.js"
 
@@ -222,8 +222,8 @@ export class Song
 			
 			str += "["
 			str += meterChange.time.toJSONString() + ","
-			str += meterChange.numerator + ","
-			str += meterChange.denominator
+			str += meterChange.meter.numerator + ","
+			str += meterChange.meter.denominator
 			str += "]"
 		}
 		str += "\n"
@@ -281,8 +281,7 @@ export class Song
 		for (const meterChange of json.meterChanges)
 			song = song.upsertMeterChange(new MeterChange(
 				Rational.fromArray(meterChange[0]),
-				meterChange[1],
-				meterChange[2]))
+				new Meter(meterChange[1], meterChange[2])))
 		
 		return song.withRefreshedRange()
 	}
@@ -305,9 +304,16 @@ export class Song
 		{
 			// Write note data as a structure-of-arrays.
 			w.writeInteger(this.notes.items.length)
-
+			
+			let prevNoteRangeStartInteger = 0
 			for (const note of this.notes.enumerate())
-				w.writeInteger(note.range.start.numerator)
+			{
+				w.writeInteger(note.range.start.integer - prevNoteRangeStartInteger)
+				prevNoteRangeStartInteger = note.range.start.integer
+			}
+			
+			for (const note of this.notes.enumerate())
+				w.writeInteger(note.range.start.numeratorWithoutInteger)
 
 			for (const note of this.notes.enumerate())
 				w.writeInteger(note.range.start.denominator)
@@ -325,8 +331,15 @@ export class Song
 		// Write chord data as a structure-of-arrays.
 		w.writeInteger(this.chords.items.length)
 
+		let prevChordRangeStartInteger = 0
 		for (const chord of this.chords.enumerate())
-			w.writeInteger(chord.range.start.numerator)
+		{
+			w.writeInteger(chord.range.start.integer - prevChordRangeStartInteger)
+			prevChordRangeStartInteger = chord.range.start.integer
+		}
+		
+		for (const chord of this.chords.enumerate())
+			w.writeInteger(chord.range.start.numeratorWithoutInteger)
 
 		for (const chord of this.chords.enumerate())
 			w.writeInteger(chord.range.start.denominator)
@@ -385,13 +398,14 @@ export class Song
 			w.writeInteger(meterChange.time.denominator)
 
 		for (const meterChange of this.meterChanges.enumerate())
-			w.writeInteger(meterChange.numerator)
+			w.writeInteger(meterChange.meter.numerator)
 
 		for (const meterChange of this.meterChanges.enumerate())
-			w.writeInteger(meterChange.denominator)
+			w.writeInteger(meterChange.meter.denominator)
 		
 		
-		return w.getCompressedURLSafe()
+		console.log(w.getCompressedURLSafe().length)
+		return "3_" + w.getCompressedURLSafe()
 	}
 	
 	
@@ -399,11 +413,17 @@ export class Song
 	{
 		let song = new Song()
 		
-		const r = new URLBinaryDecoder(str)
+		if (!str.startsWith("3_"))
+			throw "unsupported version"
+		
+		const r = new URLBinaryDecoder(str.substr(2))
 		
 		// Read header.
 		const version = r.readInteger()
 		song.baseBpm = r.readInteger()
+		
+		if (version != 3)
+			throw "unsupported version"
 
 		// Read note tracks.
 		const trackNum = r.readInteger()
@@ -414,22 +434,29 @@ export class Song
 			
 			let noteData = []
 			
+			let prevNoteRangeStartInteger = 0
 			for (let i = 0; i < noteNum; i++)
-				noteData[i] = [ r.readInteger(), 1, 0, 1 ]
+			{
+				prevNoteRangeStartInteger += r.readInteger() // range.start.integer
+				noteData[i] = [ prevNoteRangeStartInteger ]
+			}
+			
+			for (let i = 0; i < noteNum; i++)
+				noteData[i][1] = r.readInteger() // range.start.numeratorWithoutInteger
 				
 			for (let i = 0; i < noteNum; i++)
-				noteData[i][1] = r.readInteger()
+				noteData[i][2] = r.readInteger() // range.start.denominator
 			
 			for (let i = 0; i < noteNum; i++)
-				noteData[i][2] = r.readInteger()
+				noteData[i][3] = r.readInteger() // range.duration.numerator
 			
 			for (let i = 0; i < noteNum; i++)
-				noteData[i][3] = r.readInteger()
+				noteData[i][4] = r.readInteger() // range.duration.denominator
 				
 			for (let i = 0; i < noteNum; i++)
 			{
-				const start = new Rational(noteData[i][0], noteData[i][1])
-				const duration = new Rational(noteData[i][2], noteData[i][3])
+				const start = Rational.fromIntegerPlusRational(noteData[i][0], noteData[i][1], noteData[i][2])
+				const duration = new Rational(noteData[i][3], noteData[i][4])
 					
 				song = song.upsertNote(new Note(
 					Range.fromStartDuration(start, duration),
@@ -442,42 +469,52 @@ export class Song
 		
 		let chordData = []
 		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i] = [ r.readInteger(), 0, 0, 0, 0, 0, null, 0, {} ] // range.start.numerator
-			
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][1] = r.readInteger() // range.start.denominator
-		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][2] = r.readInteger() // range.end.numerator
-		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][3] = r.readInteger() // range.end.denominator
-		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][4] = r.readInteger() // chord.tonicPitch
-		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][5] = r.readInteger() // chord.tonicAccidental
-		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][6] = r.readString() // chord.getKindId()
-		
-		for (let i = 0; i < chordNum; i++)
-			chordData[i][7] = r.readInteger() // chord.getModifierArray().length
-		
-		for (let i = 0; i < chordNum; i++)
-			for (let mod = 0; mod < chordData[i][7]; mod++)
-				chordData[i][8][r.readString()] = true // chord.getModifierArray()[mod]
-			
+		let prevChordRangeStartInteger = 0
 		for (let i = 0; i < chordNum; i++)
 		{
-			const start = new Rational(chordData[i][0], chordData[i][1])
-			const duration = new Rational(chordData[i][2], chordData[i][3])
+			prevChordRangeStartInteger += r.readInteger() // range.start.integer
+			chordData[i] = [ prevChordRangeStartInteger ]
+		}
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][1] = r.readInteger() // range.start.numeratorWithoutInteger
+			
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][2] = r.readInteger() // range.start.denominator
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][3] = r.readInteger() // range.duration.numerator
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][4] = r.readInteger() // range.duration.denominator
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][5] = r.readInteger() // chord.tonicPitch
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][6] = r.readInteger() // chord.tonicAccidental
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][7] = r.readString() // chord.getKindId()
+		
+		for (let i = 0; i < chordNum; i++)
+			chordData[i][8] = r.readInteger() // chord.getModifierArray().length
+		
+		for (let i = 0; i < chordNum; i++)
+		{
+			chordData[i][9] = {}
+			for (let mod = 0; mod < chordData[i][8]; mod++)
+				chordData[i][9][r.readString()] = true // chord.getModifierArray()[mod]
+		}
+		
+		for (let i = 0; i < chordNum; i++)
+		{
+			const start = Rational.fromIntegerPlusRational(chordData[i][0], chordData[i][1], chordData[i][2])
+			const duration = new Rational(chordData[i][3], chordData[i][4])
 				
 			song = song.upsertChord(new SongChord(
 				Range.fromStartDuration(start, duration),
-				new Chord(chordData[i][4], chordData[i][5], getChordKindFromId(chordData[i][6]), chordData[i][8])))
+				new Chord(chordData[i][5], chordData[i][6], getChordKindFromId(chordData[i][7]), chordData[i][9])))
 		}
 		
 		// Read key change data as structure-of-arrays.
@@ -486,7 +523,7 @@ export class Song
 		let keyChangeData = []
 		
 		for (let i = 0; i < keyChangeNum; i++)
-			keyChangeData[i] = [ r.readInteger(), 0, 0, 0, 0, [] ] // time.numerator
+			keyChangeData[i] = [ r.readInteger() ] // time.numerator
 			
 		for (let i = 0; i < keyChangeNum; i++)
 			keyChangeData[i][1] = r.readInteger() // time.denominator
@@ -501,9 +538,12 @@ export class Song
 			keyChangeData[i][4] = r.readInteger() // key.scalePitches.length
 		
 		for (let i = 0; i < keyChangeNum; i++)
+		{
+			keyChangeData[i][5] = []
 			for (let p = 0; p < keyChangeData[i][4]; p++)
-				keyChangeData[i][5].push(r.readInteger()) // key.scalePitches[p]
-			
+				keyChangeData[i][5][p] = r.readInteger() // key.scalePitches[p]
+		}
+		
 		for (let i = 0; i < keyChangeNum; i++)
 		{
 			const time = new Rational(keyChangeData[i][0], keyChangeData[i][1])
@@ -519,7 +559,7 @@ export class Song
 		let meterChangeData = []
 		
 		for (let i = 0; i < meterChangeNum; i++)
-			meterChangeData[i] = [ r.readInteger(), 0, 0, 0, 0, [] ] // time.numerator
+			meterChangeData[i] = [ r.readInteger() ] // time.numerator
 			
 		for (let i = 0; i < meterChangeNum; i++)
 			meterChangeData[i][1] = r.readInteger() // time.denominator
@@ -536,7 +576,7 @@ export class Song
 				
 			song = song.upsertMeterChange(new MeterChange(
 				time,
-				meterChangeData[i][2], meterChangeData[i][3]))
+				new Meter(meterChangeData[i][2], meterChangeData[i][3])))
 		}
 		
 		return song.withRefreshedRange()
@@ -627,7 +667,7 @@ export class Song
 					continue
 				
 				const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, 27720)
-				song = song.upsertMeterChange(new MeterChange(time, ev.numerator, ev.denominator))
+				song = song.upsertMeterChange(new MeterChange(time, new Meter(ev.numerator, ev.denominator)))
 			}
 		}
 		
@@ -635,7 +675,7 @@ export class Song
 			song = song.upsertKeyChange(new KeyChange(new Rational(0), new Key(0, 0, scales[0].pitches)))
 		
 		if (!song.meterChanges.findActiveAt(new Rational(0)))
-			song = song.upsertMeterChange(new MeterChange(new Rational(0), 4, 4))
+			song = song.upsertMeterChange(new MeterChange(new Rational(0), new Meter(4, 4)))
 		
 		console.log(song)
 		return song.withRefreshedRange()
@@ -679,18 +719,17 @@ export class SongChord
 
 export class MeterChange
 {
-	constructor(time, numerator, denominator)
+	constructor(time, meter)
 	{
 		this.id = -1
 		this.time = time
-		this.numerator = numerator
-		this.denominator = denominator
+		this.meter = meter
 	}
 	
 	
 	withChanges(obj)
 	{
-		return Object.assign(new MeterChange(this.time, this.numerator, this.denominator), { id: this.id }, obj)
+		return Object.assign(new MeterChange(this.time, this.meter), { id: this.id }, obj)
 	}
 	
 	
@@ -702,13 +741,13 @@ export class MeterChange
 	
 	getMeasureDuration()
 	{
-		return new Rational(this.numerator, this.denominator)
+		return new Rational(this.meter.numerator, this.meter.denominator)
 	}
 	
 	
 	getSubmeasureDuration()
 	{
-		return new Rational(1, this.denominator)
+		return new Rational(1, this.meter.denominator)
 	}
 }
 

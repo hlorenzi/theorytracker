@@ -36,13 +36,13 @@ export class URLBinaryEncoder
 	getCompressedURLSafe()
 	{
 		const array = new Uint8Array(this.data)
-		console.log(array)
-		const compressed = pako.deflate(array, { to: "string" })
-		console.log(compressed)
+		//console.log(array)
+		const compressed = pako.deflateRaw(array, { to: "string", level: 9 })
+		//console.log(compressed)
 		const compressedBase64 = window.btoa(new Array(compressed))
-		console.log(compressedBase64)
+		//console.log(compressedBase64)
 		const urlSafeCompressedBase64 = urlSafeEncodeBase64(compressedBase64)
-		console.log(urlSafeCompressedBase64)
+		//console.log(urlSafeCompressedBase64)
 		return urlSafeCompressedBase64
 	}
 
@@ -103,7 +103,7 @@ export class URLBinaryDecoder
 	{
 		const compressedBase64 = urlSafeDecodeBase64(urlSafeCompressedBase64)
 		const compressed = window.atob(compressedBase64)
-		const array = pako.inflate(compressed)
+		const array = pako.inflateRaw(compressed)
 
 		this.data = array
 		this.index = 0

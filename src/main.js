@@ -196,11 +196,11 @@ function feedSongToSynth(song, synth, startTick, useChordPatterns = true)
 			continue
 		}
 			
-		const meter = song.meterChanges.findActiveAt(chord.range.start) || new MeterChange(startTick, 4, 4)
+		const meter = song.meterChanges.findActiveAt(chord.range.start) || new MeterChange(startTick, new Meter(4, 4))
 		const meterBeatLength = meter.getSubmeasureDuration()
 		const measureBreak = null//that.forcedMeasures.findActiveAt(chord.range.start)
 		
-		const pattern = getChordStrummingPattern(meter)
+		const pattern = getChordStrummingPattern(meter.meter)
 		
 		let tick = meter.time
 		//if (measureBreak != null)

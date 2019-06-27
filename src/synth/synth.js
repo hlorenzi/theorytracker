@@ -22,7 +22,7 @@ export class Synth
 			[ 440.0, "audio/piano/a4.mp3"],
 			[ 880.0, "audio/piano/a5.mp3"],
 			[1760.0, "audio/piano/a6.mp3"],
-			[3520.0, "audio/piano/a7.mp3"]
+			//[3520.0, "audio/piano/a7.mp3"]
 		])
 		
 		this.instruments = [piano, piano]
@@ -96,6 +96,9 @@ export class Synth
 
 	addNoteEvent(time, instrumentIndex, frequency, volume, duration)
 	{
+		if (!isFinite(frequency))
+			return
+		
 		this.noteEvents.push(
 		{
 			time: time + this.time,

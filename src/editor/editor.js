@@ -5,7 +5,7 @@ import { EditorChords } from "./editorChords.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales, Chord } from "../util/theory.js"
+import { Key, Meter, scales, Chord } from "../util/theory.js"
 
 
 export class Editor
@@ -28,7 +28,10 @@ export class Editor
 		this.synth = synth
 		
 		this.song = new Song()
-			.upsertNote(new Note(new Range(new Rational(0, 4), new Rational(1, 4)), 60))
+			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales[0].pitches)))
+			.upsertMeterChange(new MeterChange(new Rational(0, 4), new Meter(4, 4)))
+			
+		/*	.upsertNote(new Note(new Range(new Rational(0, 4), new Rational(1, 4)), 60))
 			.upsertNote(new Note(new Range(new Rational(1, 4), new Rational(2, 4)), 62))
 			.upsertNote(new Note(new Range(new Rational(2, 4), new Rational(3, 4)), 64))
 			.upsertNote(new Note(new Range(new Rational(3, 4), new Rational(4, 4)), 65))
@@ -41,12 +44,11 @@ export class Editor
 			.upsertChord(new SongChord(new Range(new Rational(4, 4), new Rational(7, 4)), new Chord(9, 0, 2)))
 			.upsertChord(new SongChord(new Range(new Rational(8, 4), new Rational(13, 4)), new Chord(2, 0, 3)))
 			
-			.upsertMeterChange(new MeterChange(new Rational(0, 4), 4, 4))
-			.upsertMeterChange(new MeterChange(new Rational(11, 4), 5, 4))
+			.upsertMeterChange(new MeterChange(new Rational(11, 4), new Meter(5, 4)))
 			
 			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales[0].pitches)))
 			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(5, 1, scales[5].pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales[7].pitches)))
+			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales[7].pitches)))*/
 		
 		this.timeScale = 200
 		this.timeScroll = 0
@@ -281,6 +283,56 @@ export class Editor
 	}
 	
 	
+	insertKeyChangeAtCursor(key)
+	{
+		const time = this.cursorTime.start.min(this.cursorTime.end)
+		
+		const id = this.song.nextId
+		this.song = this.song
+			.upsertKeyChange(new KeyChange(time, key))
+			.withRefreshedRange()
+			
+		this.cursorTime = Range.fromPoint(time)
+		this.cursorTrack = { start: 0, end: 0 }
+		this.cursorShow = false
+		this.scrollTimeIntoView(this.cursorTime.start)
+		
+		this.selectionClear()
+		this.selection.add(id)
+		
+		this.curSanitizationMode = "input"
+		this.sanitizeSelection()
+		
+		this.toolboxRefreshFn()
+		this.draw()
+	}
+	
+	
+	insertMeterChangeAtCursor(meter)
+	{
+		const time = this.cursorTime.start.min(this.cursorTime.end)
+		
+		const id = this.song.nextId
+		this.song = this.song
+			.upsertMeterChange(new MeterChange(time, meter))
+			.withRefreshedRange()
+			
+		this.cursorTime = Range.fromPoint(time)
+		this.cursorTrack = { start: 0, end: 0 }
+		this.cursorShow = false
+		this.scrollTimeIntoView(this.cursorTime.start)
+		
+		this.selectionClear()
+		this.selection.add(id)
+		
+		this.curSanitizationMode = "input"
+		this.sanitizeSelection()
+		
+		this.toolboxRefreshFn()
+		this.draw()
+	}
+	
+	
 	scrollTimeIntoView(time)
 	{
 		if (time.compare(this.screenRange.end.subtract(this.timeSnap.multiply(this.cursorEdgeScrollThreshold))) > 0)
@@ -455,7 +507,7 @@ export class Editor
 				this.cursorTime = new Range(this.mouseTime, this.mouseTime, false, false)
 			else
 			{
-				const anchorPoint = this.tracks[this.mouseDownData.track].getPreviousAnchor(this.cursorTime.min())
+				const anchorPoint = this.tracks[this.mouseDownData.track].getPreviousAnchor(this.cursorTime.min()) || this.song.range.start
 				
 				if (anchorPoint != null)
 				{
@@ -820,12 +872,18 @@ export class Editor
 			this.ctx.fillRect(songEndX, 0, this.width - songEndX, this.height)
 		
 		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
-		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, 64)
+		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, 256)
 		
-		for (const [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
+		for (let [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
 		{
-			if (curMeter == null)
+			if (curMeter == null && nextMeter == null)
 				continue
+			
+			if (curMeter == null)
+			{
+				const nullMeterMeasuresBehind = Math.ceil((nextMeter.time.asFloat() - this.screenRange.start.asFloat()) / nextMeter.getMeasureDuration().asFloat())
+				curMeter = new MeterChange(nextMeter.time.subtract(nextMeter.getMeasureDuration().multiply(new Rational(nullMeterMeasuresBehind))), nextMeter.meter)
+			}
 			
 			const x = (curMeter.time.asFloat() - this.timeScroll) * this.timeScale
 			
@@ -846,7 +904,7 @@ export class Editor
 			while (time.lessThan(this.screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
 			{
 				const submeasureX = (time.asFloat() - this.timeScroll) * this.timeScale
-				const isMeasure = submeasureCount % curMeter.numerator == 0
+				const isMeasure = submeasureCount % curMeter.meter.numerator == 0
 				
 				if (time.greaterThan(this.screenRange.start) && (isMeasure || submeasureBigEnough))
 				{

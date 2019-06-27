@@ -3,7 +3,7 @@ import { Editor } from "./editor.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Rect } from "../util/rect.js"
-import { Key, scales, Chord, chords, drawChordOnCanvas, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree, getFillStyleForScaleDegree } from "../util/theory.js"
+import { Key, scales, Chord, chords, drawChordOnCanvas, getChordKindFromPitches, getRomanNumeralScaleDegreeStr, getScaleDegreeForPitch, getPitchForScaleDegree, getColorRotationForScale, getColorForScaleDegree, getFillStyleForScaleDegree } from "../util/theory.js"
 
 
 export class EditorChords
@@ -160,8 +160,17 @@ export class EditorChords
 				
 				const degree = key.charCodeAt(0) - "1".charCodeAt(0)
 				const keyChange = this.owner.song.keyChanges.findActiveAt(this.owner.cursorTime.start) || new KeyChange(this.owner.cursorTime.start, new Key(0, 0, scales[0].pitches))
-				const rootPitch = keyChange.key.tonicPitch + keyChange.key.tonicAccidental + keyChange.key.scalePitches[degree]
-				const chord = new Chord(rootPitch, 0, 0, {})
+				const rootPitch = getPitchForScaleDegree(keyChange.key, degree + 0)
+				
+				const relativePitches =
+				[
+					getPitchForScaleDegree(keyChange.key, degree + 0) - rootPitch,
+					getPitchForScaleDegree(keyChange.key, degree + 2) - rootPitch,
+					getPitchForScaleDegree(keyChange.key, degree + 4) - rootPitch
+				]
+				const kind = getChordKindFromPitches(relativePitches)
+				
+				const chord = new Chord(rootPitch, 0, kind, {})
 				this.owner.insertChordAtCursor(chord)
 				return true
 			}

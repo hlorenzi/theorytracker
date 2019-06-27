@@ -426,7 +426,7 @@ export class EditorMarkers
 		this.owner.ctx.font = "14px Verdana"
 		this.owner.ctx.textAlign = "left"
 		this.owner.ctx.textBaseline = "middle"
-		this.owner.ctx.fillText(meterChange.numerator.toString() + " / " + meterChange.denominator.toString(), rect.x + rect.w + 5, rect.y + rect.h / 2)
+		this.owner.ctx.fillText(meterChange.meter.numerator.toString() + " / " + meterChange.meter.denominator.toString(), rect.x + rect.w + 5, rect.y + rect.h / 2)
 		
 		if (this.owner.selection.has(meterChange.id))
 		{

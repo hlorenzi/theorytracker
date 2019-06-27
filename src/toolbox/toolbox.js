@@ -1,14 +1,49 @@
 import React from "react"
-import { Song, KeyChange } from "../song/song.js"
-import { Key, scales, Chord, chords, drawChordOnCanvas, getScaleDegreeForPitch, getPitchForScaleDegree, getNameForPitch, getColorForScaleDegree, getColorRotationForScale, getChordKindFromPitches, getRomanNumeralScaleDegreeStr } from "../util/theory.js"
+import { Song, KeyChange, MeterChange } from "../song/song.js"
+import { Key, scales, Chord, chords, Meter, drawChordOnCanvas, getScaleIndexFromPitches, getScaleDegreeForPitch, getPitchForScaleDegree, getNameForPitch, getColorForScaleDegree, getColorRotationForScale, getChordKindFromPitches, getRomanNumeralScaleDegreeStr, getFillStyleForScaleDegree } from "../util/theory.js"
 import { Rational } from "../util/rational.js"
 import { Rect } from "../util/rect.js"
+import { mod } from "../util/math.js"
+
+
+function TabButton(props)
+{
+	const selected = (props.current == props.value)
+	const onClick = () => props.setCurrent(props.value)
+	
+	return (
+		<div
+			onClick={onClick}
+			style={{
+				display:"inline-block", paddingLeft:"0.5em", paddingRight:"0.5em", paddingBottom:"0.25em", borderBottom:"3px solid " + (selected ? "#28f" : "#fff"),
+				minWidth:"2em", textAlign:"center",
+				cursor:"pointer", userSelect:"none" }}>
+			
+			{ props.children }
+		</div>
+	)
+}
 
 
 function PlaybackToolbox(props)
 {
-	return <div style={{ display:"grid", gridTemplate:"0fr 0fr / 0fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
-		<div style={{ display:"grid", gridTemplate:"0fr / 0fr 0fr 0fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
+	const inputFileRef = React.createRef()
+	const performInputFileClick = () => inputFileRef.current.click()
+	
+	const examples =
+	[
+		"mozartk453",
+		"letitgo",
+		"rollercoaster",
+		"adventure",
+		"isaac",
+		"dontstarve",
+		"chronotrigger",
+		"jimmyneutron",
+	]
+	
+	return <div style={{ height:"auto", display:"grid", gridTemplate:"auto auto auto auto auto 1fr / auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", padding:"0.5em" }}>
+		<div style={{ display:"grid", gridTemplate:"auto / auto auto auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"center" }}>
 			<button style={{ width:"4em", height:"4em" }} onClick={() => props.onPlaybackToggle()}>
 				<span style={{ fontSize:"3em" }}>{ props.editor.playing ? "■" : "▶" }</span>
 			</button>
@@ -16,39 +51,121 @@ function PlaybackToolbox(props)
 				<span style={{ fontSize:"2em" }}>◀◀</span>
 			</button>
 			<div>
-				BPM: <input type="number" value={props.editor.song.baseBpm} onKeyDown={(ev) => ev.stopPropagation()} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
+				BPM:
+				<br/>
+				<input type="number" value={props.editor.song.baseBpm} onKeyDown={(ev) => ev.stopPropagation()} onChange={(ev) => props.onSetBpm(ev.target.value)} style={{ width:"5em" }}/>
 			</div>
 		</div>
 		
-		<div>
-			<button onClick={() => props.onNew()}>
-				New
-			</button>
-			
-			<button onClick={() => props.onGenerateURL()}>
-				Save to URL
-			</button>
-			<br/>
-			
-			<button onClick={() => props.onSaveJSONString()}>
-				Save JSON
-			</button>
-			
-			<button onClick={() => props.onLoadJSONString()}>
-				Load JSON
-			</button>
-			<br/>
-			<br/>
-			
-			<div style={{ fontSize:"12px" }}>
-				Load JSON: <input type="file" accept=".json,.txt" onChange={(ev) => props.onLoadJSON(ev.target)}/>
+		<div style={{ height:"1em" }}/>
+		
+		<div style={{ display:"grid", gridTemplate:"auto / auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center" }}>
+
+			<div style={{ justifySelf:"left" }}>
+				<button style={{ fontSize:"18px" }} title="New" onClick={() => props.onNew()}>🗑️</button>
+				<div style={{ display:"inline-block", width:"0.5em" }}/>
+				<button style={{ fontSize:"18px" }} title="Load MIDI or JSON from file" onClick={performInputFileClick}>📂</button>
+				<button style={{ fontSize:"18px" }} title="Paste JSON string" onClick={() => props.onLoadJSONString()}>📋</button>
+				<div style={{ display:"inline-block", width:"0.5em" }}/>
+				<button style={{ fontSize:"18px" }} title="Save JSON string" onClick={() => props.onSaveJSONString()}>💾</button>
+				<button style={{ fontSize:"18px" }} title="Generate URL" onClick={() => props.onGenerateURL()}>🔗</button>
+				
+				<input ref={inputFileRef} type="file" accept=".mid,.json,.txt" style={{ display:"none", width:"1em" }} onChange={(ev) => props.onLoadFile(ev.target)}/>
 			</div>
-			<br/>
 			
-			<div style={{ fontSize:"12px" }}>
-				Load MIDI: <input type="file" accept=".mid" onChange={(ev) => props.onLoadMIDI(ev.target)}/>
+		</div>
+		
+		<div style={{ height:"1em" }}/>
+		
+		<div>
+			<select value={0} onChange={ (ev) => props.onLoadExample(ev.target.value) }>
+				<option value={""}>Load an example...</option>
+				{ examples.map(ex => <option key={ex} value={ex}>{ex}</option>) }
+			</select>
+		</div>
+	</div>
+}
+
+
+function MarkerToolbox(props)
+{
+	const tonicPitches = [0, 7, 2, 9, 4, 11, 5]
+	const tonicPitchNames = ["C", "G", "D", "A", "E", "B", "F"]
+	const accidentals = [-2, -1, 0, 1, 2]
+	const accidentalNames = ["♭♭", "♭", "♮", "♯", "♯♯"]
+	const songKeyScaleIndex = getScaleIndexFromPitches(props.songKey.scalePitches)
+	
+	const modifyKeyChange = (changes) => props.onModifyKeyChange(ch => ch.withChanges({ key: ch.key.withChanges(changes) }))
+	
+	return <div style={{ display:"grid", gridTemplate:"auto 1fr / auto auto 1fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"left", padding:"0.5em" }}>
+		<KeyChangeToolbox {...props}/>
+		<MeterChangeToolbox {...props}/>
+	</div>
+}
+
+
+function KeyChangeToolbox(props)
+{
+	const tonicPitches = [0, 7, 2, 9, 4, 11, 5]
+	const tonicPitchNames = ["C", "G", "D", "A", "E", "B", "F"]
+	const accidentals = [-2, -1, 0, 1, 2]
+	const accidentalNames = ["♭♭", "♭", "♮", "♯", "♯♯"]
+	const songKeyScaleIndex = getScaleIndexFromPitches(props.songKey.scalePitches)
+	
+	const modifyKeyChange = (changes) => props.onModifyKeyChange(ch => ch.withChanges({ key: ch.key.withChanges(changes) }))
+	
+	return <div style={{ display:"grid", gridTemplate:"auto auto 1fr / auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"left" }}>
+		
+		<div>
+			<div style={{ backgroundColor:"#fdf", padding:"0.5em" }}>
+				<span>Key Change</span>
+				<br/>
+				<button onClick={props.onInsertKeyChange}>Insert New</button>
+				<br/>
+				<br/>
+				<span>Current:</span>
+				<br/>
+				<select value={props.songKey.tonicPitch} style={{ height:"2em" }} onChange={(ev) => modifyKeyChange({ tonicPitch: parseInt(ev.target.value) })}>
+					{ tonicPitches.map((tonicPitch, i) => <option key={i} value={tonicPitch}>{ tonicPitchNames[i] }</option>) } 
+				</select>
+				<select value={props.songKey.tonicAccidental} style={{ height:"2em" }} onChange={(ev) => modifyKeyChange({ tonicAccidental: parseInt(ev.target.value) })}>
+					{ accidentals.map((accidental, i) => <option key={i} value={accidental}>{ accidentalNames[i] }</option>) } 
+				</select>
+				<select value={songKeyScaleIndex} style={{ height:"2em" }} onChange={(ev) => modifyKeyChange({ scalePitches: scales[ev.target.value].pitches })}>
+					{ scales.map((scale, i) => <option key={i} value={i}>{ scale.name }</option>) } 
+				</select>
 			</div>
 		</div>
+		
+	</div>
+}
+
+
+function MeterChangeToolbox(props)
+{
+	const meterDenominators = [1, 2, 4, 8, 16, 32, 64]
+	
+	const modify = (changes) => props.onModifyMeterChange(ch => ch.withChanges({ meter: ch.meter.withChanges(changes) }))
+	
+	return <div style={{ display:"grid", gridTemplate:"auto auto 1fr / auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"left" }}>
+		
+		<div>
+			<div style={{ backgroundColor:"#def", padding:"0.5em" }}>
+				<span>Meter Change</span>
+				<br/>
+				<button onClick={props.onInsertMeterChange}>Insert New</button>
+				<br/>
+				<br/>
+				<span>Current:</span>
+				<br/>
+				<input type="number" value={props.songMeter.numerator} onKeyDown={(ev) => ev.stopPropagation()} min="1" max="64" onChange={(ev) => modify({ numerator: Math.max(1, Math.min(64, ev.target.value)) })} style={{ width:"3em", height:"2em" }}/>
+				<span>{ " / " }</span>
+				<select value={props.songMeter.denominator} style={{ height:"2em" }} onChange={(ev) => modify({ denominator: parseInt(ev.target.value) })}>
+					{ meterDenominators.map(denominator => <option key={denominator} value={denominator}>{ denominator.toString() }</option>) } 
+				</select>
+			</div>
+		</div>
+		
 	</div>
 }
 
@@ -75,41 +192,64 @@ function LengthToolbox(props)
 
 function NoteToolbox(props)
 {
-	return <div>
-		<LengthToolbox/>
-		<span style={{ fontWeight:"bold" }}>{ props.songKey.getName() }</span>
-		<br/>
-	
-		{ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(pitch =>
-			{
-				const finalPitch = pitch + props.songKey.tonicPitch + props.songKey.tonicAccidental
-				const degree = getScaleDegreeForPitch(props.songKey, finalPitch)
-				const inKey = Math.floor(degree) == degree
-				const noteName = getNameForPitch(props.songKey, finalPitch)
-				const colorRotation = getColorRotationForScale(props.songKey.scalePitches)
-				const color = getColorForScaleDegree(colorRotation + degree)
-				return <button key={pitch} onClick={ () => props.onSelectNote(finalPitch) } style={{ position:"relative", top:(inKey ? "1em" : "0"), width:"3em", height:"4em", backgroundColor: color, border:"0", borderRadius:"0.25em", margin:"0.1em" }}>
-					<span style={{ fontWeight:"bold" }}>{ noteName }</span>					
+	const NoteButton = (props2) =>
+	{
+		const finalPitch = props2.pitch + props.songKey.tonicPitch + props.songKey.tonicAccidental
+		const degree = getScaleDegreeForPitch(props.songKey, finalPitch)
+		const inKey = Math.floor(degree) == degree
+		const noteName = getNameForPitch(props.songKey, finalPitch)
+		const colorRotation = getColorRotationForScale(props.songKey.scalePitches)
+		
+		const ref = React.createRef()
+		
+		const w = 42
+		const h = 58
+		const m = 4
+		
+		React.useEffect(() =>
+		{
+			const ctx = ref.current.getContext("2d")
+			ctx.fillStyle = getFillStyleForScaleDegree(ctx, degree + colorRotation)
+			ctx.fillRect(0, 0, w, h)
+		})
+		
+		return (
+			<div style={{ display:"inline-block", top:(!inKey ? "0" : "20px"), opacity:(!inKey ? "0.5" : "1"), position:"relative", width:(w + "px"), height:(h + "px"), margin:"0.1em" }}>
+				<canvas ref={ref} width={w.toString()} height={h.toString()} style={{ position:"absolute", top:"0", left:"0", width:(w + "px"), height:(h + "px") }}/>
+				<button
+					style={{ position:"absolute", top:(m + "px"), left:(m + "px"), width:((w - m - m) + "px"), height:((h - m - m) + "px"), opacity:"0.9" }}
+					onClick={ () => props.onSelectNote(finalPitch) }>
+			
+					<span>{ noteName }</span>
+					{ !inKey ? null : <br/> }				
+					{ !inKey ? null : <span>{ "(" + (mod(degree, 7) + 1) + ")" }</span> }				
 				</button>
-			}
-		)}
+			</div>
+		)
+	}
 	
+	return <div style={{ display:"grid", gridTemplate:"auto auto 1fr / auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"center", justifyItems:"left", padding:"0.5em" }}>
+		<span>{ "Notes in " + props.songKey.getName() }</span>
+		<div>{ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(pitch => <NoteButton key={pitch} pitch={pitch}/>) }</div>
 	</div>
 }
 
 
 function ChordToolbox(props)
 {
-	const [allChordsKind, setAllChordsKind] = React.useState(-1)
-	const [allChordsAccidental, setAllChordsAccidental] = React.useState(0)
-	const [inKeyChordType, setInKeyChordType] = React.useState(0)
-	const [sus2, setSus2] = React.useState(false)
-	const [sus4, setSus4] = React.useState(false)
-	const [add9, setAdd9] = React.useState(false)
-	const [add11, setAdd11] = React.useState(false)
-	const [add13, setAdd13] = React.useState(false)
-	const [no3, setNo3] = React.useState(false)
-	const [no5, setNo5] = React.useState(false)
+	const state = props.state[0]
+	const setState = (newState) => props.state[1]({ ...state, ...newState })
+	
+	if (state == null)
+	{
+		setState({
+			kindDropdown: -1,
+			accidentalTab: 0,
+			inKeyType: 0,
+			embelishments: {}
+		})
+		return null
+	}
 	
 	const ChordButton = (props2) =>
 	{
@@ -122,76 +262,28 @@ function ChordToolbox(props)
 		})
 		
 		return <canvas ref={ref} width="80" height="58" onClick={ () => props.onSelectChord(props2.chord) } style={{ width:"80px", height:"58px", margin:"0.1em" }}/>
-		
-		const color = props2.chord.getColor(props.songKey)
-		const baseStr = props2.chord.getNameBase(props.songKey)
-		const supStr = props2.chord.getNameSup(props.songKey)
-		const subStr = props2.chord.getNameSub(props.songKey)
-		
-		return <button onClick={ () => props.onSelectChord(props2.chord) } style={{ width:"6em", height:"4em", backgroundColor:"#eee", border:"0", borderTop:"0.5em solid " + color, borderBottom:"0.5em solid " + color, borderRadius:"0.25em", margin:"0.1em" }}>
-			<span style={{ fontFamily:"Verdana", fontSize:"20px" }}>{ baseStr }<sup>{ supStr }</sup><sub>{ subStr }</sub></span>					
-		</button>
 	}
 	
-	const TabButton = (props2) =>
+	const KindDropdown = () =>
 	{
-		return <span onClick={ () => props2.onClick(props2.value) } style={{ minWidth:"2em", display:"inline-block", fontFamily:"Verdana", fontSize:"15px", backgroundColor:(props2.value == props2.variable ? "#ddd" : "#fff"), padding:"0.25em", borderRadius:"0.25em", marginRight:"0.5em", cursor:"pointer" }}>
-			{ props2.children }
-		</span>
-	}
-	
-	const AllChordsMenu = () =>
-	{
-		return <select value={allChordsKind} onChange={ (ev) => setAllChordsKind(parseInt(ev.target.value)) }>
+		return <select value={state.kindDropdown} style={{ height:"2em" }} onChange={ (ev) => setState({ kindDropdown: parseInt(ev.target.value) }) }>
+		
 			<option value={-1}>In Key</option>
-			{
-				chords.map((chord, index) =>
-				{
-					return <React.Fragment key={index}>
-						{ chord.startGroup ? <optgroup label={chord.startGroup}/> : null }
-						<option value={index}>
-							{ (chord.symbol[0] ? "i" : "I") + chord.symbol[1] + (chord.symbol[2] || "") }
-						</option>
-					</React.Fragment>
-				})
-			}
+			
+			{ chords.map((chord, index) =>
+				<React.Fragment key={index}>
+					{ chord.startGroup ? <optgroup label={chord.startGroup}/> : null }
+					<option value={index}>
+						{ (chord.symbol[0] ? "i" : "I") + chord.symbol[1] + (chord.symbol[2] || "") }
+					</option>
+				</React.Fragment>
+			)}
+			
 		</select>
 	}
 	
-	const AllChordsMatrix = () =>
-	{
-		let groupIndex = 0
-		
-		return <div>
-		{
-			chords.map((chord, index) =>
-			{
-				if (chord.startGroup)
-					groupIndex = 1
-				
-				return <React.Fragment>
-					{ (groupIndex++) % 9 == 0 || chord.startGroup ? <br/> : null }
-					<TabButton key={index} value={index} variable={allChordsKind} onClick={setAllChordsKind}>
-						{ (chord.symbol[0] ? "i" : "I") + chord.symbol[1] }<sup>{ chord.symbol[2] }</sup>
-					</TabButton>
-				</React.Fragment>
-			})
-		}
-		</div>
-	}
-				
-	let modifiers = {}
-	if (sus2) modifiers.sus2 = true
-	if (sus4) modifiers.sus4 = true
-	if (add9) modifiers.add9 = true
-	if (add11) modifiers.add11 = true
-	if (add13) modifiers.add13 = true
-	if (no3) modifiers.no3 = true
-	if (no5) modifiers.no5 = true
-	
 	let chordButtons = null
-	
-	switch (allChordsKind)
+	switch (state.kindDropdown)
 	{
 		case -1:
 			chordButtons = [0, 1, 2, 3, 4, 5, 6].map(degree =>
@@ -202,52 +294,108 @@ function ChordToolbox(props)
 				pitches.push(getPitchForScaleDegree(props.songKey, degree + 2) - root)
 				pitches.push(getPitchForScaleDegree(props.songKey, degree + 4) - root)
 				
-				if (inKeyChordType >= 1)
+				if (state.inKeyType >= 1)
 					pitches.push(getPitchForScaleDegree(props.songKey, degree + 6) - root)
 				
-				if (inKeyChordType >= 2)
+				if (state.inKeyType >= 2)
 					pitches.push(getPitchForScaleDegree(props.songKey, degree + 8) - root)
 				
-				if (inKeyChordType >= 3)
+				if (state.inKeyType >= 3)
 					pitches.push(getPitchForScaleDegree(props.songKey, degree + 10) - root)
 				
-				if (inKeyChordType >= 4)
+				if (state.inKeyType >= 4)
 					pitches.push(getPitchForScaleDegree(props.songKey, degree + 12) - root)
 				
 				const kind = getChordKindFromPitches(pitches)
 				
-				return <ChordButton key={degree} chord={ new Chord(root, 0, kind, modifiers) }/>
+				return <ChordButton key={degree} chord={ new Chord(root, 0, kind, state.embelishments) }/>
 			})
 			break
 			
 		default:
 			chordButtons = <React.Fragment>
-				<TabButton value={-1} variable={allChordsAccidental} onClick={setAllChordsAccidental}>♭</TabButton>
-				<TabButton value={ 0} variable={allChordsAccidental} onClick={setAllChordsAccidental}>♮</TabButton>
-				<TabButton value={ 1} variable={allChordsAccidental} onClick={setAllChordsAccidental}>♯</TabButton>
-				<br/>
 				{ [0, 1, 2, 3, 4, 5, 6].map(degree => {
-					const kind = getChordKindFromPitches(chords[allChordsKind].pitches)
+					const kind = getChordKindFromPitches(chords[state.kindDropdown].pitches)
 					const root = getPitchForScaleDegree(props.songKey, degree)
 					
-					return <ChordButton key={degree} chord={ new Chord(root, allChordsAccidental, kind, modifiers) }/>
+					return <ChordButton key={degree} chord={ new Chord(root, state.accidentalTab, kind, state.embelishments) }/>
 				})}
+				<br/>
+				<div style={{ fontSize:"125%", textAlign:"center" }}>
+					<TabButton value={-1} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })}>♭</TabButton>
+					<TabButton value={ 0} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })}>♮</TabButton>
+					<TabButton value={ 1} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })}>♯</TabButton>
+				</div>
 			</React.Fragment>
 			break
 	}
 	
-	const Checkbox = (props2) =>
+	const EmbelishmentCheckbox = (props2) =>
 	{
-		return <tr><td><input id={props2.label} type="checkbox" style={{ margin:"0", padding:"0" }} checked={ props2.variable } onChange={ (ev) => props2.onClick(ev.target.checked) }/></td><td><label htmlFor={props2.label}>{props2.label}</label></td></tr>
+		const fieldName = props2.value || props2.label
+		
+		const setField = (checked) =>
+		{
+			let embelishments = { ...state.embelishments }
+			if (checked)
+				embelishments[fieldName] = true
+			else
+				delete embelishments[fieldName]
+			
+			setState({ embelishments })
+		}
+		
+		return <React.Fragment>
+			<input id={props2.label} type="checkbox" style={{ margin:"0.25em", padding:"0" }} checked={ state.embelishments[fieldName] } onChange={ (ev) => setField(ev.target.checked) }/>
+			<label htmlFor={props2.label}>{props2.label}</label>
+		</React.Fragment>
 	}
 	
 	const RadioButton = (props2) =>
 	{
-		return <tr><td><input id={props2.label} type="radio" style={{ margin:"0", padding:"0" }} checked={ props2.value == props2.variable } onChange={ () => props2.onClick(props2.value) }/></td><td><label htmlFor={props2.label}>{props2.label}</label></td></tr>
+		return <React.Fragment>
+			<input id={props2.label} type="radio" style={{ margin:"0.25em", padding:"0" }} disabled={ props2.disabled } checked={ props2.current == props2.value } onChange={ (ev) => props2.setCurrent(props2.value) }/>
+			<label htmlFor={props2.label}>{props2.label}</label>
+		</React.Fragment>
 	}
 	
-	return <div style={{ fontSize:"15px" }}>
-		<LengthToolbox/>
+	return <div style={{ height:"auto", display:"grid", gridTemplate:"auto auto auto 1fr / auto auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", padding:"0.5em" }}>
+		
+		<span>{ "Chords in " + props.songKey.getName() }</span>
+		
+		<div/>
+		
+		<div>{ chordButtons }</div>
+		
+		<div>
+			<div style={{ display:"grid", gridTemplate:"auto 1fr / auto auto auto 1fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", textAlign:"left" }}>
+				<div>
+					<KindDropdown/>
+				</div>
+				
+				<div style={{ paddingLeft:"0.5em" }}>
+					<RadioButton label="5"  value={0} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+					<RadioButton label="7"  value={1} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+					<RadioButton label="9"  value={2} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+					<RadioButton label="11" value={3} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+					<RadioButton label="13" value={4} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+				</div>
+				
+				<div style={{ paddingLeft:"0.5em" }}>
+					<EmbelishmentCheckbox label="sus2"/><br/>
+					<EmbelishmentCheckbox label="sus4"/><br/>
+					<EmbelishmentCheckbox label="add9"/><br/>
+					<EmbelishmentCheckbox label="add11"/><br/>
+					<EmbelishmentCheckbox label="add13"/><br/>
+					<EmbelishmentCheckbox label="no3"/><br/>
+					<EmbelishmentCheckbox label="no5"/><br/>
+				</div>
+			</div>
+		</div>
+		
+	</div>
+		
+	/*
 		<table style={{ margin:"auto" }}><tbody>
 			<tr>
 				<td>
@@ -289,25 +437,36 @@ function ChordToolbox(props)
 				</td>
 			</tr>
 		</tbody></table>
-	</div>
+	</div>*/
 }
 
 
 export function Toolbox(props)
 {
-	const keyChange = props.editor.song.keyChanges.findActiveAt(props.editor.cursorTime.start) || new KeyChange(new Rational(0), new Key(0, 0, scales[0].pitches))
+	const realKeyChange = props.editor.song.keyChanges.findActiveAt(props.editor.cursorTime.start)
+	const keyChange = realKeyChange || new KeyChange(new Rational(0), new Key(0, 0, scales[0].pitches))
+	
+	const realMeterChange = props.editor.song.meterChanges.findActiveAt(props.editor.cursorTime.start)
+	const meterChange = realMeterChange || new MeterChange(new Rational(0), new Meter(4, 4))
 	
 	const onNew = () => generateBlankURL()
 	const onGenerateURL = () => generateURL(props.editor.song)
 	const onSaveJSONString = () => saveJSONString(props.editor.song)
 	const onLoadJSONString = () => loadJSONString(props.editor)
-	const onLoadJSON = (elem) => loadJSON(props.editor, elem)
-	const onLoadMIDI = (elem) => loadMIDI(props.editor, elem)
+	const onLoadFile = (elem) => loadFile(props.editor, elem)
+	const onLoadExample = (name) => loadExample(props.editor, name)
 	const onPlaybackToggle = () => props.editor.setPlayback(!props.editor.playing)
 	const onRewind = () => props.editor.rewind()
 	const onSetBpm = (bpm) => props.editor.setSong(props.editor.song.withChanges({ baseBpm: bpm }))
 	const onSelectNote = (pitch) => props.editor.insertNoteAtCursor(pitch)
 	const onSelectChord = (chord) => props.editor.insertChordAtCursor(chord)
+	const onInsertKeyChange = () => props.editor.insertKeyChangeAtCursor(new Key(0, 0, scales[0].pitches))
+	const onModifyKeyChange = (modifyFn) => { if (realKeyChange) props.editor.setSong(props.editor.song.upsertKeyChange(modifyFn(realKeyChange))) }
+	const onInsertMeterChange = () => props.editor.insertMeterChangeAtCursor(new Meter(4, 4))
+	const onModifyMeterChange = (modifyFn) => { if (realMeterChange) props.editor.setSong(props.editor.song.upsertMeterChange(modifyFn(realMeterChange))) }
+	
+	const [mainTabCurrent, setMainTabCurrent] = React.useState(0)
+	const [chordToolboxState, setChordToolboxState] = React.useState(null)
 	
 	const callbacks =
 	{
@@ -315,20 +474,38 @@ export function Toolbox(props)
 		onGenerateURL,
 		onSaveJSONString,
 		onLoadJSONString,
-		onLoadJSON,
-		onLoadMIDI,
+		onLoadFile, onLoadExample,
 		onPlaybackToggle,
 		onRewind,
 		onSetBpm,
 		onSelectNote,
 		onSelectChord,
+		onInsertKeyChange, onModifyKeyChange,
+		onInsertMeterChange, onModifyMeterChange,
 	}
 	
-	return <div style={{ fontFamily:"Verdana", fontSize:"18px" }}>
-		<div style={{ display:"grid", gridTemplate:"0fr / 0fr 1fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", alignItems:"top", justifyItems:"center" }}>
+	return <div style={{ fontFamily:"Verdana", fontSize:"12px", textAlign:"left" }}>
+		<div style={{ display:"grid", gridTemplate:"auto 1fr / auto 1fr", gridAutoFlow:"row", alignItems:"top", justifyItems:"left" }}>
+			
+			<div/>
+			
+			<div style={{ borderLeft:"1px solid gray", padding:"0.5em" }}>
+				<TabButton current={mainTabCurrent} setCurrent={setMainTabCurrent} value={0}>Editor</TabButton>
+				<TabButton current={mainTabCurrent} setCurrent={setMainTabCurrent} value={1}>Tools</TabButton>
+				<TabButton current={mainTabCurrent} setCurrent={setMainTabCurrent} value={2}>Options</TabButton>
+			</div>
+			
 			<PlaybackToolbox editor={ props.editor } {...callbacks}/>
-			{ props.editor.cursorTrack.start != 1 ? null : <NoteToolbox songKey={ keyChange.key } {...callbacks}/> }
-			{ props.editor.cursorTrack.start != 2 ? null : <ChordToolbox songKey={ keyChange.key } {...callbacks}/> }
+			
+			<div style={{ borderLeft:"1px solid gray" }}>
+				{ mainTabCurrent != 0 ? null :
+					<div>
+						{ props.editor.cursorTrack.start != 0 ? null : <MarkerToolbox songKey={ keyChange.key } songMeter={ meterChange.meter } {...callbacks}/> }
+						{ props.editor.cursorTrack.start != 1 ? null : <NoteToolbox songKey={ keyChange.key } {...callbacks}/> }
+						{ props.editor.cursorTrack.start != 2 ? null : <ChordToolbox songKey={ keyChange.key } state={[chordToolboxState, setChordToolboxState]} {...callbacks}/> }
+					</div>
+				}
+			</div>
 		</div>
 	</div>
 }
@@ -374,6 +551,27 @@ function loadJSONString(editor)
 }
 
 
+function loadFile(editor, elem)
+{
+	if (elem.files.length != 1)
+		return
+	
+	let reader = new FileReader()
+	reader.readAsArrayBuffer(elem.files[0])
+	reader.onload = () => 
+	{
+		const bytes = new Uint8Array(reader.result)
+		if (bytes[0] == "M".charCodeAt(0) &&
+			bytes[1] == "T".charCodeAt(0) &&
+			bytes[2] == "h".charCodeAt(0) &&
+			bytes[3] == "d".charCodeAt(0))
+			loadMIDI(editor, elem)
+		else
+			loadJSON(editor, elem)
+	}
+}
+
+
 function loadJSON(editor, elem)
 {
 	if (elem.files.length != 1)
@@ -403,4 +601,19 @@ function loadMIDI(editor, elem)
 		editor.setSong(Song.fromMIDI(bytes))
 		editor.rewind()
 	}
+}
+
+
+function loadExample(editor, name)
+{
+	if (name == "")
+		return
+	
+	fetch("examples/" + name + ".json")
+		.then(res => res.json())
+		.then(json =>
+		{
+			editor.setSong(Song.fromJSON(json))
+			editor.rewind()
+		})
 }

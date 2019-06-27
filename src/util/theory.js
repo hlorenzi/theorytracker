@@ -1,10 +1,5 @@
 import { Rational } from "./rational.js"
-
-
-export function mod(x, m)
-{
-	return (x % m + m) % m
-}
+import { mod } from "./math.js"
 
 
 export const scales =
@@ -61,6 +56,16 @@ export const chords =
 export function getScaleRecordFromPitches(pitches)
 {
 	return Object.values(scales).find(scale =>
+	(
+		scale.pitches.length == pitches.length &&
+		scale.pitches.every((p, index) => p == pitches[index])
+	))
+}
+
+
+export function getScaleIndexFromPitches(pitches)
+{
+	return Object.values(scales).findIndex(scale =>
 	(
 		scale.pitches.length == pitches.length &&
 		scale.pitches.every((p, index) => p == pitches[index])
@@ -401,6 +406,22 @@ export class Key
 }
 
 
+export class Meter
+{
+	constructor(numerator, denominator)
+	{
+		this.numerator = numerator
+		this.denominator = denominator
+	}
+	
+	
+	withChanges(obj)
+	{
+		return Object.assign(new Meter(this.numerator, this.denominator), obj)
+	}
+}
+
+
 export class Chord
 {
 	constructor(rootPitch, rootAccidental, kind, modifiers = {})
@@ -491,6 +512,8 @@ export class Chord
 	getPitches()
 	{
 		const chordData = chords[this.kind]
+		if (!chordData)
+			return []
 		
 		const rootPitch = mod(this.rootPitch + this.rootAccidental, 12)
 		
@@ -517,6 +540,8 @@ export class Chord
 	{
 		const rootPitch = mod(this.rootPitch + this.rootAccidental, 12)
 		let pitches = this.getPitches()
+		if (pitches.length == 0)
+			return []
 		
 		let octave = 12 * 4
 		if (rootPitch >= 6)
