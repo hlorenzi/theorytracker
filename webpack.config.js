@@ -1,5 +1,6 @@
 const path = require("path")
 
+
 module.exports =
 {
 	mode: "production",
@@ -11,7 +12,7 @@ module.exports =
 	output:
 	{
 		filename: "[name].js",
-		path: path.resolve(__dirname, ".webpack")
+		path: path.resolve(__dirname, "webpack")
 	},
 	
 	module:
@@ -23,7 +24,11 @@ module.exports =
 				exclude: /node_modules/,
 				use:
 				{
-					loader: "babel-loader"
+					loader: "babel-loader",
+					options: {
+						plugins: ["@babel/plugin-proposal-class-properties"],
+						presets: ["@babel/preset-env", "@babel/preset-react"]
+					}
 				}
 			}
 		]

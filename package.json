@@ -1,6 +1,6 @@
 {
-  "name": "composer",
-  "version": "1.0.0",
+  "name": "musicanalysis",
+  "version": "0.3.0",
   "description": "",
   "private": true,
   "main": "index.js",
@@ -10,9 +10,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "browserslist": [
-    "last 2 Chrome versions",
-    "last 2 Firefox versions",
-    "last 2 Safari versions"
+    "> 0.2%",
+    "not dead",
+    "not ie 11"
   ],
   "author": "",
   "dependencies": {
@@ -25,6 +25,7 @@
     "pako": "^1.0.10",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
+    "regenerator-runtime": "^0.13.2",
     "webpack": "^4.30.0",
     "webpack-cli": "^3.3.0"
   }

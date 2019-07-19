@@ -40,6 +40,7 @@ function PlaybackToolbox(props)
 		"dontstarve",
 		"chronotrigger",
 		"jimmyneutron",
+		"whensomebodylovedme",
 	]
 	
 	return <div style={{ height:"auto", display:"grid", gridTemplate:"auto auto auto auto auto 1fr / auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", padding:"0.5em" }}>
@@ -244,6 +245,7 @@ function ChordToolbox(props)
 	{
 		setState({
 			kindDropdown: -1,
+			mainTab: 0,
 			accidentalTab: 0,
 			inKeyType: 0,
 			embelishments: {}
@@ -253,15 +255,55 @@ function ChordToolbox(props)
 	
 	const ChordButton = (props2) =>
 	{
-		const ref = React.createRef()
+		const refChord = React.createRef()
+		const refPitches = []
+		for (let i = 0; i < 10; i++)
+			refPitches.push(React.createRef())
+		
+		const pitches = props2.chord.getPitches().map(p => mod(p - props2.chord.rootPitch - props2.chord.rootAccidental, 12))
+		pitches.sort((a, b) => b - a)
+		
+		const pitchW = 35
+		const pitchH = 20
 		
 		React.useEffect(() =>
 		{
-			const ctx = ref.current.getContext("2d")
-			drawChordOnCanvas(ctx, new Rect(0, 0, 80, 58), props2.chord, props.songKey, false, false)
+			const ctxChord = refChord.current.getContext("2d")
+			drawChordOnCanvas(ctxChord, new Rect(0, 0, 80, 58), props2.chord, props.songKey, false, false)
+			
+			for (let i = 0; i < pitches.length; i++)
+			{
+				const pitch = pitches[i] + props2.chord.rootPitch + props2.chord.rootAccidental
+				const degree = getScaleDegreeForPitch(props.songKey, pitch)
+				const noteName = getNameForPitch(props.songKey, pitch)
+				const colorRotation = getColorRotationForScale(props.songKey.scalePitches)
+				
+				const ctxPitch = refPitches[i].current.getContext("2d")
+				ctxPitch.fillStyle = getFillStyleForScaleDegree(ctxPitch, degree + colorRotation)
+				ctxPitch.fillRect(0, 0, pitchW, pitchH)
+				
+				ctxPitch.fillStyle = "#fff"
+				ctxPitch.globalAlpha = 0.6
+				ctxPitch.fillRect(3, 3, pitchW - 6, pitchH - 6)
+				
+				ctxPitch.globalAlpha = 1
+				ctxPitch.font = "14px Verdana"
+				ctxPitch.fillStyle = "#000"
+				ctxPitch.textAlign = "center"
+				ctxPitch.textBaseline = "middle"
+				ctxPitch.fillText(noteName, pitchW / 2, pitchH / 2 + 1)
+			}
 		})
 		
-		return <canvas ref={ref} width="80" height="58" onClick={ () => props.onSelectChord(props2.chord) } style={{ width:"80px", height:"58px", margin:"0.1em" }}/>
+		return <div style={{ display:"inline-block", textAlign:"center" }}>
+			<canvas ref={refChord} width="80" height="58" onClick={ () => props.onSelectChord(props2.chord) } style={{ width:"80px", height:"58px", margin:"0.1em" }}/>
+			{ pitches.map((pitch, i) =>
+				<React.Fragment key={i}>
+					<br/>
+					<canvas ref={refPitches[i]} width={pitchW} height={pitchH} style={{ width:(pitchW + "px"), height:(pitchH + "px"), margin:"0.05em" }}/>
+				</React.Fragment>
+			)}
+		</div>
 	}
 	
 	const KindDropdown = () =>
@@ -283,9 +325,11 @@ function ChordToolbox(props)
 	}
 	
 	let chordButtons = null
+	let title = null
 	switch (state.kindDropdown)
 	{
 		case -1:
+			title = "Chords in " + props.songKey.getName()
 			chordButtons = [0, 1, 2, 3, 4, 5, 6].map(degree =>
 			{
 				const root = getPitchForScaleDegree(props.songKey, degree)
@@ -313,6 +357,7 @@ function ChordToolbox(props)
 			break
 			
 		default:
+			title = chords[state.kindDropdown].name + " chords"
 			chordButtons = <React.Fragment>
 				{ [0, 1, 2, 3, 4, 5, 6].map(degree => {
 					const kind = getChordKindFromPitches(chords[state.kindDropdown].pitches)
@@ -320,12 +365,6 @@ function ChordToolbox(props)
 					
 					return <ChordButton key={degree} chord={ new Chord(root, state.accidentalTab, kind, state.embelishments) }/>
 				})}
-				<br/>
-				<div style={{ fontSize:"125%", textAlign:"center" }}>
-					<TabButton value={-1} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })}>♭</TabButton>
-					<TabButton value={ 0} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })}>♮</TabButton>
-					<TabButton value={ 1} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })}>♯</TabButton>
-				</div>
 			</React.Fragment>
 			break
 	}
@@ -361,37 +400,48 @@ function ChordToolbox(props)
 	
 	return <div style={{ height:"auto", display:"grid", gridTemplate:"auto auto auto 1fr / auto auto", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", padding:"0.5em" }}>
 		
-		<span>{ "Chords in " + props.songKey.getName() }</span>
+		<div>
+			<TabButton value={0} current={state.mainTab} setCurrent={(i) => setState({ mainTab: i })}>{ title }</TabButton>
+			<TabButton value={1} current={state.mainTab} setCurrent={(i) => setState({ mainTab: i })}>Search</TabButton>
+		</div>
 		
 		<div/>
 		
-		<div>{ chordButtons }</div>
+		{ state.mainTab != 0 ? null :
+			<div>{ chordButtons }</div>
+		}
 		
-		<div>
-			<div style={{ display:"grid", gridTemplate:"auto 1fr / auto auto auto 1fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", textAlign:"left" }}>
-				<div>
-					<KindDropdown/>
-				</div>
-				
-				<div style={{ paddingLeft:"0.5em" }}>
-					<RadioButton label="5"  value={0} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
-					<RadioButton label="7"  value={1} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
-					<RadioButton label="9"  value={2} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
-					<RadioButton label="11" value={3} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
-					<RadioButton label="13" value={4} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
-				</div>
-				
-				<div style={{ paddingLeft:"0.5em" }}>
-					<EmbelishmentCheckbox label="sus2"/><br/>
-					<EmbelishmentCheckbox label="sus4"/><br/>
-					<EmbelishmentCheckbox label="add9"/><br/>
-					<EmbelishmentCheckbox label="add11"/><br/>
-					<EmbelishmentCheckbox label="add13"/><br/>
-					<EmbelishmentCheckbox label="no3"/><br/>
-					<EmbelishmentCheckbox label="no5"/><br/>
+		{ state.mainTab != 0 ? null :
+			<div>
+				<div style={{ display:"grid", gridTemplate:"auto 1fr / auto auto auto 1fr", gridGap:"0.25em 0.25em", gridAutoFlow:"row", justifyItems:"left", textAlign:"left" }}>
+					<div>
+						<KindDropdown/>
+						<br/>
+						<RadioButton label="♭" value={-1} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })} disabled={state.kindDropdown < 0}/><br/>
+						<RadioButton label="♮" value={0} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })} disabled={state.kindDropdown < 0}/><br/>
+						<RadioButton label="♯" value={1} current={state.accidentalTab} setCurrent={(i) => setState({ accidentalTab: i })} disabled={state.kindDropdown < 0}/><br/>
+					</div>
+					
+					<div style={{ paddingLeft:"0.5em" }}>
+						<RadioButton label="5"  value={0} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+						<RadioButton label="7"  value={1} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+						<RadioButton label="9"  value={2} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+						<RadioButton label="11" value={3} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+						<RadioButton label="13" value={4} current={state.inKeyType} setCurrent={(i) => setState({ inKeyType: i })} disabled={state.kindDropdown >= 0}/><br/>
+					</div>
+					
+					<div style={{ paddingLeft:"0.5em" }}>
+						<EmbelishmentCheckbox label="sus2"/><br/>
+						<EmbelishmentCheckbox label="sus4"/><br/>
+						<EmbelishmentCheckbox label="add9"/><br/>
+						<EmbelishmentCheckbox label="add11"/><br/>
+						<EmbelishmentCheckbox label="add13"/><br/>
+						<EmbelishmentCheckbox label="no3"/><br/>
+						<EmbelishmentCheckbox label="no5"/><br/>
+					</div>
 				</div>
 			</div>
-		</div>
+		}
 		
 	</div>
 		
