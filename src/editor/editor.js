@@ -84,12 +84,16 @@ export class Editor
 		this.mouseTrack = -1
 		this.mouseHoverAction = 0
 		this.mouseDownAction = 0
+		this.mouseHoverChordId = null
 		
 		this.wheelDate = new Date()
 		
 		this.keyDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
 		this.curSanitizationMode = "ok"
 		this.curSanitizationSelectionSize = 0
+		
+		this.undoStack = [{ kind: null, song: this.song }]
+		this.undoStackPointer = 0
 		
 		this.screenRange = new Range(new Rational(0), new Rational(0))
 		
@@ -132,6 +136,10 @@ export class Editor
 	setSong(song)
 	{
 		this.song = song
+		
+		this.undoStack = [{ kind: null, song: this.song }]
+		this.undoStackPointer = 0
+		
 		this.toolboxRefreshFn()
 		this.draw()
 	}
@@ -397,6 +405,74 @@ export class Editor
 	}
 	
 	
+	addUndoPoint(kind)
+	{
+		this.undoStack = this.undoStack.slice(0, this.undoStackPointer + 1)
+		this.undoStackPointer = this.undoStack.length - 1
+		
+		if (this.undoStack.length > 0 && kind !== null && kind === this.undoStack[this.undoStack.length - 1].kind)
+		{
+			this.undoStack[this.undoStack.length - 1] = { kind, song: this.song }
+			this.undoStackPointer = this.undoStack.length - 1
+				
+			console.log("mergeUndoPoint", this.undoStackPointer, this.undoStack.length, this.undoStack)
+		}
+		else
+		{
+			if (this.undoStack[this.undoStack.length - 1].song !== this.song)
+			{
+				this.undoStack.push({ kind, song: this.song })
+				this.undoStackPointer = this.undoStack.length - 1
+				
+				console.log("addUndoPoint", this.undoStackPointer, this.undoStack.length, this.undoStack)
+			}
+		}
+	}
+	
+	
+	breakUndoPoint()
+	{
+		this.undoStack = this.undoStack.slice(0, this.undoStackPointer + 1)
+		this.undoStackPointer = this.undoStack.length - 1
+		
+		this.undoStack[this.undoStack.length - 1].kind = null
+	}
+	
+	
+	undo()
+	{
+		if (this.undoStackPointer <= 0)
+			return
+		
+		this.undoStackPointer -= 1
+		
+		const data = this.undoStack[this.undoStackPointer]
+		data.kind = null
+		
+		this.song = data.song
+		this.draw()
+		
+		console.log("undo", this.undoStackPointer, this.undoStack.length, this.undoStack)
+	}
+	
+	
+	redo()
+	{
+		if (this.undoStackPointer >= this.undoStack.length - 1)
+			return
+		
+		this.undoStackPointer += 1
+		
+		const data = this.undoStack[this.undoStackPointer]
+		data.kind = null
+		
+		this.song = data.song
+		this.draw()
+		
+		console.log("redo", this.undoStackPointer, this.undoStack.length, this.undoStack)
+	}
+	
+	
 	selectionClear()
 	{
 		this.sanitizeSelection()
@@ -496,6 +572,7 @@ export class Editor
 		
 		const hoveringSelected = this.tracks.reduce((accum, track) => accum || track.hasSelectedAt({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y }), false)
 		
+		this.breakUndoPoint()
 		this.sanitizeSelection("mouse")
 		if (!ev.ctrlKey && !hoveringSelected && !isRightMouseButton)
 			this.selectionClear()
@@ -544,7 +621,7 @@ export class Editor
 			}
 		}
 		else
-		{		
+		{
 			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
 			this.cursorShow = false
 			for (const track of this.tracks)
@@ -577,6 +654,7 @@ export class Editor
 		this.mousePos = this.getMousePos(ev)
 		this.mouseTime = this.getTimeAtPos(this.mousePos)
 		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
+		this.mouseHoverChordId = null
 		
 		const edgeAutoScroll = () =>
 		{
@@ -669,6 +747,7 @@ export class Editor
 		if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
 			this.cursorShow = false
 		
+		this.addUndoPoint("mouse")
 		this.toolboxRefreshFn()
 		this.draw()
 	}
@@ -801,6 +880,7 @@ export class Editor
 					this.cursorTime = Range.fromPoint(this.cursorTime.max(), false, false)
 				}
 				
+				this.breakUndoPoint()
 				this.selectionClear()
 				this.scrollTimeIntoView(this.cursorTime.max())
 				this.cursorShow = true
@@ -838,6 +918,28 @@ export class Editor
 					}
 				}
 				break
+			}
+			case "z":
+			{
+				if (!ev.ctrlKey)
+					break
+				
+				if (ev.shiftKey)
+					this.redo()
+				else
+					this.undo()
+				
+				ev.preventDefault()
+				return
+			}
+			case "y":
+			{
+				if (!ev.ctrlKey)
+					break
+				
+				this.redo()
+				ev.preventDefault()
+				return
 			}
 		}
 		
@@ -891,6 +993,7 @@ export class Editor
 			}
 			
 			ev.preventDefault()
+			this.addUndoPoint("keyboard")
 			this.toolboxRefreshFn()
 			this.draw()
 		}
@@ -901,13 +1004,13 @@ export class Editor
 	{
 		this.ctx.save()
 		
-		this.ctx.fillStyle = "#111"
+		this.ctx.fillStyle = "#29242e"
 		this.ctx.fillRect(0, 0, this.width, this.height)
 		
 		const songStartX = (this.song.range.start.asFloat() - this.timeScroll) * this.timeScale
 		const songEndX   = (this.song.range.end  .asFloat() - this.timeScroll) * this.timeScale
 		
-		this.ctx.fillStyle = "#383838"
+		this.ctx.fillStyle = "#1b191c"
 		if (songStartX > 0)
 			this.ctx.fillRect(0, 0, songStartX, this.height)
 		if (songEndX < this.width)
@@ -920,6 +1023,8 @@ export class Editor
 		{
 			if (curMeter == null && nextMeter == null)
 				continue
+			
+			const beforeStart = (curMeter == null)
 			
 			if (curMeter == null)
 			{
@@ -940,7 +1045,9 @@ export class Editor
 			
 			const submeasureDuration = curMeter.getSubmeasureDuration()
 			const submeasureBigEnough = submeasureDuration.asFloat() * this.timeScale > 8
-				
+			
+			let measureAlternate = false
+			
 			let time = curMeter.time.add(submeasureDuration)
 			let submeasureCount = 1
 			while (time.lessThan(this.screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
@@ -948,9 +1055,25 @@ export class Editor
 				const submeasureX = (time.asFloat() - this.timeScroll) * this.timeScale
 				const isMeasure = submeasureCount % curMeter.meter.numerator == 0
 				
+				if (isMeasure && !beforeStart)
+				{
+					measureAlternate = !measureAlternate
+					
+					if (measureAlternate && time.compare(this.song.range.end) < 0)
+					{
+						const nextX = ((nextMeter == null ? this.song.range.end : nextMeter.time).asFloat() - this.timeScroll) * this.timeScale
+						
+						const measureX1 = (time.asFloat() - this.timeScroll) * this.timeScale
+						const measureX2 = (time.add(curMeter.getMeasureDuration()).asFloat() - this.timeScroll) * this.timeScale
+						
+						this.ctx.fillStyle = "#383040"
+						this.ctx.fillRect(measureX1, 0, Math.min(measureX2, nextX) - measureX1, this.height)
+					}
+				}
+				
 				if (time.greaterThan(this.screenRange.start) && (isMeasure || submeasureBigEnough))
 				{
-					this.ctx.strokeStyle = (isMeasure ? "#888" : "#444")
+					this.ctx.strokeStyle = (isMeasure ? "#000" : "#111")
 					this.ctx.beginPath()
 					this.ctx.moveTo(submeasureX, 0)
 					this.ctx.lineTo(submeasureX, this.height)

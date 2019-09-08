@@ -43,6 +43,8 @@ export class EditorChords
 	onMouseMove(ev, mouseDown, mousePos)
 	{
 		this.hoverId = -1
+		this.owner.mouseHoverChordId = null
+		
 		for (const chord of this.owner.song.chords.enumerate())
 		{
 			const rect = this.getChordRect(chord, 0, this.owner.width)
@@ -55,6 +57,7 @@ export class EditorChords
 			{
 				this.hoverId = chord.id
 				this.hoverRange = chord.range
+				this.owner.mouseHoverChordId = chord.id
 				
 				if (mousePos.x < rectWithMargin.x + stretchMargin)
 					this.owner.mouseHoverAction = Editor.ACTION_STRETCH_TIME_START

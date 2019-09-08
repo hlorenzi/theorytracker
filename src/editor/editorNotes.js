@@ -409,14 +409,21 @@ export class EditorNotes
 			{
 				const y = this.area.h / 2 + (this.rowScroll - tonicRowOffset + i * 7) * this.rowScale
 				
-				this.owner.ctx.strokeStyle = "#666"
+				this.owner.ctx.strokeStyle = "#000"//(i == 0 ? "#553" : "#000")
 				this.owner.ctx.beginPath()
 				this.owner.ctx.moveTo(xStart, y)
 				this.owner.ctx.lineTo(xEnd,   y)
 				this.owner.ctx.stroke()
+				
+				if (i == 0)
+				{
+					this.owner.ctx.globalAlpha = 0.05
+					this.owner.ctx.fillStyle = "#fff"
+					this.owner.ctx.fillRect(xStart, y - 7 * this.rowScale, xEnd - xStart, 7 * this.rowScale)
+					this.owner.ctx.globalAlpha = 1
+				}
 			}
 			
-			this.owner.ctx.globalAlpha = 0.1
 			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
 			{
 				const pitches = chord.chord.getPitches()
@@ -431,6 +438,7 @@ export class EditorNotes
 					const scaleDegreeRotation = getColorRotationForScale(curKey.key.scalePitches)
 					const fillStyle = getFillStyleForScaleDegree(this.owner.ctx, scaleDegree + scaleDegreeRotation)
 					
+					this.owner.ctx.globalAlpha = (this.owner.mouseHoverChordId === chord.id ? 0.1 : 0.015)
 					for (let i = -4; i <= 4; i++)
 					{
 						const h = this.rowScale
