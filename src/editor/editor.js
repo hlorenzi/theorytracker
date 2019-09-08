@@ -11,7 +11,8 @@ import { Key, Meter, scales, Chord } from "../util/theory.js"
 export class Editor
 {
 	static ACTION_SELECTION_TIME     = 0x01
-	static ACTION_PAN                = 0x02
+	static ACTION_SELECTION_RECT     = 0x02
+	static ACTION_PAN                = 0x04
 	static ACTION_DRAG_TIME          = 0x10
 	static ACTION_DRAG_PITCH         = 0x20
 	static ACTION_STRETCH_TIME_START = 0x40
@@ -66,6 +67,8 @@ export class Editor
 		this.cursorTime = new Range(new Rational(0), new Rational(0))
 		this.cursorTrack = { start: 1, end: 1 }
 		this.cursorShow = true
+		this.rectCursorRect = { time1: new Rational(0), y1: 0, time2: new Rational(0), y2: 0 }
+		this.rectCursorTrack = 1
 		this.insertionDuration = new Rational(1, 4)
 		this.insertionPitch = 60
 		
@@ -413,6 +416,14 @@ export class Editor
 	}
 	
 	
+	selectUnderRectCursor()
+	{
+		this.selectionClear()
+		
+		this.tracks[this.rectCursorTrack].onSelectRect(this.rectCursorRect)
+	}
+	
+	
 	getSelectionRange()
 	{
 		let range = null
@@ -480,7 +491,8 @@ export class Editor
 		this.mouseTime = this.getTimeAtPos(this.mousePos)
 		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
 		this.mouseDownData = { pos: this.mousePos, time: this.mouseTime, timeScroll: this.timeScroll, track: this.mouseTrack }
-		this.mouseDownAction = (isRightMouseButton ? Editor.ACTION_PAN : Editor.ACTION_SELECTION_TIME)
+		this.mouseDownAction = (isRightMouseButton ? Editor.ACTION_PAN : (ev.shiftKey ? Editor.ACTION_SELECTION_RECT : Editor.ACTION_SELECTION_TIME))
+		this.rectCursorRect = { time1: new Rational(0), y1: 0, time2: new Rational(0), y2: 0 }
 		
 		const hoveringSelected = this.tracks.reduce((accum, track) => accum || track.hasSelectedAt({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y }), false)
 		
@@ -515,6 +527,20 @@ export class Editor
 					this.scrollTimeIntoView(anchorPoint)
 					this.mouseDownAction = 0
 				}
+			}
+		}
+		else if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
+		{
+			const yScroll = (this.tracks[this.mouseDownData.track].rowScroll || 0) / (this.tracks[this.mouseDownData.track].rowScale || 1)
+			this.cursorShow = true
+			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
+			this.rectCursorTrack = this.mouseDownData.track
+			this.rectCursorRect =
+			{
+				time1: this.mouseDownData.time,
+				y1: this.mousePos.y + yScroll - this.tracks[this.mouseDownData.track].area.y,
+				time2: this.mouseDownData.time,
+				y2: this.mousePos.y + yScroll - this.tracks[this.mouseDownData.track].area.y,
 			}
 		}
 		else
@@ -578,6 +604,16 @@ export class Editor
 				this.selectUnderCursor()
 				edgeAutoScroll()
 			}
+			else if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
+			{
+				const yScroll = (this.tracks[this.rectCursorTrack].rowScroll || 0) / (this.tracks[this.rectCursorTrack].rowScale || 1)
+				
+				this.rectCursorRect.time2 = this.mouseTime,
+				this.rectCursorRect.y2 = this.mousePos.y + yScroll - this.tracks[this.rectCursorTrack].area.y
+				
+				this.selectUnderRectCursor()
+				edgeAutoScroll()
+			}
 			else
 			{
 				this.curSanitizationMode = "mouse"
@@ -630,6 +666,9 @@ export class Editor
 		for (const track of this.tracks)
 			track.onMouseUp(ev, true, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
 		
+		if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
+			this.cursorShow = false
+		
 		this.toolboxRefreshFn()
 		this.draw()
 	}
@@ -675,6 +714,9 @@ export class Editor
 	
 	onKeyDown(ev)
 	{
+		if (this.mouseDown)
+			return
+		
 		this.sanitizeSelection("keyboard")
 		
 		this.keyDownData = {}
@@ -920,7 +962,13 @@ export class Editor
 			}
 		}
 		
-		if (this.cursorShow && !this.playing)
+		const showRectCursor = 
+			this.cursorShow &&
+			!this.playing &&
+			this.mouseDown &&
+			(this.rectCursorRect.time1.asFloat() != this.rectCursorRect.time2.asFloat() || this.rectCursorRect.y1 != this.rectCursorRect.y2)
+		
+		if (this.cursorShow && !this.playing && !showRectCursor)
 			this.drawCursorRect()
 		
 		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(this.screenRange))
@@ -955,11 +1003,18 @@ export class Editor
 			this.ctx.rect(0, 0, track.area.w, track.area.h)
 			this.ctx.clip()
 			
+			if (showRectCursor && track === this.tracks[this.rectCursorTrack])
+				this.drawRectCursorHighlight(this.rectCursorTrack, this.rectCursorRect)
+			
 			track.draw()
+			
+			if (showRectCursor && track === this.tracks[this.rectCursorTrack])
+				this.drawRectCursorBeam(this.rectCursorTrack, this.rectCursorRect)
+			
 			this.ctx.restore()
 		}
 		
-		if (this.cursorShow && !this.playing)
+		if (this.cursorShow && !this.playing && !showRectCursor)
 		{
 			this.drawCursorBeam(this.cursorTime.min(), true)
 			this.drawCursorBeam(this.cursorTime.max(), false)
@@ -1025,6 +1080,61 @@ export class Editor
 			this.tracks[trackMin].area.y,
 			xMax - xMin,
 			this.tracks[trackMax].area.y + this.tracks[trackMax].area.h - this.tracks[trackMin].area.y)
+		
+		this.ctx.restore()
+	}
+	
+	
+	drawRectCursorHighlight(trackIndex, rect)
+	{
+		if (trackIndex < 0)
+			return
+		
+		this.ctx.save()
+		
+		const offset1 = rect.time1.asFloat() - this.timeScroll
+		const x1 = offset1 * this.timeScale
+		
+		const offset2 = rect.time2.asFloat() - this.timeScroll
+		const x2 = offset2 * this.timeScale
+		
+		this.ctx.fillStyle = "#0af"
+		this.ctx.globalAlpha = 0.15
+		
+		this.ctx.fillRect(
+			x1,
+			rect.y1,
+			x2 - x1,
+			rect.y2 - rect.y1)
+		
+		this.ctx.restore()
+	}
+	
+	
+	drawRectCursorBeam(trackIndex, rect)
+	{
+		if (trackIndex < 0)
+			return
+		
+		this.ctx.save()
+		
+		const offset1 = rect.time1.asFloat() - this.timeScroll
+		const x1 = offset1 * this.timeScale
+		
+		const offset2 = rect.time2.asFloat() - this.timeScroll
+		const x2 = offset2 * this.timeScale
+		
+		this.ctx.strokeStyle = "#0af"
+		this.ctx.lineCap = "round"
+		this.ctx.lineWidth = 3
+		
+		this.ctx.beginPath()
+		this.ctx.rect(
+			x1,
+			rect.y1,
+			x2 - x1,
+			rect.y2 - rect.y1)
+		this.ctx.stroke()
 		
 		this.ctx.restore()
 	}

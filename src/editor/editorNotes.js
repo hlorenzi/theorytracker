@@ -303,6 +303,34 @@ export class EditorNotes
 	}
 	
 	
+	onSelectRect(rect)
+	{
+		const rectTimeRange = new Range(rect.time1, rect.time2).sorted()
+		const rectYMin = Math.min(rect.y1, rect.y2)
+		const rectYMax = Math.max(rect.y1, rect.y2)
+		
+		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(rectTimeRange))
+		{
+			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
+			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
+			
+			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
+			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
+			
+			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			{
+				if (!note.range.overlapsRange(rectTimeRange))
+					continue
+				
+				const noteRect = this.getNoteRect(note, curKey.key, xStart, xEnd)
+				
+				if (noteRect.y <= rectYMax && noteRect.y + noteRect.h >= rectYMin)
+					this.owner.selection.add(note.id)
+			}
+		}
+	}
+	
+	
 	hasSelectedAt(mousePos)
 	{
 		return this.hoverId >= 0 && this.owner.selection.has(this.hoverId)
