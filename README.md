@@ -1,14 +1,12 @@
 # Music Analysis
 
-[🎼 Try it now in your browser!](https://hlorenzi.github.io/musicanalysis/)
+[🎼 Try it right now in your browser!](https://hlorenzi.github.io/musicanalysis/)
 
-This is a tool for composing or analyzing music and chord progressions.
+This is a piano-roll-style song editor app with an emphasis on music theory,
+with features such as diatonic editing, where notes and chords are
+color-coded and aware of the key.
 
-It's currently a proof-of-concept, and, as such, it is
-very unoptimized performance-wise. That said, it should
-run very smoothly with small songs.
-
-Currently using piano samples from
+Currently using piano audio samples from
 <http://theremin.music.uiowa.edu/MISpiano.html>.
 
 ## Building from source

@@ -60,6 +60,18 @@ export class Range
 	}
 	
 	
+	static merge(r1, r2)
+	{
+		if (r1 === null && r2 === null)
+			return null
+		
+		if (r1 === null)
+			return r2
+		
+		return r1.merge(r2)
+	}
+	
+	
 	displace(offset)
 	{
 		return new Range(

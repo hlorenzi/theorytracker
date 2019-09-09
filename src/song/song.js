@@ -1,4 +1,5 @@
-import { ListOfRanges } from "../util/listOfRanges.js"
+import ListOfPoints from "../util/listOfPoints.js"
+import ListOfRanges from "../util/listOfRanges.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"
 import { Key, scales, Meter, Chord, getChordKindFromId } from "../util/theory.js"
@@ -13,10 +14,10 @@ export class Song
 		this.nextId = 1
 		this.baseBpm = 120
 		this.range = new Range(new Rational(0), new Rational(4))
-		this.notes = new ListOfRanges(n => n.range)
-		this.chords = new ListOfRanges(n => n.range)
-		this.meterChanges = new ListOfRanges(n => n.getTimeAsRange())
-		this.keyChanges = new ListOfRanges(n => n.getTimeAsRange())
+		this.notes = new ListOfRanges()
+		this.chords = new ListOfRanges()
+		this.meterChanges = new ListOfPoints()
+		this.keyChanges = new ListOfPoints()
 	}
 	
 	
@@ -40,10 +41,10 @@ export class Song
 		let song = this.withChanges({})
 		
 		song.range = new Range(new Rational(0), new Rational(4))
-		song.range = song.range.merge(this.notes.calcTotalRange())
-		song.range = song.range.merge(this.chords.calcTotalRange())
-		song.range = song.range.merge(this.meterChanges.calcTotalRange())
-		song.range = song.range.merge(this.keyChanges.calcTotalRange())
+		song.range = song.range.merge(this.notes.getTotalRange())
+		song.range = song.range.merge(this.chords.getTotalRange())
+		song.range = song.range.merge(this.meterChanges.getTotalRange())
+		song.range = song.range.merge(this.keyChanges.getTotalRange())
 		
 		return song
 	}
@@ -93,7 +94,7 @@ export class Song
 		}
 		
 		if (!remove)
-			list = list.addArray(newElems)
+			list = list.addMany(newElems)
 		
 		return this.withChanges({ nextId, [listField]: list })
 	}
@@ -145,7 +146,7 @@ export class Song
 			str += "\"notes\":\n"
 			str += "[\n"
 			let firstNote = true
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 			{
 				if (!firstNote)
 					str += ",\n"
@@ -168,7 +169,7 @@ export class Song
 		str += "\"chords\":\n"
 		str += "[\n"
 		let firstChord = true
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 		{
 			if (!firstChord)
 				str += ",\n"
@@ -303,66 +304,66 @@ export class Song
 		for (var j = 0; j < trackNum; j++)
 		{
 			// Write note data as a structure-of-arrays.
-			w.writeInteger(this.notes.items.length)
+			w.writeInteger(this.notes.size)
 			
 			let prevNoteRangeStartInteger = 0
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 			{
 				w.writeInteger(note.range.start.integer - prevNoteRangeStartInteger)
 				prevNoteRangeStartInteger = note.range.start.integer
 			}
 			
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 				w.writeInteger(note.range.start.numeratorWithoutInteger)
 
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 				w.writeInteger(note.range.start.denominator)
 
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 				w.writeInteger(note.range.duration.numerator)
 
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 				w.writeInteger(note.range.duration.denominator)
 
-			for (const note of this.notes.enumerate())
+			for (const note of this.notes.iterAll())
 				w.writeInteger(note.pitch - 60)
 		}
 
 		// Write chord data as a structure-of-arrays.
-		w.writeInteger(this.chords.items.length)
+		w.writeInteger(this.chords.size)
 
 		let prevChordRangeStartInteger = 0
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 		{
 			w.writeInteger(chord.range.start.integer - prevChordRangeStartInteger)
 			prevChordRangeStartInteger = chord.range.start.integer
 		}
 		
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.range.start.numeratorWithoutInteger)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.range.start.denominator)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.range.duration.numerator)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.range.duration.denominator)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.chord.rootPitch)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.chord.rootAccidental)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeString(chord.chord.getKindId())
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			w.writeInteger(chord.chord.getModifierArray().length)
 
-		for (const chord of this.chords.enumerate())
+		for (const chord of this.chords.iterAll())
 			for (const mod of chord.chord.getModifierArray())
 				w.writeString(mod)
 		

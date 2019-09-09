@@ -45,7 +45,7 @@ export class EditorChords
 		this.hoverId = -1
 		this.owner.mouseHoverChordId = null
 		
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const chord of this.owner.song.chords.iterAtRange(this.owner.screenRange))
 		{
 			const rect = this.getChordRect(chord, 0, this.owner.width)
 			
@@ -140,7 +140,7 @@ export class EditorChords
 			case "delete":
 			case "backspace":
 			{
-				for (const chord of this.owner.song.chords.enumerate())
+				for (const chord of this.owner.song.chords.iterAll())
 				{
 					if (!this.owner.selection.has(chord.id))
 						continue
@@ -185,7 +185,7 @@ export class EditorChords
 	
 	alterSelectedChords(fn)
 	{
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const chord of this.owner.song.chords.iterAll())
 		{
 			if (!this.owner.selection.has(chord.id))
 				continue
@@ -206,14 +206,14 @@ export class EditorChords
 	
 	sanitizeSelection()
 	{
-		for (const selectedChord of this.owner.song.chords.enumerate())
+		for (const selectedChord of this.owner.song.chords.iterAll())
 		{
 			if (!this.owner.selection.has(selectedChord.id))
 				continue
 			
 			this.owner.song = this.owner.song.upsertChord(selectedChord, true)
 		
-			for (const chord of this.owner.song.chords.enumerateOverlappingRange(selectedChord.range))
+			for (const chord of this.owner.song.chords.iterAtRange(selectedChord.range))
 			{
 				const slices = chord.range.slice(selectedChord.range)
 				if (slices.length == 1 && chord.range.start.compare(slices[0].start) == 0 && chord.range.end.compare(slices[0].end) == 0)
@@ -232,7 +232,7 @@ export class EditorChords
 	
 	deleteRange(range)
 	{
-		for (const chord of this.owner.song.chords.enumerateOverlappingRange(range))
+		for (const chord of this.owner.song.chords.iterAtRange(range))
 		{
 			const slices = chord.range.slice(range)
 			if (slices.length == 1 && chord.range.start.compare(slices[0].start) == 0 && chord.range.end.compare(slices[0].end) == 0)
@@ -266,7 +266,7 @@ export class EditorChords
 	{
 		let range = null
 		
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const chord of this.owner.song.chords.iterAll())
 		{
 			if (!this.owner.selection.has(chord.id))
 				continue
@@ -280,7 +280,7 @@ export class EditorChords
 	
 	onSelectRange(range)
 	{
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const chord of this.owner.song.chords.iterAll())
 		{
 			if (range.overlapsRange(chord.range))
 				this.owner.selection.add(chord.id)
@@ -298,7 +298,7 @@ export class EditorChords
 	{
 		this.dragData = new Map()
 		
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const chord of this.owner.song.chords.iterAll())
 		{
 			if (!this.owner.selection.has(chord.id))
 				continue
@@ -310,7 +310,7 @@ export class EditorChords
 	
 	onDrag(mousePos)
 	{
-		for (const chord of this.owner.song.chords.enumerate())
+		for (const chord of this.owner.song.chords.iterAll())
 		{
 			if (!this.owner.selection.has(chord.id))
 				continue
@@ -339,21 +339,24 @@ export class EditorChords
 	
 	draw()
 	{
-		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
+		for (const pair of this.owner.song.keyChanges.iterActiveAtRangePairwise(this.owner.screenRange))
 		{
 			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
 			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
 			
+			const timeStart = curKey.time.max(this.owner.screenRange.start)
+			const timeEnd = nextKey.time.min(this.owner.screenRange.end)
+			
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			
-			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const chord of this.owner.song.chords.iterAtRange(new Range(timeStart, timeEnd)))
 			{
 				if (!this.owner.selection.has(chord.id))
 					this.drawChord(chord, curKey.key, xStart, xEnd)
 			}
 			
-			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const chord of this.owner.song.chords.iterAtRange(new Range(timeStart, timeEnd)))
 			{
 				if (this.owner.selection.has(chord.id))
 					this.drawChord(chord, curKey.key, xStart, xEnd)

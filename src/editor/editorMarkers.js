@@ -42,7 +42,7 @@ export class EditorMarkers
 	onMouseMove(ev, mouseDown, mousePos)
 	{
 		this.hoverId = -1
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.iterAll())
 		{
 			const rect = this.getMeterChangeHandleRect(meterChange)
 			if (rect.contains(mousePos))
@@ -53,7 +53,7 @@ export class EditorMarkers
 			}
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.iterAll())
 		{
 			const rect = this.getKeyChangeHandleRect(keyChange)
 			if (rect.contains(mousePos))
@@ -122,7 +122,7 @@ export class EditorMarkers
 			case "delete":
 			case "backspace":
 			{
-				for (const keyChange of this.owner.song.keyChanges.enumerate())
+				for (const keyChange of this.owner.song.keyChanges.iterAll())
 				{
 					if (this.owner.selection.has(keyChange.id))
 					{
@@ -131,7 +131,7 @@ export class EditorMarkers
 					}
 				}
 				
-				for (const meterChange of this.owner.song.meterChanges.enumerate())
+				for (const meterChange of this.owner.song.meterChanges.iterAll())
 				{
 					if (this.owner.selection.has(meterChange.id))
 					{
@@ -148,7 +148,7 @@ export class EditorMarkers
 	
 	alterSelectedKeyChanges(fn)
 	{
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.iterAll())
 		{
 			if (!this.owner.selection.has(keyChange.id))
 				continue
@@ -164,7 +164,7 @@ export class EditorMarkers
 	
 	alterSelectedMeterChanges(fn)
 	{
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.iterAll())
 		{
 			if (!this.owner.selection.has(meterChange.id))
 				continue
@@ -185,14 +185,14 @@ export class EditorMarkers
 	
 	sanitizeSelection()
 	{
-		for (const selectedKeyChange of this.owner.song.keyChanges.enumerate())
+		for (const selectedKeyChange of this.owner.song.keyChanges.iterAll())
 		{
 			if (!this.owner.selection.has(selectedKeyChange.id))
 				continue
 			
 			this.owner.song = this.owner.song.upsertKeyChange(selectedKeyChange, true)
 		
-			for (const keyChange of this.owner.song.keyChanges.enumerate())
+			for (const keyChange of this.owner.song.keyChanges.iterAll())
 			{
 				if (keyChange.time.compare(selectedKeyChange.time) == 0)
 					this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
@@ -201,14 +201,14 @@ export class EditorMarkers
 			this.owner.song = this.owner.song.upsertKeyChange(selectedKeyChange)
 		}
 		
-		for (const selectedMeterChange of this.owner.song.meterChanges.enumerate())
+		for (const selectedMeterChange of this.owner.song.meterChanges.iterAll())
 		{
 			if (!this.owner.selection.has(selectedMeterChange.id))
 				continue
 			
 			this.owner.song = this.owner.song.upsertMeterChange(selectedMeterChange, true)
 		
-			for (const meterChange of this.owner.song.meterChanges.enumerate())
+			for (const meterChange of this.owner.song.meterChanges.iterAll())
 			{
 				if (meterChange.time.compare(selectedMeterChange.time) == 0)
 					this.owner.song = this.owner.song.upsertMeterChange(meterChange, true)
@@ -223,6 +223,7 @@ export class EditorMarkers
 	{
 		const pointIsContained = (p) =>
 		{
+			console.log("compare", p, range)
 			if (range.start.compare(range.end) == 0)
 				return true
 			
@@ -232,14 +233,19 @@ export class EditorMarkers
 			return false
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerateOverlappingRange(range))
+		console.log("deleteRange")
+		for (const keyChange of this.owner.song.keyChanges.iterAtRange(range))
 		{
 			if (pointIsContained(keyChange.time))
+			{
+			console.log(keyChange)
 				this.owner.song = this.owner.song.upsertKeyChange(keyChange, true)
+			}
 		}
 		
-		for (const meterChange of this.owner.song.meterChanges.enumerateOverlappingRange(range))
+		for (const meterChange of this.owner.song.meterChanges.iterAtRange(range))
 		{
+			console.log(meterChange)
 			if (pointIsContained(meterChange.time))
 				this.owner.song = this.owner.song.upsertMeterChange(meterChange, true)
 		}
@@ -260,8 +266,11 @@ export class EditorMarkers
 	
 	getPreviousDeletionAnchor(time)
 	{
-		const anchor1 = this.owner.song.keyChanges  .findPreviousDeletionAnchor(time)
-		const anchor2 = this.owner.song.meterChanges.findPreviousDeletionAnchor(time)
+		const prevKeyChange = this.owner.song.keyChanges.findActiveAt(time)
+		const prevMeterChange = this.owner.song.meterChanges.findActiveAt(time)
+		
+		const anchor1 = (prevKeyChange   == null ? null : prevKeyChange  .time)
+		const anchor2 = (prevMeterChange == null ? null : prevMeterChange.time)
 		
 		return Rational.max(anchor1, anchor2)
 	}
@@ -271,7 +280,7 @@ export class EditorMarkers
 	{
 		let range = null
 		
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.iterAll())
 		{
 			if (!this.owner.selection.has(meterChange.id))
 				continue
@@ -279,7 +288,7 @@ export class EditorMarkers
 			range = meterChange.getTimeAsRange().merge(range)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.iterAll())
 		{
 			if (!this.owner.selection.has(keyChange.id))
 				continue
@@ -293,13 +302,13 @@ export class EditorMarkers
 	
 	onSelectRange(range)
 	{
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.iterAll())
 		{
 			if (range.overlapsRange(meterChange.getTimeAsRange()))
 				this.owner.selection.add(meterChange.id)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.iterAll())
 		{
 			if (range.overlapsRange(keyChange.getTimeAsRange()))
 				this.owner.selection.add(keyChange.id)
@@ -317,7 +326,7 @@ export class EditorMarkers
 	{
 		this.dragData = new Map()
 		
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.iterAll())
 		{
 			if (!this.owner.selection.has(meterChange.id))
 				continue
@@ -325,7 +334,7 @@ export class EditorMarkers
 			this.dragData.set(meterChange.id, meterChange)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.iterAll())
 		{
 			if (!this.owner.selection.has(keyChange.id))
 				continue
@@ -337,7 +346,7 @@ export class EditorMarkers
 	
 	onDrag(mousePos)
 	{
-		for (const meterChange of this.owner.song.meterChanges.enumerate())
+		for (const meterChange of this.owner.song.meterChanges.iterAll())
 		{
 			if (!this.owner.selection.has(meterChange.id))
 				continue
@@ -360,7 +369,7 @@ export class EditorMarkers
 			this.owner.song = this.owner.song.upsertMeterChange(meterChange.withChanges(changes))
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerate())
+		for (const keyChange of this.owner.song.keyChanges.iterAll())
 		{
 			if (!this.owner.selection.has(keyChange.id))
 				continue
@@ -387,25 +396,25 @@ export class EditorMarkers
 	
 	draw()
 	{
-		for (const meterChange of this.owner.song.meterChanges.enumerateOverlappingRange(this.owner.screenRange))
+		for (const meterChange of this.owner.song.meterChanges.iterAtRange(this.owner.screenRange))
 		{
 			if (!this.owner.selection.has(meterChange.id))
 				this.drawMeterChange(meterChange)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerateOverlappingRange(this.owner.screenRange))
+		for (const keyChange of this.owner.song.keyChanges.iterAtRange(this.owner.screenRange))
 		{
 			if (!this.owner.selection.has(keyChange.id))
 				this.drawKeyChange(keyChange)
 		}
 		
-		for (const meterChange of this.owner.song.meterChanges.enumerateOverlappingRange(this.owner.screenRange))
+		for (const meterChange of this.owner.song.meterChanges.iterAtRange(this.owner.screenRange))
 		{
 			if (this.owner.selection.has(meterChange.id))
 				this.drawMeterChange(meterChange)
 		}
 		
-		for (const keyChange of this.owner.song.keyChanges.enumerateOverlappingRange(this.owner.screenRange))
+		for (const keyChange of this.owner.song.keyChanges.iterAtRange(this.owner.screenRange))
 		{
 			if (this.owner.selection.has(keyChange.id))
 				this.drawKeyChange(keyChange)

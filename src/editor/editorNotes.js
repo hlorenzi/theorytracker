@@ -58,15 +58,18 @@ export class EditorNotes
 	onMouseMove(ev, mouseDown, mousePos)
 	{
 		this.hoverId = -1
-		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
+		for (const pair of this.owner.song.keyChanges.iterActiveAtRangePairwise(this.owner.screenRange))
 		{
 			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
 			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
 			
+			const timeStart = curKey.time.max(this.owner.screenRange.start)
+			const timeEnd = nextKey.time.min(this.owner.screenRange.end)
+			
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			
-			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const note of this.owner.song.notes.iterAtRange(new Range(timeStart, timeEnd)))
 			{
 				const rect = this.getNoteRect(note, curKey.key, xStart, xEnd)
 				
@@ -162,7 +165,7 @@ export class EditorNotes
 			case "delete":
 			case "backspace":
 			{
-				for (const note of this.owner.song.notes.enumerate())
+				for (const note of this.owner.song.notes.iterAll())
 				{
 					if (!this.owner.selection.has(note.id))
 						continue
@@ -196,7 +199,7 @@ export class EditorNotes
 	
 	alterSelectedNotes(fn)
 	{
-		for (const note of this.owner.song.notes.enumerate())
+		for (const note of this.owner.song.notes.iterAll())
 		{
 			if (!this.owner.selection.has(note.id))
 				continue
@@ -218,14 +221,14 @@ export class EditorNotes
 	
 	sanitizeSelection()
 	{
-		for (const selectedNote of this.owner.song.notes.enumerate())
+		for (const selectedNote of this.owner.song.notes.iterAll())
 		{
 			if (!this.owner.selection.has(selectedNote.id))
 				continue
 			
 			this.owner.song = this.owner.song.upsertNote(selectedNote, true)
 		
-			for (const note of this.owner.song.notes.enumerateOverlappingRange(selectedNote.range))
+			for (const note of this.owner.song.notes.iterAtRange(selectedNote.range))
 			{
 				if (note.pitch != selectedNote.pitch)
 					continue
@@ -247,7 +250,7 @@ export class EditorNotes
 	
 	deleteRange(range)
 	{
-		for (const note of this.owner.song.notes.enumerateOverlappingRange(range))
+		for (const note of this.owner.song.notes.iterAtRange(range))
 		{
 			const slices = note.range.slice(range)
 			if (slices.length == 1 && note.range.start.compare(slices[0].start) == 0 && note.range.end.compare(slices[0].end) == 0)
@@ -281,7 +284,7 @@ export class EditorNotes
 	{
 		let range = null
 		
-		for (const note of this.owner.song.notes.enumerate())
+		for (const note of this.owner.song.notes.iterAll())
 		{
 			if (!this.owner.selection.has(note.id))
 				continue
@@ -295,7 +298,7 @@ export class EditorNotes
 	
 	onSelectRange(range)
 	{
-		for (const note of this.owner.song.notes.enumerate())
+		for (const note of this.owner.song.notes.iterAll())
 		{
 			if (range.overlapsRange(note.range))
 				this.owner.selection.add(note.id)
@@ -309,7 +312,7 @@ export class EditorNotes
 		const rectYMin = Math.min(rect.y1, rect.y2)
 		const rectYMax = Math.max(rect.y1, rect.y2)
 		
-		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(rectTimeRange))
+		for (const pair of this.owner.song.keyChanges.iterActiveAtRangePairwise(rectTimeRange))
 		{
 			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
 			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
@@ -317,7 +320,7 @@ export class EditorNotes
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			
-			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const note of this.owner.song.notes.iterAtRange(new Range(curKey.time, nextKey.time)))
 			{
 				if (!note.range.overlapsRange(rectTimeRange))
 					continue
@@ -342,7 +345,7 @@ export class EditorNotes
 		this.mouseRow = this.mouseDownRow = this.getRowAt(mousePos)
 		this.dragData = new Map()
 		
-		for (const note of this.owner.song.notes.enumerate())
+		for (const note of this.owner.song.notes.iterAll())
 		{
 			if (!this.owner.selection.has(note.id))
 				continue
@@ -356,7 +359,7 @@ export class EditorNotes
 	{
 		this.mouseRow = this.getRowAt(mousePos)
 		
-		for (const note of this.owner.song.notes.enumerate())
+		for (const note of this.owner.song.notes.iterAll())
 		{
 			if (!this.owner.selection.has(note.id))
 				continue
@@ -395,13 +398,18 @@ export class EditorNotes
 	
 	draw()
 	{
-		for (const pair of this.owner.song.keyChanges.enumerateAffectingRangePairwise(this.owner.screenRange))
+		let drawnNotes = 0
+		
+		for (const pair of this.owner.song.keyChanges.iterActiveAtRangePairwise(this.owner.screenRange))
 		{
 			const curKey  = pair[0] || new KeyChange(this.owner.screenRange.start, new Key(0, 0, scales[0].pitches))
 			const nextKey = pair[1] || new KeyChange(this.owner.screenRange.end,   new Key(0, 0, scales[0].pitches))
 			
 			const xStart = (curKey .time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
 			const xEnd   = (nextKey.time.asFloat() - this.owner.timeScroll) * this.owner.timeScale
+			
+			const timeStart = curKey.time.max(this.owner.screenRange.start)
+			const timeEnd = nextKey.time.min(this.owner.screenRange.end)
 			
 			const tonicRowOffset = getTonicPitchRowOffset(curKey.key.tonicPitch + curKey.key.tonicAccidental)
 			
@@ -424,7 +432,7 @@ export class EditorNotes
 				}
 			}
 			
-			for (const chord of this.owner.song.chords.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const chord of this.owner.song.chords.iterAtRange(new Range(timeStart, timeEnd)))
 			{
 				const pitches = chord.chord.getPitches()
 				
@@ -453,18 +461,22 @@ export class EditorNotes
 			}
 			this.owner.ctx.globalAlpha = 1
 			
-			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const note of this.owner.song.notes.iterAtRange(new Range(timeStart, timeEnd)))
 			{
+				drawnNotes++
 				if (!this.owner.selection.has(note.id))
 					this.drawNote(note, curKey.key, xStart, xEnd)
 			}
 			
-			for (const note of this.owner.song.notes.enumerateOverlappingRange(new Range(curKey.time, nextKey.time)))
+			for (const note of this.owner.song.notes.iterAtRange(new Range(timeStart, timeEnd)))
 			{
+				drawnNotes++
 				if (this.owner.selection.has(note.id))
 					this.drawNote(note, curKey.key, xStart, xEnd)
 			}
 		}
+		
+		//console.log(drawnNotes)
 	}
 	
 	

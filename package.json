@@ -4,13 +4,14 @@
   "description": "",
   "private": true,
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "build": "webpack",
     "watch": "webpack --watch --mode development",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --experimental-modules ./src/test.js"
   },
   "browserslist": [
-    "> 0.2%",
+    "> 2%",
     "not dead",
     "not ie 11"
   ],
@@ -22,6 +23,7 @@
     "@babel/preset-react": "^7.0.0",
     "babel-loader": "^8.0.5",
     "core-js": "^3.0.1",
+    "immutable": "^4.0.0-rc.12",
     "pako": "^1.0.10",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",

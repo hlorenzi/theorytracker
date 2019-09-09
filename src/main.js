@@ -9,7 +9,7 @@ import { Synth } from "./synth/synth.js"
 import { Song, MeterChange } from "./song/song.js"
 import { Toolbox, askBeforeUnload } from "./toolbox/toolbox.js"
 import { Rational } from "./util/rational.js"
-import { getChordStrummingPattern } from "./util/theory.js"
+import { Meter, getChordStrummingPattern } from "./util/theory.js"
 
 
 let gEditor = null
@@ -176,7 +176,7 @@ function feedSongToSynth(song, synth, startTick, useChordPatterns = true)
 	}
 	
 	// Register notes.
-	for (const note of song.notes.enumerate())
+	for (const note of song.notes.iterAll())
 	{
 		if (note.range.end.compare(startTick) <= 0)
 			continue
@@ -185,7 +185,7 @@ function feedSongToSynth(song, synth, startTick, useChordPatterns = true)
 	}
 	
 	// Register chords.
-	for (const chord of song.chords.enumerate())
+	for (const chord of song.chords.iterAll())
 	{
 		if (chord.range.end.compare(startTick) <= 0)
 			continue

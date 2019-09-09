@@ -718,7 +718,7 @@ export class Editor
 		if (this.mouseDown && (this.mouseDownAction & Editor.ACTION_PAN))
 			this.canvas.style.cursor = "default"
 		else if (this.mouseHoverAction & (Editor.ACTION_DRAG_TIME | Editor.ACTION_DRAG_PITCH))
-			this.canvas.style.cursor = "move"
+			this.canvas.style.cursor = (this.mouseDown ? "grabbing" : "grab")
 		else if (this.mouseHoverAction & (Editor.ACTION_STRETCH_TIME_START | Editor.ACTION_STRETCH_TIME_END))
 			this.canvas.style.cursor = "col-resize"
 		else if (this.mouseTrack >= 0)
@@ -1019,7 +1019,7 @@ export class Editor
 		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
 		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, 256)
 		
-		for (let [curMeter, nextMeter] of this.song.meterChanges.enumerateAffectingRangePairwise(this.screenRange))
+		for (let [curMeter, nextMeter] of this.song.meterChanges.iterActiveAtRangePairwise(this.screenRange))
 		{
 			if (curMeter == null && nextMeter == null)
 				continue
@@ -1094,7 +1094,7 @@ export class Editor
 		if (this.cursorShow && !this.playing && !showRectCursor)
 			this.drawCursorRect()
 		
-		for (const keyChange of this.song.keyChanges.enumerateOverlappingRange(this.screenRange))
+		for (const keyChange of this.song.keyChanges.iterAtRange(this.screenRange))
 		{
 			const x = (keyChange.time.asFloat() - this.timeScroll) * this.timeScale
 			
