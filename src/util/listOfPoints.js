@@ -51,6 +51,15 @@ export class ListOfPoints
 	}
 	
 	
+	update(elem)
+	{
+		if (!this.idMap.get(elem.id))
+			return this
+		
+		return this.upsert(elem)
+	}
+	
+	
 	upsert(elem)
 	{
 		//console.log("upsert id", elem.id)
@@ -166,10 +175,12 @@ export class ListOfPoints
 		
 		while (i < this.elems.length)
 		{
-			if (!range.overlapsPoint(this.elems[i].time))
+			if (range.end.compare(this.elems[i].time) <= 0)
 				break
 			
-			yield this.elems[i]
+			if (range.overlapsPoint(this.elems[i].time))
+				yield this.elems[i]
+			
 			i += 1
 		}
 	}
@@ -230,13 +241,23 @@ export class ListOfPoints
 	}
 	
 	
-	findPrevious(fromPoint)
+	findPreviousAnchor(fromPoint)
 	{
 		const i = BinarySearch.findPreviousNotEqual(this.elems, fromPoint, (a, b) => a.compare(b.time))
 		if (i === null)
 			return null
 		
-		return this.elems[i]
+		return this.elems[i].time
+	}
+	
+	
+	findPreviousDeletionAnchor(point)
+	{
+		const elem = this.findActiveAt(point)
+		if (elem === null)
+			return null
+		
+		return elem.time
 	}
 	
 	
@@ -267,6 +288,7 @@ export function test()
 	const range2 = new Range(new Rational(0), new Rational(1), true, false)
 	const range3 = new Range(new Rational(0), new Rational(5), true, false)
 	const range4 = new Range(new Rational(-1), new Rational(6), true, false)
+	const range5 = new Range(new Rational(0), new Rational(5, 2), true, false)
 	
 	assert.deepEqual([ ...list.iterAll() ], [])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range2) ], [ [ null, null ] ])
@@ -280,6 +302,7 @@ export function test()
 	assert.deepEqual([ ...list.iterAt(elem2.time) ], [])
 	assert.deepEqual([ ...list.iterAtRange(range1) ], [])
 	assert.deepEqual([ ...list.iterAtRange(range2) ], [ elem1 ])
+	assert.deepEqual([ ...list.iterAtRange(range5) ], [ elem1 ])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range2) ], [ [ elem1, null ] ])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range3) ], [ [ elem1, null ] ])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range4) ], [ [ null, elem1 ], [ elem1, null ] ])
@@ -291,6 +314,7 @@ export function test()
 	assert.deepEqual([ ...list.iterAt(elem2.time) ], [ elem2 ])
 	assert.deepEqual([ ...list.iterAtRange(range2) ], [ elem1 ])
 	assert.deepEqual([ ...list.iterAtRange(range3) ], [ elem1, elem2 ])
+	assert.deepEqual([ ...list.iterAtRange(range5) ], [ elem1, elem2 ])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range2) ], [ [ elem1, elem2 ] ])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range3) ], [ [ elem1, elem2 ], [ elem2, null ] ])
 	assert.deepEqual([ ...list.iterActiveAtRangePairwise(range4) ], [ [ null, elem1 ], [ elem1, elem2 ], [ elem2, null ] ])

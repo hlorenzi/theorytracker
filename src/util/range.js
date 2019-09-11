@@ -51,12 +51,7 @@ export class Range
 	
 	merge(other)
 	{
-		if (other == null)
-			return this
-		
-		return new Range(
-			this.start.min(other.start),
-			this.end.max(other.end))
+		return Range.merge(this, other)
 	}
 	
 	
@@ -68,7 +63,12 @@ export class Range
 		if (r1 === null)
 			return r2
 		
-		return r1.merge(r2)
+		if (r2 === null)
+			return r1
+		
+		return new Range(
+			r1.start.min(r2.start),
+			r1.end.max(r2.end))
 	}
 	
 	
@@ -100,23 +100,34 @@ export class Range
 			this.startInclusive,
 			this.endInclusive)
 	}
+
+
+	snap(step)
+	{
+		return new Range(
+			this.start.snap(step),
+			this.end.snap(step),
+			this.startInclusive,
+			this.endInclusive)
+	}
 	
 	
-	slice(slice)
+	*iterSlices(slice)
 	{
 		if (slice.start.compare(this.start) <= 0)
 		{
 			if (slice.end.compare(this.end) < 0)
-				return [new Range(slice.end, this.end)]
-			else
-				return []
+				yield new Range(slice.end, this.end)
 		}
 		else
 		{
 			if (slice.end.compare(this.end) >= 0)
-				return [new Range(this.start, slice.start)]
+				yield new Range(this.start, slice.start)
 			else
-				return [new Range(this.start, slice.start), new Range(slice.end, this.end)]
+			{
+				yield new Range(this.start, slice.start)
+				yield new Range(slice.end, this.end)
+			}
 		}
 	}
 	
@@ -150,3 +161,6 @@ export class Range
 		return checkStart & checkEnd
 	}
 }
+
+
+export default Range

@@ -1,5 +1,5 @@
 import React from "react"
-import { Song, KeyChange, MeterChange } from "../song/song.js"
+//import { Song, KeyChange, MeterChange } from "../song/song.js"
 import { Key, scales, Chord, chords, Meter, drawChordOnCanvas, getScaleIndexFromPitches, getScaleDegreeForPitch, getPitchForScaleDegree, getNameForPitch, getColorForScaleDegree, getColorRotationForScale, getChordKindFromPitches, getRomanNumeralScaleDegreeStr, getFillStyleForScaleDegree } from "../util/theory.js"
 import { Rational } from "../util/rational.js"
 import { Rect } from "../util/rect.js"

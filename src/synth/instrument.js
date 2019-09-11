@@ -119,7 +119,7 @@ export class Instrument
 		sourceNode.start(0)
 		
 		let envelopeNode = this.synth.audioCtx.createGain()
-		envelopeNode.gain.value = 1
+		envelopeNode.gain.setValueAtTime(1, this.synth.audioCtx.currentTime)
 		
 		let volumeNode = this.synth.audioCtx.createGain()
 		volumeNode.gain.value = volume
@@ -135,15 +135,20 @@ export class Instrument
 	processNote(noteData, deltaTime)
 	{
 		noteData.duration -= deltaTime
+
+		const releaseFalloffDuration = 0.1
 		
 		if (noteData.duration <= 0 && !noteData.released)
 		{
 			noteData.released = true
 			for (let i = 0; i < noteData.voices.length; i++)
-				noteData.voices[i].envelope.gain.linearRampToValueAtTime(0, this.synth.audioCtx.currentTime + 0.1)
+			{
+				noteData.voices[i].envelope.gain.setValueAtTime(1, this.synth.audioCtx.currentTime)
+				noteData.voices[i].envelope.gain.linearRampToValueAtTime(0, this.synth.audioCtx.currentTime + releaseFalloffDuration)
+			}
 		}
 		
-		if (noteData.duration <= -0.1)
+		if (noteData.duration <= -releaseFalloffDuration * 2)
 		{
 			for (let i = 0; i < noteData.voices.length; i++)
 				noteData.voices[i].source.stop()

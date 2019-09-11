@@ -7,6 +7,9 @@ export class Rational
 	{
 		if (denominator == 0)
 			throw new "denominator zero"
+
+		if (!isFinite(numerator) || !isFinite(denominator))
+			throw new "invalid rational"
 		
 		this.numerator = numerator
 		this.denominator = denominator
@@ -19,7 +22,7 @@ export class Rational
 		const integer = Math.floor(floatValue)
 		const frac = floatValue - integer
 		
-		return new Rational(integer * maxDenominator + Math.floor(frac * maxDenominator), maxDenominator)
+		return new Rational(integer * maxDenominator + Math.round(frac * maxDenominator), maxDenominator)
 	}
 	
 	
@@ -32,6 +35,18 @@ export class Rational
 	asFloat()
 	{
 		return this.numerator / this.denominator
+	}
+	
+	
+	get n()
+	{
+		return this.numerator
+	}
+	
+	
+	get d()
+	{
+		return this.denominator
 	}
 	
 	
@@ -88,11 +103,25 @@ export class Rational
 	}
 	
 	
+	multiplyByFloat(x)
+	{
+		return new Rational(
+			this.numerator * x,
+			this.denominator)
+	}
+	
+	
 	divide(other)
 	{
 		return new Rational(
 			this.numerator * other.denominator,
 			this.denominator * other.numerator)
+	}
+
+
+	snap(step)
+	{
+		return Rational.fromFloat(this.asFloat(), step.denominator)
 	}
 	
 	
@@ -176,49 +205,49 @@ export class Rational
 	
 	static max(a, b)
 	{
-		if (a == null && b == null)
+		if (a === null && b === null)
 			return null
 		
-		if (a == null)
+		if (a === null)
 			return b
 		
-		if (b == null)
+		if (b === null)
 			return a
 		
-		return a.max(b)
+		if (a.compare(b) > 0)
+			return a
+		else
+			return b
 	}
 	
 	
 	static min(a, b)
 	{
-		if (a == null && b == null)
+		if (a === null && b === null)
 			return null
 		
-		if (a == null)
+		if (a === null)
 			return b
 		
-		if (b == null)
+		if (b === null)
 			return a
 		
-		return a.min(b)
+		if (a.compare(b) < 0)
+			return a
+		else
+			return b
 	}
 
 
 	max(other)
 	{
-		if (this.compare(other) < 0)
-			return other
-		else
-			return this
+		return Rational.max(this, other)
 	}
 
 
 	min(other)
 	{
-		if (this.compare(other) > 0)
-			return other
-		else
-			return this
+		return Rational.min(this, other)
 	}
 	
 	
@@ -271,3 +300,6 @@ export class Rational
 		return new Rational(array[0] * array[2] + array[1], array[2])
 	}
 }
+
+
+export default Rational

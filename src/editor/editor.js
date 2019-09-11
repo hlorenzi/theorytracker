@@ -1,4 +1,4 @@
-import { Song, Note, SongChord, MeterChange, KeyChange } from "../song/song.js"
+//import { Song, Note, SongChord, MeterChange, KeyChange } from "../song/song.js"
 import { EditorMarkers } from "./editorMarkers.js"
 import { EditorNotes } from "./editorNotes.js"
 import { EditorChords } from "./editorChords.js"
@@ -714,6 +714,8 @@ export class Editor
 				track.onMouseMove(ev, this.mouseDown, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
 			}
 		}
+		
+		this.setProject(this.song)
 		
 		if (this.mouseDown && (this.mouseDownAction & Editor.ACTION_PAN))
 			this.canvas.style.cursor = "default"

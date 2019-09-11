@@ -111,6 +111,15 @@ export class ListOfRanges
 	}
 	
 	
+	update(elem)
+	{
+		if (!this.idMap.get(elem.id))
+			return this
+		
+		return this.upsert(elem)
+	}
+	
+	
 	upsert(elem)
 	{
 		//console.log("upsert id", elem.id, "buckets", this.bucketFn(elem.range.start), this.bucketFn(elem.range.end),)
@@ -242,6 +251,36 @@ export class ListOfRanges
 			return null
 		
 		return firstElem.range.merge(lastElem.range)
+	}
+	
+	
+	findPreviousAnchor(fromPoint)
+	{
+		let previous = null
+		
+		const end = this.bucketFn(fromPoint)
+		const endB = Math.min(
+			this.buckets.length - 1,
+			BinarySearch.find(this.buckets, end, (value, bucket) => value - bucket.start))
+		
+		for (let b = endB; b >= 0; b--)
+		{
+			if (previous && this.bucketFn(previous) > this.buckets[b].start + 1)
+				break
+			
+			for (const elem of this.buckets[b].elems)
+			{
+				if (elem.range.start.compare(fromPoint) < 0 &&
+					(previous === null || elem.range.start.compare(previous) > 0))
+					previous = elem.range.start
+					
+				if (elem.range.end.compare(fromPoint) < 0 &&
+					(previous === null || elem.range.end.compare(previous) > 0))
+					previous = elem.range.end
+			}
+		}
+		
+		return previous
 	}
 	
 	

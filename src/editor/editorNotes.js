@@ -1,4 +1,4 @@
-import { KeyChange } from "../song/song.js"
+//import { KeyChange } from "../song/song.js"
 import { Editor } from "./editor.js"
 import { Rational } from "../util/rational.js"
 import { Range } from "../util/range.js"

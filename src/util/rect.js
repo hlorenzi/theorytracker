@@ -19,6 +19,30 @@ export class Rect
 	}
 	
 	
+	get x1()
+	{
+		return this.x
+	}
+	
+	
+	get y1()
+	{
+		return this.y
+	}
+	
+	
+	get x2()
+	{
+		return this.x + this.w
+	}
+	
+	
+	get y2()
+	{
+		return this.y + this.h
+	}
+	
+	
 	contains(p)
 	{
 		return p.x >= this.x &&
@@ -36,3 +60,6 @@ export class Rect
 			this.y < other.y + other.h
 	}
 }
+
+
+export default Rect
