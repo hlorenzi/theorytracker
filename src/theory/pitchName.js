@@ -5,7 +5,7 @@ export class PitchName
 {
 	constructor(letter, accidental)
 	{
-		this.letter = letter
+		this.letter = Utils.mod(letter, 7)
 		this.accidental = accidental
 	}
 	
@@ -73,6 +73,15 @@ export class PitchName
 	altered(additionalAccidental)
 	{
 		return new PitchName(this.letter, this.accidental + additionalAccidental)
+	}
+
+
+	get simplified()
+	{
+		if (this.accidental === 0)
+			return this
+		else
+			return PitchName.fromMidi(this.midi)
 	}
 	
 	

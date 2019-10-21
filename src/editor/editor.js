@@ -1,1289 +1,1876 @@
-//import { Song, Note, SongChord, MeterChange, KeyChange } from "../song/song.js"
-import { EditorMarkers } from "./editorMarkers.js"
-import { EditorNotes } from "./editorNotes.js"
-import { EditorChords } from "./editorChords.js"
-import { Rational } from "../util/rational.js"
-import { Range } from "../util/range.js"
-import { Rect } from "../util/rect.js"
-import { Key, Meter, scales, Chord } from "../util/theory.js"
+import { default as Immutable } from "immutable"
+import Track from "./track.js"
+import Theory from "../theory.js"
+import Rational from "../util/rational.js"
+import Range from "../util/range.js"
+import Rect from "../util/rect.js"
+import Project from "../project/project.js"
+import MathUtils from "../util/math.js"
 
 
-export class Editor
+export default class Editor
 {
-	static ACTION_SELECTION_TIME     = 0x01
-	static ACTION_SELECTION_RECT     = 0x02
-	static ACTION_PAN                = 0x04
-	static ACTION_DRAG_TIME          = 0x10
-	static ACTION_DRAG_PITCH         = 0x20
-	static ACTION_STRETCH_TIME_START = 0x40
-	static ACTION_STRETCH_TIME_END   = 0x80
+	static actionPan              = 0x01
+	static actionSelectCursor     = 0x02
+	static actionSelectRect       = 0x04
+	static actionDraw             = 0x08
+	static actionDragTime         = 0x10
+	static actionDragPitchRow     = 0x20
+	static actionStretchTimeStart = 0x40
+	static actionStretchTimeEnd   = 0x80
+	
+	static keyPan = " "
+	static keyDraw = "a"
+	static keySelectMultiple = "control"
+	static keySelectRect = "shift"
 	
 	
-	constructor(canvas, synth)
+	static reduce(state, action)
 	{
-		this.canvas = canvas
-		this.ctx = canvas.getContext("2d")
-		this.width = parseInt(canvas.width)
-		this.height = parseInt(canvas.height)
+		const shouldLog = (
+			action.type !== "playbackStep" &&
+			action.type !== "mouseMove" &&
+			action.type !== "keyDown" &&
+			action.type !== "keyUp" &&
+			action.type !== "keyCommand"
+		)
 		
-		this.synth = synth
-		
-		this.song = new Song()
-			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales[0].pitches)))
-			.upsertMeterChange(new MeterChange(new Rational(0, 4), new Meter(4, 4)))
-			
-		/*	.upsertNote(new Note(new Range(new Rational(0, 4), new Rational(1, 4)), 60))
-			.upsertNote(new Note(new Range(new Rational(1, 4), new Rational(2, 4)), 62))
-			.upsertNote(new Note(new Range(new Rational(2, 4), new Rational(3, 4)), 64))
-			.upsertNote(new Note(new Range(new Rational(3, 4), new Rational(4, 4)), 65))
-			.upsertNote(new Note(new Range(new Rational(4, 4), new Rational(5, 4)), 67))
-			.upsertNote(new Note(new Range(new Rational(5, 4), new Rational(6, 4)), 69))
-			.upsertNote(new Note(new Range(new Rational(6, 4), new Rational(7, 4)), 71))
-			.upsertNote(new Note(new Range(new Rational(7, 4), new Rational(8, 4)), 72))
-			
-			.upsertChord(new SongChord(new Range(new Rational(0, 4), new Rational(3, 4)), new Chord(0, 0, 0)))
-			.upsertChord(new SongChord(new Range(new Rational(4, 4), new Rational(7, 4)), new Chord(9, 0, 2)))
-			.upsertChord(new SongChord(new Range(new Rational(8, 4), new Rational(13, 4)), new Chord(2, 0, 3)))
-			
-			.upsertMeterChange(new MeterChange(new Rational(11, 4), new Meter(5, 4)))
-			
-			.upsertKeyChange(new KeyChange(new Rational(0, 4), new Key(0, 0, scales[0].pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(7, 4), new Key(5, 1, scales[5].pitches)))
-			.upsertKeyChange(new KeyChange(new Rational(9, 4), new Key(7, -1, scales[7].pitches)))*/
-		
-		this.timeScale = 200
-		this.timeScroll = 0
-		this.timeSnap = new Rational(1, 16)
-		this.timeSnapBase = new Rational(1, 16)
-		
-		this.selection = new Set()
-		
-		this.tracks = []
-		this.tracks.push(new EditorMarkers(this))
-		this.tracks.push(new EditorNotes(this))
-		this.tracks.push(new EditorChords(this))
-		this.refreshLayout()
-		
-		this.cursorTime = new Range(new Rational(0), new Rational(0))
-		this.cursorTrack = { start: 1, end: 1 }
-		this.cursorShow = true
-		this.rectCursorRect = { time1: new Rational(0), y1: 0, time2: new Rational(0), y2: 0 }
-		this.rectCursorTrack = 1
-		this.insertionDuration = new Rational(1, 4)
-		this.insertionPitch = 60
-		
-		this.playing = false
-		this.playbackTime = 0
-		this.playbackTimeRational = new Rational(0)
-		
-		this.mouseDown = false
-		this.mouseDownDate = new Date()
-		this.mouseDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
-		this.mousePos = { x: -1, y: -1 }
-		this.mouseTime = new Rational(0)
-		this.mouseTrack = -1
-		this.mouseHoverAction = 0
-		this.mouseDownAction = 0
-		this.mouseHoverChordId = null
-		
-		this.wheelDate = new Date()
-		
-		this.keyDownData = { pos: { x: -1, y: -1 }, time: new Rational(0) }
-		this.curSanitizationMode = "ok"
-		this.curSanitizationSelectionSize = 0
-		
-		this.undoStack = [{ kind: null, song: this.song }]
-		this.undoStackPointer = 0
-		
-		this.screenRange = new Range(new Rational(0), new Rational(0))
-		
-		this.doubleClickThreshold = 250
-		this.mouseEdgeScrollThreshold = 60
-		this.mouseEdgeScrollSpeed = 1
-		this.cursorEdgeScrollThreshold = new Rational(4)
-		this.cursorEdgeScrollSpeed = 16
-		
-		canvas.onmousedown = (ev) => this.onMouseDown(ev)
-		window.onmousemove = (ev) => this.onMouseMove(ev)
-		window.onmouseup   = (ev) => this.onMouseUp  (ev)
-		window.onkeydown   = (ev) => this.onKeyDown  (ev)
-		
-		canvas.onwheel = (ev) => this.onMouseWheel(ev)
-		
-		canvas.oncontextmenu = (ev) => { ev.preventDefault() }
-	}
-	
-	
-	resize(w, h)
-	{
-		const prevTimeAtCenter = this.getTimeAtPos({ x: this.width / 2, y: 0 }, new Rational(1, 2048))
-		
-		this.canvas.width = w
-		this.canvas.height = h
-		
-		this.width = w
-		this.height = h
-		
-		const newTimeAtCenter = this.getTimeAtPos({ x: this.width / 2, y: 0 }, new Rational(1, 2048))
-		
-		this.timeScroll += prevTimeAtCenter.subtract(newTimeAtCenter).asFloat()
-		
-		this.refreshLayout()
-		this.draw()
-	}
-	
-	
-	setSong(song)
-	{
-		this.song = song
-		
-		this.undoStack = [{ kind: null, song: this.song }]
-		this.undoStackPointer = 0
-		
-		this.toolboxRefreshFn()
-		this.draw()
-	}
-	
-	
-	setPlayback(playing)
-	{
-		this.playing = playing
-		this.playbackTime = this.cursorTime.min().asFloat()
-		
-		if (playing)
-			this.scrollTimeIntoView(this.cursorTime.min())
-		
-		this.toolboxRefreshFn()
-		this.draw()
-		
-		this.onPlaybackToggle(this.playing)
-	}
-	
-	
-	playNoteSample(pitch)
-	{
-		const midiPitchToHertz = (midiPitch) =>
+		if (shouldLog)
 		{
-			return Math.pow(2, (midiPitch - 69) / 12) * 440
+			console.log("oldState", state)
+			console.log("action", action)
 		}
 		
-		this.synth.stopAll()
-		this.synth.addNoteEvent(0, 0, midiPitchToHertz(pitch), 1, 0.5)
-		this.onPlaySample()
-	}
-	
-	
-	playChordSample(chord)
-	{
-		const midiPitchToHertz = (midiPitch) =>
+		const reducer = Editor["reduce_" + action.type]
+		
+		if (reducer)
 		{
-			return Math.pow(2, (midiPitch - 69) / 12) * 440
-		}
-		
-		this.synth.stopAll()
-		
-		const pitches = chord.getStrummingPitches()
-		for (const pitch of pitches)
-			this.synth.addNoteEvent(0, 0, midiPitchToHertz(pitch), 1, 0.5)
-		
-		this.onPlaySample()
-	}
-	
-	
-	rewind()
-	{
-		this.selectionClear()
-		
-		this.cursorTime = Range.fromPoint(this.song.range.start)
-		this.cursorShow = true
-		this.playbackTime = this.cursorTime.start.asFloat()
-		this.playbackTimeRational = this.cursorTime.start
-		
-		if (this.playing)
-		{
-			this.setPlayback(false)
-			this.setPlayback(true)
+			const newState = reducer(state, action)
+			
+			if (shouldLog)
+			{
+				console.log("newState", newState)
+				console.log("")
+			}
+			
+			return newState
 		}
 		else
-			this.scrollTimeIntoView(this.cursorTime.start)
-		
-		this.toolboxRefreshFn()
-		this.draw()
+		{
+			console.error("unhandled dispatch action", action)
+			return state
+		}
 	}
 	
 	
-	refreshLayout()
+	static reduce_init(state, action)
 	{
-		this.tracks[0].area = new Rect(0, 0, this.width, 44)
-		this.tracks[1].area = new Rect(0, 44, this.width, this.height - 44 - 60)
-		this.tracks[2].area = new Rect(0, this.height - 60, this.width, 60)
-	}
-	
-	
-	insertNoteAtCursor(pitch)
-	{
-		const mod = (x, m) => (x % m + m) % m
-		
-		pitch = mod(pitch, 12)
+		state = {
+			project: action.project,
+			w: 0,
+			h: 0,
+			
+			tracks: [],
+			
+			timeSnap: new Rational(1, 16),
+			timeSnapBase: new Rational(1, 16),
+			timeScale: 200,
+			timeScroll: -1,
 
-		let minDistance = 10000
-		let selectedOctave = 0
-		for (let octave = -1; octave <= 7; octave++)
-		{
-			const dist = Math.abs(this.insertionPitch - (pitch + octave * 12))
-			if (dist < minDistance)
+			insert: {
+				nearPitch: 60,
+				duration: new Rational(1, 4),
+			},
+			
+			undoData: {
+				stack: [],
+				pointer: -1,
+			},
+
+			clipboard: {
+				elems: new Immutable.Map(),
+			},
+
+			playback: {
+				playing: false,
+				timeAsFloat: 0,
+				time: new Rational(0),
+				startTime: null,
+			},
+			
+			cursor: {
+				visible: true,
+				time1: new Rational(0),
+				time2: new Rational(0),
+				track1: 0,
+				track2: 0,
+			},
+			
+			rectSelection: null,
+			
+			mouse: {
+				down: false,
+				action: 0,
+				dragOrig: null,
+				drag: null,
+				x: 0,
+				y: 0,
+				xPrev: 0,
+				yPrev: 0,
+				hover: null,
+				draw: null,
+				lastDownDate: new Date(),
+				lastWheelDate: new Date(),
+			},
+			
+			keys: {},
+			pendingKeyCommandFinish: false,
+
+			soundPreview: null,
+			soundPreviewPrev: null,
+
+			prefs:
 			{
-				minDistance = dist
-				selectedOctave = octave
+				doubleClickThresholdMs: 250,
+				mouseEdgeScrollThreshold: 60,
+				mouseEdgeScrollSpeed: 1,
+				cursorEdgeScrollThreshold: new Rational(4),
+				cursorEdgeScrollSpeed: 16,
+
+				backgroundColor: "#29242e",
+				selectionCursorColor: "#0af",
+				playbackCursorColor: "#f00",
+				trackSeparatorColor: "#aaa",
+				submeasureColor: "#111",
+				meterChangeColor: "#0cf",
+				keyChangeColor: "#f0c",
 			}
 		}
 		
-		const finalPitch = selectedOctave * 12 + pitch
-		
-		const time = this.cursorTime.start.min(this.cursorTime.end)
-		const duration = this.insertionDuration
-		
-		const id = this.song.nextId
-		this.song = this.song
-			.upsertNote(new Note(Range.fromStartDuration(time, duration), finalPitch))
-			.withRefreshedRange()
-		
-		this.cursorTime = Range.fromPoint(time.add(duration))
-		this.cursorTrack = { start: 1, end: 1 }
-		this.cursorShow = false
-		this.scrollTimeIntoView(this.cursorTime.start)
-		
-		this.selectionClear()
-		this.selection.add(id)
-		
-		this.insertionPitch = finalPitch
-		
-		this.curSanitizationMode = "input"
-		this.sanitizeSelection()
-		
-		this.playNoteSample(finalPitch)
-		this.toolboxRefreshFn()
-		this.draw()
+		state = Editor.refreshProjectRange(state)
+		return Editor.undoPointAdd(state)
 	}
 	
 	
-	insertChordAtCursor(chord)
+	static reduce_set(state, action)
 	{
-		const time = this.cursorTime.start.min(this.cursorTime.end)
-		const duration = this.insertionDuration
+		state = { ...state,
+			...action.state,
+		}
 		
-		const id = this.song.nextId
-		this.song = this.song
-			.upsertChord(new SongChord(Range.fromStartDuration(time, duration), chord))
-			.withRefreshedRange()
-			
-		this.cursorTime = Range.fromPoint(time.add(duration))
-		this.cursorTrack = { start: 2, end: 2 }
-		this.cursorShow = false
-		this.scrollTimeIntoView(this.cursorTime.start)
-		
-		this.selectionClear()
-		this.selection.add(id)
-		
-		this.curSanitizationMode = "input"
-		this.sanitizeSelection()
-		
-		this.playChordSample(chord)
-		this.toolboxRefreshFn()
-		this.draw()
+		return state
 	}
 	
 	
-	insertKeyChangeAtCursor(key)
+	static reduce_resize(state, action)
 	{
-		const time = this.cursorTime.start.min(this.cursorTime.end)
+		state = { ...state,
+			w: action.w,
+			h: action.h,
+			tracks: [ ...state.tracks ],
+		}
 		
-		const id = this.song.nextId
-		this.song = this.song
-			.upsertKeyChange(new KeyChange(time, key))
-			.withRefreshedRange()
-			
-		this.cursorTime = Range.fromPoint(time)
-		this.cursorTrack = { start: 0, end: 0 }
-		this.cursorShow = false
-		this.scrollTimeIntoView(this.cursorTime.start)
-		
-		this.selectionClear()
-		this.selection.add(id)
-		
-		this.curSanitizationMode = "input"
-		this.sanitizeSelection()
-		
-		this.toolboxRefreshFn()
-		this.draw()
-	}
-	
-	
-	insertMeterChangeAtCursor(meter)
-	{
-		const time = this.cursorTime.start.min(this.cursorTime.end)
-		
-		const id = this.song.nextId
-		this.song = this.song
-			.upsertMeterChange(new MeterChange(time, meter))
-			.withRefreshedRange()
-			
-		this.cursorTime = Range.fromPoint(time)
-		this.cursorTrack = { start: 0, end: 0 }
-		this.cursorShow = false
-		this.scrollTimeIntoView(this.cursorTime.start)
-		
-		this.selectionClear()
-		this.selection.add(id)
-		
-		this.curSanitizationMode = "input"
-		this.sanitizeSelection()
-		
-		this.toolboxRefreshFn()
-		this.draw()
-	}
-	
-	
-	scrollTimeIntoView(time)
-	{
-		if (time.compare(this.screenRange.end.subtract(this.timeSnap.multiply(this.cursorEdgeScrollThreshold))) > 0)
-			this.timeScroll = time.subtract(this.screenRange.duration).subtract(this.timeSnap).asFloat() + this.timeSnap.asFloat() * this.cursorEdgeScrollSpeed
-			
-		else if (time.compare(this.screenRange.start.add(this.timeSnap.multiply(this.cursorEdgeScrollThreshold))) < 0)
-			this.timeScroll = time.asFloat() - this.timeSnap.asFloat() * this.cursorEdgeScrollSpeed
-	}
-	
-	
-	scrollPlaybackIntoView(time)
-	{
-		const margin = this.timeSnap.multiply(new Rational(16))
-		
-		if (time.compare(this.screenRange.end.subtract(margin)) > 0)
-			this.timeScroll = time.subtract(margin).asFloat()
-			
-		else if (time.compare(this.screenRange.start.add(margin)) < 0)
-			this.timeScroll = time.subtract(margin).asFloat()
-	}
-	
-	
-	isTrackUnderCursor(trackIndex)
-	{
-		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
-		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
-		
-		return trackIndex >= trackMin && trackIndex <= trackMax
-	}
-	
-	
-	*enumerateTracksUnderCursor()
-	{
-		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
-		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
-		
-		if (trackMin >= 0 && trackMax >= 0)
-			for (let t = trackMin; t <= trackMax; t++)
-				yield this.tracks[t]
-	}
-	
-	
-	sanitizeSelection(ignore = null)
-	{
-		if (this.curSanitizationMode == "ok")
-			return
-		
-		if (this.curSanitizationMode == ignore &&
-			this.curSanitizationSelectionSize == this.selection.size)
-			return
-		 
-		this.curSanitizationMode = "ok"
-		this.curSanitizationSelectionSize = this.selection.size
-		
-		for (const track of this.tracks)
-			track.sanitizeSelection()
-		
-		this.song = this.song.withRefreshedRange()
-	}
-	
-	
-	addUndoPoint(kind)
-	{
-		this.undoStack = this.undoStack.slice(0, this.undoStackPointer + 1)
-		this.undoStackPointer = this.undoStack.length - 1
-		
-		if (this.undoStack.length > 0 && kind !== null && kind === this.undoStack[this.undoStack.length - 1].kind)
+		let trackY = 0
+		for (let tr = 0; tr < state.tracks.length; tr++)
 		{
-			this.undoStack[this.undoStack.length - 1] = { kind, song: this.song }
-			this.undoStackPointer = this.undoStack.length - 1
-				
-			console.log("mergeUndoPoint", this.undoStackPointer, this.undoStack.length, this.undoStack)
+			if (state.tracks[tr].kind == "notes")
+				state.tracks[tr] = { ...state.tracks[tr], rect: new Rect(0, trackY, state.w, state.h - trackY) }
+			else if (state.tracks[tr].kind == "chords")
+				state.tracks[tr] = { ...state.tracks[tr], rect: new Rect(0, trackY, state.w, 54) }
+			else
+				state.tracks[tr] = { ...state.tracks[tr], rect: new Rect(0, trackY, state.w, 44) }
+			
+			trackY += state.tracks[tr].rect.h
+		}
+		
+		return state
+	}
+	
+	
+	static reduce_projectSet(state, action)
+	{
+		state = Editor.undoPointAdd(state)		
+
+		state = { ...state,
+			project: action.project,
+		}
+
+		return state
+	}
+	
+	
+	static reduce_projectLoad(state, action)
+	{
+		state = { ...state,
+			project: action.project,
+		}
+
+		state = Editor.selectionClear(state)
+		state = Editor.reduce_clearUndoStack(state, {})		
+		state = Editor.reduce_rewind(state, {})
+		state = Editor.reduce_playbackSet(state, { playing: false })
+		return state
+	}
+	
+	
+	static reduce_rewind(state, action)
+	{
+		if (state.playback.playing)
+		{
+			state = Editor.reduce_playbackSet(state, { playing: true, time: state.project.range.start })
 		}
 		else
 		{
-			if (this.undoStack[this.undoStack.length - 1].song !== this.song)
+			state = Editor.Cursor.setVisible(state, true)
+			state = Editor.Cursor.place(state, state.project.range.start, null)
+			state = Editor.scrollTimeIntoView(state, state.project.range.start)
+		}
+
+		return state
+	}
+	
+	
+	static reduce_trackAdd(state, action)
+	{
+		state = Track.handlerForTrackKind(action.kind).init(state, action)
+		state = Editor.Cursor.place(state, null, state.tracks.length - 1)
+		
+		return Editor.reduce_resize(state, { type: "resize", w: state.w, h: state.h })
+	}
+	
+	
+	static reduce_playbackSet(state, action)
+	{
+		if (state.mouse.down)
+			state = Editor.reduce_mouseUp(state, {})
+
+		const time = action.time || state.playback.time
+
+		state = { ...state,
+			playback: { ...state.playback,
+				playing: action.playing,
+				time,
+				timeAsFloat: time.asFloat(),
+				startTime: (action.playing ? time : null),
+			},
+		}
+
+		if (action.playing)
+			state = Editor.scrollPlaybackIntoView(state, time)		
+		
+		return state
+	}
+	
+	
+	static reduce_playbackStep(state, action)
+	{
+		const timeAsFloat = action.timeAsFloat === null ? state.playback.timeAsFloat : action.timeAsFloat
+		const time = Rational.fromFloat(timeAsFloat, 1024)
+
+		state = { ...state,
+			playback: { ...state.playback,
+				timeAsFloat,
+				time,
+			},
+		}
+
+		state = Editor.scrollPlaybackIntoView(state, time)
+		return state
+	}
+	
+	
+	static reduce_clearSoundPreview(state, action = {})
+	{
+		let soundPreviewPrev = action.clearPrev ? null : (state.soundPreview || state.soundPreviewPrev)
+
+		if (!state.soundPreview && state.soundPreviewPrev === soundPreviewPrev)
+			return state
+
+		return { ...state, soundPreview: null, soundPreviewPrev }
+	}
+
+
+	static reduce_insertNote(state, action)
+	{
+		state = Editor.handlePendingKeyCommandFinish(state)
+
+		const insertOctave = Math.floor(state.insert.nearPitch / 12)
+		const possiblePitches = [-1, 0, 1].map(offset =>
+		{
+			const pitch = (insertOctave + offset) * 12 + (MathUtils.mod(action.chroma, 12))
+			const delta = Math.abs(pitch - state.insert.nearPitch)
+			return { pitch, delta }
+		})
+
+		possiblePitches.sort((a, b) => a.delta - b.delta)
+		const chosenPitch = possiblePitches[0].pitch
+
+		const track = state.tracks.findIndex(t => t.kind === "notes")
+
+		const range = new Range(action.time, action.time.add(state.insert.duration))
+		const note = new Project.Note(range, chosenPitch)
+		const id = state.project.nextId
+		const project = state.project.upsertNote(note).withRefreshedRange()
+
+		state = { ...state,
+			project,
+			insert: { ...state.insert,
+				nearPitch: chosenPitch,
+			},
+		}
+
+		state = Editor.Cursor.place(state, range.end, track)
+		state = Editor.Cursor.setVisible(state, false)
+		state = Editor.scrollTimeIntoView(state, range.end)
+		state = Editor.soundPreviewSet(state, { kind: "note", pitch: chosenPitch })
+		state = Editor.selectionClear(state)
+		state = Track.selectionAdd(state, track, id)
+		state = Track.selectionRemoveConflictingBehind(state, track)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+
+
+	static reduce_insertChord(state, action)
+	{
+		state = Editor.handlePendingKeyCommandFinish(state)
+
+		const track = state.tracks.findIndex(t => t.kind === "chords")
+
+		const range = new Range(action.time, action.time.add(state.insert.duration))
+		const chord = new Project.Chord(range, action.chord)
+		const id = state.project.nextId
+		const project = state.project.upsertChord(chord).withRefreshedRange()
+
+		state = { ...state, project }
+		state = Editor.Cursor.place(state, range.end, track)
+		state = Editor.Cursor.setVisible(state, false)
+		state = Editor.scrollTimeIntoView(state, range.end)
+		state = Editor.soundPreviewSet(state, { kind: "chord", chord: action.chord })
+		state = Editor.selectionClear(state)
+		state = Track.selectionAdd(state, track, id)
+		state = Track.selectionRemoveConflictingBehind(state, track)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+
+
+	static reduce_insertKeyChange(state, action)
+	{
+		state = Editor.handlePendingKeyCommandFinish(state)
+
+		const track = state.tracks.findIndex(t => t.kind === "markers")
+
+		const keyCh = new Project.KeyChange(action.time, action.key)
+		const id = state.project.nextId
+		const project = state.project.upsertKeyChange(keyCh).withRefreshedRange()
+
+		state = { ...state, project }
+		state = Editor.Cursor.place(state, action.time, track)
+		state = Editor.Cursor.setVisible(state, false)
+		state = Editor.scrollTimeIntoView(state, action.time)
+		state = Editor.selectionClear(state)
+		state = Track.selectionAdd(state, track, id)
+		state = Track.selectionRemoveConflictingBehind(state, track)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+
+
+	static reduce_insertMeterChange(state, action)
+	{
+		state = Editor.handlePendingKeyCommandFinish(state)
+
+		const track = state.tracks.findIndex(t => t.kind === "markers")
+
+		const meterCh = new Project.MeterChange(action.time, action.meter)
+		const id = state.project.nextId
+		const project = state.project.upsertMeterChange(meterCh).withRefreshedRange()
+
+		state = { ...state, project }
+		state = Editor.Cursor.place(state, action.time, track)
+		state = Editor.Cursor.setVisible(state, false)
+		state = Editor.scrollTimeIntoView(state, action.time)
+		state = Editor.selectionClear(state)
+		state = Track.selectionAdd(state, track, id)
+		state = Track.selectionRemoveConflictingBehind(state, track)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+	
+	
+	static reduce_keyDown(state, action)
+	{
+		return { ...state,
+			keys: { ...state.keys, [action.key]: true },
+		}
+	}
+	
+	
+	static reduce_keyUp(state, action)
+	{
+		let keys = { ...state.keys }
+		delete keys[action.key]
+		
+		return { ...state, keys }
+	}
+	
+	
+	static reduce_keyCommand(state, action)
+	{
+		let needsUndoPointAfter = true
+		
+		state = Editor.reduce_clearSoundPreview(state, { clearPrev: true })
+
+		switch (action.key)
+		{
+			case "z":
 			{
-				this.undoStack.push({ kind, song: this.song })
-				this.undoStackPointer = this.undoStack.length - 1
+				if (state.playback.playing)
+					break
+
+				if (!action.ctrlKey)
+					break
 				
-				console.log("addUndoPoint", this.undoStackPointer, this.undoStack.length, this.undoStack)
-			}
-		}
-	}
-	
-	
-	breakUndoPoint()
-	{
-		this.undoStack = this.undoStack.slice(0, this.undoStackPointer + 1)
-		this.undoStackPointer = this.undoStack.length - 1
-		
-		this.undoStack[this.undoStack.length - 1].kind = null
-	}
-	
-	
-	undo()
-	{
-		if (this.undoStackPointer <= 0)
-			return
-		
-		this.undoStackPointer -= 1
-		
-		const data = this.undoStack[this.undoStackPointer]
-		data.kind = null
-		
-		this.song = data.song
-		this.draw()
-		
-		console.log("undo", this.undoStackPointer, this.undoStack.length, this.undoStack)
-	}
-	
-	
-	redo()
-	{
-		if (this.undoStackPointer >= this.undoStack.length - 1)
-			return
-		
-		this.undoStackPointer += 1
-		
-		const data = this.undoStack[this.undoStackPointer]
-		data.kind = null
-		
-		this.song = data.song
-		this.draw()
-		
-		console.log("redo", this.undoStackPointer, this.undoStack.length, this.undoStack)
-	}
-	
-	
-	selectionClear()
-	{
-		this.sanitizeSelection()
-		this.selection.clear()
-	}
-	
-	
-	selectUnderCursor()
-	{
-		this.selectionClear()
-		
-		if (this.cursorTime.start.compare(this.cursorTime.end) == 0)
-			return
-		
-		for (const track of this.enumerateTracksUnderCursor())
-			track.onSelectRange(this.cursorTime.sorted())
-	}
-	
-	
-	selectUnderRectCursor()
-	{
-		this.selectionClear()
-		
-		this.tracks[this.rectCursorTrack].onSelectRect(this.rectCursorRect)
-	}
-	
-	
-	getSelectionRange()
-	{
-		let range = null
-		for (const track of this.tracks)
-		{
-			const trackRange = track.getSelectedRange()
-			if (trackRange != null)
-				range = trackRange.merge(range)
-		}
-		
-		return range
-	}
-	
-	
-	getSelectionTrackRange()
-	{
-		let max = null
-		let min = null
-		for (let t = 0; t < this.tracks.length; t++)
-		{
-			const trackRange = this.tracks[t].getSelectedRange()
-			if (trackRange != null)
-			{
-				max = (max == null ? t : Math.max(max, t))
-				min = (min == null ? t : Math.min(min, t))
-			}
-		}
-		
-		return (max == null || min == null ? null : { start: min, end: max })
-	}
-	
-	
-	getMousePos(ev)
-	{
-		const rect = this.canvas.getBoundingClientRect()
-		return {
-			x: (ev.clientX - rect.left),
-			y: (ev.clientY - rect.top)
-		}
-	}
-	
-	
-	getTimeAtPos(pos, snap = null)
-	{
-		snap = snap || this.timeSnap
-		const xOffset = (pos.x - this.tracks[0].area.x) / this.timeScale + this.timeScroll
-		return Rational.fromFloat(xOffset, snap.denominator)
-	}
-	
-	
-	onMouseDown(ev)
-	{
-		ev.preventDefault()
-		document.activeElement.blur()
-		
-		if (this.mouseDown)
-			return
-		
-		const isRightMouseButton = (ev.button != 0)
-		const prevMouseDownDate = this.mouseDownDate
-		
-		this.mouseDown = true
-		this.mouseDownDate = new Date()
-		this.mousePos = this.getMousePos(ev)
-		this.mouseTime = this.getTimeAtPos(this.mousePos)
-		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
-		this.mouseDownData = { pos: this.mousePos, time: this.mouseTime, timeScroll: this.timeScroll, track: this.mouseTrack }
-		this.mouseDownAction = (isRightMouseButton ? Editor.ACTION_PAN : (ev.shiftKey ? Editor.ACTION_SELECTION_RECT : Editor.ACTION_SELECTION_TIME))
-		this.rectCursorRect = { time1: new Rational(0), y1: 0, time2: new Rational(0), y2: 0 }
-		
-		const hoveringSelected = this.tracks.reduce((accum, track) => accum || track.hasSelectedAt({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y }), false)
-		
-		this.breakUndoPoint()
-		this.sanitizeSelection("mouse")
-		if (!ev.ctrlKey && !hoveringSelected && !isRightMouseButton)
-			this.selectionClear()
-		
-		for (const track of this.tracks)
-		{
-			if (track.area.contains(this.mousePos))
-				track.onMouseDown(ev, true, isRightMouseButton, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
-		}
-		
-		if (this.mouseDownAction == Editor.ACTION_PAN)
-		{
-			this.cursorShow = false
-		}
-		else if (this.mouseDownAction == Editor.ACTION_SELECTION_TIME)
-		{
-			this.cursorShow = true
-			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
-			
-			if (this.mouseDownDate.getTime() - prevMouseDownDate.getTime() > this.doubleClickThreshold)
-				this.cursorTime = new Range(this.mouseTime, this.mouseTime, false, false)
-			else
-			{
-				const anchorPoint = this.tracks[this.mouseDownData.track].getPreviousAnchor(this.cursorTime.min()) || this.song.range.start
+				if (action.shiftKey)
+					state = Editor.reduce_redo(state, {})
+				else
+					state = Editor.reduce_undo(state, {})
 				
-				if (anchorPoint != null)
+				needsUndoPointAfter = false
+				break
+			}
+			case "y":
+			{
+				if (state.playback.playing)
+					break
+
+				if (!action.ctrlKey)
+					break
+				
+				state = Editor.reduce_redo(state, {})
+				needsUndoPointAfter = false
+				break
+			}
+			case "c":
+			{
+				if (state.playback.playing)
+					break
+
+				if (!action.ctrlKey)
+					break
+
+				state = Editor.reduce_copy(state, {})
+				break
+			}
+			case "x":
+			{
+				if (state.playback.playing)
+					break
+
+				if (!action.ctrlKey)
+					break
+
+				state = Editor.reduce_cut(state, {})
+				break
+			}
+			case "v":
+			{
+				if (state.playback.playing)
+					break
+
+				if (!action.ctrlKey)
+					break
+				
+				state = Editor.reduce_paste(state, {})
+				break
+			}
+			case " ":
+			{
+				const time = state.cursor.time1.min(state.cursor.time2)
+				state = Editor.reduce_playbackSet(state, { playing: !state.playback.playing, time })
+				break
+			}
+			case "delete":
+			{
+				if (state.playback.playing)
+					break
+
+				state = Editor.selectionDelete(state)
+				break
+			}
+			case "backspace":
+			{
+				if (state.playback.playing)
+					break
+
+				if (!state.cursor.visible)
 				{
-					this.cursorTime = Range.fromPoint(anchorPoint, false, false)
-					this.scrollTimeIntoView(anchorPoint)
-					this.mouseDownAction = 0
+					state = Editor.selectionDelete(state)
+					break
 				}
-			}
-		}
-		else if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
-		{
-			const yScroll = (this.tracks[this.mouseDownData.track].rowScroll || 0) / (this.tracks[this.mouseDownData.track].rowScale || 1)
-			this.cursorShow = true
-			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
-			this.rectCursorTrack = this.mouseDownData.track
-			this.rectCursorRect =
-			{
-				time1: this.mouseDownData.time,
-				y1: this.mousePos.y + yScroll - this.tracks[this.mouseDownData.track].area.y,
-				time2: this.mouseDownData.time,
-				y2: this.mousePos.y + yScroll - this.tracks[this.mouseDownData.track].area.y,
-			}
-		}
-		else
-		{
-			this.cursorTrack = { start: this.mouseDownData.track, end: this.mouseDownData.track }
-			this.cursorShow = false
-			for (const track of this.tracks)
-				track.onDragStart({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
-			
-			if (this.mouseHoverAction & (Editor.ACTION_STRETCH_TIME_START | Editor.ACTION_STRETCH_TIME_END))
-			{
-				this.mouseDownData.stretchRange = this.getSelectionRange()
+
+				const track1 = Math.min(state.cursor.track1, state.cursor.track2)
+				const track2 = Math.max(state.cursor.track1, state.cursor.track2)
 				
-				if (this.mouseDownData.stretchRange == null)
-					this.mouseDownAction = 0
+				if (state.cursor.time1.compare(state.cursor.time2) == 0)
+				{
+					const time = state.cursor.time1.min(state.cursor.time2)
+					const prevAnchor = Editor.previousAnchor(state, time, track1, track2)
+					
+					for (let tr = track1; tr <= track2; tr++)
+						state = Track.deleteRange(state, tr, new Range(prevAnchor, time, false, false))
+						
+					state = Editor.Cursor.place(state, prevAnchor, null)
+					state = Editor.Cursor.setVisible(state, true)
+					state = Editor.scrollTimeIntoView(state, prevAnchor)
+				}
+				else
+				{
+					const time1 = state.cursor.time1.min(state.cursor.time2)
+					const time2 = state.cursor.time1.max(state.cursor.time2)
+					
+					for (let tr = track1; tr <= track2; tr++)
+						state = Track.deleteRange(state, tr, new Range(time1, time2, false, false))
+						
+					state = Editor.Cursor.place(state, time1, null)
+					state = Editor.Cursor.setVisible(state, true)
+					state = Editor.scrollTimeIntoView(state, time1)
+				}
+				break
 			}
-		}
-		
-		if (this.mouseDownAction & Editor.ACTION_PAN)
-			this.canvas.style.cursor = "default"
-		
-		this.sanitizeSelection("mouse")
-		this.toolboxRefreshFn()
-		this.draw()
-	}
-	
-	
-	onMouseMove(ev)
-	{
-		if (this.mouseDown)
-			ev.preventDefault()
-		
-		const mousePosPrev = this.mousePos
-		this.mousePos = this.getMousePos(ev)
-		this.mouseTime = this.getTimeAtPos(this.mousePos)
-		this.mouseTrack = this.tracks.findIndex(track => track.area.contains(this.mousePos))
-		this.mouseHoverChordId = null
-		
-		const edgeAutoScroll = () =>
-		{
-			if (this.mousePos.x > this.width - this.mouseEdgeScrollThreshold)// && this.mousePos.x > mousePosPrev.x)
-				this.timeScroll += this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
-			else if (this.mousePos.x < this.mouseEdgeScrollThreshold)// && this.mousePos.x < mousePosPrev.x)
-				this.timeScroll -= this.timeSnap.asFloat() * this.mouseEdgeScrollSpeed
-		}
-		
-		if (this.mouseDown)
-		{
-			if (this.mouseDownAction == Editor.ACTION_PAN)
+			case "escape":
 			{
-				this.timeScroll = this.mouseDownData.timeScroll + (this.mouseDownData.pos.x - this.mousePos.x) / this.timeScale
-				if (this.mouseDownData.track >= 0)
-					this.tracks[this.mouseDownData.track].onPan()
+				state = Editor.reduce_rewind(state)
+				break
 			}
-			else if (this.mouseDownAction == Editor.ACTION_SELECTION_TIME)
+			case "enter":
 			{
-				this.cursorTime = new Range(this.cursorTime.start, this.mouseTime, false, false)
-				
-				if (this.mouseTrack >= 0)
-					this.cursorTrack = { ...this.cursorTrack, end: this.mouseTrack }
-				
-				this.selectUnderCursor()
-				edgeAutoScroll()
+				if (state.playback.playing)
+					break
+
+				state = Editor.Cursor.setVisible(state, true)
+
+				const range = Editor.selectionRange(state)
+				if (range)
+				{
+					let track = 0
+					for (let tr = 0; tr < state.tracks.length; tr++)
+						if (Track.selectionHasAny(state, tr))
+							track = tr
+
+					state = Editor.Cursor.place(state, range.end, track)
+					state = Editor.scrollTimeIntoView(state, range.end)
+				}
+
+				state = Editor.handlePendingKeyCommandFinish(state)
+				state = Editor.selectionClear(state)
+				break
 			}
-			else if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
-			{
-				const yScroll = (this.tracks[this.rectCursorTrack].rowScroll || 0) / (this.tracks[this.rectCursorTrack].rowScale || 1)
-				
-				this.rectCursorRect.time2 = this.mouseTime,
-				this.rectCursorRect.y2 = this.mousePos.y + yScroll - this.tracks[this.rectCursorTrack].area.y
-				
-				this.selectUnderRectCursor()
-				edgeAutoScroll()
-			}
-			else
-			{
-				this.curSanitizationMode = "mouse"
-				for (const track of this.tracks)
-					track.onDrag({ x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
-				
-				edgeAutoScroll()
-			}
-		}
-		else
-		{
-			this.mouseHoverAction = Editor.ACTION_SELECTION_TIME
-			
-			for (const track of this.tracks)
-				track.onMouseLeave()
-			
-			if (this.mouseTrack >= 0)
-			{
-				const track = this.tracks[this.mouseTrack]
-				track.onMouseMove(ev, this.mouseDown, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
-			}
-		}
-		
-		this.setProject(this.song)
-		
-		if (this.mouseDown && (this.mouseDownAction & Editor.ACTION_PAN))
-			this.canvas.style.cursor = "default"
-		else if (this.mouseHoverAction & (Editor.ACTION_DRAG_TIME | Editor.ACTION_DRAG_PITCH))
-			this.canvas.style.cursor = (this.mouseDown ? "grabbing" : "grab")
-		else if (this.mouseHoverAction & (Editor.ACTION_STRETCH_TIME_START | Editor.ACTION_STRETCH_TIME_END))
-			this.canvas.style.cursor = "col-resize"
-		else if (this.mouseTrack >= 0)
-			this.canvas.style.cursor = "text"
-		else
-			this.canvas.style.cursor = "default"
-		
-		this.draw()
-	}
-	
-	
-	onMouseUp(ev)
-	{
-		if (!this.mouseDown)
-			return
-		
-		ev.preventDefault()
-		
-		this.mouseDown = false
-		this.mousePos = this.getMousePos(ev)
-		this.mouseTime = this.getTimeAtPos(this.mousePos)
-		
-		for (const track of this.tracks)
-			track.onMouseUp(ev, true, { x: this.mousePos.x - track.area.x, y: this.mousePos.y - track.area.y })
-		
-		if (this.mouseDownAction == Editor.ACTION_SELECTION_RECT)
-			this.cursorShow = false
-		
-		this.addUndoPoint("mouse")
-		this.toolboxRefreshFn()
-		this.draw()
-	}
-	
-	
-	onMouseWheel(ev)
-	{
-		ev.preventDefault()
-		
-		if (Math.abs(ev.deltaX) > 0)
-		{
-			this.timeScroll += 0.01 / (this.timeScale / 100) * ev.deltaX
-			this.wheelDate = new Date()
-		}
-		else if (new Date().getTime() - this.wheelDate.getTime() > 250)
-		{
-			const snap = new Rational(1, 1024)
-			const prevMouseTime = this.getTimeAtPos(this.mousePos, snap)
-			
-			this.timeScale *= (ev.deltaY > 0 ? 0.8 : 1.25)
-			this.timeScale = Math.max(4, Math.min(2048, this.timeScale))
-			
-			const newMouseTime = this.getTimeAtPos(this.mousePos, snap)
-			
-			this.timeScroll -= (newMouseTime.subtract(prevMouseTime).asFloat())
-			
-			const timeSnapAdjustThresholdUpper = 24
-			const timeSnapAdjustThresholdLower = 8
-			this.timeSnap = this.timeSnapBase
-			
-			if (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
-				while (this.timeSnap.asFloat() * this.timeScale > timeSnapAdjustThresholdUpper)
-					this.timeSnap = this.timeSnap.divide(new Rational(2))
-				
-			else if (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
-				while (this.timeSnap.asFloat() * this.timeScale < timeSnapAdjustThresholdLower)
-					this.timeSnap = this.timeSnap.divide(new Rational(1, 2))
-		}
-		
-		this.draw()
-	}
-	
-	
-	onKeyDown(ev)
-	{
-		if (this.mouseDown)
-			return
-		
-		this.sanitizeSelection("keyboard")
-		
-		this.keyDownData = {}
-		this.keyDownData.stretchRange = this.getSelectionRange()
-		
-		const selectionEmpty = (this.selection.size == 0)
-		const selectionTrackRange = this.getSelectionTrackRange()
-		
-		let handled = false
-		
-		const key = ev.key.toLowerCase()
-		switch (key)
-		{
 			case "arrowright":
 			case "arrowleft":
 			{
-				if (!this.cursorShow)
-					break
-				
-				const offset = (key == "arrowright" ? this.timeSnap : this.timeSnap.negate()).multiply(new Rational(ev.ctrlKey ? 16 : 1))
-				
-				if (ev.shiftKey)
+				const invert = (action.key === "arrowleft")
+
+				if (state.playback.playing)
 				{
-					this.cursorTime = new Range(this.cursorTime.start, this.cursorTime.end.add(offset), false, false)
-					this.selectUnderCursor()
-					this.scrollTimeIntoView(this.cursorTime.end)
-					handled = true
+					const timeDelta = state.timeSnap.multiplyByFloat((action.ctrlKey ? 64 : 16) * (invert ? -1 : 1))
+					const newTime = state.playback.time.add(timeDelta)
+					state = Editor.reduce_playbackSet(state, { playing: true, time: newTime })
 				}
-				else if (selectionEmpty)
+				else if (state.cursor.visible && (!Editor.selectionHasAny(state) || action.shiftKey))
 				{
-					const start  = (key == "arrowright" ? this.cursorTime.max() : this.cursorTime.min())
-					this.cursorTime = Range.fromPoint(start.add(offset), false, false)
-					this.cursorTrack = { start: this.cursorTrack.end, end: this.cursorTrack.end }
-					this.scrollTimeIntoView(this.cursorTime.start)
-					handled = true
+					const timeDelta = state.timeSnap.multiplyByFloat((action.ctrlKey ? 16 : 1) * (invert ? -1 : 1))
+
+					state = Editor.handlePendingKeyCommandFinish(state)
+
+					if (action.shiftKey)
+					{
+						const newTime = state.cursor.time2.add(timeDelta)
+						state = Editor.Cursor.drag(state, newTime, null)
+						state = Editor.selectAtCursor(state)
+						state = Editor.scrollTimeIntoView(state, newTime)
+					}
+					else
+					{
+						const timeMin = state.cursor.time1.min(state.cursor.time2)
+						const timeMax = state.cursor.time1.max(state.cursor.time2)
+	
+						const newTime = (invert ? timeMin : timeMax).add(timeDelta)
+						state = Editor.Cursor.place(state, newTime, null)
+						state = Editor.scrollTimeIntoView(state, newTime)
+					}
 				}
+				else
+				{
+					const commandData =
+					{
+						timeDelta: state.timeSnap.multiplyByFloat((action.ctrlKey ? 16 : 1) * (invert ? -1 : 1)),
+					}
+	
+					state = Editor.executeKeyCommand(state, "TimeShift", commandData)
+
+					const range = Editor.selectionRange(state)
+					const newTime = (invert ? range.start : range.end)
+					state = Editor.Cursor.setVisible(state, false)
+					state = Editor.Cursor.place(state, newTime, null)
+					state = Editor.scrollTimeIntoView(state, newTime)
+
+					state = { ...state, pendingKeyCommandFinish: true }
+					needsUndoPointAfter = false
+				}
+
 				break
 			}
 			case "arrowup":
 			case "arrowdown":
 			{
-				if (!this.cursorShow)
+				if (state.playback.playing)
 					break
-				
-				const offset = (key == "arrowdown" ? 1 : -1)
-				
-				if (ev.shiftKey)
+
+				const invert = (action.key === "arrowdown")
+				if (state.cursor.visible && (!Editor.selectionHasAny(state) || action.shiftKey))
 				{
-					const track = Math.max(0, Math.min(this.tracks.length - 1, this.cursorTrack.end + offset))
-					this.cursorTrack = { start: this.cursorTrack.start, end: track }
-					this.selectUnderCursor()
-					handled = true
-				}
-				else if (selectionEmpty)
-				{
-					const start = (key == "arrowdown" ? Math.max : Math.min)(this.cursorTrack.start, this.cursorTrack.end)
-					const track = Math.max(0, Math.min(this.tracks.length - 1, start + offset))
-					this.cursorTime = Range.fromPoint(this.cursorTime.end, false, false)
-					this.cursorTrack = { start: track, end: track }
-					handled = true
-				}
-				break
-			}
-			case " ":
-			{
-				this.setPlayback(!this.playing)
-				handled = true
-				break
-			}
-			case "enter":
-			case "escape":
-			{
-				const range = this.getSelectionRange()
-				const trackRange = this.getSelectionTrackRange()
-				if (range != null && trackRange != null)
-				{
-					this.cursorTime = Range.fromPoint(range.end, false, false)
-					this.cursorTrack = trackRange
-				}
-				else
-				{
-					this.cursorTime = Range.fromPoint(this.cursorTime.max(), false, false)
-				}
-				
-				this.breakUndoPoint()
-				this.selectionClear()
-				this.scrollTimeIntoView(this.cursorTime.max())
-				this.cursorShow = true
-				handled = true
-				break
-			}
-			case "backspace":
-			{
-				if (!this.cursorShow)
-					break
-				
-				if (this.cursorTime.start.compare(this.cursorTime.end) != 0)
-				{
-					for (const track of this.enumerateTracksUnderCursor())
-						track.deleteRange(new Range(this.cursorTime.min(), this.cursorTime.max(), true, true))
+					const trackDelta = (invert ? 1 : -1)
+
+					state = Editor.handlePendingKeyCommandFinish(state)
 					
-					this.cursorTime = Range.fromPoint(this.cursorTime.min(), false, false)
-					this.scrollTimeIntoView(this.cursorTime.start)
-					handled = true
-				}
-				else
-				{				
-					let anchorPoint = null
-					for (const track of this.enumerateTracksUnderCursor())
-						anchorPoint = Rational.max(anchorPoint, track.getPreviousDeletionAnchor(this.cursorTime.min()))
-					
-					if (anchorPoint != null)
+					if (action.shiftKey)
 					{
-						for (const track of this.enumerateTracksUnderCursor())
-							track.deleteRange(new Range(anchorPoint, this.cursorTime.min(), true, true))
-						
-						this.cursorTime = Range.fromPoint(anchorPoint, false, false)
-						this.scrollTimeIntoView(anchorPoint)
-						handled = true
+						const newTrack = state.cursor.track2 + trackDelta
+						state = Editor.Cursor.drag(state, null, newTrack)
+						state = Editor.selectAtCursor(state)
+					}
+					else
+					{
+						const trackMin = Math.min(state.cursor.track1, state.cursor.track2)
+						const trackMax = Math.max(state.cursor.track1, state.cursor.track2)
+	
+						const newTrack = (invert ? trackMax : trackMin) + trackDelta
+						state = Editor.Cursor.place(state, null, newTrack)
 					}
 				}
+				else
+				{
+					const commandData =
+					{
+						diatonic: true,
+						degreeDelta: (action.ctrlKey ? 7 : 1) * (invert ? -1 : 1),
+					}
+					
+					state = Editor.Cursor.setVisible(state, false)
+					state = Editor.executeKeyCommand(state, "PitchShift", commandData)
+					state = { ...state, pendingKeyCommandFinish: true }
+					needsUndoPointAfter = false
+				}
+
 				break
 			}
-			case "z":
+			case ".":
+			case ">":
+			case ",":
+			case "<":
 			{
-				if (!ev.ctrlKey)
+				if (state.playback.playing)
 					break
+
+				const invert = (action.key === "," || action.key === "<")
+				const commandData =
+				{
+					diatonic: false,
+					pitchDelta: (action.ctrlKey ? 12 : 1) * (invert ? -1 : 1),
+				}
 				
-				if (ev.shiftKey)
-					this.redo()
-				else
-					this.undo()
-				
-				ev.preventDefault()
-				return
+				state = Editor.Cursor.setVisible(state, false)
+				state = Editor.executeKeyCommand(state, "PitchShift", commandData)
+				state = { ...state, pendingKeyCommandFinish: true }
+				needsUndoPointAfter = false
+				break
 			}
-			case "y":
+			case "1":
+			case "2":
+			case "3":
+			case "4":
+			case "5":
+			case "6":
+			case "7":
 			{
-				if (!ev.ctrlKey)
+				if (state.playback.playing)
 					break
+
+				const degree = (action.key.charCodeAt(0) - "1".charCodeAt(0))
+				const time = state.cursor.time1.min(state.cursor.time2)
+				const keyCh = state.project.keyChanges.findActiveAt(time)
+				const key = keyCh ? keyCh.key : Editor.defaultKey()
 				
-				this.redo()
-				ev.preventDefault()
-				return
+				if (state.tracks[state.cursor.track1].kind === "chords")
+				{
+					const root = key.midiForDegree(degree)
+					
+					let pitches = [0]
+					pitches.push(key.midiForDegree(degree + 2) - root)
+					pitches.push(key.midiForDegree(degree + 4) - root)
+					
+					const kind = Theory.Chord.kindFromPitches(pitches)
+					const chord = new Theory.Chord(root, 0, kind, 0, [])
+					state = Editor.reduce_insertChord(state, { time, chord })
+				}
+				else
+				{
+					const chroma = key.midiForDegree(degree)
+					state = Editor.reduce_insertNote(state, { time, chroma })
+				}
+			}
+			default:
+				return state
+		}
+
+		if (action.ev)
+			action.ev.preventDefault()
+		
+		state = Editor.refreshProjectRange(state)
+		
+		if (needsUndoPointAfter)
+		{
+			state = { ...state, pendingKeyCommandFinish: false }
+			state = Editor.undoPointAdd(state)
+		}
+
+		return state
+	}
+
+
+	static reduce_copy(state, action)
+	{
+		if (!Editor.selectionHasAny(state))
+			return state
+	
+		state = Editor.clipboardClear(state)
+		state = Editor.selectionAddToClipboard(state)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+
+
+	static reduce_cut(state, action)
+	{
+		if (!Editor.selectionHasAny(state))
+			return state
+		
+		state = Editor.clipboardClear(state)
+		state = Editor.selectionAddToClipboard(state)
+		state = Editor.selectionDelete(state)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+
+
+	static reduce_paste(state, action)
+	{
+		state = Editor.clipboardPaste(state)
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+	
+	
+	static reduce_mouseMove(state, action)
+	{
+		state = Editor.reduce_clearSoundPreview(state)
+
+		state = { ...state,
+			mouse: { ...state.mouse,
+				x: action.x,
+				y: action.y,
+				xPrev: state.mouse.x,
+				yPrev: state.mouse.y,
+				hover: null,
+				draw: null,
+				time: Editor.timeAtX(state, action.x),
+				track: Editor.trackAtY(state, action.y),
 			}
 		}
 		
-		const handledHere = handled
-		
-		this.sanitizeSelection("keyboard")
-		if (!handled)
+		if (!state.mouse.down)
 		{
-			this.curSanitizationMode = "keyboard"
-			for (let t = 0; t < this.tracks.length; t++)
-				handled |= this.tracks[t].onKeyDown(ev, this.isTrackUnderCursor(t))
-		}
-		
-		if (handled)
-		{
-			switch (key)
+			for (let tr = 0; tr < state.tracks.length; tr++)
 			{
-				case "arrowright":
-				case "arrowleft":
+				if (state.tracks[tr].rect.contains(state.mouse))
 				{
-					if (this.cursorShow)
-						break
+					const input = { mouse: { ...state.mouse } }
+					input.mouse.x -= state.tracks[tr].rect.x
+					input.mouse.y -= state.tracks[tr].rect.y
 					
-					const newSelectionRange = this.getSelectionRange()
-					if (newSelectionRange != null)
+					state = Track.updateHover(state, tr, input)
+					if (state.tracks[tr].hover || state.tracks[tr].draw)
 					{
-						this.cursorTime = Range.fromPoint(newSelectionRange.max(), false, false)
-						this.scrollTimeIntoView(key == "arrowleft" && !ev.ctrlKey ? newSelectionRange.min() : newSelectionRange.max())
+						state = { ...state,
+							mouse: { ...state.mouse,
+								hover: state.tracks[tr].hover,
+								draw: state.tracks[tr].draw,
+							},
+						}
 					}
-					
-					break
 				}
-				case "delete":
-				case "backspace":
-				{
-					if (key == "backspace" && handledHere)
-						break
-					
-					if (this.keyDownData.stretchRange != null)
-					{
-						this.cursorTime = Range.fromPoint(this.keyDownData.stretchRange.min(), false, false)
-						this.scrollTimeIntoView(this.cursorTime.start)
-					}
-					
-					if (selectionTrackRange != null)
-						this.cursorTrack = selectionTrackRange
-					
-					this.cursorShow = true
-					break
-				}
+				else
+					state = Track.update(state, tr, { hover: null, draw: null })
+			}
+		}
+		else
+		{
+			state = { ...state,
+				mouse: { ...state.mouse,
+					drag: {
+						xDelta: state.mouse.x - state.mouse.dragOrig.x,
+						yDelta: state.mouse.y - state.mouse.dragOrig.y,
+						timeDelta: state.mouse.time.subtract(state.mouse.dragOrig.time),
+					},
+				},
 			}
 			
-			ev.preventDefault()
-			this.addUndoPoint("keyboard")
-			this.toolboxRefreshFn()
-			this.draw()
+			const handleMouseEdgeScroll = (state) =>
+			{
+				let timeScroll = state.timeScroll
+
+				if (state.mouse.x > state.w - state.prefs.mouseEdgeScrollThreshold)
+					timeScroll += state.timeSnap.asFloat() * state.prefs.mouseEdgeScrollSpeed
+
+				else if (state.mouse.x < state.prefs.mouseEdgeScrollThreshold)
+					timeScroll -= state.timeSnap.asFloat() * state.prefs.mouseEdgeScrollSpeed
+
+				return { ...state, timeScroll }
+			}
+			
+			if (state.mouse.action == Editor.actionPan)
+			{
+				state = { ...state,
+					timeScroll: state.mouse.dragOrig.timeScroll - state.mouse.drag.xDelta / state.timeScale,
+				}
+
+				for (let tr = 0; tr < state.tracks.length; tr++)
+					state = Track.pan(state, tr)
+			}
+			else if (state.mouse.action == Editor.actionSelectCursor)
+			{
+				state = Editor.Cursor.drag(state, state.mouse.time, state.mouse.track)
+				state = Editor.selectAtCursor(state)
+				state = handleMouseEdgeScroll(state)
+			}
+			else if (state.mouse.action == Editor.actionSelectRect)
+			{
+				state = { ...state,
+					rectSelection: { ...state.rectSelection,
+						time2: state.mouse.time,
+						y2: state.mouse.y - state.tracks[state.rectSelection.track].rect.y,
+					},
+				}
+				
+				for (let tr = 0; tr < state.tracks.length; tr++)
+					state = Track.selectionClear(state, tr)
+				
+				state = Track.selectionAddAtRect(state, state.rectSelection.track)
+				state = handleMouseEdgeScroll(state)
+			}
+			else if (state.mouse.action == Editor.actionDraw)
+			{
+				for (let tr = 0; tr < state.tracks.length; tr++)
+				{
+					const input = { mouse: { ...state.mouse } }
+					input.mouse.x -= state.tracks[tr].rect.x
+					input.mouse.y -= state.tracks[tr].rect.y
+					
+					state = Track.drawMove(state, tr, input)
+				}
+
+				state = handleMouseEdgeScroll(state)
+			}
+			else
+			{
+				for (let tr = 0; tr < state.tracks.length; tr++)
+					state = Track.drag(state, tr)
+
+				state = handleMouseEdgeScroll(state)
+			}
+		}
+		
+		return state
+	}
+	
+	
+	static reduce_mouseDown(state, action)
+	{
+		if (state.mouse.down)
+			return state
+
+		const timeSinceLastDown = new Date().getTime() - state.mouse.lastDownDate.getTime()
+
+		state = Editor.reduce_clearSoundPreview(state, { clearPrev: true })
+		state = Editor.handlePendingKeyCommandFinish(state)
+		
+		state = { ...state,
+			mouse: { ...state.mouse,
+				down: true,
+				action: 0,
+				lastDownDate: new Date(),
+				dragOrig: {
+					x: state.mouse.x,
+					y: state.mouse.y,
+					time: state.mouse.time,
+					timeScroll: state.timeScroll,
+					track: state.mouse.track,
+				},
+			},
+		}
+		
+		if (action.rightButton || state.keys[Editor.keyPan])
+		{
+			state = { ...state,
+				mouse: { ...state.mouse,
+					action: Editor.actionPan,
+				},
+			}
+			
+			for (let tr = 0; tr < state.tracks.length; tr++)
+				state = Track.dragStart(state, tr)
+		}
+		else if (state.keys[Editor.keySelectRect])
+		{
+			state = Editor.Cursor.setVisible(state, false)
+			
+			state = { ...state,
+				mouse: { ...state.mouse,
+					action: Editor.actionSelectRect,
+				},
+				rectSelection: {
+					track: state.mouse.track,
+					time1: state.mouse.time,
+					time2: state.mouse.time,
+					y1: state.mouse.y - state.tracks[state.mouse.track].rect.y,
+					y2: state.mouse.y - state.tracks[state.mouse.track].rect.y,
+				},
+			}
+		}
+		else if (!state.playback.playing)
+		{
+			if (state.mouse.draw)
+			{
+				state = Editor.selectionClear(state)
+				state = Editor.Cursor.setVisible(state, false)
+
+				for (let tr = 0; tr < state.tracks.length; tr++)
+					state = Track.drawStart(state, tr)
+				
+				state = { ...state,
+					mouse: { ...state.mouse,
+						action: Editor.actionDraw,
+					},
+				}
+			}
+			else
+			{
+				if (!state.mouse.hover)
+				{
+					if (timeSinceLastDown < state.prefs.doubleClickThresholdMs)
+					{
+						const time = Editor.previousAnchor(state, state.mouse.time, state.mouse.track, state.mouse.track)
+						state = Editor.Cursor.place(state, time, state.mouse.track)
+						state = Editor.scrollTimeIntoView(state, time)
+					}
+					else
+					{
+						state = Editor.Cursor.place(state, state.mouse.time, state.mouse.track)
+						state = { ...state,
+							mouse: { ...state.mouse,
+								action: Editor.actionSelectCursor,
+							},
+						}
+					}
+					
+					state = Editor.Cursor.setVisible(state, true)
+				}
+				else
+				{
+					state = Editor.Cursor.setVisible(state, false)
+					
+					if (state.keys[Editor.keySelectMultiple])
+					{
+						for (let tr = 0; tr < state.tracks.length; tr++)
+						{
+							state = Track.hoveredPlaySoundPreview(state, tr)
+							state = Track.hoveredToggleSelection(state, tr)
+						}
+					}
+					else
+					{
+						let isHoveringSelected = false
+						for (let tr = 0; tr < state.tracks.length; tr++)
+							isHoveringSelected |= Track.hoveredIsSelected(state, tr)
+						
+						if (!isHoveringSelected)
+							for (let tr = 0; tr < state.tracks.length; tr++)
+								state = Track.selectionClear(state, tr)
+						
+						for (let tr = 0; tr < state.tracks.length; tr++)
+						{
+							state = Track.hoveredPlaySoundPreview(state, tr)
+							state = Track.hoveredSelect(state, tr)
+						}
+					}
+					
+					for (let tr = 0; tr < state.tracks.length; tr++)
+						state = Track.dragStart(state, tr)
+					
+					state = { ...state,
+						mouse: { ...state.mouse,
+							action: state.mouse.hover && state.mouse.hover.action,
+							dragOrig: { ...state.mouse.dragOrig,
+								range: Editor.selectionRange(state),
+							},
+						},
+					}
+				}
+			}
+		}
+		
+		return state
+	}
+	
+	
+	static reduce_mouseUp(state, action)
+	{
+		if (!state.mouse.down)
+			return state
+
+		state = Editor.reduce_clearSoundPreview(state)
+		
+		if (state.mouse.action == Editor.actionDraw)
+		{
+			for (let tr = 0; tr < state.tracks.length; tr++)
+				state = Track.drawEnd(state, tr)
+		}
+			
+		state = { ...state,
+			mouse: { ...state.mouse, down: false, action: 0, dragOrig: null, drag: null },
+			rectSelection: null,
+		}
+		
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionRemoveConflictingBehind(state, tr)
+
+		state = Editor.refreshProjectRange(state)
+		state = Editor.undoPointAdd(state)
+		
+		return state
+	}
+	
+	
+	static reduce_mouseWheel(state, action)
+	{
+		if (Math.abs(action.deltaX) > 0)
+		{
+			let timeScroll = state.timeScroll + 0.01 / (state.timeScale / 100) * action.deltaX
+			let lastWheelDate = new Date()
+		
+			return { ...state, timeScroll, mouse: { ...state.mouse, lastWheelDate } }
+		}
+		else if (new Date().getTime() - state.mouse.lastWheelDate.getTime() > 250)
+		{
+			const snap = new Rational(1, 1024)
+			const prevMouseTime = Editor.timeAtX(state, state.mouse.x, snap)
+			
+			let timeScale = state.timeScale * (action.deltaY > 0 ? 0.8 : 1.25)
+			timeScale = Math.max(4, Math.min(2048, timeScale))
+			state = { ...state, timeScale }
+			
+			const newMouseTime = Editor.timeAtX(state, state.mouse.x, snap)
+			
+			const timeScroll = state.timeScroll - newMouseTime.subtract(prevMouseTime).asFloat()
+			
+			const timeSnapAdjustThresholdUpper = 24
+			const timeSnapAdjustThresholdLower = 8
+			let timeSnap = state.timeSnapBase
+			
+			if (timeSnap.asFloat() * timeScale > timeSnapAdjustThresholdUpper)
+				while (timeSnap.asFloat() * timeScale > timeSnapAdjustThresholdUpper)
+					timeSnap = timeSnap.divide(new Rational(2))
+				
+			else if (timeSnap.asFloat() * timeScale < timeSnapAdjustThresholdLower)
+				while (timeSnap.asFloat() * timeScale < timeSnapAdjustThresholdLower)
+					timeSnap = timeSnap.divide(new Rational(1, 2))
+				
+			return { ...state, timeScroll, timeSnap }
+		}
+		
+		return state
+	}
+	
+	
+	static reduce_clearUndoStack(state, action)
+	{
+		state = { ...state,
+			undoData: {
+				stack: [],
+				pointer: -1,
+			},
+		}
+		
+		return Editor.undoPointAdd(state)
+	}
+	
+	
+	static reduce_undo(state, action)
+	{
+		if (state.undoData.pointer <= 0)
+			return state
+		
+		state = Editor.handlePendingKeyCommandFinish(state)
+		
+		const undoData = { ...state.undoData,
+			pointer: state.undoData.pointer - 1,
+		}
+		
+		state = {
+			...state,
+			...undoData.stack[undoData.pointer].state,
+			undoData,
+		}
+		
+		return Editor.reduce_resize(state, { w: state.w, h: state.h })
+	}
+	
+	
+	static reduce_redo(state, action)
+	{
+		if (state.undoData.pointer >= state.undoData.stack.length - 1)
+			return state
+		
+		state = Editor.handlePendingKeyCommandFinish(state)
+		
+		const undoData = { ...state.undoData,
+			pointer: state.undoData.pointer + 1,
+		}
+		
+		state = {
+			...state,
+			...undoData.stack[undoData.pointer].state,
+			undoData,
+		}
+		
+		return Editor.reduce_resize(state, { w: state.w, h: state.h })
+	}
+
+
+	static handlePendingKeyCommandFinish(state)
+	{
+		if (!state.pendingKeyCommandFinish)
+			return state
+
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionRemoveConflictingBehind(state, tr)
+
+		state = { ...state, pendingKeyCommandFinish: false }
+		state = Editor.undoPointAdd(state)
+		return state
+	}
+	
+	
+	static undoPointAdd(state)
+	{
+		let stackCutIndex = state.undoData.pointer + 1
+		
+		if (state.undoData.stack.length > 0 &&
+			state.project === state.undoData.stack[stackCutIndex - 1].state.project)
+		{
+			//if (state.undoData.pointer != state.undoData.stack.length - 1)
+				return state
+			
+			//stackCutIndex = state.undoData.pointer
+		}
+		
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionRemoveConflictingBehind(state, tr)
+	
+		const newUndoPoint =
+		{
+			state: {
+				project: state.project,
+				cursor: state.cursor,
+				tracks: state.tracks,
+				timeScale: state.timeScale,
+				timeScroll: state.timeScroll,
+				pendingKeyCommandFinish: state.pendingKeyCommandFinish,
+			},
+		}
+		
+		const newStack =
+		[
+			...state.undoData.stack.slice(0, stackCutIndex),
+			newUndoPoint,
+		]
+		
+		//console.log("undoPointAdd", newStack)
+		
+		return { ...state,
+			undoData: { ...state.undoData,
+				stack: newStack,
+				pointer: newStack.length - 1,
+			},
 		}
 	}
 	
 	
-	draw()
+	static canUndo(state)
 	{
-		this.ctx.save()
+		return (state.undoData.pointer > 0)
+	}
+	
+	
+	static canRedo(state)
+	{
+		return (state.undoData.pointer < state.undoData.stack.length - 1)
+	}
+	
+	
+	static refreshProjectRange(state)
+	{
+		const project = state.project.withRefreshedRange()
+		if (project === state.project)
+			return state
 		
-		this.ctx.fillStyle = "#29242e"
-		this.ctx.fillRect(0, 0, this.width, this.height)
+		return { ...state, project }
+	}
+	
+	
+	static xAtTime(state, time)
+	{
+		return (time.asFloat() - state.timeScroll) * state.timeScale
+	}
+	
+	
+	static timeAtX(state, x, timeSnap = null)
+	{
+		timeSnap = timeSnap || state.timeSnap
+		const time = x / state.timeScale + state.timeScroll
+		return Rational.fromFloat(time, timeSnap.denominator)
+	}
+	
+	
+	static timeRangeAtX(state, x1, x2, timeSnap = null)
+	{
+		timeSnap = timeSnap || state.timeSnap
+		return new Range(Editor.timeAtX(state, x1, timeSnap).subtract(timeSnap), Editor.timeAtX(state, x2, timeSnap).add(timeSnap))
+	}
+	
+	
+	static trackAtY(state, y)
+	{	
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			if (y < state.tracks[tr].rect.y2)
+				return tr
 		
-		const songStartX = (this.song.range.start.asFloat() - this.timeScroll) * this.timeScale
-		const songEndX   = (this.song.range.end  .asFloat() - this.timeScroll) * this.timeScale
+		return state.tracks.length - 1
+	}
+	
+	
+	static visibleTimeRange(state)
+	{
+		return new Range(Editor.timeAtX(state, 0).subtract(state.timeSnap), Editor.timeAtX(state, state.w).add(state.timeSnap))
+	}
+	
+	
+	static defaultKey()
+	{
+		return Theory.Key.parse("C Major")
+	}
+	
+	
+	static defaultMeter()
+	{
+		return new Theory.Meter(4, 4)
+	}
+
+
+	static insertionTime(state)
+	{
+		return state.cursor.time1
+	}
+
+
+	static insertionTrack(state)
+	{
+		return state.cursor.track1
+	}
+	
+	
+	static scrollTimeIntoView(state, time)
+	{
+		const visibleTimeRange = Editor.visibleTimeRange(state)
+
+		let timeScroll = state.timeScroll
+
+		if (time.compare(visibleTimeRange.end.subtract(state.timeSnap.multiply(state.prefs.cursorEdgeScrollThreshold))) > 0)
+			timeScroll = time.subtract(visibleTimeRange.duration).subtract(state.timeSnap).asFloat() + state.timeSnap.asFloat() * state.prefs.cursorEdgeScrollSpeed
+			
+		else if (time.compare(visibleTimeRange.start.add(state.timeSnap.multiply(state.prefs.cursorEdgeScrollThreshold))) < 0)
+			timeScroll = time.asFloat() - state.timeSnap.asFloat() * state.prefs.cursorEdgeScrollSpeed
+
+		return { ...state, timeScroll }
+	}
+	
+	
+	static scrollPlaybackIntoView(state, time)
+	{
+		const margin = state.timeSnap.multiplyByFloat(16)
+		const visibleTimeRange = Editor.visibleTimeRange(state)
 		
-		this.ctx.fillStyle = "#1b191c"
-		if (songStartX > 0)
-			this.ctx.fillRect(0, 0, songStartX, this.height)
-		if (songEndX < this.width)
-			this.ctx.fillRect(songEndX, 0, this.width - songEndX, this.height)
+		let timeScroll = state.timeScroll
+
+		if (time.compare(visibleTimeRange.end.subtract(margin)) > 0)
+			timeScroll = time.subtract(margin).asFloat()
+			
+		else if (time.compare(visibleTimeRange.start.add(margin)) < 0)
+			timeScroll = time.subtract(margin).asFloat()
+
+		return { ...state, timeScroll }
+	}
+	
+
+	static selectAtCursor(state)
+	{
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionClear(state, tr)
 		
-		this.screenRange = new Range(this.getTimeAtPos({ x: 0, y: 0 }), this.getTimeAtPos({ x: this.width, y: 0 }).add(this.timeSnap))
-		this.playbackTimeRational = Rational.fromFloat(this.playbackTime, 256)
+		const trackMin = Math.min(state.cursor.track1, state.cursor.track2)
+		const trackMax = Math.max(state.cursor.track1, state.cursor.track2)
 		
-		for (let [curMeter, nextMeter] of this.song.meterChanges.iterActiveAtRangePairwise(this.screenRange))
+		if (state.cursor.time1.compare(state.cursor.time2) != 0)
+			for (let tr = trackMin; tr <= trackMax; tr++)
+				state = Track.selectionAddAtCursor(state, tr)
+		
+		return state
+	}
+
+	
+	static selectionHasAny(state)
+	{
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			if (Track.selectionHasAny(state, tr))
+				return true
+			
+		return false
+	}
+	
+	
+	static selectionClear(state)
+	{
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionClear(state, tr)
+		
+		return state
+	}
+	
+	
+	static selectionRange(state)
+	{
+		let range = null
+
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			range = Range.merge(range, Track.selectionRange(state, tr))
+		
+		return range
+	}
+	
+	
+	static selectionDelete(state)
+	{
+		if (!Editor.selectionHasAny(state))
+			return state
+		
+		const range = Editor.selectionRange(state)
+		
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionDelete(state, tr)
+		
+		state = Editor.Cursor.place(state, range.start, null)
+		state = Editor.Cursor.setVisible(state, true)
+		state = Editor.scrollTimeIntoView(state, range.start)
+		
+		return state
+	}
+	
+	
+	static selectionAddToClipboard(state)
+	{
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track.selectionAddToClipboard(state, tr)
+		
+		return state
+	}
+
+
+	static clipboardClear(state)
+	{
+		return { ...state,
+			clipboard: {
+				elems: new Immutable.Map(),
+				range: null,
+			},
+		}
+	}
+
+
+	static clipboardAdd(state, elem)
+	{
+		if (state.clipboard.elems.has(elem.id))
+			return state
+
+		return { ...state,
+			clipboard: { ...state.clipboard,
+				elems: state.clipboard.elems.set(elem.id, elem),
+				range: Range.merge(state.clipboard.range, elem.range || Range.fromPoint(elem.time)),
+			},
+		}
+	}
+
+
+	static clipboardPaste(state, elem)
+	{
+		state = Editor.selectionClear(state)
+
+		if (!state.clipboard.range)
+			return state
+
+		const trackMin = Math.min(state.cursor.track1, state.cursor.track2)
+		const trackMax = Math.max(state.cursor.track1, state.cursor.track2)
+
+		const pasteData =
 		{
-			if (curMeter == null && nextMeter == null)
+			time: state.cursor.time1.min(state.cursor.time2),
+		}
+
+		const projectBefore = state.project
+		
+		for (let tr = trackMin; tr <= trackMax; tr++)
+			state = Track.clipboardPaste(state, tr, pasteData)
+
+		if (state.project === projectBefore)
+			return state
+
+		const endTime = pasteData.time.add(state.clipboard.range.duration)
+		state = Editor.Cursor.setVisible(state, false)
+		state = Editor.Cursor.place(state, endTime, null)
+		state = Editor.scrollTimeIntoView(state, endTime)
+		state = Editor.refreshProjectRange(state) 
+		
+		return state
+	}
+
+
+	static soundPreviewSet(state, soundPreview)
+	{
+		if (!soundPreview)
+			return state
+		
+		if (state.soundPreviewPrev && 
+			state.soundPreviewPrev.kind == soundPreview.kind)
+		{
+			if (soundPreview.kind == "note" &&
+				state.soundPreviewPrev.pitch == soundPreview.pitch)
+				return state
+		}
+
+		return { ...state, soundPreview }
+	}
+	
+	
+	static executeKeyCommand(state, command, args)
+	{
+		for (let tr = 0; tr < state.tracks.length; tr++)
+			state = Track["keyCommand" + command](state, tr, args)
+		
+		return state
+	}
+	
+	
+	static previousAnchor(state, time, track1, track2)
+	{
+		let prevAnchor = null
+		
+		const trackMin = Math.min(track1, track2)
+		const trackMax = Math.max(track1, track2)
+		
+		for (let tr = trackMin; tr <= trackMax; tr++)
+			prevAnchor = Rational.max(prevAnchor, Track.previousAnchor(state, tr, time))
+		
+		if (!prevAnchor)
+			return state.project.range.start
+		
+		return prevAnchor
+	}
+	
+	
+	static render(state, ctx)
+	{
+		ctx.save()
+		
+		ctx.fillStyle = state.prefs.backgroundColor
+		ctx.fillRect(0, 0, state.w, state.h)
+		
+		Editor.renderBackgroundMeasures(state, ctx)
+		Editor.renderCursorHighlight(state, ctx)
+		
+		for (let tr = 0; tr < state.tracks.length; tr++)
+		{
+			const track = state.tracks[tr]
+			
+			ctx.save()
+			ctx.translate(track.rect.x, track.rect.y)
+			
+			ctx.strokeStyle = state.prefs.trackSeparatorColor
+			ctx.lineCap = "square"
+			ctx.lineWidth = 1
+			
+			ctx.beginPath()
+			ctx.moveTo(0, 0)
+			ctx.lineTo(state.w, 0)
+			ctx.stroke()
+			
+			ctx.beginPath()
+			ctx.rect(0, 0, track.rect.w, track.rect.h)
+			ctx.clip()
+			
+			Editor.renderRectSelectionHighlight(state, ctx, tr)
+			Track.render(state, tr, ctx)
+			Editor.renderRectSelectionContour(state, ctx, tr)
+			
+			ctx.restore()
+		}
+		
+		if (state.cursor.visible)
+		{
+			const timeMin = state.cursor.time1.min(state.cursor.time2)
+			const timeMax = state.cursor.time1.max(state.cursor.time2)
+			Editor.renderCursorBeam(state, ctx, timeMin, false)
+			Editor.renderCursorBeam(state, ctx, timeMax, true)
+		}
+
+		Editor.renderPlaybackBeam(state, ctx, state.playback.time)
+		
+		ctx.restore()
+	}
+	
+	
+	static renderBackgroundMeasures(state, ctx)
+	{
+		const visibleTimeRange = Editor.visibleTimeRange(state)
+		
+		ctx.fillStyle = "#1b191c"
+		
+		const songXMin = Editor.xAtTime(state, state.project.range.start)
+		const songXMax = Editor.xAtTime(state, state.project.range.end)
+		
+		if (songXMin > 0)
+			ctx.fillRect(0, 0, songXMin, state.h)
+
+		if (songXMax < state.w)
+			ctx.fillRect(songXMax, 0, state.w - songXMax, state.h)
+
+		for (let [meterCh1, meterCh2] of state.project.meterChanges.iterActiveAtRangePairwise(visibleTimeRange))
+		{
+			if (!meterCh1 && !meterCh2)
 				continue
-			
-			const beforeStart = (curMeter == null)
-			
-			if (curMeter == null)
+
+			let timeMin = (meterCh1 ? meterCh1.time : null)
+			let timeMax = (meterCh2 ? meterCh2.time : visibleTimeRange.end)
+
+			let measureAlternate = true
+
+			if (!meterCh1)
 			{
-				const nullMeterMeasuresBehind = Math.ceil((nextMeter.time.asFloat() - this.screenRange.start.asFloat()) / nextMeter.getMeasureDuration().asFloat())
-				curMeter = new MeterChange(nextMeter.time.subtract(nextMeter.getMeasureDuration().multiply(new Rational(nullMeterMeasuresBehind))), nextMeter.meter)
+				meterCh1 = meterCh2
+				timeMin = meterCh2.time
+				while (timeMin.compare(visibleTimeRange.start) > 0)
+				{
+					timeMin = timeMin.subtract(meterCh2.meter.fullCycleDuration)
+
+					if (meterCh2.meter.alternatingMeasureCount % 2 != 0)
+						measureAlternate = !measureAlternate
+				}
 			}
 			
-			const x = (curMeter.time.asFloat() - this.timeScroll) * this.timeScale
+			const meterCh1X = Editor.xAtTime(state, timeMin)
+			const meterCh2X = Editor.xAtTime(state, timeMax)
+
+			ctx.strokeStyle = state.prefs.meterChangeColor
+			ctx.lineCap = "square"
+			ctx.lineWidth = 1
 			
-			this.ctx.strokeStyle = "#0cf"
-			this.ctx.lineCap = "square"
-			this.ctx.lineWidth = 1
-			
-			this.ctx.beginPath()
-			this.ctx.moveTo(x, 0)
-			this.ctx.lineTo(x, this.height)
-			this.ctx.stroke()
-			
-			const submeasureDuration = curMeter.getSubmeasureDuration()
-			const submeasureBigEnough = submeasureDuration.asFloat() * this.timeScale > 8
-			
-			let measureAlternate = false
-			
-			let time = curMeter.time.add(submeasureDuration)
-			let submeasureCount = 1
-			while (time.lessThan(this.screenRange.end) && (nextMeter == null || time.lessThan(nextMeter.time)))
+			ctx.beginPath()
+			ctx.moveTo(meterCh1X, 0)
+			ctx.lineTo(meterCh1X, state.h)
+			ctx.stroke()
+
+			for (const [measureN, measureD, time1, time2] of meterCh1.meter.iterMeasuresPairwise(timeMin))
 			{
-				const submeasureX = (time.asFloat() - this.timeScroll) * this.timeScale
-				const isMeasure = submeasureCount % curMeter.meter.numerator == 0
-				
-				if (isMeasure && !beforeStart)
+				measureAlternate = !measureAlternate
+
+				if (time2.compare(visibleTimeRange.start) < 0)
+					continue
+
+				if (time1.compare(timeMax) > 0 || time1.compare(visibleTimeRange.end) > 0)
+					break
+
+				const measureX1 = Editor.xAtTime(state, time1)
+				const measureX2 = Editor.xAtTime(state, time2)
+
+				if (measureAlternate)
 				{
-					measureAlternate = !measureAlternate
+					const x1 = Math.max(songXMin, Math.min(songXMax, Math.min(meterCh2X, measureX1)))
+					const x2 = Math.max(songXMin, Math.min(songXMax, Math.min(meterCh2X, measureX2)))
 					
-					if (measureAlternate && time.compare(this.song.range.end) < 0)
+					ctx.fillStyle = "#cdf"
+					ctx.globalAlpha = 0.1
+					ctx.fillRect(x1, 0, x2 - x1, state.h)
+					ctx.globalAlpha = 1
+				}
+
+				const submeasureSize = Editor.xAtTime(state, new Rational(1, measureD)) - Editor.xAtTime(state, new Rational(0))
+				if (submeasureSize > 8)
+				{
+					let submeasureTime = time1
+					for (let sub = 1; sub <= measureN; sub++)
 					{
-						const nextX = ((nextMeter == null ? this.song.range.end : nextMeter.time).asFloat() - this.timeScroll) * this.timeScale
+						submeasureTime = submeasureTime.add(new Rational(1, measureD))
 						
-						const measureX1 = (time.asFloat() - this.timeScroll) * this.timeScale
-						const measureX2 = (time.add(curMeter.getMeasureDuration()).asFloat() - this.timeScroll) * this.timeScale
-						
-						this.ctx.fillStyle = "#383040"
-						this.ctx.fillRect(measureX1, 0, Math.min(measureX2, nextX) - measureX1, this.height)
+						const submeasureX = Editor.xAtTime(state, submeasureTime)
+						if (submeasureX >= meterCh1X && submeasureX <= meterCh2X)
+						{
+							ctx.strokeStyle = state.prefs.submeasureColor
+							ctx.beginPath()
+							ctx.moveTo(submeasureX, 0)
+							ctx.lineTo(submeasureX, state.h)
+							ctx.stroke()
+						}
 					}
 				}
-				
-				if (time.greaterThan(this.screenRange.start) && (isMeasure || submeasureBigEnough))
-				{
-					this.ctx.strokeStyle = (isMeasure ? "#000" : "#111")
-					this.ctx.beginPath()
-					this.ctx.moveTo(submeasureX, 0)
-					this.ctx.lineTo(submeasureX, this.height)
-					this.ctx.stroke()
-				}
-				
-				submeasureCount++
-				time = time.add(submeasureDuration)
 			}
 		}
 		
-		const showRectCursor = 
-			this.cursorShow &&
-			!this.playing &&
-			this.mouseDown &&
-			(this.rectCursorRect.time1.asFloat() != this.rectCursorRect.time2.asFloat() || this.rectCursorRect.y1 != this.rectCursorRect.y2)
-		
-		if (this.cursorShow && !this.playing && !showRectCursor)
-			this.drawCursorRect()
-		
-		for (const keyChange of this.song.keyChanges.iterAtRange(this.screenRange))
+		for (const keyCh of state.project.keyChanges.iterAtRange(visibleTimeRange))
 		{
-			const x = (keyChange.time.asFloat() - this.timeScroll) * this.timeScale
+			const keyChX = Editor.xAtTime(state, keyCh.time)
 			
-			this.ctx.strokeStyle = "#f0c"
-			this.ctx.lineCap = "square"
-			this.ctx.lineWidth = 1
+			ctx.strokeStyle = state.prefs.keyChangeColor
+			ctx.lineCap = "square"
+			ctx.lineWidth = 1
 			
-			this.ctx.beginPath()
-			this.ctx.moveTo(x, 0)
-			this.ctx.lineTo(x, this.height)
-			this.ctx.stroke()
+			ctx.beginPath()
+			ctx.moveTo(keyChX, 0)
+			ctx.lineTo(keyChX, state.h)
+			ctx.stroke()
 		}
-		
-		for (const track of this.tracks)
-		{
-			this.ctx.save()
-			this.ctx.translate(track.area.x, track.area.y)
-			
-			this.ctx.strokeStyle = "#aaa"
-			this.ctx.lineCap = "square"
-			this.ctx.lineWidth = 1
-			
-			this.ctx.beginPath()
-			this.ctx.moveTo(0, 0)
-			this.ctx.lineTo(this.width, 0)
-			this.ctx.stroke()
-			
-			this.ctx.beginPath()
-			this.ctx.rect(0, 0, track.area.w, track.area.h)
-			this.ctx.clip()
-			
-			if (showRectCursor && track === this.tracks[this.rectCursorTrack])
-				this.drawRectCursorHighlight(this.rectCursorTrack, this.rectCursorRect)
-			
-			track.draw()
-			
-			if (showRectCursor && track === this.tracks[this.rectCursorTrack])
-				this.drawRectCursorBeam(this.rectCursorTrack, this.rectCursorRect)
-			
-			this.ctx.restore()
-		}
-		
-		if (this.cursorShow && !this.playing && !showRectCursor)
-		{
-			this.drawCursorBeam(this.cursorTime.min(), true)
-			this.drawCursorBeam(this.cursorTime.max(), false)
-		}
-		
-		if (this.playing)
-			this.drawPlaybackBeam(this.playbackTime)
-		
-		this.ctx.restore()
 	}
 	
 	
-	drawCursorBeam(time, sideToRight)
+	static renderPlaybackBeam(state, ctx, time)
 	{
-		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
-		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
-		
-		if (trackMin < 0 || trackMax < 0)
+		if (!state.playback.playing)
 			return
 		
-		this.ctx.save()
-		
-		const offset = time.asFloat() - this.timeScroll
-		const x = offset * this.timeScale
-		
-		this.ctx.strokeStyle = "#0af"
-		this.ctx.lineCap = "round"
-		this.ctx.lineWidth = 3
-		
-		const headSize = 7 * (sideToRight ? 1 : -1)
-		
-		this.ctx.beginPath()
-		this.ctx.moveTo(this.tracks[trackMin].area.x + x + headSize, this.tracks[trackMin].area.y)
-		this.ctx.lineTo(this.tracks[trackMin].area.x + x, this.tracks[trackMin].area.y)
-		this.ctx.lineTo(this.tracks[trackMax].area.x + x, this.tracks[trackMax].area.y + this.tracks[trackMax].area.h)
-		this.ctx.lineTo(this.tracks[trackMin].area.x + x + headSize, this.tracks[trackMax].area.y + this.tracks[trackMax].area.h)
-		this.ctx.stroke()
-		
-		this.ctx.restore()
-	}
-	
-	
-	drawCursorRect()
-	{
-		const timeMin = this.cursorTime.min()
-		const timeMax = this.cursorTime.max()
-		const trackMin = Math.min(this.cursorTrack.start, this.cursorTrack.end)
-		const trackMax = Math.max(this.cursorTrack.start, this.cursorTrack.end)
-		
-		if (trackMin < 0 || trackMax < 0)
-			return
-		
-		this.ctx.save()
-		
-		const xMin = (timeMin.asFloat() - this.timeScroll) * this.timeScale
-		const xMax = (timeMax.asFloat() - this.timeScroll) * this.timeScale
-		
-		this.ctx.fillStyle = "#0af"
-		this.ctx.globalAlpha = 0.15
-		
-		this.ctx.fillRect(
-			this.tracks[trackMin].area.x + xMin,
-			this.tracks[trackMin].area.y,
-			xMax - xMin,
-			this.tracks[trackMax].area.y + this.tracks[trackMax].area.h - this.tracks[trackMin].area.y)
-		
-		this.ctx.restore()
-	}
-	
-	
-	drawRectCursorHighlight(trackIndex, rect)
-	{
-		if (trackIndex < 0)
-			return
-		
-		this.ctx.save()
-		
-		const offset1 = rect.time1.asFloat() - this.timeScroll
-		const x1 = offset1 * this.timeScale
-		
-		const offset2 = rect.time2.asFloat() - this.timeScroll
-		const x2 = offset2 * this.timeScale
-		
-		this.ctx.fillStyle = "#0af"
-		this.ctx.globalAlpha = 0.15
-		
-		this.ctx.fillRect(
-			x1,
-			rect.y1,
-			x2 - x1,
-			rect.y2 - rect.y1)
-		
-		this.ctx.restore()
-	}
-	
-	
-	drawRectCursorBeam(trackIndex, rect)
-	{
-		if (trackIndex < 0)
-			return
-		
-		this.ctx.save()
-		
-		const offset1 = rect.time1.asFloat() - this.timeScroll
-		const x1 = offset1 * this.timeScale
-		
-		const offset2 = rect.time2.asFloat() - this.timeScroll
-		const x2 = offset2 * this.timeScale
-		
-		this.ctx.strokeStyle = "#0af"
-		this.ctx.lineCap = "round"
-		this.ctx.lineWidth = 3
-		
-		this.ctx.beginPath()
-		this.ctx.rect(
-			x1,
-			rect.y1,
-			x2 - x1,
-			rect.y2 - rect.y1)
-		this.ctx.stroke()
-		
-		this.ctx.restore()
-	}
-	
-	
-	drawPlaybackBeam(time)
-	{
 		const trackMin = 0
-		const trackMax = this.tracks.length - 1
+		const trackMax = state.tracks.length - 1
 		
-		this.ctx.save()
+		if (trackMin < 0 || trackMax < 0)
+			return
 		
-		const offset = time - this.timeScroll
-		const x = offset * this.timeScale
+		ctx.save()
 		
-		this.ctx.strokeStyle = "#f00"
-		this.ctx.lineCap = "round"
-		this.ctx.lineWidth = 3
+		const x = Editor.xAtTime(state, time)
 		
-		this.ctx.beginPath()
-		this.ctx.moveTo(this.tracks[trackMin].area.x + x, this.tracks[trackMin].area.y)
-		this.ctx.lineTo(this.tracks[trackMax].area.x + x, this.tracks[trackMax].area.y + this.tracks[trackMax].area.h)
-		this.ctx.stroke()
+		ctx.strokeStyle = state.prefs.playbackCursorColor
+		ctx.lineCap = "round"
+		ctx.lineWidth = 2
 		
-		this.ctx.restore()
+		const trackMinRect = state.tracks[trackMin].rect
+		const trackMaxRect = state.tracks[trackMax].rect
+		
+		ctx.beginPath()
+		ctx.moveTo(trackMinRect.x1 + x, trackMinRect.y1)
+		ctx.lineTo(trackMinRect.x1 + x, trackMinRect.y1)
+		ctx.lineTo(trackMaxRect.x1 + x, trackMaxRect.y2)
+		ctx.lineTo(trackMaxRect.x1 + x, trackMaxRect.y2)
+		ctx.stroke()
+		
+		ctx.restore()
+	}
+	
+	
+	static renderCursorBeam(state, ctx, time, tipOffsetSide)
+	{
+		if (state.playback.playing)
+			return
+		
+		if (state.rectSelection)
+			return
+		
+		const trackMin = Math.min(state.cursor.track1, state.cursor.track2)
+		const trackMax = Math.max(state.cursor.track1, state.cursor.track2)
+		
+		if (trackMin < 0 || trackMax < 0)
+			return
+		
+		ctx.save()
+		
+		const x = Editor.xAtTime(state, time)
+		
+		ctx.strokeStyle = state.prefs.selectionCursorColor
+		ctx.lineCap = "round"
+		ctx.lineWidth = 2
+		
+		const headSize = 7 * (tipOffsetSide ? -1 : 1)
+		
+		const trackMinRect = state.tracks[trackMin].rect
+		const trackMaxRect = state.tracks[trackMax].rect
+		
+		ctx.beginPath()
+		ctx.moveTo(trackMinRect.x1 + x + headSize, trackMinRect.y1)
+		ctx.lineTo(trackMinRect.x1 + x,            trackMinRect.y1)
+		ctx.lineTo(trackMaxRect.x1 + x,            trackMaxRect.y2)
+		ctx.lineTo(trackMaxRect.x1 + x + headSize, trackMaxRect.y2)
+		ctx.stroke()
+		
+		ctx.restore()
+	}
+	
+	
+	static renderCursorHighlight(state, ctx)
+	{
+		if (state.playback.playing)
+			return
+		
+		if (state.rectSelection)
+			return
+		
+		if (!state.cursor.visible)
+			return
+		
+		const timeMin = state.cursor.time1.min(state.cursor.time2)
+		const timeMax = state.cursor.time1.max(state.cursor.time2)
+		const trackMin = Math.min(state.cursor.track1, state.cursor.track2)
+		const trackMax = Math.max(state.cursor.track1, state.cursor.track2)
+		const trackMinRect = state.tracks[trackMin].rect
+		const trackMaxRect = state.tracks[trackMax].rect
+		
+		ctx.save()
+		
+		const x1 = Editor.xAtTime(state, timeMin)
+		const x2 = Editor.xAtTime(state, timeMax)
+		
+		ctx.fillStyle = state.prefs.selectionCursorColor
+		ctx.globalAlpha = 0.3
+		ctx.fillRect(x1, trackMinRect.y1, x2 - x1, trackMaxRect.y2 - trackMinRect.y1)
+		
+		ctx.restore()
+	}
+	
+	
+	static renderRectSelectionContour(state, ctx, trackIndex)
+	{
+		if (state.playback.playing)
+			return
+		
+		if (!state.rectSelection)
+			return
+		
+		if (trackIndex != state.rectSelection.track)
+			return
+		
+		const timeMin = state.rectSelection.time1.min(state.rectSelection.time2)
+		const timeMax = state.rectSelection.time1.max(state.rectSelection.time2)
+		const y1 = Math.min(state.rectSelection.y1, state.rectSelection.y2)
+		const y2 = Math.max(state.rectSelection.y1, state.rectSelection.y2) + 1
+		
+		ctx.save()
+		
+		const x1 = Editor.xAtTime(state, timeMin)
+		const x2 = Editor.xAtTime(state, timeMax)
+		
+		ctx.strokeStyle = state.prefs.selectionCursorColor
+		ctx.lineCap = "square"
+		ctx.lineWidth = 2
+		ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)
+		
+		ctx.restore()
+	}
+	
+	
+	static renderRectSelectionHighlight(state, ctx, trackIndex)
+	{
+		if (state.playback.playing)
+			return
+		
+		if (!state.rectSelection)
+			return
+		
+		if (trackIndex != state.rectSelection.track)
+			return
+		
+		const timeMin = state.rectSelection.time1.min(state.rectSelection.time2)
+		const timeMax = state.rectSelection.time1.max(state.rectSelection.time2)
+		const y1 = Math.min(state.rectSelection.y1, state.rectSelection.y2)
+		const y2 = Math.max(state.rectSelection.y1, state.rectSelection.y2) + 1
+		
+		ctx.save()
+		
+		const x1 = Editor.xAtTime(state, timeMin)
+		const x2 = Editor.xAtTime(state, timeMax)
+		
+		ctx.fillStyle = state.prefs.selectionCursorColor
+		ctx.globalAlpha = 0.3
+		ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+		
+		ctx.restore()
+	}
+
+
+	static Cursor = class EditorCursor
+	{
+		static setVisible(state, visible)
+		{
+			return { ...state,
+				cursor: { ...state.cursor,
+					visible,
+				},
+			}
+		}
+		
+		
+		static place(state, time, trackIndex)
+		{
+			if (trackIndex !== null)
+				trackIndex = Math.max(0, Math.min(state.tracks.length - 1, trackIndex))
+
+			return { ...state,
+				cursor: { ...state.cursor,
+					time1: time === null ? state.cursor.time1 : time,
+					time2: time === null ? state.cursor.time2 : time,
+					track1: trackIndex === null ? state.cursor.track1 : trackIndex,
+					track2: trackIndex === null ? state.cursor.track2 : trackIndex,
+				},
+			}
+		}
+		
+		
+		static drag(state, time, trackIndex)
+		{
+			if (trackIndex !== null)
+				trackIndex = Math.max(0, Math.min(state.tracks.length - 1, trackIndex))
+
+			return { ...state,
+				cursor: { ...state.cursor,
+					time2: time === null ? state.cursor.time2 : time,
+					track2: trackIndex === null ? state.cursor.track2 : trackIndex,
+				},
+			}
+		}
 	}
 }

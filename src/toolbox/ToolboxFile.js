@@ -1,4 +1,5 @@
 import React from "react"
+import Ribbon from "./Ribbon.js"
 import Project from "../project/project.js"
 
 
@@ -91,68 +92,89 @@ export default function ToolboxFile(props)
         props.dispatch({ type: "rewind" })
     }
     
-	return <>
-        <div style={{
-            display: "grid",
-            gridTemplate: "auto / auto",
-            gridGap: "0.25em 0.25em",
-            alignItems: "center",
-            ...props.style,
-        }}>
-            <div style={{ justifySelf:"left" }}>
-                <button
-                    title="New"
-                    onClick={ newProject }
-                    style={{ fontSize:"18px" }}
-                >
-                    🗑️
-                </button>
+	const examples =
+	[
+		"mozartk453",
+		"letitgo",
+		"rollercoaster",
+		"adventure",
+		"isaac",
+		"dontstarve",
+		"chronotrigger",
+		"jimmyneutron",
+		"whensomebodylovedme",
+	]
+	
+    const loadExample = (filename) =>
+    {
+        if (filename == "")
+            return
+        
+        fetch("examples/" + filename + ".json")
+            .then(res => res.json())
+            .then(json =>
+            {
+                props.dispatch({ type: "projectLoad", project: Project.fromJson(json) })
+            })
+    }
 
-                <div style={{ display:"inline-block", width:"0.5em" }}/>
-               
-                <button
-                    title="Load MIDI or JSON from file"
-                    onClick={ performInputFileClick }
-                    style={{ fontSize:"18px" }}
-                >
-                    📂
-                </button>
-                
-                <button
-                    title="Paste JSON string"
-                    onClick={ () => loadJson(props.dispatch) }
-                    style={{ fontSize:"18px" }}
-                >
-                    📋
-                </button>
-                
-                <div style={{ display:"inline-block", width:"0.5em" }}/>
-                
-                <button
-                    title="Save as JSON"
-                    onClick={ () => saveJson(state.project) }
-                    style={{ fontSize:"18px" }}
-                >
-                    💾
-                </button>
-
-                <button
-                    style={{ fontSize:"18px" }}
-                    title="Generate URL"
-                    onClick={ () => saveAndSetUrl(state.project) }
-                >
-                    🔗
-                </button>
-                
-                <input
-                    ref={ inputFileRef }
-                    type="file"
-                    accept=".mid,.json,.txt"
-                    onChange={ ev => loadFile(props.dispatch, ev.target) }
-                    style={{ display:"none", width:"1em" }}
-                />
-            </div>
+    return <Ribbon.Tab label="File">
+        <Ribbon.Group label="File">
+            <Ribbon.SlotButton tall
+                icon="📄"
+                label="New"
+                onClick={ newProject }
+            />
+            <Ribbon.SlotButton tall
+                icon="📂"
+                label="Open..."
+                onClick={ performInputFileClick }
+            />
+        </Ribbon.Group>
             
-        </div>
-    </>
+        <Ribbon.Group label="Link">
+            <Ribbon.SlotButton tall
+                icon="🔗"
+                label="Generate"
+                onClick={ () => saveAndSetUrl(state.project) }
+            />
+        </Ribbon.Group>
+
+        <Ribbon.Group label="JSON">
+            <Ribbon.SlotButton
+                icon="💾"
+                label="Save"
+                onClick={ () => saveJson(state.project) }
+            />
+            <Ribbon.SlotButton
+                icon="📋"
+                label="Load..."
+                onClick={ () => loadJson(props.dispatch) }
+            />
+
+            <input
+                ref={ inputFileRef }
+                type="file"
+                accept=".mid,.json,.txt"
+                onChange={ ev => loadFile(props.dispatch, ev.target) }
+                style={{ display:"none", width:"1em" }}
+            />
+
+        </Ribbon.Group>
+
+        <Ribbon.Group label="Example">
+            <Ribbon.Slot>
+                <Ribbon.SlotLayout
+                    icon="💡"
+                    label= {
+                        <Ribbon.Select value={0} onChange={ ev => loadExample(ev.target.value) }>
+                            <option value={""}>Load an example...</option>
+                            { examples.map(ex => <option key={ ex } value={ ex }>{ ex }</option>) }
+                        </Ribbon.Select>
+                    }
+                />
+            </Ribbon.Slot>
+        </Ribbon.Group>
+
+    </Ribbon.Tab>
 }

@@ -1,5 +1,5 @@
 import Project from "../project/project.js"
-import Editor from "./editor2.js"
+import Editor from "./editor.js"
 import Track from "./track.js"
 import Rational from "../util/rational.js"
 import Range from "../util/range.js"

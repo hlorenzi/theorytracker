@@ -1,8 +1,7 @@
 import React from "react"
-import Tab from "./tab.js"
-import Editor from "../editor/editor2.js"
+import Editor from "../editor/editor.js"
 import Theory from "../theory.js"
-import Project from "../project/project.js"
+import Ribbon from "./Ribbon.js"
 
 
 function KeyChangeToolbox(props)
@@ -10,13 +9,11 @@ function KeyChangeToolbox(props)
     const state = props.state
     const dispatch = props.dispatch
 
-    const time = state.cursor.time1.min(state.cursor.time2)
+    const time = Editor.insertionTime(props.state)
     const cursorKeyCh = state.project.keyChanges.findActiveAt(time)
     const key = cursorKeyCh ? cursorKeyCh.key : Editor.defaultKey()
 
     const accidentalNames = ["♭♭", "♭", "♮", "♯", "♯♯"]
-
-    const insertNew = () => dispatch({ type: "insertKeyChange", time, key: Editor.defaultKey() })
 
     const setTonicLetter = (letter) =>
     {
@@ -51,48 +48,32 @@ function KeyChangeToolbox(props)
         dispatch({ type: "projectSet", project })
     }
 
-	return <div style={{ ...props.style }}>
-        <div style={{
-            display: "grid",
-            gridTemplate: "auto auto / auto",
-            gridGap: "0.25em 0.25em",
-            alignItems: "center",
-            justifyItems: "start",
-            textAlign: "left",
-            ...props.style,
-        }}>
-            <div style={{ backgroundColor:"#fdf", padding:"0.5em" }}>
-                <span>Key Change</span>
-                <br/>
-                <button onClick={ insertNew }>Insert New</button>
-                <br/>
-                <br/>
-                <span>Current:</span>
-                <br/>
-                <select
-                    value={ key.tonic.letter }
-                    onChange={ ev => setTonicLetter(parseInt(ev.target.value)) }
-                    style={{ height:"2em" }}
-                >
-                    { [0, 1, 2, 3, 4, 5, 6].map(i => <option key={ i } value={ i }>{ Theory.Utils.letterToStr(i) }</option>) } 
-                </select>
-                <select
-                    value={ key.tonic.accidental }
-                    onChange={ ev => setTonicAccidental(parseInt(ev.target.value)) }
-                    style={{ height:"2em" }}
-                >
-                    { [-2, -1, 0, 1, 2].map(acc => <option key={ acc } value={ acc }>{ accidentalNames[acc + 2] }</option>) } 
-                </select>
-                <select
-                    value={ key.scale.id }
-                    onChange={ ev => setScale(Theory.Scale.fromId(ev.target.value)) }
-                    style={{ height:"2em" }}
-                >
-                    { Theory.Scale.list.map(scale => <option key={ scale.id } value={ scale.id }>{ scale.names[0] }</option>) } 
-                </select>
-            </div>
-        </div>
-    </div>
+    return <Ribbon.Group label="Current Key">
+        <Ribbon.Slot>
+            <Ribbon.SlotLayout
+                label={ <>
+                    <Ribbon.Select
+                        value={ key.tonic.letter }
+                        onChange={ ev => setTonicLetter(parseInt(ev.target.value)) }
+                    >
+                        { [0, 1, 2, 3, 4, 5, 6].map(i => <option key={ i } value={ i }>{ Theory.Utils.letterToStr(i) }</option>) } 
+                    </Ribbon.Select>
+                    <Ribbon.Select
+                        value={ key.tonic.accidental }
+                        onChange={ ev => setTonicAccidental(parseInt(ev.target.value)) }
+                    >
+                        { [2, 1, 0, -1, -2].map(acc => <option key={ acc } value={ acc }>{ accidentalNames[acc + 2] }</option>) } 
+                    </Ribbon.Select>
+                    <Ribbon.Select
+                        value={ key.scale.id }
+                        onChange={ ev => setScale(Theory.Scale.fromId(ev.target.value)) }
+                    >
+                        { Theory.Scale.list.map(scale => <option key={ scale.id } value={ scale.id }>{ scale.names[0] }</option>) } 
+                    </Ribbon.Select>
+                </> }
+            />
+        </Ribbon.Slot>
+    </Ribbon.Group>
 }
 
 
@@ -101,14 +82,12 @@ function MeterChangeToolbox(props)
     const state = props.state
     const dispatch = props.dispatch
 
-    const time = state.cursor.time1.min(state.cursor.time2)
+    const time = Editor.insertionTime(props.state)
     const cursorMeterCh = state.project.meterChanges.findActiveAt(time)
     const meter = cursorMeterCh ? cursorMeterCh.meter : Editor.defaultMeter()
 
 	const meterDenominators = [1, 2, 4, 8, 16, 32, 64]
 	
-    const insertNew = () => dispatch({ type: "insertMeterChange", time, meter: Editor.defaultMeter() })
-
     const setNumerator = (numerator) =>
     {
         if (!cursorMeterCh)
@@ -131,42 +110,29 @@ function MeterChangeToolbox(props)
         dispatch({ type: "projectSet", project })
     }
 
-	return <div style={{ ...props.style }}>
-        <div style={{
-            display: "grid",
-            gridTemplate: "auto auto 1fr / auto",
-            gridGap: "0.25em 0.25em",
-            gridAutoFlow: "row",
-            alignItems: "center",
-            justifyItems: "start",
-            textAlign: "left",
-        }}>
-            <div style={{ backgroundColor:"#def", padding:"0.5em" }}>
-                <span>Meter Change</span>
-                <br/>
-                <button onClick={ insertNew }>Insert New</button>
-                <br/>
-                <br/>
-                <span>Current:</span>
-                <br/>
-                <input type="number"
-                    value={ meter.numerator }
-                    onChange={ ev => setNumerator(Math.max(1, Math.min(64, ev.target.value))) }
-                    onKeyDown={ ev => ev.stopPropagation() }
-                    min="1" max="64"
-                    style={{ width:"3em", height:"2em" }}
-                />
-                <span>{ " / " }</span>
-                <select
-                    value={ meter.denominator }
-                    onChange={ ev => setDenominator(parseInt(ev.target.value)) }
-                    style={{ height:"2em" }}
-                >
-                    { meterDenominators.map(d => <option key={ d } value={ d }>{ d.toString() }</option>) } 
-                </select>
-            </div>
-        </div>
-    </div>
+    return <Ribbon.Group label="Current Meter">
+        <Ribbon.Slot>
+            <Ribbon.SlotLayout
+                label={ <>
+                    <Ribbon.Input type="number"
+                        value={ meter.numerator }
+                        onChange={ ev => setNumerator(Math.max(1, Math.min(64, ev.target.value))) }
+                        onKeyDown={ ev => ev.stopPropagation() }
+                        min="1" max="64"
+                        style={{ width:"3em" }}
+                    />
+                    <span>{ " / " }</span>
+                    <Ribbon.Select
+                        value={ meter.denominator }
+                        onChange={ ev => setDenominator(parseInt(ev.target.value)) }
+                        style={{ height:"2em" }}
+                    >
+                        { meterDenominators.map(d => <option key={ d } value={ d }>{ d.toString() }</option>) } 
+                    </Ribbon.Select>
+                </> }
+            />
+        </Ribbon.Slot>
+    </Ribbon.Group>
 }
 
 
@@ -175,17 +141,30 @@ export default function ToolboxMarkers(props)
     const state = props.state
     const dispatch = props.dispatch
 
-	return <div style={{ ...props.style }}>
-        <div style={{ 
-            display: "grid",
-            gridTemplate: "auto / auto auto",
-            gridGap: "0.25em 0.25em",
-            alignItems: "start",
-            justifyContent: "start",
-            justifyItems: "start",
-        }}>
-            <KeyChangeToolbox state={ state } dispatch={ dispatch }/>
-            <MeterChangeToolbox state={ state } dispatch={ dispatch }/>
-        </div>
-    </div>
+    const time = Editor.insertionTime(props.state)
+    const insertKeyChange = () => dispatch({ type: "insertKeyChange", time, key: Editor.defaultKey() })
+    const insertMeterChange = () => dispatch({ type: "insertMeterChange", time, meter: Editor.defaultMeter() })
+
+    const insertIconStyle =
+    {
+        fontWeight: "bold",
+    }
+
+    return <>
+        <Ribbon.Group label="Insert">
+            <Ribbon.SlotButton
+                onClick={ insertKeyChange }
+                icon={ <span style={{ color: state.prefs.keyChangeColor, ...insertIconStyle }}>+</span> }
+                label="Key Change"
+            />
+            <Ribbon.SlotButton
+                onClick={ insertMeterChange }
+                icon={ <span style={{ color: state.prefs.meterChangeColor, ...insertIconStyle }}>+</span> }
+                label="Meter Change"
+            />
+        </Ribbon.Group>
+
+        { KeyChangeToolbox({ state, dispatch }) }
+        { MeterChangeToolbox({ state, dispatch }) }
+    </>
 }

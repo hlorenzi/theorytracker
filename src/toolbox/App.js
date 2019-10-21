@@ -1,10 +1,12 @@
 import React from "react"
-import Editor from "../editor/editor2.js"
+import Editor from "../editor/editor.js"
 import Project from "../project/project.js"
 import { usePlaybackController } from "./PlaybackController.js"
-import ToolboxFile from "./ToolboxFile.js"
 import ToolboxPlayback from "./ToolboxPlayback.js"
+import ToolboxFile from "./ToolboxFile.js"
+import ToolboxEdit from "./ToolboxEdit.js"
 import ToolboxInput from "./ToolboxInput.js"
+import Ribbon from "./Ribbon.js"
 
 
 function EditorComponent(props)
@@ -52,6 +54,9 @@ function EditorComponent(props)
 		
 		const onMouseDown = (ev) =>
 		{
+			if (window.document.activeElement)
+				window.document.activeElement.blur()
+
 			ev.preventDefault()
 			const p = transformMousePos(refCanvas.current, ev)
 			props.dispatch({ type: "mouseMove", ...p })
@@ -185,20 +190,28 @@ export default function App(props)
 			height: "100vh",
 			boxSizing: "border-box",
 			display: "grid",
-			gridTemplate: "160px 1fr / 1fr",
+			gridTemplate: "150px 1fr / 1fr",
 		}}>
 			<div style={{
 				gridRow: 1,
 				gridColumn: 1,
 				boxSizing: "border-box",
-				padding: "0.5em",
 				display: "grid",
-				gridTemplate: "auto auto / auto 1fr",
-				gridGap: "0.5em",
+				gridTemplate: "1fr / auto 1fr",
 				borderBottom: "1px solid #454545",
 				alignItems: "start",
 			}}>
-				<ToolboxFile
+				<Ribbon.Toolbar style={{ gridRow: 1, gridColumn: 1 }}>
+					{ ToolboxPlayback({ state, dispatch, playbackController }) }
+				</Ribbon.Toolbar>
+				
+				<Ribbon.Toolbar style={{ gridRow: 1, gridColumn: 2 }}>
+					{ ToolboxFile({ state, dispatch }) }
+					{ ToolboxEdit({ state, dispatch }) }
+					{ ToolboxInput({ state, dispatch }) }
+				</Ribbon.Toolbar>
+
+				{/*<ToolboxFile
 					state={ state }
 					dispatch={ dispatch }
 					style={{ gridRow: 1, gridColumn: 1 }}
@@ -213,7 +226,7 @@ export default function App(props)
 					state={ state }
 					dispatch={ dispatch }
 					style={{ gridRow: "1 / 3", gridColumn: 2 }}
-				/>
+				/>*/}
 			</div>
 			
 			<EditorComponent

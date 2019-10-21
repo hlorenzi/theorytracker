@@ -1,9 +1,10 @@
 import Project from "../project/project.js"
-import Editor from "./editor2.js"
+import Editor from "./editor.js"
 import Track from "./track.js"
 import Rational from "../util/rational.js"
 import Range from "../util/range.js"
 import Rect from "../util/rect.js"
+import Theory from "../theory.js"
 
 
 const markerWidth = 22
@@ -288,6 +289,41 @@ export default class TrackMarkers
 	}
 	
 	
+	static keyCommandPitchShift(state, trackIndex, commandData)
+	{
+		for (const id of state.tracks[trackIndex].selection)
+		{
+			const elem = state.project.findById(id)
+			if (!elem)
+				continue
+
+			if (!(elem instanceof Project.KeyChange))
+				continue
+			
+			let changes = {}
+			if (commandData.diatonic)
+			{
+				const key = elem.key
+				const newRootMidi = key.midiForDegree(0) + commandData.degreeDelta
+				changes.key = new Theory.Key(key.nameForMidi(newRootMidi).simplified, key.scale)
+				/*const key = elem.key
+				const newRoot = new Theory.PitchName(key.tonic.letter + commandData.degreeDelta, key.tonic.accidental)
+				changes.key = new Theory.Key(newRoot, key.scale)*/
+			}
+			else
+			{
+				const key = elem.key
+				const newRootMidi = key.midiForDegree(0) + commandData.pitchDelta
+				changes.key = new Theory.Key(key.nameForMidi(newRootMidi).simplified, key.scale)
+			}
+			
+			state = { ...state, project: state.project.update(elem.withChanges(changes)) }
+		}
+		
+		return state
+	}
+	
+	
 	static knobRectForMeterChange(state, time)
 	{
 		const x = (time.asFloat() - state.timeScroll) * state.timeScale
@@ -370,6 +406,19 @@ export default class TrackMarkers
 			
 			ctx.globalAlpha = 1
 		}
+		
+		const hover = state.tracks[trackIndex].hover
+		if (hover && hover.id === meterCh.id)
+		{
+			ctx.globalAlpha = 0.5
+			ctx.fillStyle = "#fff"
+			
+			ctx.beginPath()
+			ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, 0, Math.PI * 2)
+			ctx.fill()
+			
+			ctx.globalAlpha = 1
+		}
 	}
 	
 	
@@ -407,6 +456,19 @@ export default class TrackMarkers
 			
 			ctx.beginPath()
 			ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2 - 3, 0, Math.PI * 2)
+			ctx.fill()
+			
+			ctx.globalAlpha = 1
+		}
+		
+		const hover = state.tracks[trackIndex].hover
+		if (hover && hover.id === keyCh.id)
+		{
+			ctx.globalAlpha = 0.5
+			ctx.fillStyle = "#fff"
+			
+			ctx.beginPath()
+			ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, 0, Math.PI * 2)
 			ctx.fill()
 			
 			ctx.globalAlpha = 1

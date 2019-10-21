@@ -133,10 +133,27 @@ export class Key
 	{
 		const degree = this.degreeForMidi(midi)
 		
-		const letter     = Utils.mod(this.tonic.letter + Math.floor(degree), 7)
-		const accidental = Utils.mod(midi - Utils.letterToChroma(letter) + 6, 12) - 6
-		
-		return new PitchName(letter, accidental)
+		const letter1     = Utils.mod(this.tonic.letter + Math.floor(degree), 7)
+		const accidental1 = Utils.mod(midi - Utils.letterToChroma(letter1) + 6, 12) - 6
+
+		if (degree == Math.floor(degree))
+			return new PitchName(letter1, accidental1)
+
+		const letter2     = Utils.mod(letter1 + 1, 7)
+		const accidental2 = Utils.mod(midi - Utils.letterToChroma(letter2) + 6, 12) - 6
+
+		const letter3     = Utils.mod(letter1 - 1, 7)
+		const accidental3 = Utils.mod(midi - Utils.letterToChroma(letter3) + 6, 12) - 6
+
+		const attempts = [
+			[letter1, accidental1],
+			[letter2, accidental2],
+			[letter3, accidental3],
+		]
+
+		attempts.sort((a, b) => Math.abs(a[1]) - Math.abs(b[1]))
+
+		return new PitchName(attempts[0][0], attempts[0][1])
 	}
 	
 	

@@ -1,5 +1,6 @@
 import Rational from "../util/rational.js"
 import MathUtils from "../util/math.js"
+import Editor from "../editor/editor.js"
 
 
 export default class PlaybackSynth
@@ -55,13 +56,14 @@ export default class PlaybackSynth
                 continue
             }
                 
-            const meter = project.meterChanges.findActiveAt(chord.range.start) || new MeterChange(startTick, new Meter(4, 4))
-            const meterBeatLength = new Rational(1, meter.meter.denominator)
+            const meterCh = project.meterChanges.findActiveAt(chord.range.start)
+            const meter = meterCh ? meterCh.meter : Editor.defaultMeter()
+            const meterBeatLength = new Rational(1, meter.denominator)
             const measureBreak = null//that.forcedMeasures.findActiveAt(chord.range.start)
             
-            const pattern = getChordStrummingPattern(meter.meter)
+            const pattern = getChordStrummingPattern(meter)
             
-            let tick = meter.time
+            let tick = meterCh ? meterCh.time : chord.range.start
             //if (measureBreak != null)
             //	tick.max(measureBreak.tick)
             

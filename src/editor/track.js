@@ -1,5 +1,5 @@
 import { default as Immutable } from "immutable"
-import Editor from "./editor2.js"
+import Editor from "./editor.js"
 import TrackMarkers from "./trackMarkers.js"
 import TrackChords from "./trackChords.js"
 import TrackNotes from "./trackNotes.js"

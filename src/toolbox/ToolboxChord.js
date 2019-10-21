@@ -1,16 +1,15 @@
 import React from "react"
-import Tab from "./tab.js"
-import Editor from "../editor/editor2.js"
+import Editor from "../editor/editor.js"
 import CanvasUtils from "../util/canvas.js"
 import Theory from "../theory.js"
-import { setIn } from "immutable"
+import Ribbon from "./Ribbon.js"
 
 
 function ChordButton(props)
 {
     const refCanvas = React.useRef(null)
 
-    const w = 70
+    const w = 60
     const h = 54
 
     const key = props.theoryKey
@@ -25,40 +24,30 @@ function ChordButton(props)
 
     const onClick = () =>
     {
-        const time = props.state.cursor.time1.min(props.state.cursor.time2)
+        const time = Editor.insertionTime(props.state)
         props.dispatch({ type: "insertChord", chord, time })
     }
 
-    return <>
-        <div onClick={ onClick } style={{
-            display: "inline-block",
-            margin: "0.1em 0.1em",
-            userSelect: "none",
-            cursor: "pointer",
-        }}>
-            <div style={{
-                display: "grid",
-                gridTemplate: "auto / auto",
-                alignContent: "center",
-                alignItems: "center",
-            }}>
-                <canvas ref={ refCanvas } width={ w } height={ h } style={{
-                    gridRow: 1,
-                    gridColumn: 1,
-                    width: w + "px",
-                    height: h + "px",
-                    borderRadius: "0.25em",
-                }}/>
-            </div>
-        </div>
-    </>
+    return <Ribbon.SlotButton tall thin
+        onClick={ onClick }
+        icon={ <canvas ref={ refCanvas } width={ w } height={ h } style={{
+            width: w + "px",
+            height: h + "px",
+            borderRadius: "0.25em",
+        }}/> }
+        label=""
+    />
 }
 
 
 function KindDropdown(props)
 {
-    return <select value={ props.current } style={{ height:"2em" }} onChange={ ev => props.onChange(ev.target.value) }>
-    
+    return <Ribbon.Select
+        value={ props.current }
+        onChange={ ev => props.onChange(ev.target.value) }
+        style={{ height:"2em" }}
+    >
+
         { Theory.Chord.kinds.map((chord, index) =>
             <React.Fragment key={ chord.id }>
                 { chord.startGroup ? <optgroup label={ chord.startGroup }/> : null }
@@ -68,7 +57,7 @@ function KindDropdown(props)
             </React.Fragment>
         )}
         
-    </select>
+    </Ribbon.Select>
 }
 
 
@@ -81,23 +70,22 @@ export default function ToolboxChord(props)
     const [kindCustomId, setKindCustomId] = React.useState("M")
     const [accidental, setAccidental] = React.useState(0)
 
-    const cursorKeyCh = state.project.keyChanges.findActiveAt(state.cursor.time1.min(state.cursor.time2))
+    const time = Editor.insertionTime(props.state)
+    const cursorKeyCh = state.project.keyChanges.findActiveAt(time)
     const key = cursorKeyCh ? cursorKeyCh.key : Editor.defaultKey()
-
 
     let title = null
     let chordButtons = null
     switch (kindGroup)
     {
         case "inkey":
-            title = key.str + " • "
             switch (inKeyType)
             {
-                case 5: title += "Triads in key"; break
-                case 7: title += "Seventh chords in key"; break
-                case 9: title += "Ninth chords in key"; break
-                case 11: title += "Eleventh chords in key"; break
-                case 13: title += "Thirteenth chords in key"; break
+                case 5: title = "Triads in " + key.str; break
+                case 7: title = "Seventh chords in " + key.str; break
+                case 9: title = "Ninth chords in " + key.str; break
+                case 11: title = "Eleventh chords in " + key.str; break
+                case 13: title = "Thirteenth chords in " + key.str; break
             }
 
             chordButtons = [0, 1, 2, 3, 4, 5, 6].map(degree =>
@@ -128,7 +116,7 @@ export default function ToolboxChord(props)
             break
 
         case "custom":
-            title = key.str + " • " + Theory.Chord.kinds[Theory.Chord.kindFromId(kindCustomId)].name + " chords"
+            title = Theory.Chord.kinds[Theory.Chord.kindFromId(kindCustomId)].name + " chords"
             chordButtons = [0, 1, 2, 3, 4, 5, 6].map(degree => {
                 const kind = Theory.Chord.kindFromId(kindCustomId)
                 const root = key.midiForDegree(degree)
@@ -139,54 +127,52 @@ export default function ToolboxChord(props)
             break
     }
 
-	return <div style={{ ...props.style }}>
-        <div style={{
-            display: "grid",
-            gridTemplate: "auto auto / auto auto auto",
-            gridGap: "0.5em 0.5em",
-            alignItems: "center",
-            justifyContent: "center",
-            justifyItems: "center",
-        }}>
-            <div style={{ gridRow: 1, gridColumn: 1 }}>
-                { title }
-            </div>
+    return <>
+        <Ribbon.Group label={ title }>
+            { chordButtons }
+        </Ribbon.Group>
 
-            <div style={{ gridRow: 2, gridColumn: 1 }}>
-                { chordButtons }
-            </div>
+        <Ribbon.Group label="Chord Type">
+            <Ribbon.Slot onClick={ () => setKindGroup("inkey") }>
+                <Ribbon.SlotLayout
+                    icon={ <span style={{ display: "inline-block", width: "4em" }}>In-Key</span> }
+                    label={ <Ribbon.InlineRadioGroup
+                        current={ kindGroup == "inkey" ? inKeyType : null }
+                        onChange={ setInKeyType }
+                        options={[
+                            { value: 5, render: "-" },
+                            { value: 7, render: "7" },
+                            { value: 9, render: "9" },
+                            { value: 11, render: "11" },
+                            { value: 13, render: "13" },
+                        ]}/>
+                    }
+                />
+            </Ribbon.Slot>
 
-            <div style={{ gridRow: 2, gridColumn: 2, margin: "0 0.5em" }}>
-                <Tab current={ accidental } onChange={ setAccidental } vertical options={[
+            <Ribbon.Slot
+                selected={ kindGroup == "custom" }
+                onClick={ () => setKindGroup("custom") }
+            >
+                <Ribbon.SlotLayout
+                    icon={ <span style={{ display: "inline-block", width: "4em" }}>Other</span> }
+                    label={ <KindDropdown current={ kindCustomId } onChange={ setKindCustomId }/> }
+                />
+            </Ribbon.Slot>
+        </Ribbon.Group>
+
+        <Ribbon.Group thin label="Acc.">
+            <Ribbon.SlotRadioGroup
+                thin
+                current={ accidental }
+                onChange={ setAccidental }
+                options={[
                     { value:  1, render: "♯" },
                     { value:  0, render: "♮" },
                     { value: -1, render: "♭" },
-                ]}/>
-            </div>
-    
-            <div style={{ gridRow: 2, gridColumn: 3, margin: "0 0.5em" }}>
-                <Tab current={ kindGroup } onChange={ setKindGroup } vertical options={[
-                    { value: "inkey", render:
-                        <div>
-                            In Key
-                            <br/>
-                            <Tab current={ kindGroup == "inkey" ? inKeyType : null }
-                                onChange={ setInKeyType }
-                                options={[
-                                    { value: 5, render: "-" },
-                                    { value: 7, render: "7" },
-                                    { value: 9, render: "9" },
-                                    { value: 11, render: "11" },
-                                    { value: 13, render: "13" },
-                            ]}/>
-                        </div>
-                    },
-                    { value: "custom", render:
-                        <KindDropdown current={ kindCustomId } onChange={ setKindCustomId }/>
-                    },
-                ]}/>
-            </div>
-        
-        </div>
-    </div>
+                ]}
+            />
+
+        </Ribbon.Group>
+    </>
 }
