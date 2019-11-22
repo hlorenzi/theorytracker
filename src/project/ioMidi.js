@@ -33,9 +33,9 @@ export default class IOMidi
 		{
 			for (const noteOn of track.events)
 			{
-				if (noteOn.kind != "noteOn" || noteOn.channel == 9)
+				if (noteOn.kind != "noteOn" || noteOn.channel == 9 || noteOn.velocity == 0)
 					continue
-				
+
 				let noteOff = null
 				for (const ev of track.events)
 				{
