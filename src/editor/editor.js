@@ -141,7 +141,8 @@ export default class Editor
 				selectionCursorColor: "#0af",
 				playbackCursorColor: "#f00",
 				trackSeparatorColor: "#aaa",
-				submeasureColor: "#111",
+				submeasureColor: "#0008",
+				halfSubmeasureColor: "#0002",
 				meterChangeColor: "#0cf",
 				keyChangeColor: "#f0c",
 			}
@@ -1633,6 +1634,26 @@ export default class Editor
 					ctx.globalAlpha = 1
 				}
 
+				const halfSubmeasureSize = Editor.xAtTime(state, new Rational(1, measureD * 2)) - Editor.xAtTime(state, new Rational(0))
+				if (halfSubmeasureSize > 16)
+				{
+					let halfSubmeasureTime = time1.add(new Rational(-1, measureD * 2))
+					for (let sub = 1; sub <= measureN; sub++)
+					{
+						halfSubmeasureTime = halfSubmeasureTime.add(new Rational(2, measureD * 2))
+						
+						const halfSubmeasureX = Editor.xAtTime(state, halfSubmeasureTime)
+						if (halfSubmeasureX >= meterCh1X && halfSubmeasureX <= meterCh2X)
+						{
+							ctx.strokeStyle = state.prefs.halfSubmeasureColor
+							ctx.beginPath()
+							ctx.moveTo(halfSubmeasureX, 0)
+							ctx.lineTo(halfSubmeasureX, state.h)
+							ctx.stroke()
+						}
+					}
+				}
+				
 				const submeasureSize = Editor.xAtTime(state, new Rational(1, measureD)) - Editor.xAtTime(state, new Rational(0))
 				if (submeasureSize > 8)
 				{
