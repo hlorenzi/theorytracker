@@ -231,9 +231,15 @@ export default class Editor
 	}
 	
 	
+	static reduce_trackClear(state, action)
+	{
+		return { ...state, tracks: [] }
+	}
+	
+	
 	static reduce_trackAdd(state, action)
 	{
-		state = Track.handlerForTrackKind(action.kind).init(state, action)
+		state = Track.handlerForTrackKind(action.kind).init(state, null, action)
 		state = Editor.Cursor.place(state, null, state.tracks.length - 1)
 		
 		return Editor.reduce_resize(state, { type: "resize", w: state.w, h: state.h })

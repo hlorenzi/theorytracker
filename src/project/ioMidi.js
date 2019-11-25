@@ -28,9 +28,20 @@ export default class IOMidi
 		const msPerQuarterNote = (tempoEv ? tempoEv.msPerQuarterNote : 500000)
 		song.baseBpm = Math.round(60 * 1000 * 1000 / msPerQuarterNote)
 		
-		let notesToAdd = []
 		for (const track of midi.tracks)
 		{
+			let trackName = "New Track"
+			for (const ev of track.events)
+			{
+				if (ev.kind == "trackName")
+					trackName = ev.name
+			}
+
+			const trackId = song.nextId
+			song = song.upsertTrack(new Project.Track().withChanges({ name: trackName }))
+
+			let notesToAdd = []
+
 			for (const noteOn of track.events)
 			{
 				if (noteOn.kind != "noteOn" || noteOn.channel == 9 || noteOn.velocity == 0)
@@ -58,11 +69,12 @@ export default class IOMidi
 				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, 27720)
 				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, 27720)
 				
-				notesToAdd.push(new Project.Note(new Range(onTick, offTick), noteOn.key))
+				notesToAdd.push(new Project.Note(trackId, new Range(onTick, offTick), noteOn.key))
 			}
+
+			song = song.upsertNotes(notesToAdd)
 		}
 		
-		song = song.upsertNotes(notesToAdd)
 		
 		for (const track of midi.tracks)
 		{

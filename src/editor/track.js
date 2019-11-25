@@ -42,6 +42,13 @@ export default class Track
 		if (!fn)
 			return null
 		
+		if (state.tracks[trackIndex].trackId)
+		{
+			const track = state.project.tracks.find(t => t.id === state.tracks[trackIndex].trackId)
+			if (!track)
+				return null
+		}
+
 		return fn(state, trackIndex, args)
 	}
 	

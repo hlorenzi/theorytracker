@@ -141,7 +141,14 @@ export class MidiFile
 	{
 		let r = new BinaryReader(event.rawData)
 		
-		if (event.metaType == 0x2f)
+		if (event.metaType == 0x03)
+		{
+			event.kind = "trackName"
+			event.description = "[FF 03] Track Name"
+			event.name = r.readAsciiLength(event.rawData.length)
+		}
+
+		else if (event.metaType == 0x2f)
 		{
 			event.kind = "endOfTrack"
 			event.description = "[FF 2F] End of Track"

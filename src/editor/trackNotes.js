@@ -16,6 +16,7 @@ export default class TrackNotes
 		{
 			...Track.init(state, action),
 			kind: "notes",
+			trackId: action.trackId,
 			rowScale: 15,
 		}
 		
@@ -112,7 +113,8 @@ export default class TrackNotes
 			return state
 		
 		const id = hover.id
-		const note = state.project.notes.findById(id)
+		const track = state.project.tracks.find(t => t.id === state.tracks[trackIndex].trackId)
+		const note = track.notes.findById(id)
 
 		if (!note)
 			return state
@@ -124,8 +126,9 @@ export default class TrackNotes
 	static selectionAddAtCursor(state, trackIndex)
 	{
 		const timeRange = new Range(state.cursor.time1, state.cursor.time2, false, false).sorted()
-		
-		for (const note of state.project.notes.iterAtRange(timeRange))
+		const track = state.project.tracks.find(t => t.id === state.tracks[trackIndex].trackId)
+
+		for (const note of track.notes.iterAtRange(timeRange))
 			state = Track.selectionAdd(state, trackIndex, note.id)
 		
 		return state
@@ -153,14 +156,15 @@ export default class TrackNotes
 	static selectionRemoveConflictingBehind(state, trackIndex)
 	{
 		const selection = state.tracks[trackIndex].selection
+		const track = state.project.tracks.find(t => t.id === state.tracks[trackIndex].trackId)
 
 		for (const id of selection)
 		{
-			const elem = state.project.findById(id)
+			const elem = track.notes.findById(id)
 			if (!elem)
 				continue
 
-			for (const note of state.project.notes.iterAtRange(elem.range))
+			for (const note of track.notes.iterAtRange(elem.range))
 			{
 				if (selection.has(note.id))
 					continue
@@ -168,13 +172,15 @@ export default class TrackNotes
 				if (note.pitch !== elem.pitch)
 					continue
 				
-				state = { ...state, project: state.project.removeById(note.id) }
+				let project = state.project.upsertNote(note, true)
 				
 				for (const slice of note.range.iterSlices(elem.range))
 				{
-					const newNote = new Project.Note(slice, note.pitch)
-					state = { ...state, project: state.project.upsertNote(newNote) }
+					const newNote = new Project.Note(note.trackId, slice, note.pitch)
+					project = project.upsertNote(newNote)
 				}
+
+				state = { ...state, project }
 			}
 		}
 
@@ -188,8 +194,9 @@ export default class TrackNotes
 		{
 			if (elem instanceof Project.Note)
 			{
+				const trackId = state.tracks[trackIndex].trackId
 				const range = elem.range.displace(pasteData.time.subtract(state.clipboard.range.start))
-				const note = new Project.Note(range, elem.pitch)
+				const note = new Project.Note(trackId, range, elem.pitch)
 				const id = state.project.nextId
 				state = { ...state, project: state.project.upsertNote(note) }
 				state = Track.selectionAdd(state, trackIndex, id)
@@ -202,19 +209,25 @@ export default class TrackNotes
 	
 	static previousAnchor(state, trackIndex, time)
 	{
-		return state.project.notes.findPreviousAnchor(time)
+		const trackId = state.tracks[trackIndex].trackId
+		const track = state.project.tracks.find(t => t.id === trackId)
+		
+		return track.notes.findPreviousAnchor(time)
 	}
 	
 	
 	static deleteRange(state, trackIndex, range)
 	{
-		for (const note of state.project.notes.iterAtRange(range))
+		const trackId = state.tracks[trackIndex].trackId
+		const track = state.project.tracks.find(t => t.id === trackId)
+		
+		for (const note of track.notes.iterAtRange(range))
 		{
-			state = { ...state, project: state.project.removeById(note.id) }
+			state = { ...state, project: state.project.upsertNote(note, true) }
 			
 			for (const slice of note.range.iterSlices(range))
 			{
-				const newNote = new Project.Note(slice, note.pitch)
+				const newNote = new Project.Note(trackId, slice, note.pitch)
 				state = { ...state, project: state.project.upsertNote(newNote) }
 			}
 		}
@@ -279,7 +292,8 @@ export default class TrackNotes
 				soundPreview = TrackNotes.mergeSoundPreview(soundPreview, newPitch)
 			}
 			
-			state = { ...state, project: state.project.update(elem.withChanges(changes)) }
+			let project = state.project.upsertNote(elem.withChanges(changes))
+			state = { ...state, project }
 		}
 		
 		state = Editor.soundPreviewSet(state, soundPreview)
@@ -311,7 +325,8 @@ export default class TrackNotes
 		{
 			if (draw.kind == "note")
 			{
-				const note = new Project.Note(new Range(draw.time1, draw.time2).sorted(), draw.pitch)
+				const editorTrack = state.tracks[trackIndex]
+				const note = new Project.Note(editorTrack.trackId, new Range(draw.time1, draw.time2).sorted(), draw.pitch)
 				const id = state.project.nextId
 				state = { ...state, project: state.project.upsertNote(note) }
 				state = Track.selectionAdd(state, trackIndex, id)
@@ -334,7 +349,7 @@ export default class TrackNotes
 			let changes = {}
 			changes.range = elem.range.displace(commandData.timeDelta)
 			
-			state = { ...state, project: state.project.update(elem.withChanges(changes)) }
+			state = { ...state, project: state.project.upsertNote(elem.withChanges(changes)) }
 		}
 		
 		return state
@@ -365,7 +380,7 @@ export default class TrackNotes
 				changes.pitch = elem.pitch + commandData.pitchDelta
 			
 			soundPreview = TrackNotes.mergeSoundPreview(soundPreview, changes.pitch)
-			state = { ...state, project: state.project.update(elem.withChanges(changes)) }
+			state = { ...state, project: state.project.upsertNote(elem.withChanges(changes)) }
 		}
 		
 		state = Editor.soundPreviewSet(state, soundPreview)
@@ -454,6 +469,9 @@ export default class TrackNotes
 	static *iterNotesAndKeyChangesAtRange(state, trackIndex, range)
 	{
 		const defaultKey = Editor.defaultKey()
+		const track = state.project.tracks.find(t => t.id === state.tracks[trackIndex].trackId)
+		if (!track)
+			return
 		
 		for (const pair of state.project.keyChanges.iterActiveAtRangePairwise(range))
 		{
@@ -466,8 +484,35 @@ export default class TrackNotes
 			const time1 = keyCh1.time.max(range.start)
 			const time2 = keyCh2.time.min(range.end)
 			
-			for (const note of state.project.notes.iterAtRange(new Range(time1, time2)))
+			for (const note of track.notes.iterAtRange(new Range(time1, time2)))
 				yield [note, keyCh1, keyCh1X, keyCh2X]
+		}
+	}
+	
+	
+	static *iterOnionNotesAndKeyChangesAtRange(state, trackIndex, range)
+	{
+		const defaultKey = Editor.defaultKey()
+		
+		for (const pair of state.project.keyChanges.iterActiveAtRangePairwise(range))
+		{
+			const keyCh1 = pair[0] || new Project.KeyChange(range.start, defaultKey)
+			const keyCh2 = pair[1] || new Project.KeyChange(range.end,   defaultKey)
+			
+			const keyCh1X = Editor.xAtTime(state, keyCh1.time)
+			const keyCh2X = Editor.xAtTime(state, keyCh2.time)
+			
+			const time1 = keyCh1.time.max(range.start)
+			const time2 = keyCh2.time.min(range.end)
+			
+			for (const track of state.project.tracks)
+			{
+				if (track.id === state.tracks[trackIndex].trackId)
+					continue
+
+				for (const note of track.notes.iterAtRange(new Range(time1, time2)))
+					yield [note, keyCh1, keyCh1X, keyCh2X]
+			}
 		}
 	}
 	
@@ -517,6 +562,17 @@ export default class TrackNotes
 			}
 		}
 		
+		for (const [note, keyCh, xMin, xMax] of TrackNotes.iterOnionNotesAndKeyChangesAtRange(state, trackIndex, visibleTimeRange))
+		{
+			const row = TrackNotes.rowForPitch(state, trackIndex, note.pitch, keyCh.key)
+			const mode = keyCh.key.scale.metadata.mode
+			const fillStyle = CanvasUtils.fillStyleForDegree(ctx, keyCh.key.degreeForMidi(note.pitch) + mode)
+			const hovering = track.hover && track.hover.id == note.id
+			const playing = state.playback.playing && note.range.overlapsPoint(state.playback.time)
+
+			TrackNotes.renderOutlineNote(state, trackIndex, ctx, note.range, row, xMin, xMax, fillStyle, 0.25, hovering, false, playing)
+		}
+
 		for (const [note, keyCh, xMin, xMax] of TrackNotes.iterNotesAndKeyChangesAtRange(state, trackIndex, visibleTimeRange))
 		{
 			if (!state.playback.playing && track.selection.has(note.id))
@@ -527,7 +583,7 @@ export default class TrackNotes
 			const fillStyle = CanvasUtils.fillStyleForDegree(ctx, keyCh.key.degreeForMidi(note.pitch) + mode)
 			const hovering = track.hover && track.hover.id == note.id
 			const playing = state.playback.playing && note.range.overlapsPoint(state.playback.time)
-			TrackNotes.renderNote(state, trackIndex, ctx, note.range, row, xMin, xMax, fillStyle, hovering, false, playing)
+			TrackNotes.renderNote(state, trackIndex, ctx, note.range, row, xMin, xMax, fillStyle, 1, hovering, false, playing)
 		}
 
 		if (!state.playback.playing)
@@ -541,7 +597,7 @@ export default class TrackNotes
 				const mode = keyCh.key.scale.metadata.mode
 				const fillStyle = CanvasUtils.fillStyleForDegree(ctx, keyCh.key.degreeForMidi(note.pitch) + mode)
 				const hovering = track.hover && track.hover.id == note.id
-				TrackNotes.renderNote(state, trackIndex, ctx, note.range, row, xMin, xMax, fillStyle, hovering, true, false)
+				TrackNotes.renderNote(state, trackIndex, ctx, note.range, row, xMin, xMax, fillStyle, 1, hovering, true, false)
 			}
 		}
 
@@ -555,25 +611,26 @@ export default class TrackNotes
 			const row = TrackNotes.rowForPitch(state, trackIndex, draw.pitch, key)
 			const mode = key.scale.metadata.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(ctx, key.degreeForMidi(draw.pitch) + mode)
-			TrackNotes.renderNote(state, trackIndex, ctx, new Range(draw.time1, draw.time2).sorted(), row, -Infinity, Infinity, fillStyle)
+			TrackNotes.renderNote(state, trackIndex, ctx, new Range(draw.time1, draw.time2).sorted(), row, -Infinity, Infinity, fillStyle, 1)
 			
 			ctx.globalAlpha = 1
 		}
 	}
 	
 	
-	static renderNote(state, trackIndex, ctx, range, row, xMin, xMax, fillStyle, hovering, selected, playing)
+	static renderNote(state, trackIndex, ctx, range, row, xMin, xMax, fillStyle, alpha, hovering, selected, playing)
 	{
 		const rect = TrackNotes.rectForNote(state, trackIndex, range, row, xMin, xMax)
 		
 		ctx.fillStyle = fillStyle
-		
+		ctx.globalAlpha = alpha
+
 		ctx.beginPath()
 		ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 		
 		if (hovering)
 		{
-			ctx.globalAlpha = 0.4
+			ctx.globalAlpha = alpha * 0.4
 			ctx.fillStyle = "#fff"
 			ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 			ctx.globalAlpha = 1
@@ -582,10 +639,44 @@ export default class TrackNotes
 		if (selected || playing)
 		{
 			const margin = 3
-			ctx.globalAlpha = 0.6
+			ctx.globalAlpha = alpha * 0.6
 			ctx.fillStyle = "#fff"
 			ctx.fillRect(rect.x, rect.y + margin, rect.w, rect.h - margin * 2)
 			ctx.globalAlpha = 1
 		}
+
+		ctx.globalAlpha = 1
+	}
+	
+	
+	static renderOutlineNote(state, trackIndex, ctx, range, row, xMin, xMax, fillStyle, alpha, hovering, selected, playing)
+	{
+		const rect = TrackNotes.rectForNote(state, trackIndex, range, row, xMin, xMax)
+		
+		ctx.strokeStyle = fillStyle
+		ctx.lineWidth = 3
+		ctx.globalAlpha = alpha
+
+		ctx.beginPath()
+		ctx.strokeRect(rect.x, rect.y, rect.w, rect.h)
+		
+		/*if (hovering)
+		{
+			ctx.globalAlpha = alpha * 0.4
+			ctx.fillStyle = "#fff"
+			ctx.strokeRect(rect.x, rect.y, rect.w, rect.h)
+			ctx.globalAlpha = 1
+		}
+		
+		if (selected || playing)
+		{
+			const margin = 3
+			ctx.globalAlpha = alpha * 0.6
+			ctx.fillStyle = "#fff"
+			ctx.strokeRect(rect.x, rect.y + margin, rect.w, rect.h - margin * 2)
+			ctx.globalAlpha = 1
+		}*/
+
+		ctx.globalAlpha = 1
 	}
 }

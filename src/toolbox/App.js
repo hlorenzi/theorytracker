@@ -6,6 +6,7 @@ import ToolboxPlayback from "./ToolboxPlayback.js"
 import ToolboxFile from "./ToolboxFile.js"
 import ToolboxEdit from "./ToolboxEdit.js"
 import ToolboxInput from "./ToolboxInput.js"
+import ToolboxTracks from "./ToolboxTracks.js"
 import Ribbon from "./Ribbon.js"
 
 
@@ -157,7 +158,7 @@ export default function App(props)
 		state = Editor.reduce(state, { type: "init", project: Project.getDefault() })
 		state = Editor.reduce(state, { type: "trackAdd", kind: "markers" })
 		state = Editor.reduce(state, { type: "trackAdd", kind: "chords" })
-		state = Editor.reduce(state, { type: "trackAdd", kind: "notes" })
+		state = Editor.reduce(state, { type: "trackAdd", kind: "notes", trackId: state.project.tracks[0].id })
 		state = Editor.reduce(state, { type: "clearUndoStack" })
 
 		const urlData =
@@ -191,6 +192,7 @@ export default function App(props)
 			boxSizing: "border-box",
 			display: "grid",
 			gridTemplate: "150px 1fr / 1fr",
+			backgroundColor: "#eee",
 		}}>
 			<div style={{
 				gridRow: 1,
@@ -198,7 +200,7 @@ export default function App(props)
 				boxSizing: "border-box",
 				display: "grid",
 				gridTemplate: "1fr / auto 1fr",
-				borderBottom: "1px solid #454545",
+				//borderBottom: "1px solid #454545",
 				alignItems: "start",
 			}}>
 				<Ribbon.Toolbar style={{ gridRow: 1, gridColumn: 1 }}>
@@ -211,29 +213,35 @@ export default function App(props)
 					{ ToolboxInput({ state, dispatch }) }
 				</Ribbon.Toolbar>
 
-				{/*<ToolboxFile
+			</div>
+			
+			<div style={{
+				gridRow: 2,
+				gridColumn: 1,
+				width: "100%",
+				height: "100%",
+				boxSizing: "border-box",
+				display: "grid",
+				gridTemplate: "1fr / 20em 1fr",
+				borderBottom: "1px solid #454545",
+				alignItems: "start",
+			}}>
+				<ToolboxTracks
 					state={ state }
 					dispatch={ dispatch }
 					style={{ gridRow: 1, gridColumn: 1 }}
 				/>
-				<ToolboxPlayback
+
+				<EditorComponent
 					state={ state }
 					dispatch={ dispatch }
-					playbackController={ playbackController }
-					style={{ gridRow: 2, gridColumn: 1 }}
-				/>
-				<ToolboxInput
-					state={ state }
-					dispatch={ dispatch }
-					style={{ gridRow: "1 / 3", gridColumn: 2 }}
-				/>*/}
+					style={{
+						gridRow: 1,
+						gridColumn: 2,
+						width: "100%",
+						height: "100%",
+				}}/>
 			</div>
-			
-			<EditorComponent
-				state={ state }
-				dispatch={ dispatch }
-				style={{ gridRow: 2, gridColumn: 1 }}
-			/>
 		</div>
 	)
 }

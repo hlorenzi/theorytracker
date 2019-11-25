@@ -32,14 +32,17 @@ export default class PlaybackSynth
         }
         
         // Register notes.
-        for (const note of project.notes.iterAll())
+        for (const track of project.tracks)
         {
-            if (note.range.end.compare(startTick) <= 0)
-                continue
-            
-            addNoteEvent(note.range.start, note.range.duration, 0, note.pitch, 1)
+            for (const note of track.notes.iterAll())
+            {
+                if (note.range.end.compare(startTick) <= 0)
+                    continue
+                
+                addNoteEvent(note.range.start, note.range.duration, 0, note.pitch, 1)
+            }
         }
-        
+
         // Register chords.
         for (const chord of project.chords.iterAll())
         {
