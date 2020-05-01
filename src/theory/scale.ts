@@ -1,7 +1,16 @@
-import { PitchName } from "./pitchName.js"
+import PitchName from "./pitchName"
 
 
-export const knownScales =
+interface ScaleMetadata
+{
+	chromas: number[]
+	mode: number
+	id: string
+	names: string[]
+}
+
+
+export const knownScales: ScaleMetadata[] =
 [
 	{ chromas: [0, 2, 4, 5, 7, 9, 11], mode: 0, id: "maj", names: ["Major", "Ionian"] },
 	{ chromas: [0, 2, 3, 5, 7, 9, 10], mode: 1, id: "dor", names: ["Dorian"] },
@@ -15,12 +24,15 @@ export const knownScales =
 ]
 
 
-export class Scale
+export default class Scale
 {
 	static list = knownScales
 
+	chromas: number[]
+	metadata: ScaleMetadata | null | undefined
+
 	
-	constructor(chromas)
+	constructor(chromas: number[])
 	{
 		if (chromas.length <= 1 || chromas.length > 12)
 			throw "invalid scale length"
@@ -33,19 +45,19 @@ export class Scale
 	}
 	
 	
-	static fromChromas(chromas)
+	static fromChromas(chromas: number[]): Scale
 	{
 		return new Scale(chromas)
 	}
 	
 	
-	static fromId(id)
+	static fromId(id: string): Scale
 	{
-		return new Scale(knownScales.find(s => s.id === id).chromas)
+		return new Scale(knownScales.find(s => s.id === id)!.chromas)
 	}
 	
 	
-	static parse(str)
+	static parse(str: string): Scale
 	{
 		str = str.toLowerCase().trim()
 		
@@ -57,7 +69,7 @@ export class Scale
 	}
 
 
-	get id()
+	get id(): string | null
 	{
 		if (!this.metadata)
 			return null
@@ -66,7 +78,7 @@ export class Scale
 	}
 	
 	
-	get name()
+	get name(): string | null
 	{
 		if (!this.metadata)
 			return null
@@ -75,7 +87,7 @@ export class Scale
 	}
 	
 	
-	get alterationsFromMajor()
+	get alterationsFromMajor(): number[]
 	{
 		if (this.chromas.length != 7)
 			throw "not a seven-note scale"
@@ -84,13 +96,13 @@ export class Scale
 	}
 	
 	
-	get str()
+	get str(): string
 	{
-		return this.name || ("[" + this.chromas.map(chroma => PitchName.fromChroma(chroma).name).join(", ") + "]")
+		return this.name || ("[" + this.chromas.map(chroma => PitchName.fromChroma(chroma).str).join(", ") + "]")
 	}
 	
 	
-	toString()
+	toString(): string
 	{
 		return this.str
 	}

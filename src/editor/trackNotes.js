@@ -4,7 +4,7 @@ import Track from "./track.js"
 import Rational from "../util/rational.js"
 import Range from "../util/range.js"
 import Rect from "../util/rect.js"
-import Theory from "../theory.js"
+import Theory from "../theory.ts"
 import CanvasUtils from "../util/canvas.js"
 
 

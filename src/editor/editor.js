@@ -1,6 +1,6 @@
 import { default as Immutable } from "immutable"
 import Track from "./track.js"
-import Theory from "../theory.js"
+import Theory from "../theory.ts"
 import Rational from "../util/rational.js"
 import Range from "../util/range.js"
 import Rect from "../util/rect.js"

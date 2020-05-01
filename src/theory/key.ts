@@ -1,12 +1,17 @@
-import { PitchName } from "./pitchName.js"
-import { Pitch } from "./pitch.js"
-import { Scale } from "./scale.js"
-import * as Utils from "./utils.js"
+import PitchName from "./pitchName"
+import Pitch from "./pitch"
+import Scale from "./scale"
+import Utils from "./utils"
 
 
-export class Key
+export default class Key
 {
-	constructor(tonic, scale)
+	tonic: PitchName
+	scale: Scale
+	_chromaToDegree: number[]
+
+
+	constructor(tonic: PitchName, scale: Scale)
 	{
 		this.tonic = tonic
 		this.scale = scale
@@ -36,13 +41,13 @@ export class Key
 	}
 	
 	
-	static fromTonicAndScale(tonic, scale)
+	static fromTonicAndScale(tonic: PitchName, scale: Scale): Key
 	{
 		return new Key(tonic, scale)
 	}
 	
 	
-	static parse(str)
+	static parse(str: string): Key
 	{
 		str = str.toLowerCase().trim()
 		
@@ -60,7 +65,7 @@ export class Key
 	}
 	
 	
-	get str()
+	get str(): string
 	{
 		const scaleStr = this.scale.name || "Unknown Scale"
 		const tonicStr = this.tonic.str
@@ -69,31 +74,31 @@ export class Key
 	}
 	
 	
-	toString()
+	toString(): string
 	{
-		return this.name
+		return this.str
 	}
 	
 	
-	degreeForChroma(chroma)
+	degreeForChroma(chroma: number): number
 	{
 		return this._chromaToDegree[chroma]
 	}
 	
 	
-	degreeForMidi(midi)
+	degreeForMidi(midi: number): number
 	{
 		return this.degreeForChroma(Utils.mod(midi, 12))
 	}
 	
 	
-	degreeForPitch(pitch)
+	degreeForPitch(pitch: Pitch | PitchName): number
 	{
 		return this.degreeForMidi(pitch.midi)
 	}
 	
 	
-	octavedDegreeForMidi(midi)
+	octavedDegreeForMidi(midi: number): number
 	{
 		const degree = this.degreeForMidi(midi)
 		const degreeOctave = Math.floor((midi - this.tonic.midi) / 12)
@@ -102,13 +107,13 @@ export class Key
 	}
 	
 	
-	octavedDegreeForPitch(pitch)
+	octavedDegreeForPitch(pitch: Pitch | PitchName): number
 	{
 		return this.octavedDegreeForMidi(pitch.midi)
 	}
 	
 	
-	midiForDegree(octavedDegree)
+	midiForDegree(octavedDegree: number): number
 	{
 		const degree = Utils.mod(octavedDegree, this.scale.chromas.length)
 		const degreeOctave = Math.floor(octavedDegree / this.scale.chromas.length)
@@ -117,19 +122,19 @@ export class Key
 	}
 	
 	
-	pitchForDegree(octavedDegree)
+	pitchForDegree(octavedDegree: number): Pitch
 	{
 		return Pitch.fromMidi(this.midiForDegree(octavedDegree))
 	}
 	
 	
-	chromaForDegree(octavedDegree)
+	chromaForDegree(octavedDegree: number): number
 	{
 		return Utils.mod(this.midiForDegree(octavedDegree), 12)
 	}
 	
 	
-	nameForMidi(midi)
+	nameForMidi(midi: number): PitchName
 	{
 		const degree = this.degreeForMidi(midi)
 		
@@ -157,37 +162,37 @@ export class Key
 	}
 	
 	
-	nameForPitch(pitch)
+	nameForPitch(pitch: Pitch | PitchName): PitchName
 	{
 		return this.nameForMidi(pitch.midi)
 	}
 	
 	
-	nameForChroma(chroma)
+	nameForChroma(chroma: number): PitchName
 	{
 		return this.nameForMidi(chroma)
 	}
 	
 	
-	nameForDegree(degree)
+	nameForDegree(degree: number): PitchName
 	{
 		return this.nameForMidi(this.midiForDegree(degree))
 	}
 	
 	
-	get midi()
+	get midi(): number[]
 	{
 		return this.scale.chromas.map(chroma => chroma + this.tonic.midi)
 	}
 	
 	
-	get chroma()
+	get chroma(): number[]
 	{
 		return this.scale.chromas.map(chroma => Utils.mod(chroma + this.tonic.midi, 12))
 	}
 	
 	
-	get namedPitches()
+	get namedPitches(): PitchName[]
 	{
 		return this.scale.chromas.map(chroma => this.nameForMidi(chroma + this.tonic.midi))
 	}

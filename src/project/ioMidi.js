@@ -1,5 +1,5 @@
 import Project from "./project.js"
-import Theory from "../theory.js"
+import Theory from "../theory.ts"
 import { MidiFile } from "../util/midi.js"
 import Rational from "../util/rational.js"
 import Range from "../util/range.js"

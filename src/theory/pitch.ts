@@ -1,34 +1,37 @@
-import { PitchName } from "./pitchName.js"
-import * as Utils from "./utils.js"
+import PitchName from "./pitchName"
+import Utils from "./utils"
 
 
-export class Pitch
+export default class Pitch
 {
-	constructor(midi)
+	midi: number
+
+
+	constructor(midi: number)
 	{
 		this.midi = midi
 	}
 	
 
-	static fromMidi(midi)
+	static fromMidi(midi: number): Pitch
 	{
 		return new Pitch(midi)
 	}
 	
 	
-	static fromOctaveAndChroma(octave, chroma)
+	static fromOctaveAndChroma(octave: number, chroma: number): Pitch
 	{
 		return Pitch.fromMidi(12 * octave + chroma)
 	}
 	
 	
-	static fromOctaveAndName(octave, pitchName)
+	static fromOctaveAndName(octave: number, pitchName: any): Pitch
 	{
 		return Pitch.fromMidi(12 * octave + pitchName.midi)
 	}
 	
 	
-	static parse(str)
+	static parse(str: string): Pitch
 	{
 		const pitchName = PitchName.parse(str)
 		
@@ -54,37 +57,37 @@ export class Pitch
 	}
 	
 	
-	get frequency()
+	get frequency(): number
 	{
 		return Math.pow(2, (this.midi - 69) / 12) * 440
 	}
 	
 	
-	get octave()
+	get octave(): number
 	{
 		return Math.floor(this.midi / 12)
 	}
 	
 	
-	get chroma()
+	get chroma(): number
 	{
 		return Utils.mod(this.midi, 12)
 	}
 	
 	
-	get name()
+	get name(): PitchName
 	{
 		return PitchName.fromMidi(this.midi)
 	}
 	
 	
-	get str()
+	get str(): string
 	{
 		return this.name.str + this.octave.toString()
 	}
 	
 	
-	toString()
+	toString(): string
 	{
 		return this.str
 	}

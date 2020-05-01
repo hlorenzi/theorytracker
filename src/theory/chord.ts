@@ -1,7 +1,18 @@
-import * as Utils from "./utils.js"
+import Key from "./key"
+import Utils from "./utils"
 
 
-export const chordKinds =
+interface ChordMetadata
+{
+	pitches: number[]
+	id: string
+	symbol: [boolean, string, string | null]
+	name: string
+	startGroup?: string
+}
+
+
+export const chordKinds: ChordMetadata[] =
 [
 	{ pitches: [0, 4, 7], id: "M", symbol: [false, "", null], name: "Major", startGroup: "Triads" },
 	{ pitches: [0, 3, 7], id: "m", symbol: [true,  "", null], name: "Minor" },
@@ -38,12 +49,19 @@ export const chordKinds =
 ]
 
 
-export class Chord
+export default class Chord
 {
-	static kinds = chordKinds
+	static kinds: ChordMetadata[] = chordKinds
+
+
+	rootMidi: number
+	rootAccidental: number
+	kind: number
+	inversion: number
+	modifiers: any
 
 	
-	constructor(rootMidi, rootAccidental, kind, inversion = 0, modifiers = [])
+	constructor(rootMidi: number, rootAccidental: number, kind: number, inversion: number = 0, modifiers: any[] = [])
 	{
         this.rootMidi = rootMidi
         this.rootAccidental = rootAccidental
@@ -53,19 +71,19 @@ export class Chord
     }
 	
 	
-	withChanges(obj)
+	withChanges(obj: any): Chord
 	{
 		return Object.assign(new Chord(this.rootMidi, this.rootAccidental, this.kind, this.inversion, this.modifiers), obj)
 	}
 
 
-	static kindFromId(id)
+	static kindFromId(id: string): number
 	{
 		return chordKinds.findIndex(k => k.id === id)
 	}
 
 
-	static kindFromPitches(pitches)
+	static kindFromPitches(pitches: number[]): number
 	{
 		return chordKinds.findIndex(k =>
 			k.pitches.length === pitches.length &&
@@ -73,13 +91,13 @@ export class Chord
 	}
 
 
-	get kindId()
+	get kindId(): string
 	{
 		return chordKinds[this.kind].id
 	}
 	
 	
-	romanBase(key)
+	romanBase(key: Key): string
 	{
 		const degree = key.degreeForMidi(this.rootMidi)
 		const chordKind = chordKinds[this.kind] || { symbol: [false, "", "?"] }
@@ -95,7 +113,7 @@ export class Chord
 	}
 	
 	
-	romanSup(key)
+	romanSup(key: Key): string
 	{
 		const chordKind = chordKinds[this.kind] || { symbol: [false, "", "?"] }
 		
@@ -123,7 +141,7 @@ export class Chord
 	}
 	
 	
-	romanSub(key)
+	romanSub(key: Key): string
 	{
 		let subStr = ""
 		
@@ -144,7 +162,7 @@ export class Chord
 	}
 	
 	
-	get pitches()
+	get pitches(): number[]
 	{
 		const chordData = chordKinds[this.kind]
 		if (!chordData)
@@ -171,7 +189,7 @@ export class Chord
 	}
 	
 	
-	get strummingPitches()
+	get strummingPitches(): number[]
 	{
 		const rootMidi = Utils.mod(this.rootMidi + this.rootAccidental, 12)
 		let pitches = this.pitches
@@ -187,12 +205,12 @@ export class Chord
 		if (pitches.length <= 3)
 			pitches.push(pitches[0] + 12)
 		
-		pitches = pitches.sort((x, y) => (x > y))
+		pitches = pitches.sort((x, y) => (x - y))
 
 		let sum = pitches.reduce((x, y) => (x + y)) / pitches.length
 		while (sum < 60)
 		{
-			const x = pitches.shift()
+			const x = pitches.shift()!
 			pitches.push(x + 12)
 			sum += 12 / pitches.length
 		}

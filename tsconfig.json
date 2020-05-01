@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "sourceMap": true,
+      "target": "esnext",
+      "allowSyntheticDefaultImports": true,
+      "strict": true,
+      "baseUrl": ".",
+      "paths": {
+        "*.ts": ["*"]
+      }
+    }
+}

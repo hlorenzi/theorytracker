@@ -1,7 +1,7 @@
 import React from "react"
 import Editor from "../editor/editor.js"
 import CanvasUtils from "../util/canvas.js"
-import Theory from "../theory.js"
+import Theory from "../theory.ts"
 import Ribbon from "./Ribbon.js"
 
 

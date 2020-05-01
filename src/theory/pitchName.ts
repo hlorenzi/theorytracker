@@ -1,16 +1,20 @@
-import * as Utils from "./utils.js"
+import Utils from "./utils"
 
 
-export class PitchName
+export default class PitchName
 {
-	constructor(letter, accidental)
+	letter: number
+	accidental: number
+
+
+	constructor(letter: number, accidental: number)
 	{
 		this.letter = Utils.mod(letter, 7)
 		this.accidental = accidental
 	}
 	
 
-	static fromMidi(midi)
+	static fromMidi(midi: number): PitchName
 	{
 		const chroma = Utils.mod(midi, 12)
 		
@@ -21,13 +25,13 @@ export class PitchName
 	}
 	
 
-	static fromChroma(chroma)
+	static fromChroma(chroma: number): PitchName
 	{
 		return PitchName.fromMidi(chroma)
 	}
 	
 	
-	static parse(str)
+	static parse(str: string): PitchName
 	{
 		if (str.length < 1)
 			throw "invalid pitch string"
@@ -58,25 +62,25 @@ export class PitchName
 	}
 	
 	
-	get midi()
+	get midi(): number
 	{
 		return Utils.letterToChroma(this.letter) + this.accidental
 	}
 	
 	
-	get chroma()
+	get chroma(): number
 	{
 		return Utils.mod(this.midi, 12)
 	}
 	
 	
-	altered(additionalAccidental)
+	altered(additionalAccidental: number): PitchName
 	{
 		return new PitchName(this.letter, this.accidental + additionalAccidental)
 	}
 
 
-	get simplified()
+	get simplified(): PitchName
 	{
 		if (this.accidental === 0)
 			return this
@@ -85,7 +89,7 @@ export class PitchName
 	}
 	
 	
-	get str()
+	get str(): string
 	{
 		const letterStr     = Utils.letterToStr(this.letter)
 		const accidentalStr = Utils.accidentalToStr(this.accidental)
@@ -94,7 +98,7 @@ export class PitchName
 	}
 	
 	
-	get strUnicode()
+	get strUnicode(): string
 	{
 		const letterStr     = Utils.letterToStr(this.letter)
 		const accidentalStr = Utils.accidentalToStr(this.accidental, true)
@@ -103,7 +107,7 @@ export class PitchName
 	}
 	
 	
-	toString()
+	toString(): string
 	{
 		return this.str
 	}

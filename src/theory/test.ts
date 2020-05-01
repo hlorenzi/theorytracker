@@ -1,4 +1,4 @@
-import Theory from "../theory.js"
+import Theory from "../theory"
 import assert from "assert"
 
 
@@ -63,7 +63,7 @@ export function test()
 	assert.equal(fsMinorKey.octavedDegreeForPitch(fb), -1)
 	assert.equal(fsMinorKey.octavedDegreeForPitch(bsss), 5)
 	assert.equal(fsMinorKey.octavedDegreeForPitch(d5), 4 * 7 + 5)
-	assert.equal(fsMinorKey.nameForPitch(c).str, "B#")
+	assert.equal(fsMinorKey.nameForPitch(c).str, "C")
 	assert.equal(fsMinorKey.nameForPitch(fb).str, "E")
 	assert.equal(fsMinorKey.nameForPitch(bsss).str, "D")
 	assert.equal(fsMinorKey.nameForPitch(d5).str, "D")
