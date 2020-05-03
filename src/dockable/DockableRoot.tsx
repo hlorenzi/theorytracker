@@ -1,11 +1,18 @@
 import React from "react"
-import DockableData, { Root, Panel, Rect, Layout, Divider, Anchor } from "./DockableData"
+import DockableData, { Root, Panel, Content, Rect, Layout, Divider, Anchor } from "./DockableData"
+import { AppState, AppDispatch } from "../App"
 
 
 interface DockableRootProps
 {
     root: Root
     setRoot: ((newRoot: Root) => void)
+
+    contents: { [id: number]: Content }
+    contentTypeToComponent: (type: string) => any
+
+    appState: AppState
+    appDispatch: AppDispatch
 }
 
 
@@ -30,24 +37,35 @@ export default function DockableRoot(props: DockableRootProps)
         if (!rootRef.current)
             return
             
-        const elemRect = rootRef.current!.getBoundingClientRect()
-        setRect({
-            x1: elemRect.x,
-            x2: elemRect.x + elemRect.width,
-            y1: elemRect.y,
-            y2: elemRect.y + elemRect.height,
-        })
+        const onResize = () =>
+        {
+            const elemRect = rootRef.current!.getBoundingClientRect()
+            setRect({
+                x1: elemRect.x,
+                x2: elemRect.x + elemRect.width,
+                y1: elemRect.y,
+                y2: elemRect.y + elemRect.height,
+            })
+        }
+
+        onResize()
+        
+        window.addEventListener("resize", onResize)
+
+        return () =>
+        {
+            window.removeEventListener("resize", onResize)
+        }
 
     }, [rootRef.current])
 
 
-    const mouseData = useMouseHandling(props, layout)
+    const mouseData = useMouseHandling(props, layout, rootRef)
 
 
-    return <div ref={ rootRef } style={{
+    return <div style={{
         width: "100vw",
         height: "100vh",
-        cursor: mouseData.cursor,
     }}>
 
         { !layout ? null : layout.panelRects.map(panelRect =>
@@ -89,11 +107,54 @@ export default function DockableRoot(props: DockableRootProps)
                     backgroundColor: "#222",
                     color: "#fff",
                     fontSize: "3em",
+                    width: "100%",
+                    height: "100%",
+                    minWidth: "0px",
+                    minHeight: "0px",
                 }}>
-                    { panelRect.panel.curContent < panelRect.panel.contentIds.length ?
-                        panelRect.panel.contentIds[panelRect.panel.curContent].toString() :
-                        ""
-                    }
+                    { (() =>
+                    {
+                        const contentIds = panelRect.panel.contentIds
+                        const contentIndex = panelRect.panel.curContent
+
+                        if (contentIndex >= contentIds.length)
+                            return null
+
+                        const contentId = contentIds[contentIndex]
+                        const content = props.contents[contentId]
+                        if (!content)
+                            return null
+
+                        const component = props.contentTypeToComponent(content.type)
+                        const contentStateSet = (newState: any) =>
+                        {
+                            props.appDispatch({
+                                type: "contentStateSet",
+                                contentId,
+                                newState,
+                            })
+                        }
+                        
+                        const contentDispatch = (action: any) =>
+                        {
+                            props.appDispatch({
+                                type: "contentDispatch",
+                                contentId,
+                                action,
+                            })
+                        }
+                        
+                        return React.createElement(component, {
+                            appState: props.appState,
+                            appDispatch: props.appDispatch,
+                            contentId,
+                            contentState: content.state,
+                            contentStateSet,
+                            contentDispatch,
+                            rect: panelRect.rect,
+                        })
+
+                    })() }
                 </div>
 
             </div>
@@ -124,6 +185,16 @@ export default function DockableRoot(props: DockableRootProps)
             }}/>
         }
 
+        <div ref={ rootRef } style={{
+            position: "absolute",
+            top: "0px",
+            left: "0px",
+            width: "100%",
+            height: "100%",
+            cursor: mouseData.cursor,
+            pointerEvents: mouseData.blockEvents ? "auto" : "none",
+        }}/>
+
     </div>
 }
 
@@ -142,6 +213,7 @@ interface MouseHandlingState
     cursor: string | undefined
     draggingPanelPos: MousePos | null
     draggingAnchor: Anchor | null
+    blockEvents: boolean
 }
 
 
@@ -152,7 +224,7 @@ interface MousePos
 }
 
 
-function useMouseHandling(props: DockableRootProps, layout: Layout | null): MouseHandlingState
+function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootDivRef: React.RefObject<HTMLDivElement>): MouseHandlingState
 {
     const transformMouse = (ev: MouseEvent): MousePos =>
     {
@@ -195,6 +267,7 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null): Mous
         cursor: undefined,
         draggingPanelPos: null,
         draggingAnchor: null,
+        blockEvents: false,
     })
 
 
@@ -421,14 +494,14 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null): Mous
 
 
         window.addEventListener("mousemove", onMouseMove)
-        window.addEventListener("mousedown", onMouseDown)
         window.addEventListener("mouseup", onMouseUp)
+        rootDivRef.current!.addEventListener("mousedown", onMouseDown)
 
         return () =>
         {
             window.removeEventListener("mousemove", onMouseMove)
-            window.removeEventListener("mousedown", onMouseDown)
             window.removeEventListener("mouseup", onMouseUp)
+            rootDivRef.current!.removeEventListener("mousedown", onMouseDown)
         }
 
     }, [])
@@ -447,10 +520,17 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null): Mous
         if (mouseAction.current == MouseAction.MoveHeader)
             draggingPanelPos = mousePosLast.current
 
+        const blockEvents =
+            !!curDivider.current ||
+            curHeader.current !== null ||
+            mouseAction.current == MouseAction.MoveHeaderStart ||
+            mouseAction.current == MouseAction.MoveHeader
+
         setState({
             cursor,
             draggingPanelPos,
             draggingAnchor: curAnchor.current,
+            blockEvents,
         })
     }
     

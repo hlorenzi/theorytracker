@@ -34,6 +34,13 @@ export interface Panel
 }
 
 
+export interface Content
+{
+    type: string
+    state: any
+}
+
+
 export interface Rect
 {
     x1: number

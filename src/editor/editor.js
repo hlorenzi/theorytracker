@@ -37,8 +37,8 @@ export default class Editor
 		
 		if (shouldLog)
 		{
-			console.log("oldState", state)
-			console.log("action", action)
+			console.log("Editor.oldState", state)
+			console.log("Editor.action", action)
 		}
 		
 		const reducer = Editor["reduce_" + action.type]
@@ -49,7 +49,7 @@ export default class Editor
 			
 			if (shouldLog)
 			{
-				console.log("newState", newState)
+				console.log("Editor.newState", newState)
 				console.log("")
 			}
 			
@@ -57,7 +57,7 @@ export default class Editor
 		}
 		else
 		{
-			console.error("unhandled dispatch action", action)
+			console.error("unhandled Editor.action", action)
 			return state
 		}
 	}
