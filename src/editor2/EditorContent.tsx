@@ -1,19 +1,14 @@
 import React from "react"
-// @ts-ignore
-import Editor from "./editor.js"
-// @ts-ignore
-import Project from "../project/project.js"
-import { AppState, AppDispatch } from "../App"
+import Editor from "./editor"
+import { AppState, AppDispatch, ContentStateManager } from "../App"
 import { Rect } from "../dockable/dockableData"
 
 
 interface EditorContentProps
 {
-	appState: AppState
-	appDispatch: AppDispatch
+	state: ContentStateManager<any>
 	contentId: number
-	contentState: any
-	contentStateSet: (newState: any) => void
+	appDispatch: AppDispatch
 	contentDispatch: (action: any) => void
 	rect: Rect
 }
@@ -21,15 +16,15 @@ interface EditorContentProps
 
 export function EditorContent(props: EditorContentProps)
 {
-	let contentState = props.contentState
-	if (!contentState)
+	let state = props.state
+	if (!state.contentState)
 	{
-		contentState = Editor.reduce(contentState, { type: "init", project: Project.getDefault() })
-		contentState = Editor.reduce(contentState, { type: "trackAdd", kind: "markers" })
-		contentState = Editor.reduce(contentState, { type: "trackAdd", kind: "chords" })
-		contentState = Editor.reduce(contentState, { type: "trackAdd", kind: "notes" })
-		contentState = Editor.reduce(contentState, { type: "clearUndoStack" })
-		props.contentStateSet(contentState)
+		window.setTimeout(() =>
+		{
+			props.contentDispatch({ type: "init" })
+			props.contentDispatch({ type: "tracksRefresh" })
+
+		}, 0)
 		return null
 	}
 
@@ -45,27 +40,33 @@ export function EditorContent(props: EditorContentProps)
 		}
 	}
 
+	const resize = () =>
+	{
+		if (!refCanvas.current)
+			return
+		
+		const rect = refCanvas.current!.getBoundingClientRect()
+		const w = Math.floor(rect.width)
+		const h = Math.floor(rect.height)
+		
+		refCanvas.current!.width = w
+		refCanvas.current!.height = h
+
+		props.contentDispatch({
+			type: "resize",
+			w,
+			h,
+		})
+	}
+
 	React.useEffect(() =>
 	{
-		const rect = refCanvas.current!.getBoundingClientRect()
-		refCanvas.current!.width = rect.width
-		refCanvas.current!.height = rect.height
-
-		contentState = Editor.reduce(contentState, {
-			type: "resize",
-			w: rect.width,
-			h: rect.height,
-		})
-
-		if (needsResetView.current)
-		{
-			needsResetView.current = false
-			contentState = Editor.reduce(contentState, { type: "rewind" })
-		}
-
-		props.contentStateSet(contentState)
+		resize()
 
 	}, [props.rect])
+
+	if (state.contentState.w == 0 && state.contentState.h == 0)
+		window.requestAnimationFrame(resize)
 
 	React.useEffect(() =>
 	{
@@ -74,8 +75,8 @@ export function EditorContent(props: EditorContentProps)
 		
 		const onMouseMove = (ev: MouseEvent) =>
 		{
-			const p = transformMousePos(refCanvas.current!, ev)
-			props.contentDispatch({ type: "mouseMove", ...p })
+			const pos = transformMousePos(refCanvas.current!, ev)
+			props.contentDispatch({ type: "mouseMove", pos })
 		}
 		
 		const onMouseDown = (ev: MouseEvent) =>
@@ -84,18 +85,18 @@ export function EditorContent(props: EditorContentProps)
 			//	window.document.activeElement.blur()
 
 			ev.preventDefault()
-			const p = transformMousePos(refCanvas.current!, ev)
+			const pos = transformMousePos(refCanvas.current!, ev)
 
-			props.contentDispatch({ type: "mouseMove", ...p })
+			props.contentDispatch({ type: "mouseMove", pos })
 			props.contentDispatch({ type: "mouseDown", rightButton: ev.button != 0, ctrlKey: ev.ctrlKey })
 		}
 		
 		const onMouseUp = (ev: MouseEvent) =>
 		{
-			const p = transformMousePos(refCanvas.current!, ev)
-			props.contentDispatch({ type: "mouseMove", ...p })
+			const pos = transformMousePos(refCanvas.current!, ev)
+			props.contentDispatch({ type: "mouseMove", pos })
 			props.contentDispatch({ type: "mouseUp" })
-			props.contentDispatch({ type: "mouseMove", ...p })
+			props.contentDispatch({ type: "mouseMove", pos })
 		}
 		
 		const onMouseWheel = (ev: MouseWheelEvent) =>
@@ -148,14 +149,16 @@ export function EditorContent(props: EditorContentProps)
 	
 	React.useEffect(() =>
 	{
-		Editor.render(contentState, refCanvas.current!.getContext("2d"))
+		Editor.render(state, refCanvas.current!.getContext("2d")!)
 		
-		const mouseAction = contentState.mouse.action || (contentState.mouse.hover && contentState.mouse.hover.action)
+		const mouseAction =
+			state.contentState.mouse.action || 
+			(state.contentState.mouse.hover && state.contentState.mouse.hover.action)
 		
-		if (contentState.mouse.draw || mouseAction & (Editor.actionDraw))
+		if (state.contentState.mouse.draw || mouseAction & (Editor.actionDraw))
 			refCanvas.current!.style.cursor = "crosshair"
 		else if (mouseAction & (Editor.actionDragTime))
-			refCanvas.current!.style.cursor = (contentState.mouse.down ? "grabbing" : "grab")
+			refCanvas.current!.style.cursor = (state.contentState.mouse.down ? "grabbing" : "grab")
 		else if (mouseAction & (Editor.actionPan))
 			refCanvas.current!.style.cursor = "move"
 		else if (mouseAction & (Editor.actionStretchTimeStart | Editor.actionStretchTimeEnd))
@@ -163,7 +166,7 @@ export function EditorContent(props: EditorContentProps)
 		else
 			refCanvas.current!.style.cursor = "text"
 		
-	}, [props.appState])
+	}, [props.state.appState])
 	
 	return (
 		<div style={{

@@ -66,7 +66,6 @@ export default class Editor
 	static reduce_init(state, action)
 	{
 		state = {
-			project: action.project,
 			w: 0,
 			h: 0,
 			

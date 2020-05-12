@@ -1,11 +1,10 @@
 import React from "react"
 import DockableRoot from "./dockable/DockableRoot"
 import DockableData, { DockingMode, Root, Content } from "./dockable/DockableData"
-import { EditorContent } from "./editor/EditorContent"
-// @ts-ignore
-import Project from "./project/project.js"
-// @ts-ignore
-import Editor from "./editor/editor.js"
+import { EditorContent } from "./editor2/EditorContent"
+import EditorState from "./editor2/editor"
+import Project from "./project/project2"
+import Immutable from "immutable"
 
 
 export default function App(props: {})
@@ -30,6 +29,8 @@ export default function App(props: {})
         root = DockableData.addPanel(root, 6, DockingMode.Bottom, 4)
         console.log(root)
 
+        console.log(Project.getDefault())
+
         return {
             dockableRoot: root,
             dockableContents: {
@@ -40,10 +41,19 @@ export default function App(props: {})
                 1: {
                     type: "editor",
                     state: null,
-                }
+                },
             },
 
             project: Project.getDefault(),
+            selection: Immutable.Set<number>(),
+
+            prefs: {
+                editor: {
+                    bkgColor: "#220022",
+                    trackVBorderColor: "#fff",
+                    trackHBorderColor: "#fff",
+                },
+            },
         }
     }
 
@@ -72,18 +82,72 @@ export interface AppState
         [id: number]: Content
     }
 
-    project: any
+    project: Project
+    selection: Immutable.Set<number>,
+    prefs: any
 }
 
 
 export type AppDispatch = (action: any) => void
 
 
+export class ContentStateManager<T>
+{
+    appState: AppState
+    contentId: number
+
+
+    constructor(appState: AppState, contentId: number)
+    {
+        this.appState = appState
+        this.contentId = contentId
+    }
+
+
+    mergeAppState(newState: any)
+    {
+        this.appState = {
+            ...this.appState,
+            ...newState,
+        }
+    }
+
+
+    get contentState(): T
+    {
+        return this.appState.dockableContents[this.contentId].state
+    }
+
+
+    set contentState(newState: T)
+    {
+        this.appState = {
+            ...this.appState,
+            dockableContents: {
+                ...this.appState.dockableContents,
+                [this.contentId]: {
+                    ...this.appState.dockableContents[this.contentId],
+                    state: newState,
+                }
+            }
+        }
+    }
+
+
+    mergeContentState(newState: any)
+    {
+        this.contentState = {
+            ...this.contentState,
+            ...newState,
+        }
+    }
+}
+
+
 function reduce(state: AppState, action: any): AppState
 {
-    const shouldLog = true
-        //action.type !== "dockableRootSet" &&
-        //action.type !== "contentStateSet"
+    const shouldLog = 
+        action.type !== "contentDispatch"
     
     if (shouldLog)
     {
@@ -93,17 +157,19 @@ function reduce(state: AppState, action: any): AppState
     
     switch (action.type)
     {
-        case "init":
-        {
-
-        }
-
         case "dockableRootSet":
         {
             state = {
                 ...state,
                 dockableRoot: action.newRoot,
             }
+            break
+        }
+
+
+        case "appStateSet":
+        {
+            state = action.newState
             break
         }
 
@@ -126,22 +192,17 @@ function reduce(state: AppState, action: any): AppState
         {
             const content = state.dockableContents[action.contentId]
             const reducer = contentTypeToReducer(content.type)
-            state = {
-                ...state,
-                dockableContents: {
-                    ...state.dockableContents,
-                    [action.contentId]: {
-                        ...content,
-                        state: reducer(content.state, action.action),
-                    }
-                }
-            }
+
+            const stateManager = new ContentStateManager(state, action.contentId)
+            reducer(stateManager, action.action)
+            state = stateManager.appState
             break
         }
 
         default:
         {
             console.error("unhandled App.action", action)
+            console.log("")
         }
     }
 
@@ -173,7 +234,7 @@ function contentTypeToReducer(type: string): any
     switch (type)
     {
         case "editor":
-            return Editor.reduce
+            return EditorState.reduce
 
         default:
             throw "invalid content type"

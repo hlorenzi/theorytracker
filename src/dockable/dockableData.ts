@@ -306,7 +306,7 @@ export default class DockableData
         {
             if (panel.subdivMode == SubdivMode.LeftRight)
             {
-                const xSplit = rect.x1 + (rect.x2 - rect.x1) * panel.subdivSize
+                const xSplit = rect.x1 + Math.round((rect.x2 - rect.x1) * panel.subdivSize)
 
                 const rect1: Rect = { ...rect, x2: xSplit }
                 const rect2: Rect = { ...rect, x1: xSplit }
@@ -325,7 +325,7 @@ export default class DockableData
             }
             else if (panel.subdivMode == SubdivMode.TopBottom)
             {
-                const ySplit = rect.y1 + (rect.y2 - rect.y1) * panel.subdivSize
+                const ySplit = rect.y1 + Math.round((rect.y2 - rect.y1) * panel.subdivSize)
 
                 const rect1: Rect = { ...rect, y2: ySplit }
                 const rect2: Rect = { ...rect, y1: ySplit }

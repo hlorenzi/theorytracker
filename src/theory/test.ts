@@ -1,4 +1,4 @@
-import Theory from "../theory"
+import * as Theory from "../theory/theory"
 import assert from "assert"
 
 

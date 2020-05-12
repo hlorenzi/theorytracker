@@ -1,6 +1,6 @@
 import React from "react"
 import DockableData, { Root, Panel, Content, Rect, Layout, Divider, Anchor } from "./DockableData"
-import { AppState, AppDispatch } from "../App"
+import { AppState, AppDispatch, ContentStateManager } from "../App"
 
 
 interface DockableRootProps
@@ -145,6 +145,7 @@ export default function DockableRoot(props: DockableRootProps)
                         }
                         
                         return React.createElement(component, {
+                            state: new ContentStateManager<any>(props.appState, contentId),
                             appState: props.appState,
                             appDispatch: props.appDispatch,
                             contentId,
