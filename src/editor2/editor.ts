@@ -3,9 +3,13 @@ import EditorState from "./editorState"
 import Track from "./track"
 import TrackState from "./trackState"
 import TrackStateManager from "./trackStateManager"
+import TrackKeyChanges from "./trackKeyChanges"
+import TrackMeterChanges from "./trackMeterChanges"
+import Project from "../project/project2"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
+import * as Theory from "../theory/theory"
 
 
 export default class Editor
@@ -71,16 +75,12 @@ export default class Editor
 			timeScroll: 0,
 			timeScale: 100,
 			timeSnap: new Rational(1, 16),
+			timeSnapBase: new Rational(1, 16),
 
 			mouse:
 			{
 				down: false,
 				downDate: new Date(),
-				downOrig: {
-					pos: { x: 0, y: 0 },
-					time: new Rational(0),
-					timeScroll: 0,
-				},
 
 				action: 0,
 
@@ -91,6 +91,12 @@ export default class Editor
 				hover: null,
 
 				drag: {
+					posOrigin: { x: 0, y: 0 },
+					timeOrigin: new Rational(0),
+					timeScrollOrigin: 0,
+					rangeOrigin: new Range(new Rational(), new Rational()),
+					projectOrigin: Project.getDefault(),
+
 					posDelta: { x: 0, y: 0 },
 					timeDelta: new Rational(0),
 				},
@@ -116,14 +122,33 @@ export default class Editor
 
 		for (let t = 0; t < state.appState.project.tracks.length; t++)
 		{
-			tracks.push({
-				type: "notesPreview",
-				trackIndex: t,
-				trackId: state.appState.project.tracks[t].id,
-				h: 80,
-				yScroll: 0,
-				pinned: false,
-			})
+			if (state.appState.project.tracks[t].trackType == Project.TrackType.Notes)
+				tracks.push({
+					type: "notesPreview",
+					trackIndex: t,
+					trackId: state.appState.project.tracks[t].id,
+					h: 80,
+					yScroll: 0,
+					pinned: false,
+				})
+			else if (state.appState.project.tracks[t].trackType == Project.TrackType.KeyChanges)
+				tracks.push({
+					type: "keyChanges",
+					trackIndex: t,
+					trackId: state.appState.project.tracks[t].id,
+					h: TrackKeyChanges.knobHeight,
+					yScroll: 0,
+					pinned: false,
+				})
+			else if (state.appState.project.tracks[t].trackType == Project.TrackType.MeterChanges)
+				tracks.push({
+					type: "meterChanges",
+					trackIndex: t,
+					trackId: state.appState.project.tracks[t].id,
+					h: TrackMeterChanges.knobHeight,
+					yScroll: 0,
+					pinned: false,
+				})
 		}
 
 		state.mergeContentState({ tracks })
@@ -172,17 +197,18 @@ export default class Editor
 		else
 		{
 			const dragPosDelta = {
-				x: state.contentState.mouse.pos.x - state.contentState.mouse.downOrig.pos.x,
-				y: state.contentState.mouse.pos.y - state.contentState.mouse.downOrig.pos.y,
+				x: state.contentState.mouse.pos.x - state.contentState.mouse.drag.posOrigin.x,
+				y: state.contentState.mouse.pos.y - state.contentState.mouse.drag.posOrigin.y,
 			}
 
 			const dragTimeDelta =
-				state.contentState.mouse.time.subtract(state.contentState.mouse.downOrig.time)
+				state.contentState.mouse.time.subtract(state.contentState.mouse.drag.timeOrigin)
 
 			state.mergeContentState({
 				mouse: {
 					...state.contentState.mouse,
 					drag: {
+						...state.contentState.mouse.drag,
 						posDelta: dragPosDelta,
 						timeDelta: dragTimeDelta,
 					},
@@ -192,9 +218,102 @@ export default class Editor
 			if (state.contentState.mouse.action == Editor.actionPan)
 			{
 				state.mergeContentState({
-					timeScroll: state.contentState.mouse.downOrig.timeScroll - state.contentState.mouse.drag.posDelta.x / state.contentState.timeScale,
+					timeScroll: state.contentState.mouse.drag.timeScrollOrigin - state.contentState.mouse.drag.posDelta.x / state.contentState.timeScale,
 				})
 			}
+			else
+			{
+				Editor.drag(state)
+			}
+		}
+	}
+
+
+	static drag(state: ContentStateManager<EditorState>)
+	{
+		const mouseAction = state.contentState.mouse.action
+		const mouseDrag = state.contentState.mouse.drag
+
+		for (const id of state.appState.selection)
+		{
+			const elem = mouseDrag.projectOrigin.elems.get(id)
+			if (!elem)
+				continue
+			
+			let changes: any = {}
+
+			if (elem.type == Project.ElementType.Note)
+			{
+				const rangedElem = elem as any as Project.RangedElement
+
+				if (mouseAction & Editor.actionDragTime)
+					changes.range = rangedElem.range.displace(mouseDrag.timeDelta)
+				
+				if (mouseAction & Editor.actionStretchTimeStart)
+				{
+					changes.range = rangedElem.range.stretch(mouseDrag.timeDelta, mouseDrag.rangeOrigin.end, mouseDrag.rangeOrigin.start)
+					if (rangedElem.range.start.compare(mouseDrag.rangeOrigin.start) == 0)
+						changes.range = new Range(changes.range.start.snap(state.contentState.timeSnap), changes.range.end)
+						
+					changes.range = changes.range.sorted()
+				}
+	
+				if (mouseAction & Editor.actionStretchTimeEnd)
+				{
+					changes.range = rangedElem.range.stretch(mouseDrag.timeDelta, mouseDrag.rangeOrigin.start, mouseDrag.rangeOrigin.end)
+					if (rangedElem.range.end.compare(mouseDrag.rangeOrigin.end) == 0)
+						changes.range = new Range(changes.range.start, changes.range.end.snap(state.contentState.timeSnap))
+	
+					changes.range = changes.range.sorted()
+				}
+				
+				const newRangedElem = Project.RangedElement.withChanges(rangedElem, changes)
+					
+				state.mergeAppState({
+					project: Project.upsertRangedElement(state.appState.project, newRangedElem)
+				})
+			}
+
+			else if (elem.type == Project.ElementType.KeyChange ||
+				elem.type == Project.ElementType.MeterChange)
+			{
+				const timedElem = elem as any as Project.TimedElement
+
+				if (mouseAction & Editor.actionDragTime)
+					changes.time = timedElem.time.add(mouseDrag.timeDelta).snap(state.contentState.timeSnap)
+				
+				if (mouseAction & Editor.actionStretchTimeStart)
+				{
+					changes.time = timedElem.time.stretch(mouseDrag.timeDelta, mouseDrag.rangeOrigin.end, mouseDrag.rangeOrigin.start)
+					if (timedElem.time.compare(mouseDrag.rangeOrigin.start) == 0)
+						changes.time = changes.time.snap(state.contentState.timeSnap)
+				}
+	
+				if (mouseAction & Editor.actionStretchTimeEnd)
+				{
+					changes.time = timedElem.time.stretch(mouseDrag.timeDelta, mouseDrag.rangeOrigin.start, mouseDrag.rangeOrigin.end)
+					if (timedElem.time.compare(mouseDrag.rangeOrigin.start) == 0)
+						changes.time = changes.time.snap(state.contentState.timeSnap)
+				}
+				
+				const newTimedElem = Project.TimedElement.withChanges(timedElem, changes)
+					
+				state.mergeAppState({
+					project: Project.upsertTimedElement(state.appState.project, newTimedElem)
+				})
+			}
+			
+			/*
+
+			if (state.mouse.action & Editor.actionDragPitchRow)
+			{
+				const keyCh = state.project.keyChanges.findActiveAt(elem.range.start)
+				const key = keyCh ? keyCh.key : Editor.defaultKey()
+				const degree = key.octavedDegreeForMidi(elem.pitch)
+				const newPitch = key.midiForDegree(Math.floor(degree + pitchRowDelta))
+				changes.pitch = newPitch
+				soundPreview = TrackNotes.mergeSoundPreview(soundPreview, newPitch)
+			}*/
 		}
 	}
 	
@@ -212,10 +331,12 @@ export default class Editor
 				...state.contentState.mouse,
 				down: true,
 				downDate: now,
-				downOrig: {
-					pos: state.contentState.mouse.pos,
-					time: state.contentState.mouse.time,
-					timeScroll: state.contentState.timeScroll,
+				drag: {
+					...state.contentState.mouse.drag,
+					posOrigin: state.contentState.mouse.pos,
+					timeOrigin: state.contentState.mouse.time,
+					timeScrollOrigin: state.contentState.timeScroll,
+					projectOrigin: state.appState.project,
 				},
 				action: 0,
 			}
@@ -232,10 +353,30 @@ export default class Editor
 		}
 		else
 		{
-			Editor.selectionClear(state)
-
 			if (state.contentState.mouse.hover)
+			{
+				if (!action.ctrlKey &&
+					!state.appState.selection.has(state.contentState.mouse.hover.id))
+					Editor.selectionClear(state)
+
 				Editor.selectionAdd(state, state.contentState.mouse.hover.id)
+
+				state.mergeContentState({
+					mouse: {
+						...state.contentState.mouse,
+						drag: {
+							...state.contentState.mouse.drag,
+							rangeOrigin: Editor.selectionRange(state)!,
+						},
+						action: state.contentState.mouse.hover.action,
+					}
+				})
+			}
+			else
+			{
+				if (!action.ctrlKey)
+					Editor.selectionClear(state)
+			}
 		}
 	}
 	
@@ -252,6 +393,52 @@ export default class Editor
 				action: 0,
 			}
 		})
+	}
+	
+	
+	static reduce_mouseWheel(state: ContentStateManager<EditorState>, action: any)
+	{
+		if (Math.abs(action.deltaX) > 0)
+		{
+			let timeScroll = state.contentState.timeScroll + 0.01 / (state.contentState.timeScale / 100) * action.deltaX
+			let wheelDate = new Date()
+
+			state.mergeContentState({
+				timeScroll,
+				mouse: {
+					...state.contentState.mouse,
+					wheelDate
+				}
+			})
+		}
+		else if (new Date().getTime() - state.contentState.mouse.wheelDate.getTime() > 250)
+		{
+			const snap = new Rational(1, 1024)
+			const prevMouseTime = Editor.timeAtX(state, state.contentState.mouse.pos.x - state.contentState.trackHeaderW, snap)
+			
+			let timeScale = state.contentState.timeScale * (action.deltaY > 0 ? 0.8 : 1.25)
+			timeScale = Math.max(4, Math.min(2048, timeScale))
+			state.mergeContentState({ timeScale })
+			
+			const newMouseTime = Editor.timeAtX(state, state.contentState.mouse.pos.x - state.contentState.trackHeaderW, snap)
+			console.log(prevMouseTime, newMouseTime)
+			
+			const timeScroll = state.contentState.timeScroll - newMouseTime.subtract(prevMouseTime).asFloat()
+			
+			const timeSnapAdjustThresholdUpper = 24
+			const timeSnapAdjustThresholdLower = 8
+			let timeSnap = state.contentState.timeSnapBase
+			
+			if (timeSnap.asFloat() * timeScale > timeSnapAdjustThresholdUpper)
+				while (timeSnap.asFloat() * timeScale > timeSnapAdjustThresholdUpper)
+					timeSnap = timeSnap.divide(new Rational(2))
+				
+			else if (timeSnap.asFloat() * timeScale < timeSnapAdjustThresholdLower)
+				while (timeSnap.asFloat() * timeScale < timeSnapAdjustThresholdLower)
+					timeSnap = timeSnap.divide(new Rational(1, 2))
+				
+			state.mergeContentState({ timeScroll, timeSnap })
+		}
 	}
 
 
@@ -276,6 +463,33 @@ export default class Editor
 		state.mergeAppState({
 			selection: state.appState.selection.clear(),
 		})
+	}
+
+
+	static selectionRange(state: ContentStateManager<EditorState>): Range | null
+	{
+		let range = null
+
+		for (const id of state.appState.selection)
+		{
+			const elem = state.appState.project.elems.get(id) as any
+			if (!elem)
+				continue
+
+			if (elem.range)
+			{
+				const rangedElem = elem as Project.RangedElement
+				range = Range.merge(range, rangedElem.range)
+			}
+
+			else if (elem.time)
+			{
+				const timedElem = elem as Project.TimedElement
+				range = Range.merge(range, Range.fromPoint(timedElem.time))
+			}
+		}
+
+		return range
 	}
 
 
@@ -331,12 +545,23 @@ export default class Editor
 			Editor.timeAtX(state, 0).subtract(state.contentState.timeSnap),
 			Editor.timeAtX(state, state.contentState.w).add(state.contentState.timeSnap))
 	}
+
+
+	static defaultKey(): Theory.Key
+	{
+		return Theory.Key.parse("C Major")
+	}
+
+
+	static defaultMeter(): Theory.Meter
+	{
+		return new Theory.Meter(4, 4)
+	}
 	
 	
 	static render(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D)
 	{
 		ctx.save()
-		ctx.translate(0.5, 0.5)
 		
 		ctx.fillStyle = state.appState.prefs.editor.bkgColor
 		ctx.fillRect(0, 0, state.contentState.w, state.contentState.h)
@@ -355,15 +580,15 @@ export default class Editor
 			
 			ctx.strokeStyle = state.appState.prefs.editor.trackHBorderColor
 			ctx.beginPath()
-			ctx.moveTo(0, y)
-			ctx.lineTo(state.contentState.w, y)
+			ctx.moveTo(0, y + 0.5)
+			ctx.lineTo(state.contentState.w, y + 0.5)
 			ctx.stroke()
 		}
         
 		ctx.strokeStyle = state.appState.prefs.editor.trackVBorderColor
 		ctx.beginPath()
-		ctx.moveTo(state.contentState.trackHeaderW, 0)
-		ctx.lineTo(state.contentState.trackHeaderW, state.contentState.h)
+		ctx.moveTo(state.contentState.trackHeaderW + 0.5, 0)
+		ctx.lineTo(state.contentState.trackHeaderW + 0.5, state.contentState.h)
 		ctx.stroke()
 
         ctx.restore()

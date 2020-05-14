@@ -1,5 +1,7 @@
 import TrackState from "./trackState"
+import Project from "../project/project2"
 import Rational from "../util/rational"
+import Range from "../util/range"
 
 
 export default interface EditorState
@@ -14,17 +16,12 @@ export default interface EditorState
     timeScroll: number
     timeScale: number
     timeSnap: Rational
+    timeSnapBase: Rational
 
     mouse:
     {
         down: boolean
         downDate: Date
-        downOrig:
-        {
-            pos: { x: number, y: number }
-            time: Rational
-            timeScroll: number
-        }
 
         action: number
 
@@ -41,6 +38,12 @@ export default interface EditorState
 
         drag:
         {
+            posOrigin: { x: number, y: number }
+            timeOrigin: Rational
+            timeScrollOrigin: number
+            rangeOrigin: Range
+            projectOrigin: Project
+
             posDelta: { x: number, y: number }
             timeDelta: Rational
         }

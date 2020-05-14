@@ -1,21 +1,27 @@
 import Immutable from "immutable"
 import Range from "../util/range"
 import Rational from "../util/rational"
+import ListOfPoints from "../util/listOfPoints"
 import ListOfRanges from "../util/listOfRanges"
+import * as Theory from "../theory/theory"
 
 
 export class Project
 {
     nextId: Project.ID
     tracks: Project.Track[]
-    elems: Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>
+    timedLists: Immutable.Map<Project.ID, ListOfPoints<Project.TimedElement>>
+    rangedLists: Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>
+    elems: Immutable.Map<number, Project.Element>
 
 
     constructor()
     {
         this.nextId = 1
         this.tracks = []
-        this.elems = Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>()
+        this.timedLists = Immutable.Map<Project.ID, ListOfPoints<Project.TimedElement>>()
+        this.rangedLists = Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>()
+        this.elems = Immutable.Map<number, Project.Element>()
     }
 
 
@@ -24,14 +30,22 @@ export class Project
         let project = new Project()
 
         const track1Id = project.nextId
-        project = Project.upsertTrack(project, new Project.TrackNotes())
-        for (let i = 0; i < 16; i++)
-            project = Project.upsertElement(project, track1Id, new Project.Note(Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 60 + i % 8))
+        project = Project.upsertTrack(project, new Project.TrackKeyChanges())
+        project = Project.upsertTimedElement(project, new Project.KeyChange(track1Id, new Rational(0), Theory.Key.parse("C Major")))
 
         const track2Id = project.nextId
+        project = Project.upsertTrack(project, new Project.TrackMeterChanges())
+        project = Project.upsertTimedElement(project, new Project.MeterChange(track2Id, new Rational(0), new Theory.Meter(4, 4)))
+
+        const track3Id = project.nextId
         project = Project.upsertTrack(project, new Project.TrackNotes())
         for (let i = 0; i < 16; i++)
-            project = Project.upsertElement(project, track2Id, new Project.Note(Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 68 - (i % 8)))
+            project = Project.upsertRangedElement(project, new Project.Note(track3Id, Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 60 + i % 8))
+
+        const track4Id = project.nextId
+        project = Project.upsertTrack(project, new Project.TrackNotes())
+        for (let i = 0; i < 16; i++)
+            project = Project.upsertRangedElement(project, new Project.Note(track4Id, Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 68 - (i % 8)))
 
         return project
     }
@@ -42,7 +56,7 @@ export class Project
         let nextId = project.nextId
         let tracks = project.tracks
 		
-		if (track.id < 0)
+		if (!track.id)
 		{
 			track = track.withChanges({ id: nextId })
 			nextId++
@@ -65,40 +79,64 @@ export class Project
                 ]
         }
 
-        return Object.assign({}, project, { nextId, tracks })
+        let elems = project.elems
+        if (!remove)
+            elems = elems.set(track.id, track)
+
+        return Object.assign({}, project, { nextId, elems, tracks })
 	}
 
 
-	static upsertElement(project: Project, parentId: Project.ID, elem: Project.RangedElement, remove: boolean = false): Project
+	static upsertTimedElement(project: Project, elem: Project.TimedElement, remove: boolean = false): Project
 	{
         let nextId = project.nextId
-        let list = project.elems.get(parentId)
 		
-		if (elem.id < 0)
+		if (!elem.id)
 		{
-			elem = elem.withChanges({ id: nextId })
+			elem = Project.Element.withChanges(elem, { id: nextId })
 			nextId++
 		}
-		else
-		{
-            if (list)
-			    list = list.removeById(elem.id)
-		}
-		
-        if (!remove)
-        {
-            if (!list)
-                list = new ListOfRanges()
-            
-			list = list.add(elem)
-        }
 
-        let elems = project.elems
-        if (list)
-            elems = elems.set(parentId, list)
+        let timedList = project.timedLists.get(elem.parentId) || new ListOfPoints()
+        timedList = timedList.add(elem)
 
-        return Object.assign({}, project, { nextId, elems })
+        let elems = project.elems.set(elem.id, elem)
+        let timedLists = project.timedLists.set(elem.parentId, timedList)
+
+        return Object.assign({}, project, { nextId, elems, timedLists })
 	}
+
+
+	static upsertRangedElement(project: Project, elem: Project.RangedElement, remove: boolean = false): Project
+	{
+        let nextId = project.nextId
+		
+		if (!elem.id)
+		{
+			elem = Project.Element.withChanges(elem, { id: nextId })
+			nextId++
+		}
+
+        let rangedList = project.rangedLists.get(elem.parentId) || new ListOfRanges()
+        rangedList = rangedList.add(elem)
+
+        let elems = project.elems.set(elem.id, elem)
+        let rangedLists = project.rangedLists.set(elem.parentId, rangedList)
+
+        return Object.assign({}, project, { nextId, elems, rangedLists })
+    }
+    
+
+    static keyChangeTrackForTrack(project: Project, trackId: Project.ID): Project.ID
+    {
+        return 1
+    }
+    
+
+    static meterChangeTrackForTrack(project: Project, trackId: Project.ID): Project.ID
+    {
+        return 2
+    }
 }
 
 
@@ -107,21 +145,53 @@ export namespace Project
     export type ID = number
 
 
-    export enum TrackType
+    export enum ElementType
     {
-        Notes,
+        Track,
+        Note,
+        KeyChange,
+        MeterChange,
     }
 
 
-    export class Track
+    export class Element
     {
-        id: Project.ID = -1
-        type: Project.TrackType = -1
+        type: Project.ElementType = -1
+        id: Project.ID = 0
+        parentId: Project.ID = 0
 
 
-        constructor(type: Project.TrackType)
+        constructor(type: Project.ElementType, parentId: Project.ID)
         {
             this.type = type
+            this.parentId = parentId
+        }
+
+
+        static withChanges<T>(original: T, changes: any): T
+        {
+            return Object.assign({}, original, changes)
+        }
+    }
+
+
+    export enum TrackType
+    {
+        Notes,
+        KeyChanges,
+        MeterChanges,
+    }
+
+
+    export class Track extends Element
+    {
+        trackType: Project.TrackType = 0
+
+
+        constructor(trackType: Project.TrackType)
+        {
+            super(ElementType.Track, 0)
+            this.trackType = trackType
         }
 
 
@@ -141,27 +211,33 @@ export namespace Project
     }
 
 
-    export enum ElementType
+    export class TrackKeyChanges extends Track
     {
-        Note,
+        constructor()
+        {
+            super(Project.TrackType.KeyChanges)
+        }
     }
 
 
-    export class Element
+    export class TrackMeterChanges extends Track
     {
-        id: Project.ID = -1
-        type: Project.ElementType = -1
-
-
-        constructor(type: Project.ElementType)
+        constructor()
         {
-            this.type = type
+            super(Project.TrackType.MeterChanges)
         }
+    }
 
 
-        withChanges(changes: any): this
+    export class TimedElement extends Element
+    {
+        time: Rational
+
+
+        constructor(type: Project.ElementType, parentId: Project.ID, time: Rational)
         {
-            return Object.assign({}, this, changes)
+            super(type, parentId)
+            this.time = time
         }
     }
 
@@ -171,9 +247,9 @@ export namespace Project
         range: Range
 
 
-        constructor(type: Project.ElementType, range: Range)
+        constructor(type: Project.ElementType, parentId: Project.ID, range: Range)
         {
-            super(type)
+            super(type, parentId)
             this.range = range
         }
     }
@@ -184,10 +260,36 @@ export namespace Project
         pitch: number
 
 
-        constructor(range: Range, pitch: number)
+        constructor(parentId: Project.ID, range: Range, pitch: number)
         {
-            super(Project.ElementType.Note, range)
+            super(Project.ElementType.Note, parentId, range)
             this.pitch = pitch
+        }
+    }
+
+
+    export class KeyChange extends TimedElement
+    {
+        key: Theory.Key
+
+
+        constructor(parentId: Project.ID, time: Rational, key: Theory.Key)
+        {
+            super(Project.ElementType.KeyChange, parentId, time)
+            this.key = key
+        }
+    }
+
+
+    export class MeterChange extends TimedElement
+    {
+        meter: Theory.Meter
+
+
+        constructor(parentId: Project.ID, time: Rational, meter: Theory.Meter)
+        {
+            super(Project.ElementType.MeterChange, parentId, time)
+            this.meter = meter
         }
     }
 }

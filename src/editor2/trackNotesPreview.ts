@@ -104,18 +104,32 @@ export default class TrackNotesPreview
 	}
 
 
-    static *iterNotesAndKeyChangesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.Note, null, number, number], void, void>
+    static *iterNotesAndKeyChangesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.Note, Project.KeyChange, number, number], void, void>
     {
-        const trackElems = state.appState.project.elems.get(state.trackState.trackId)
+        const trackElems = state.appState.project.rangedLists.get(state.trackState.trackId)
         if (!trackElems)
             return
 
-        for (const elem of trackElems.iterAtRange(range))
+        const defaultKey = Editor.defaultKey()
+
+        const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project, state.trackState.trackId)
+        const keyChangeTrackTimedElems = state.appState.project.timedLists.get(keyChangeTrackId)
+        if (!keyChangeTrackTimedElems)
+            return
+    
+        for (const pair of keyChangeTrackTimedElems.iterActiveAtRangePairwise(range))
         {
-			const xMin = Editor.xAtTime(state.contentStateManager, elem.range.start)
-			const xMax = Editor.xAtTime(state.contentStateManager, elem.range.end)
-			
-            yield [elem as Project.Note, null, xMin, xMax]
+            const keyCh1 = pair[0] || new Project.KeyChange(-1, range.start, defaultKey)
+            const keyCh2 = pair[1] || new Project.KeyChange(-1, range.end,   defaultKey)
+            
+            const keyCh1X = Editor.xAtTime(state.contentStateManager, keyCh1.time)
+            const keyCh2X = Editor.xAtTime(state.contentStateManager, keyCh2.time)
+            
+            const time1 = keyCh1.time.max(range.start)!
+            const time2 = keyCh2.time.min(range.end)!
+            
+            for (const note of trackElems.iterAtRange(new Range(time1, time2)))
+                yield [note as Project.Note, keyCh1 as Project.KeyChange, keyCh1X, keyCh2X]
         }
     }
 
@@ -151,7 +165,7 @@ export default class TrackNotesPreview
 		const noteOrigX1 = Editor.xAtTime(state.contentStateManager, range.start)
 		const noteOrigX2 = Editor.xAtTime(state.contentStateManager, range.end)
 		
-		const noteY = TrackNotesPreview.yForRow(state, row)
+		const noteY = Math.floor(TrackNotesPreview.yForRow(state, row))
 		
 		let noteX1 = Math.max(noteOrigX1, xStart)
 		let noteX2 = Math.min(noteOrigX2, xEnd)
@@ -160,7 +174,10 @@ export default class TrackNotesPreview
 		const cutEnd   = noteOrigX2 > noteX2
 		
 		if (!cutStart) noteX1 += 1
-		if (!cutEnd)   noteX2 -= 1
+        if (!cutEnd)   noteX2 -= 1
+        
+        noteX1 = Math.floor(noteX1)
+        noteX2 = Math.floor(noteX2)
 		
 		const noteW = Math.max(2, noteX2 - noteX1)
 		
@@ -196,7 +213,7 @@ export default class TrackNotesPreview
 		ctx.fillStyle = fillStyle
 		
 		ctx.beginPath()
-		ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 		
 		if (hovering)
 		{

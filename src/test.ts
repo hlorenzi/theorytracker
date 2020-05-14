@@ -1,10 +1,8 @@
-// @ts-ignore
-import { test as testListOfPoints } from "./util/listOfPoints.js"
-// @ts-ignore
-import { test as testListOfRanges } from "./util/listOfRanges.js"
+import ListOfPoints from "./util/listOfPoints"
+import ListOfRanges from "./util/listOfRanges"
 import { test as testTheory } from "./theory/test"
 
 
-testListOfPoints()
-testListOfRanges()
+ListOfPoints.test()
+ListOfRanges.test()
 testTheory()

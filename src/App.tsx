@@ -49,9 +49,17 @@ export default function App(props: {})
 
             prefs: {
                 editor: {
-                    bkgColor: "#220022",
+                    backgroundColor: "#29242e",
                     trackVBorderColor: "#fff",
                     trackHBorderColor: "#fff",
+                    
+                    selectionCursorColor: "#0af",
+                    playbackCursorColor: "#f00",
+                    trackSeparatorColor: "#aaa",
+                    submeasureColor: "#0008",
+                    halfSubmeasureColor: "#0002",
+                    meterChangeColor: "#0cf",
+                    keyChangeColor: "#f0c",
                 },
             },
         }

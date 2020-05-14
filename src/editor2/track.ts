@@ -2,6 +2,8 @@ import { ContentStateManager } from "../App"
 import EditorState from "./editorState"
 import TrackStateManager from "./trackStateManager"
 import TrackNotesPreview from "./trackNotesPreview"
+import TrackKeyChanges from "./trackKeyChanges"
+import TrackMeterChanges from "./trackMeterChanges"
 
 
 export default class Track
@@ -19,6 +21,8 @@ export default class Track
 		switch (type)
 		{
 			case "notesPreview": return TrackNotesPreview
+            case "keyChanges": return TrackKeyChanges
+            case "meterChanges": return TrackMeterChanges
 			default: throw "invalid track kind"
 		}
 	}
