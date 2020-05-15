@@ -502,7 +502,7 @@ export default class TrackNotes
 					const ySuboctave = TrackNotes.yForRow(state, trackIndex, tonicRowOffset + i * 7 + j) + track.rowScale
 					
 					ctx.globalAlpha = 0.025
-					ctx.filltyle = "#000"
+					ctx.fillStyle = "#000"
 					ctx.fillRect(xMin, ySuboctave, xMax - xMin, track.rowScale)
 					ctx.globalAlpha = 1
 				}

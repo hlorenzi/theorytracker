@@ -42,12 +42,11 @@ export default class TrackNotesPreview
         let hoverPrimary = null
         let hoverSecondary = null
 
-        const key = Theory.Key.parse("C Major")
-
         for (const [note, keyCh, xMin, xMax] of TrackNotesPreview.iterNotesAndKeyChangesAtRange(state, checkRange))
         {
             const margin = 2
 
+            const key = keyCh ? keyCh.key : Editor.defaultKey()
             const row = TrackNotesPreview.rowForPitch(state, note.pitch, key)
             const rectExact = TrackNotesPreview.rectForNote(state, note.range, row, xMin, xMax)
             const rect = new Rect(
@@ -104,12 +103,8 @@ export default class TrackNotesPreview
 	}
 
 
-    static *iterNotesAndKeyChangesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.Note, Project.KeyChange, number, number], void, void>
+    static *iterKeyChangePairsAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
     {
-        const trackElems = state.appState.project.rangedLists.get(state.trackState.trackId)
-        if (!trackElems)
-            return
-
         const defaultKey = Editor.defaultKey()
 
         const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project, state.trackState.trackId)
@@ -125,38 +120,51 @@ export default class TrackNotesPreview
             const keyCh1X = Editor.xAtTime(state.contentStateManager, keyCh1.time)
             const keyCh2X = Editor.xAtTime(state.contentStateManager, keyCh2.time)
             
-            const time1 = keyCh1.time.max(range.start)!
-            const time2 = keyCh2.time.min(range.end)!
-            
-            for (const note of trackElems.iterAtRange(new Range(time1, time2)))
-                yield [note as Project.Note, keyCh1 as Project.KeyChange, keyCh1X, keyCh2X]
+            yield [keyCh1 as Project.KeyChange, keyCh2 as Project.KeyChange, keyCh1X, keyCh2X]
         }
     }
 
 
-	static yForRow(state: TrackStateManager<TrackNotesPreviewState>, row: number)
+    static *iterNotesAndKeyChangesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.Note, Project.KeyChange, number, number], void, void>
+    {
+        const trackElems = state.appState.project.rangedLists.get(state.trackState.trackId)
+        if (!trackElems)
+            return
+
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of TrackNotesPreview.iterKeyChangePairsAtRange(state, range))
+        {
+            const time1 = keyCh1.time.max(range.start)!
+            const time2 = keyCh2.time.min(range.end)!
+            
+            for (const note of trackElems.iterAtRange(new Range(time1, time2)))
+                yield [note as Project.Note, keyCh1, keyCh1X, keyCh2X]
+        }
+    }
+
+
+	static yForRow(state: TrackStateManager<TrackNotesPreviewState>, row: number): number
 	{
 		return state.trackState.h / 2 - (row + 1 + state.trackState.yScroll) * state.trackState.rowScale
 	}
 	
 	
-	static rowAtY(state: TrackStateManager<TrackNotesPreviewState>, y: number)
+	static rowAtY(state: TrackStateManager<TrackNotesPreviewState>, y: number): number
 	{
 		return Math.floor((state.trackState.h / 2 - y) / state.trackState.rowScale - state.trackState.yScroll)
 	}
 	
 	
-	static rowForPitch(state: TrackStateManager<TrackNotesPreviewState>, pitch: number, key: Theory.Key)
+	static rowForPitch(state: TrackStateManager<TrackNotesPreviewState>, pitch: number, key: Theory.Key): number
 	{
 		const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(key.tonic.chroma)
-		return key.octavedDegreeForMidi(pitch - 64) + tonicRowOffset
+		return key.octavedDegreeForMidi(pitch - 60) + tonicRowOffset
 	}
 	
 	
-	static pitchForRow(state: TrackStateManager<TrackNotesPreviewState>, row: number, key: Theory.Key)
+	static pitchForRow(state: TrackStateManager<TrackNotesPreviewState>, row: number, key: Theory.Key): number
 	{
 		const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(key.tonic.chroma)
-		return key.midiForDegree(row - Math.floor(tonicRowOffset)) + 64
+		return key.midiForDegree(row - Math.floor(tonicRowOffset)) + 60
 	}
 	
 	
@@ -173,7 +181,7 @@ export default class TrackNotesPreview
 		const cutStart = noteOrigX1 < noteX1
 		const cutEnd   = noteOrigX2 > noteX2
 		
-		if (!cutStart) noteX1 += 1
+		//if (!cutStart) noteX1 += 1
         if (!cutEnd)   noteX2 -= 1
         
         noteX1 = Math.floor(noteX1)
@@ -191,10 +199,50 @@ export default class TrackNotesPreview
     {
         const visibleRange = Editor.visibleTimeRange(state.contentStateManager)
 
-        const key = Theory.Key.parse("C Major")
+        const rowAtTop = TrackNotesPreview.rowAtY(state, 0)
+        const rowAtBottom = TrackNotesPreview.rowAtY(state, state.trackState.h)
 
+        const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
+        const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
+
+		for (const [keyCh1, keyCh2, xMin, xMax] of TrackNotesPreview.iterKeyChangePairsAtRange(state, visibleRange))
+		{
+			const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(keyCh1.key.tonic.chroma)
+
+			for (let i = octaveAtBottom; i <= octaveAtTop; i++)
+			{
+				const y = 0.5 + Math.floor(TrackNotesPreview.yForRow(state, tonicRowOffset + i * 7) + state.trackState.rowScale)
+				
+				ctx.strokeStyle = state.appState.prefs.editor.octaveDividerColor
+				ctx.beginPath()
+				ctx.moveTo(xMin, y)
+				ctx.lineTo(xMax, y)
+				ctx.stroke()
+
+				for (let j = 1; j < 7; j += 1)
+				{
+					const ySuboctave = 0.5 + Math.floor(TrackNotesPreview.yForRow(state, tonicRowOffset + i * 7 + j) + state.trackState.rowScale)
+					
+					ctx.strokeStyle = state.appState.prefs.editor.noteRowAlternateBkgColor
+                    ctx.beginPath()
+                    ctx.moveTo(xMin, ySuboctave)
+                    ctx.lineTo(xMax, ySuboctave)
+                    ctx.stroke()
+				}
+				
+				/*if (i == 0)
+				{
+					ctx.globalAlpha = 0.05
+					ctx.fillStyle = "#fff"
+					ctx.fillRect(xMin, y - 7 * state.trackState.rowScale, xMax - xMin, 7 * state.trackState.rowScale)
+					ctx.globalAlpha = 1
+				}*/
+			}
+        }
+        
 		for (const [note, keyCh, xMin, xMax] of TrackNotesPreview.iterNotesAndKeyChangesAtRange(state, visibleRange))
 		{
+            const key = keyCh.key
 			const row = TrackNotesPreview.rowForPitch(state, note.pitch, key)
 			const mode = key.scale.metadata!.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(ctx, key.degreeForMidi(note.pitch) + mode)

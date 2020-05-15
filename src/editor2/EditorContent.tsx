@@ -28,6 +28,7 @@ export function EditorContent(props: EditorContentProps)
 		return null
 	}
 
+	const refDiv = React.useRef<HTMLDivElement>(null)
 	const refCanvas = React.useRef<HTMLCanvasElement>(null)
 	const needsResetView = React.useRef(true)
 	
@@ -42,13 +43,15 @@ export function EditorContent(props: EditorContentProps)
 
 	const resize = () =>
 	{
-		if (!refCanvas.current)
+		if (!refDiv.current)
 			return
 		
-		const rect = refCanvas.current!.getBoundingClientRect()
+		const rect = refDiv.current!.getBoundingClientRect()
 		const w = Math.floor(rect.width)
 		const h = Math.floor(rect.height)
 		
+		refCanvas.current!.style.width = w + "px"
+		refCanvas.current!.style.height = h + "px"
 		refCanvas.current!.width = w
 		refCanvas.current!.height = h
 
@@ -169,7 +172,7 @@ export function EditorContent(props: EditorContentProps)
 	}, [props.state.appState])
 	
 	return (
-		<div style={{
+		<div ref={ refDiv } style={{
 			width: "100%",
 			height: "100%",
 		}}>

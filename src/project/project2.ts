@@ -31,10 +31,11 @@ export class Project
 
         const track1Id = project.nextId
         project = Project.upsertTrack(project, new Project.TrackKeyChanges())
-        project = Project.upsertTimedElement(project, new Project.KeyChange(track1Id, new Rational(0), Theory.Key.parse("C Major")))
-
+        
         const track2Id = project.nextId
         project = Project.upsertTrack(project, new Project.TrackMeterChanges())
+
+        project = Project.upsertTimedElement(project, new Project.KeyChange(track1Id, new Rational(0), Theory.Key.parse("D Major")))
         project = Project.upsertTimedElement(project, new Project.MeterChange(track2Id, new Rational(0), new Theory.Meter(4, 4)))
 
         const track3Id = project.nextId

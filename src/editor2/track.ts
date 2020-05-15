@@ -28,23 +28,25 @@ export default class Track
 	}
 	
 	
-	static execute(fnName: string, state: ContentStateManager<EditorState>, trackIndex: number, ...args: any[])
+	static rowAtY(state: TrackStateManager<any>, y: number): number
+	{
+		return 0
+	}
+	
+	
+	static execute(fnName: string, state: ContentStateManager<EditorState>, trackIndex: number, ...args: any[]): any
 	{
         const trackStateManager = new TrackStateManager<any>(state, trackIndex)
         
         const handlerDerived = Track.handlerForTrackType(trackStateManager.trackState.type)
 		const fnDerived = handlerDerived[fnName]
         if (fnDerived)
-        {
-            fnDerived(trackStateManager, ...args)
-            return
-        }
+            return fnDerived(trackStateManager, ...args)
 
 		const fn = (Track as any)[fnName]
         if (fn)
-        {
-            fn(trackStateManager, ...args)
-            return
-        }
+            return fn(trackStateManager, ...args)
+
+        return null
 	}
 }

@@ -28,6 +28,9 @@ export default interface EditorState
         pos: { x: number, y: number }
         posPrev: { x: number, y: number }
         time: Rational
+        track: number,
+        trackY: number,
+        row: number,
 
         hover: null |
         {
@@ -38,14 +41,22 @@ export default interface EditorState
 
         drag:
         {
+            xLocked: boolean
+            yLocked: boolean
+            
             posOrigin: { x: number, y: number }
             timeOrigin: Rational
             timeScrollOrigin: number
             rangeOrigin: Range
+            trackOrigin: number
+            trackYOrigin: number
+            rowOrigin: number
             projectOrigin: Project
 
             posDelta: { x: number, y: number }
             timeDelta: Rational
+            trackYDelta: number
+            rowDelta: number
         }
 
         wheelDate: Date
