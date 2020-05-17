@@ -67,6 +67,17 @@ export default class TrackKeyChanges
             }
         })
 	}
+	
+	
+	static elemsAt(state: TrackStateManager<TrackKeyChangesState>, region: any): Project.ID[]
+	{
+        const elems = []
+
+        for (const keyCh of TrackKeyChanges.iterAtRange(state, region.range))
+            elems.push(keyCh.id)
+
+        return elems
+	}
 
 
     static *iterAtRange(state: TrackStateManager<TrackKeyChangesState>, range: Range): Generator<Project.KeyChange, void, void>

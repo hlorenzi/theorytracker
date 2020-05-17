@@ -67,6 +67,17 @@ export default class TrackMeterChanges
             }
         })
 	}
+	
+	
+	static elemsAt(state: TrackStateManager<TrackMeterChangesState>, region: any): Project.ID[]
+	{
+        const elems = []
+
+        for (const meterCh of TrackMeterChanges.iterAtRange(state, region.range))
+            elems.push(meterCh.id)
+
+        return elems
+	}
 
 
     static *iterAtRange(state: TrackStateManager<TrackMeterChangesState>, range: Range): Generator<Project.MeterChange, void, void>

@@ -128,6 +128,15 @@ export default class ListOfPoints<T extends Element>
 	}
 	
 	
+	findFirst(): T | null
+	{
+		if (this.elems.length > 0)
+			return this.elems[0]
+
+		return null
+	}
+	
+	
 	getTotalRange(): Range | null
 	{
 		if (this.elems.length == 0)

@@ -18,6 +18,26 @@ export default interface EditorState
     timeSnap: Rational
     timeSnapBase: Rational
 
+    cursor:
+    {
+        visible: boolean
+        time1: Rational
+        time2: Rational
+        track1: number
+        track2: number
+    }
+
+    rectCursor:
+    {
+        track: number
+        time1: Rational
+        time2: Rational
+        y1: number
+        y2: number
+    }
+
+    keys: { [key: string]: boolean }
+
     mouse:
     {
         down: boolean
@@ -30,6 +50,7 @@ export default interface EditorState
         time: Rational
         track: number,
         trackY: number,
+        trackYRaw: number,
         row: number,
 
         hover: null |
@@ -50,6 +71,8 @@ export default interface EditorState
             rangeOrigin: Range
             trackOrigin: number
             trackYOrigin: number
+            trackYRawOrigin: number
+            trackYScrollOrigin: number
             rowOrigin: number
             projectOrigin: Project
 

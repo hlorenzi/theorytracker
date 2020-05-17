@@ -31,6 +31,32 @@ export default class TrackNotesPreview
     }
 	
 	
+	static pan(state: TrackStateManager<TrackNotesPreviewState>)
+	{
+        const yScroll =
+            state.contentState.mouse.drag.trackYScrollOrigin -
+            state.contentState.mouse.drag.posDelta.y
+
+        state.mergeTrackState({ yScroll })
+	}
+
+			
+	static handleEdgeScroll(state: TrackStateManager<TrackNotesPreviewState>)
+	{
+		const threshold = state.appState.prefs.editor.mouseEdgeScrollThreshold
+		const speed = state.appState.prefs.editor.mouseEdgeScrollSpeed * 2
+
+        const mouseY = state.contentState.mouse.trackYRaw
+        const yScroll = state.trackState.yScroll
+
+        if (mouseY > state.trackState.h - threshold)
+            state.mergeTrackState({ yScroll: yScroll + speed })
+
+		else if (mouseY < threshold)
+            state.mergeTrackState({ yScroll: yScroll - speed })
+	}
+	
+	
 	static updateHover(state: TrackStateManager<TrackNotesPreviewState>, input: UpdateHoverInput)
 	{
         const margin = 10
@@ -46,8 +72,7 @@ export default class TrackNotesPreview
         {
             const margin = 2
 
-            const key = keyCh ? keyCh.key : Editor.defaultKey()
-            const row = TrackNotesPreview.rowForPitch(state, note.pitch, key)
+            const row = TrackNotesPreview.rowForPitch(state, note.pitch, keyCh.key)
             const rectExact = TrackNotesPreview.rectForNote(state, note.range, row, xMin, xMax)
             const rect = new Rect(
                 rectExact.x - margin,
@@ -101,16 +126,53 @@ export default class TrackNotesPreview
             }
         })
 	}
+	
+	
+	static elemsAt(state: TrackStateManager<TrackNotesPreviewState>, region: any): Project.ID[]
+	{
+        const elems = []
+
+        if (region.y1 === undefined)
+        {
+            for (const note of TrackNotesPreview.iterNotesAtRange(state, region.range))
+                elems.push(note.id)
+        }
+        else
+        {
+            for (const [note, keyCh, xMin, xMax] of TrackNotesPreview.iterNotesAndKeyChangesAtRange(state, region.range))
+            {
+                const row = TrackNotesPreview.rowForPitch(state, note.pitch, keyCh.key)
+                const rect = TrackNotesPreview.rectForNote(state, note.range, row, xMin, xMax)
+
+                if (rect.y1 < region.y2 && rect.y2 > region.y1)
+                    elems.push(note.id)
+            }
+        }
+
+        return elems
+	}
+
+
+    static *iterNotesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<Project.Note, void, void>
+    {
+        const trackElems = state.appState.project.rangedLists.get(state.trackState.trackId)
+        if (!trackElems)
+            return
+
+        for (const note of trackElems.iterAtRange(range))
+            yield note as Project.Note
+    }
 
 
     static *iterKeyChangePairsAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
     {
-        const defaultKey = Editor.defaultKey()
-
         const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project, state.trackState.trackId)
         const keyChangeTrackTimedElems = state.appState.project.timedLists.get(keyChangeTrackId)
         if (!keyChangeTrackTimedElems)
             return
+
+        const firstKeyCh = keyChangeTrackTimedElems.findFirst() as (Project.KeyChange | null)
+        const defaultKey = firstKeyCh ? firstKeyCh.key : Editor.defaultKey()
     
         for (const pair of keyChangeTrackTimedElems.iterActiveAtRangePairwise(range))
         {
@@ -127,30 +189,26 @@ export default class TrackNotesPreview
 
     static *iterNotesAndKeyChangesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<[Project.Note, Project.KeyChange, number, number], void, void>
     {
-        const trackElems = state.appState.project.rangedLists.get(state.trackState.trackId)
-        if (!trackElems)
-            return
-
         for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of TrackNotesPreview.iterKeyChangePairsAtRange(state, range))
         {
             const time1 = keyCh1.time.max(range.start)!
             const time2 = keyCh2.time.min(range.end)!
             
-            for (const note of trackElems.iterAtRange(new Range(time1, time2)))
-                yield [note as Project.Note, keyCh1, keyCh1X, keyCh2X]
+            for (const note of TrackNotesPreview.iterNotesAtRange(state, new Range(time1, time2)))
+                yield [note, keyCh1, keyCh1X, keyCh2X]
         }
     }
 
 
 	static yForRow(state: TrackStateManager<TrackNotesPreviewState>, row: number): number
 	{
-		return state.trackState.h / 2 - (row + 1 + state.trackState.yScroll) * state.trackState.rowScale
+		return state.trackState.h / 2 - (row + 1) * state.trackState.rowScale - state.trackState.yScroll
 	}
 	
 	
 	static rowAtY(state: TrackStateManager<TrackNotesPreviewState>, y: number): number
 	{
-		return Math.floor((state.trackState.h / 2 - y) / state.trackState.rowScale - state.trackState.yScroll)
+        return -Math.floor((y - state.trackState.h / 2) / state.trackState.rowScale) - 1
 	}
 	
 	
@@ -199,8 +257,8 @@ export default class TrackNotesPreview
     {
         const visibleRange = Editor.visibleTimeRange(state.contentStateManager)
 
-        const rowAtTop = TrackNotesPreview.rowAtY(state, 0)
-        const rowAtBottom = TrackNotesPreview.rowAtY(state, state.trackState.h)
+        const rowAtTop = TrackNotesPreview.rowAtY(state, state.trackState.yScroll)
+        const rowAtBottom = TrackNotesPreview.rowAtY(state, state.trackState.yScroll + state.trackState.h)
 
         const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
         const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1

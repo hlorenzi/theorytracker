@@ -50,17 +50,18 @@ export default function App(props: {})
             prefs: {
                 editor: {
                     bkgColor: "#000",//"#29242e",
-                    trackVBorderColor: "#fff",
-                    trackHBorderColor: "#fff",
+                    trackVBorderColor: "#888",
+                    trackHBorderColor: "#888",
                     
                     selectionCursorColor: "#0af",
+                    selectionBkgColor: "#024",
                     playbackCursorColor: "#f00",
                     trackSeparatorColor: "#aaa",
 
                     measureColor: "#444",
                     submeasureColor: "#222",
                     halfSubmeasureColor: "#111",
-                    measureAlternateBkgColor: "#111",
+                    measureAlternateBkgColor: "#fff1",
 
                     octaveDividerColor: "#444",
                     noteRowAlternateBkgColor: "#222",//"#19141e",
@@ -68,8 +69,16 @@ export default function App(props: {})
                     meterChangeColor: "#0cf",
                     keyChangeColor: "#f0c",
 
+                    keyPan: " ",
+                    keyDraw: "a",
+                    keySelectMultiple: "control",
+                    keySelectRect: "shift",
+
                     mouseDragXLockedDistance: 10,
                     mouseDragYLockedDistance: 10,
+
+                    mouseEdgeScrollThreshold: 60,
+                    mouseEdgeScrollSpeed: 1,
                 },
             },
         }
@@ -96,17 +105,56 @@ export default function App(props: {})
 export interface AppState
 {
     dockableRoot: Root
-    dockableContents: {
+    dockableContents:
+    {
         [id: number]: Content
     }
 
     project: Project
-    selection: Immutable.Set<number>,
-    prefs: any
+    selection: Immutable.Set<number>
+    prefs: AppPreferences
 }
 
 
 export type AppDispatch = (action: any) => void
+
+
+export interface AppPreferences
+{
+    editor:
+    {
+        bkgColor: string
+        trackVBorderColor: string
+        trackHBorderColor: string
+        
+        selectionCursorColor: string
+        selectionBkgColor: string
+        playbackCursorColor: string
+        trackSeparatorColor: string
+
+        measureColor: string
+        submeasureColor: string
+        halfSubmeasureColor: string
+        measureAlternateBkgColor: string
+
+        octaveDividerColor: string
+        noteRowAlternateBkgColor: string
+
+        meterChangeColor: string
+        keyChangeColor: string
+
+        keyPan: string
+        keyDraw: string
+        keySelectMultiple: string
+        keySelectRect: string
+
+        mouseDragXLockedDistance: number
+        mouseDragYLockedDistance: number
+
+        mouseEdgeScrollThreshold: number
+        mouseEdgeScrollSpeed: number
+    }
+}
 
 
 export class ContentStateManager<T>
@@ -122,7 +170,7 @@ export class ContentStateManager<T>
     }
 
 
-    mergeAppState(newState: any)
+    mergeAppState(newState: Partial<AppState>)
     {
         this.appState = {
             ...this.appState,
@@ -152,7 +200,7 @@ export class ContentStateManager<T>
     }
 
 
-    mergeContentState(newState: any)
+    mergeContentState(newState: Partial<T>)
     {
         this.contentState = {
             ...this.contentState,

@@ -4,6 +4,7 @@ import TrackStateManager from "./trackStateManager"
 import TrackNotesPreview from "./trackNotesPreview"
 import TrackKeyChanges from "./trackKeyChanges"
 import TrackMeterChanges from "./trackMeterChanges"
+import Project from "../project/project2"
 
 
 export default class Track
@@ -31,6 +32,12 @@ export default class Track
 	static rowAtY(state: TrackStateManager<any>, y: number): number
 	{
 		return 0
+	}
+	
+	
+	static elemsAt(state: TrackStateManager<any>, region: any): Project.ID[]
+	{
+		return []
 	}
 	
 	

@@ -1,5 +1,6 @@
 import { AppState, ContentStateManager } from "../App"
 import EditorState from "./editorState"
+import TrackState from "./trackState"
 
 
 export default class TrackStateManager<T>
@@ -33,7 +34,7 @@ export default class TrackStateManager<T>
     }
 
 
-    mergeContentState(newState: any)
+    mergeContentState(newState: Partial<EditorState>)
     {
         this.contentStateManager.mergeContentState(newState)
     }
@@ -50,14 +51,14 @@ export default class TrackStateManager<T>
         this.contentStateManager.mergeContentState({
             tracks: [
                 ...this.contentStateManager.contentState.tracks.slice(0, this.trackIndex),
-                newState,
+                newState as any as TrackState,
                 ...this.contentStateManager.contentState.tracks.slice(this.trackIndex + 1),
             ]
         })
     }
 
 
-    mergeTrackState(newState: any)
+    mergeTrackState(newState: Partial<T>)
     {
         this.trackState = {
             ...this.trackState,
