@@ -1,25 +1,12 @@
 import Editor from "./editor"
 import Track from "./track"
 import TrackStateManager from "./trackStateManager"
-import TrackState from "./trackState"
+import TrackKeyChangesState from "./trackKeyChangesState"
 import Rect from "../util/rect"
 import Range from "../util/range"
 import Project from "../project/project2"
 import Rational from "../util/rational"
-import CanvasUtils from "../util/canvasUtils"
 import * as Theory from "../theory/theory"
-
-
-type TrackKeyChangesState = TrackState
-
-
-type UpdateHoverInput =
-{
-    mouse:
-    {
-        pos: { x: number, y: number }
-    }
-}
 
 
 export default class TrackKeyChanges
@@ -28,7 +15,7 @@ export default class TrackKeyChanges
     static knobHeight = 22
 
 
-    static init(state: TrackStateManager<TrackState>)
+    static init(state: TrackStateManager<TrackKeyChangesState>)
     {
         Track.init(state)
         state.mergeTrackState({
@@ -37,19 +24,21 @@ export default class TrackKeyChanges
     }
 	
 	
-	static updateHover(state: TrackStateManager<TrackKeyChangesState>, input: UpdateHoverInput)
+	static hover(state: TrackStateManager<TrackKeyChangesState>)
 	{
+        const pos = state.contentState.mouse.trackPos
+
         const checkRange = Editor.timeRangeAtX(
             state.contentStateManager,
-            input.mouse.pos.x - TrackKeyChanges.knobWidth,
-            input.mouse.pos.x + TrackKeyChanges.knobWidth)
+            pos.x - TrackKeyChanges.knobWidth,
+            pos.x + TrackKeyChanges.knobWidth)
 
         let hover = null
         
         for (const keyCh of TrackKeyChanges.iterAtRange(state, checkRange))
         {
             const rect = TrackKeyChanges.knobRectForKeyChange(state, keyCh.time)
-            if (rect.contains(input.mouse.pos))
+            if (rect.contains(pos))
             {
                 hover =
                 {
@@ -61,11 +50,54 @@ export default class TrackKeyChanges
         }
 
         state.mergeContentState({
-            mouse: {
-                ...state.contentState.mouse,
+            mouse: { ...state.contentState.mouse,
                 hover,
             }
         })
+	}
+    
+
+	static drawClear(state: TrackStateManager<TrackKeyChangesState>)
+    {
+        state.mergeTrackState({ draw: null })
+    }
+    
+
+	static drawHover(state: TrackStateManager<TrackKeyChangesState>)
+    {
+        const time =  state.contentState.mouse.time
+
+        state.mergeTrackState({ draw: { time } })
+    }
+	
+	
+	static drawDrag(state: TrackStateManager<TrackKeyChangesState>)
+	{
+		const draw = state.trackState.draw
+		if (draw)
+		{
+            const time = state.contentState.mouse.time
+            state.mergeTrackState({ draw: { time } })
+		}
+	}
+	
+	
+	static drawEnd(state: TrackStateManager<TrackKeyChangesState>)
+	{
+		const draw = state.trackState.draw
+		if (draw)
+		{
+            const keyCh = new Project.KeyChange(
+                state.trackState.trackId,
+                draw.time,
+                Editor.defaultKey())
+
+            const id = state.appState.project.nextId
+            state.mergeAppState({
+                project: Project.upsertTimedElement(state.appState.project, keyCh),
+                selection: state.appState.selection.add(id),
+            })
+		}
 	}
 	
 	
@@ -106,7 +138,15 @@ export default class TrackKeyChanges
         const visibleRange = Editor.visibleTimeRange(state.contentStateManager)
 
 		for (const keyCh of TrackKeyChanges.iterAtRange(state, visibleRange))
-			TrackKeyChanges.renderKeyChange(state, ctx, keyCh)
+            TrackKeyChanges.renderKeyChange(state, ctx, keyCh)
+            
+        const draw = state.trackState.draw
+        if (draw)
+        {
+            ctx.globalAlpha = 0.6
+            TrackKeyChanges.renderKeyChangeKnob(state, ctx, draw.time)
+            ctx.globalAlpha = 1
+        }
     }
 	
 	

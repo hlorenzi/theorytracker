@@ -10,15 +10,6 @@ import CanvasUtils from "../util/canvasUtils"
 import * as Theory from "../theory/theory"
 
 
-type UpdateHoverInput =
-{
-    mouse:
-    {
-        pos: { x: number, y: number }
-    }
-}
-
-
 export default class TrackNotesPreview
 {
     static init(state: TrackStateManager<TrackNotesPreviewState>)
@@ -31,39 +22,18 @@ export default class TrackNotesPreview
     }
 	
 	
-	static pan(state: TrackStateManager<TrackNotesPreviewState>)
+	static yScrollEnabled(state: TrackStateManager<TrackNotesPreviewState>): boolean
 	{
-        const yScroll =
-            state.contentState.mouse.drag.trackYScrollOrigin -
-            state.contentState.mouse.drag.posDelta.y
-
-        state.mergeTrackState({ yScroll })
-	}
-
-			
-	static handleEdgeScroll(state: TrackStateManager<TrackNotesPreviewState>)
-	{
-		const threshold = state.appState.prefs.editor.mouseEdgeScrollThreshold
-		const speed = state.appState.prefs.editor.mouseEdgeScrollSpeed * 2
-
-        const mouseY = state.contentState.mouse.trackYRaw
-        const yScroll = state.trackState.yScroll
-
-        if (mouseY > state.trackState.h - threshold)
-            state.mergeTrackState({ yScroll: yScroll + speed })
-
-		else if (mouseY < threshold)
-            state.mergeTrackState({ yScroll: yScroll - speed })
+		return true
 	}
 	
 	
-	static updateHover(state: TrackStateManager<TrackNotesPreviewState>, input: UpdateHoverInput)
+	static hover(state: TrackStateManager<TrackNotesPreviewState>)
 	{
+        const pos = state.contentState.mouse.trackPos
+
         const margin = 10
-        const checkRange = Editor.timeRangeAtX(
-            state.contentStateManager,
-            input.mouse.pos.x - margin,
-            input.mouse.pos.x + margin)
+        const checkRange = Editor.timeRangeAtX(state.contentStateManager, pos.x - margin, pos.x + margin)
         
         let hoverPrimary = null
         let hoverSecondary = null
@@ -87,14 +57,14 @@ export default class TrackNotesPreview
             const rectStretchStart = new Rect(rect.x - stretchMarginOut, rect.y, stretchMarginOut + stretchMarginIn, rect.h)
             const rectStretchEnd = new Rect(rect.x2 - stretchMarginIn, rect.y, stretchMarginOut + stretchMarginIn, rect.h)
             
-            const exactHover = rect.contains(input.mouse.pos)
+            const exactHover = rect.contains(pos)
 
             let action = 0
-            if (dragMarginOut > 0 && rectDrag.contains(input.mouse.pos))
+            if (dragMarginOut > 0 && rectDrag.contains(pos))
                 action = Editor.actionDragTime | Editor.actionDragPitchRow
-            else if (rectStretchStart.contains(input.mouse.pos) && !rectExact.cutStart)
+            else if (rectStretchStart.contains(pos) && !rectExact.cutStart)
                 action = Editor.actionStretchTimeStart
-            else if (rectStretchEnd.contains(input.mouse.pos) && !rectExact.cutEnd)
+            else if (rectStretchEnd.contains(pos) && !rectExact.cutEnd)
                 action = Editor.actionStretchTimeEnd
             else if (exactHover)
                 action = Editor.actionDragTime | Editor.actionDragPitchRow
@@ -120,11 +90,74 @@ export default class TrackNotesPreview
 
         const hover = hoverPrimary || hoverSecondary
         state.mergeContentState({
-            mouse: {
-                ...state.contentState.mouse,
+            mouse: { ...state.contentState.mouse,
                 hover,
             }
         })
+    }
+    
+
+	static drawClear(state: TrackStateManager<TrackNotesPreviewState>)
+    {
+        state.mergeTrackState({ draw: null })
+    }
+    
+
+	static drawHover(state: TrackStateManager<TrackNotesPreviewState>)
+    {
+        const time =  state.contentState.mouse.time
+        const key = Editor.keyAt(state.contentStateManager, state.trackState.trackId, time)
+        const row = TrackNotesPreview.rowAtY(state, state.contentState.mouse.trackPos.y)
+        const pitch = TrackNotesPreview.pitchForRow(state, row, key)
+
+        state.mergeTrackState({
+            draw:
+            {
+                time1: time,
+                time2: time.add(state.contentState.timeSnap.multiply(new Rational(4))),
+                pitch,
+            }
+        })
+    }
+	
+	
+	static drawDrag(state: TrackStateManager<TrackNotesPreviewState>)
+	{
+		const draw = state.trackState.draw
+		if (draw)
+		{
+            let time2 = state.contentState.mouse.time
+            
+            const time1X = Editor.xAtTime(state.contentStateManager, draw.time1)
+            const time2X = Editor.xAtTime(state.contentStateManager, time2)
+			if (Math.abs(time1X - time2X) < 5)
+				time2 = draw.time1.add(state.contentState.timeSnap.multiply(new Rational(4)))
+            
+            state.mergeTrackState({
+                draw: { ...draw,
+                    time2,
+                }
+            })
+		}
+	}
+	
+	
+	static drawEnd(state: TrackStateManager<TrackNotesPreviewState>)
+	{
+		const draw = state.trackState.draw
+		if (draw)
+		{
+            const note = new Project.Note(
+                state.trackState.trackId,
+                new Range(draw.time1, draw.time2).sorted(),
+                draw.pitch)
+
+            const id = state.appState.project.nextId
+            state.mergeAppState({
+                project: Project.upsertRangedElement(state.appState.project, note),
+                selection: state.appState.selection.add(id),
+            })
+		}
 	}
 	
 	
@@ -150,7 +183,7 @@ export default class TrackNotesPreview
         }
 
         return elems
-	}
+    }
 
 
     static *iterNotesAtRange(state: TrackStateManager<TrackNotesPreviewState>, range: Range): Generator<Project.Note, void, void>
@@ -202,7 +235,7 @@ export default class TrackNotesPreview
 
 	static yForRow(state: TrackStateManager<TrackNotesPreviewState>, row: number): number
 	{
-		return state.trackState.h / 2 - (row + 1) * state.trackState.rowScale - state.trackState.yScroll
+		return state.trackState.h / 2 - (row + 1) * state.trackState.rowScale
 	}
 	
 	
@@ -309,10 +342,24 @@ export default class TrackNotesPreview
 			const playing = false//state.playback.playing && note.range.overlapsPoint(state.playback.time)
 			TrackNotesPreview.renderNote(state, ctx, note.range, row, xMin, xMax, fillStyle, hovering, selected, playing)
         }
+
+		const draw = state.trackState.draw
+		if (draw)
+		{
+			ctx.globalAlpha = 0.6
+			
+			const key = Editor.keyAt(state.contentStateManager, state.trackState.trackId, draw.time1)
+			const row = TrackNotesPreview.rowForPitch(state, draw.pitch, key)
+			const mode = key.scale.metadata!.mode
+			const fillStyle = CanvasUtils.fillStyleForDegree(ctx, key.degreeForMidi(draw.pitch) + mode)
+			TrackNotesPreview.renderNote(state, ctx, new Range(draw.time1, draw.time2).sorted(), row, -Infinity, Infinity, fillStyle)
+			
+			ctx.globalAlpha = 1
+		}
     }
 	
 	
-	static renderNote(state: TrackStateManager<TrackNotesPreviewState>, ctx: CanvasRenderingContext2D, range: Range, row: number, xMin: number, xMax: number, fillStyle: any, hovering: boolean, selected: boolean, playing: boolean)
+	static renderNote(state: TrackStateManager<TrackNotesPreviewState>, ctx: CanvasRenderingContext2D, range: Range, row: number, xMin: number, xMax: number, fillStyle: any, hovering?: boolean, selected?: boolean, playing?: boolean)
 	{
 		const rect = TrackNotesPreview.rectForNote(state, range, row, xMin, xMax)
 		

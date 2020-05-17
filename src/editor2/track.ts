@@ -29,6 +29,12 @@ export default class Track
 	}
 	
 	
+	static yScrollEnabled(state: TrackStateManager<any>): boolean
+	{
+		return false
+	}
+	
+	
 	static rowAtY(state: TrackStateManager<any>, y: number): number
 	{
 		return 0

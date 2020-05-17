@@ -1,25 +1,12 @@
 import Editor from "./editor"
 import Track from "./track"
 import TrackStateManager from "./trackStateManager"
-import TrackState from "./trackState"
+import TrackMeterChangesState from "./trackMeterChangesState"
 import Rect from "../util/rect"
 import Range from "../util/range"
 import Project from "../project/project2"
 import Rational from "../util/rational"
-import CanvasUtils from "../util/canvasUtils"
 import * as Theory from "../theory/theory"
-
-
-type TrackMeterChangesState = TrackState
-
-
-type UpdateHoverInput =
-{
-    mouse:
-    {
-        pos: { x: number, y: number }
-    }
-}
 
 
 export default class TrackMeterChanges
@@ -28,7 +15,7 @@ export default class TrackMeterChanges
     static knobHeight = 22
 
 
-    static init(state: TrackStateManager<TrackState>)
+    static init(state: TrackStateManager<TrackMeterChangesState>)
     {
         Track.init(state)
         state.mergeTrackState({
@@ -37,19 +24,21 @@ export default class TrackMeterChanges
     }
 	
 	
-	static updateHover(state: TrackStateManager<TrackMeterChangesState>, input: UpdateHoverInput)
+	static hover(state: TrackStateManager<TrackMeterChangesState>)
 	{
+        const pos = state.contentState.mouse.trackPos
+
         const checkRange = Editor.timeRangeAtX(
             state.contentStateManager,
-            input.mouse.pos.x - TrackMeterChanges.knobWidth,
-            input.mouse.pos.x + TrackMeterChanges.knobWidth)
+            pos.x - TrackMeterChanges.knobWidth,
+            pos.x + TrackMeterChanges.knobWidth)
 
         let hover = null
         
         for (const keyCh of TrackMeterChanges.iterAtRange(state, checkRange))
         {
             const rect = TrackMeterChanges.knobRectForMeterChange(state, keyCh.time)
-            if (rect.contains(input.mouse.pos))
+            if (rect.contains(pos))
             {
                 hover =
                 {
@@ -61,11 +50,54 @@ export default class TrackMeterChanges
         }
 
         state.mergeContentState({
-            mouse: {
-                ...state.contentState.mouse,
+            mouse: { ...state.contentState.mouse,
                 hover,
             }
         })
+	}
+    
+
+	static drawClear(state: TrackStateManager<TrackMeterChangesState>)
+    {
+        state.mergeTrackState({ draw: null })
+    }
+    
+
+	static drawHover(state: TrackStateManager<TrackMeterChangesState>)
+    {
+        const time =  state.contentState.mouse.time
+
+        state.mergeTrackState({ draw: { time } })
+    }
+	
+	
+	static drawDrag(state: TrackStateManager<TrackMeterChangesState>)
+	{
+		const draw = state.trackState.draw
+		if (draw)
+		{
+            const time = state.contentState.mouse.time
+            state.mergeTrackState({ draw: { time } })
+		}
+	}
+	
+	
+	static drawEnd(state: TrackStateManager<TrackMeterChangesState>)
+	{
+		const draw = state.trackState.draw
+		if (draw)
+		{
+            const meterCh = new Project.MeterChange(
+                state.trackState.trackId,
+                draw.time,
+                Editor.defaultMeter())
+
+            const id = state.appState.project.nextId
+            state.mergeAppState({
+                project: Project.upsertTimedElement(state.appState.project, meterCh),
+                selection: state.appState.selection.add(id),
+            })
+		}
 	}
 	
 	
@@ -107,6 +139,14 @@ export default class TrackMeterChanges
 
 		for (const meterCh of TrackMeterChanges.iterAtRange(state, visibleRange))
             TrackMeterChanges.renderMeterChange(state, ctx, meterCh)
+        
+        const draw = state.trackState.draw
+        if (draw)
+        {
+            ctx.globalAlpha = 0.6
+            TrackMeterChanges.renderMeterChangeKnob(state, ctx, draw.time)
+            ctx.globalAlpha = 1
+        }
     }
 	
 	

@@ -22,6 +22,12 @@ export default class TrackStateManager<T>
     }
 
 
+    mergeAppState(newState: Partial<AppState>)
+    {
+        this.contentStateManager.mergeAppState(newState)
+    }
+
+
     get contentState(): EditorState
     {
         return this.contentStateManager.contentState

@@ -108,7 +108,7 @@ export default class Editor
 				posPrev: { x: 0, y: 0 },
 				time: new Rational(0),
 				track: 0,
-				trackY: 0,
+				trackPos: { x: 0, y: 0 },
 				trackYRaw: 0,
 				row: 0,
 
@@ -123,7 +123,7 @@ export default class Editor
 					timeScrollOrigin: 0,
 					rangeOrigin: new Range(new Rational(), new Rational()),
 					trackOrigin: 0,
-					trackYOrigin: 0,
+					trackPosOrigin: { x: 0, y: 0 },
 					trackYRawOrigin: 0,
 					trackYScrollOrigin: 0,
 					rowOrigin: 0,
@@ -131,7 +131,7 @@ export default class Editor
 
 					posDelta: { x: 0, y: 0 },
 					timeDelta: new Rational(0),
-					trackYDelta: 0,
+					trackPosDelta: { x: 0, y: 0 },
 					rowDelta: 0,
 				},
 
@@ -220,8 +220,10 @@ export default class Editor
 		const track = Editor.trackAtY(state, state.contentState.mouse.pos.y)
 		const trackDrag = !state.contentState.mouse.down ? track : state.contentState.mouse.drag.trackOrigin
 
+		const trackX = action.pos.x - state.contentState.trackHeaderW
 		const trackYRaw = state.contentState.mouse.pos.y - Editor.trackY(state, trackDrag)
 		const trackY = trackYRaw + state.contentState.tracks[trackDrag].yScroll
+		const trackPos = { x: trackX, y: trackY }
 		
 		const row = Track.execute("rowAtY", state, trackDrag, trackY)
 
@@ -230,9 +232,9 @@ export default class Editor
 				...state.contentState.mouse,
 				pos: action.pos,
 				posPrev: state.contentState.mouse.pos,
-				time: Editor.timeAtX(state, action.pos.x - state.contentState.trackHeaderW),
+				time: Editor.timeAtX(state, trackX),
 				track,
-				trackY,
+				trackPos,
 				trackYRaw,
 				row,
 			}
@@ -247,20 +249,25 @@ export default class Editor
 				}
 			})
 
-			for (let t = 0; t < state.contentState.tracks.length; t++)
+			if (state.contentState.keys[state.appState.prefs.editor.keyDraw])
 			{
-				const rect = Editor.rectForTrack(state, t)!
-
-				if (rect.contains(state.contentState.mouse.pos))
+				for (let t = 0; t < state.contentState.tracks.length; t++)
 				{
-					const input = { mouse: { pos: { ...state.contentState.mouse.pos } } }
-					input.mouse.pos.x -= rect.x
-					input.mouse.pos.y -= rect.y
-					
-					Track.execute("updateHover", state, t, input)
+					if (t == state.contentState.mouse.track)
+						Track.execute("drawHover", state, t)
+					else
+						Track.execute("drawClear", state, t)
 				}
-				else
-					Track.execute("update", state, t)
+			}
+			else
+			{
+				for (let t = 0; t < state.contentState.tracks.length; t++)
+				{
+					Track.execute("drawClear", state, t)
+
+					if (t == state.contentState.mouse.track)
+						Track.execute("hover", state, t)
+				}
 			}
 		}
 		else
@@ -273,7 +280,10 @@ export default class Editor
 			const timeDelta =
 				state.contentState.mouse.time.subtract(state.contentState.mouse.drag.timeOrigin)
 
-			const trackYDelta = state.contentState.mouse.trackY - state.contentState.mouse.drag.trackYOrigin
+			const trackPosDelta = {
+				x: state.contentState.mouse.trackPos.x - state.contentState.mouse.drag.trackPosOrigin.x,
+				y: state.contentState.mouse.trackPos.y - state.contentState.mouse.drag.trackPosOrigin.y,
+			}
 
 			const rowDelta = state.contentState.mouse.row - state.contentState.mouse.drag.rowOrigin
 
@@ -289,7 +299,7 @@ export default class Editor
 						yLocked,
 						posDelta,
 						timeDelta,
-						trackYDelta,
+						trackPosDelta,
 						rowDelta,
 					},
 				},
@@ -301,7 +311,15 @@ export default class Editor
 					timeScroll: state.contentState.mouse.drag.timeScrollOrigin - state.contentState.mouse.drag.posDelta.x / state.contentState.timeScale,
 				})
 
-				Track.execute("pan", state, state.contentState.mouse.drag.trackOrigin)
+				if (Track.execute("yScrollEnabled", state, state.contentState.mouse.drag.trackOrigin))
+				{
+					const trackState = new TrackStateManager<TrackState>(state, state.contentState.mouse.drag.trackOrigin)
+					const yScroll =
+						state.contentState.mouse.drag.trackYScrollOrigin -
+						state.contentState.mouse.drag.posDelta.y
+		
+					trackState.mergeTrackState({ yScroll })
+				}
 			}
 			else if (state.contentState.mouse.action == Editor.actionSelectCursor)
 			{
@@ -315,13 +333,18 @@ export default class Editor
 				state.mergeContentState({
 					rectCursor: { ...state.contentState.rectCursor,
 						time2: state.contentState.mouse.time,
-						y2: state.contentState.mouse.trackY,
+						y2: state.contentState.mouse.trackPos.y,
 					},
 				})
 
 				Editor.selectionClear(state)
 				Editor.selectionAddAtRectCursor(state)
 				Editor.handleEdgeScroll(state, true)
+			}
+			else if (state.contentState.mouse.action == Editor.actionDraw)
+			{
+				Track.execute("drawDrag", state, state.contentState.mouse.drag.trackOrigin)
+				Editor.handleEdgeScroll(state, false)
 			}
 			else
 			{
@@ -380,11 +403,7 @@ export default class Editor
 				if (mouseAction & Editor.actionDragPitchRow)
 				{
 					const note = rangedElem as Project.Note
-					const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project, 0)
-					const keyChangeTrackTimedElems = state.appState.project.timedLists.get(keyChangeTrackId)!
-
-					const keyCh = keyChangeTrackTimedElems.findActiveAt(rangedElem.range.start) as Project.KeyChange
-					const key = keyCh ? keyCh.key : Editor.defaultKey()
+					const key = Editor.keyAt(state, state.contentState.tracks[state.contentState.mouse.drag.trackOrigin].trackId, rangedElem.range.start)
 					const degree = key.octavedDegreeForMidi(note.pitch)
 					const newPitch = key.midiForDegree(Math.floor(degree + mouseDrag.rowDelta))
 					changes.pitch = newPitch
@@ -438,19 +457,17 @@ export default class Editor
 		const timeSinceLastDown = now.getTime() - state.contentState.mouse.downDate.getTime()
 
 		state.mergeContentState({
-			mouse: {
-				...state.contentState.mouse,
+			mouse: { ...state.contentState.mouse,
 				down: true,
 				downDate: now,
-				drag: {
-					...state.contentState.mouse.drag,
+				drag: { ...state.contentState.mouse.drag,
 					xLocked: true,
 					yLocked: true,
 					posOrigin: state.contentState.mouse.pos,
 					timeOrigin: state.contentState.mouse.time,
 					timeScrollOrigin: state.contentState.timeScroll,
 					trackOrigin: state.contentState.mouse.track,
-					trackYOrigin: state.contentState.mouse.trackY,
+					trackPosOrigin: state.contentState.mouse.trackPos,
 					trackYRawOrigin: state.contentState.mouse.trackYRaw,
 					trackYScrollOrigin: state.contentState.tracks[state.contentState.mouse.track].yScroll,
 					rowOrigin: state.contentState.mouse.row,
@@ -463,8 +480,7 @@ export default class Editor
 		if (action.rightButton || state.contentState.keys[state.appState.prefs.editor.keyPan])
 		{
 			state.mergeContentState({
-				mouse: {
-					...state.contentState.mouse,
+				mouse: { ...state.contentState.mouse,
 					action: Editor.actionPan
 				}
 			})
@@ -478,12 +494,23 @@ export default class Editor
 					track: state.contentState.mouse.track,
 					time1: state.contentState.mouse.time,
 					time2: state.contentState.mouse.time,
-					y1: state.contentState.mouse.trackY,
-					y2: state.contentState.mouse.trackY,
+					y1: state.contentState.mouse.trackPos.y,
+					y2: state.contentState.mouse.trackPos.y,
 				},
-				mouse: {
-					...state.contentState.mouse,
+				mouse: { ...state.contentState.mouse,
 					action: Editor.actionSelectRect,
+				}
+			})
+		}
+		else if (state.contentState.keys[state.appState.prefs.editor.keyDraw])
+		{
+			Editor.cursorSetVisible(state, false)
+			Editor.selectionClear(state)
+			Track.execute("drawStart", state, state.contentState.mouse.track)
+
+			state.mergeContentState({
+				mouse: { ...state.contentState.mouse,
+					action: Editor.actionDraw,
 				}
 			})
 		}
@@ -506,10 +533,8 @@ export default class Editor
 				Editor.cursorSetVisible(state, false)
 
 				state.mergeContentState({
-					mouse: {
-						...state.contentState.mouse,
-						drag: {
-							...state.contentState.mouse.drag,
+					mouse: { ...state.contentState.mouse,
+						drag: { ...state.contentState.mouse.drag,
 							rangeOrigin: Editor.selectionRange(state)!,
 						},
 						action: state.contentState.mouse.hover.action,
@@ -524,8 +549,7 @@ export default class Editor
 				Editor.cursorPlace(state, state.contentState.mouse.time, state.contentState.mouse.track)
 				Editor.cursorSetVisible(state, true)
 				state.mergeContentState({
-					mouse: {
-						...state.contentState.mouse,
+					mouse: { ...state.contentState.mouse,
 						action: Editor.actionSelectCursor,
 					}
 				})
@@ -539,9 +563,13 @@ export default class Editor
 		if (!state.contentState.mouse.down)
 			return state
 
+		if (state.contentState.mouse.action == Editor.actionDraw)
+		{
+			Track.execute("drawEnd", state, state.contentState.mouse.track)
+		}
+
 		state.mergeContentState({
-			mouse: {
-				...state.contentState.mouse,
+			mouse: { ...state.contentState.mouse,
 				down: false,
 				action: 0,
 			}
@@ -558,8 +586,7 @@ export default class Editor
 
 			state.mergeContentState({
 				timeScroll,
-				mouse: {
-					...state.contentState.mouse,
+				mouse: { ...state.contentState.mouse,
 					wheelDate
 				}
 			})
@@ -611,8 +638,22 @@ export default class Editor
 
 		state.mergeContentState({ timeScroll })
 
-		if (handleYScroll)
-			Track.execute("handleEdgeScroll", state, state.contentState.mouse.drag.trackOrigin)
+		if (handleYScroll &&
+			Track.execute("yScrollEnabled", state, state.contentState.mouse.drag.trackOrigin))
+		{
+			const threshold = state.appState.prefs.editor.mouseEdgeScrollThreshold
+			const speed = state.appState.prefs.editor.mouseEdgeScrollSpeed * 2
+	
+			const mouseY = state.contentState.mouse.trackYRaw
+
+			const trackState = new TrackStateManager<TrackState>(state, state.contentState.mouse.drag.trackOrigin)
+	
+			if (mouseY > trackState.trackState.h - threshold)
+				trackState.mergeTrackState({ yScroll: trackState.trackState.yScroll + speed })
+	
+			else if (mouseY < threshold)
+				trackState.mergeTrackState({ yScroll: trackState.trackState.yScroll - speed })
+		}
 	}
 	
 	
@@ -680,7 +721,7 @@ export default class Editor
 		{
 			let selection = state.appState.selection
 
-			const range = new Range(time1, time2).sorted()
+			const range = new Range(time1, time2, false, false).sorted()
 
 			for (let t = trackMin; t <= trackMax; t++)
 			{
@@ -701,15 +742,13 @@ export default class Editor
 		
 		const time1 = state.contentState.rectCursor.time1
 		const time2 = state.contentState.rectCursor.time2
-
 		if (time1.compare(time2) != 0)
 		{
 			let selection = state.appState.selection
 
-			const range = new Range(time1, time2).sorted()
-			const yScroll = state.contentState.tracks[state.contentState.rectCursor.track].yScroll
-			const y1 = -yScroll + Math.min(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)
-			const y2 = -yScroll + Math.max(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)
+			const range = new Range(time1, time2, false, false).sorted()
+			const y1 = Math.min(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)
+			const y2 = Math.max(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)
 			const elems = Track.execute("elemsAt", state, track, { range, y1, y2 })
 
 			for (const elem of elems)
@@ -738,7 +777,7 @@ export default class Editor
 
 	static selectionRange(state: ContentStateManager<EditorState>): Range | null
 	{
-		let range = null
+		let range: Range | null = null
 
 		for (const id of state.appState.selection)
 		{
@@ -845,6 +884,25 @@ export default class Editor
 			Editor.timeAtX(state, 0).subtract(state.contentState.timeSnap),
 			Editor.timeAtX(state, state.contentState.w).add(state.contentState.timeSnap))
 	}
+    
+
+    static keyAt(state: ContentStateManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Key
+    {
+        const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project,trackId)
+        const keyChangeTrackTimedElems = state.appState.project.timedLists.get(keyChangeTrackId)
+        if (!keyChangeTrackTimedElems)
+			return Editor.defaultKey()
+			
+		const keyCh = keyChangeTrackTimedElems.findActiveAt(time)
+		if (keyCh)
+			return (keyCh as Project.KeyChange).key
+
+        const firstKeyCh = keyChangeTrackTimedElems.findFirst() as (Project.KeyChange | null)
+		if (firstKeyCh)
+			return (firstKeyCh as Project.KeyChange).key
+			
+		return Editor.defaultKey()
+    }
 
 
 	static defaultKey(): Theory.Key
@@ -887,7 +945,7 @@ export default class Editor
 		{
 			ctx.save()
 			ctx.translate(state.contentState.trackHeaderW, y)
-
+			
 			ctx.beginPath()
 			ctx.rect(
 				0,
@@ -895,6 +953,8 @@ export default class Editor
 				state.contentState.w - state.contentState.trackHeaderW,
 				state.contentState.tracks[t].h - 1)
 			ctx.clip()
+
+			ctx.translate(0, -state.contentState.tracks[t].yScroll)
 
 			Editor.renderRectCursorHighlight(state, ctx, t)
 			Track.execute("render", state, t, ctx)
@@ -1152,9 +1212,8 @@ export default class Editor
 		
 		const timeMin = state.contentState.rectCursor.time1.min(state.contentState.rectCursor.time2)!
 		const timeMax = state.contentState.rectCursor.time1.max(state.contentState.rectCursor.time2)!
-		const yScroll = state.contentState.tracks[state.contentState.rectCursor.track].yScroll
-		const y1 = 0.5 + Math.floor(-yScroll + Math.min(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2))
-		const y2 = 0.5 + Math.floor(-yScroll + Math.max(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)) + 1
+		const y1 = 0.5 + Math.floor(Math.min(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2))
+		const y2 = 0.5 + Math.floor(Math.max(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)) + 1
 		
 		const x1 = 0.5 + Math.floor(Editor.xAtTime(state, timeMin))
 		const x2 = 0.5 + Math.floor(Editor.xAtTime(state, timeMax))
@@ -1174,9 +1233,8 @@ export default class Editor
 		
 		const timeMin = state.contentState.rectCursor.time1.min(state.contentState.rectCursor.time2)!
 		const timeMax = state.contentState.rectCursor.time1.max(state.contentState.rectCursor.time2)!
-		const yScroll = state.contentState.tracks[state.contentState.rectCursor.track].yScroll
-		const y1 = 0.5 + Math.floor(-yScroll + Math.min(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2))
-		const y2 = 0.5 + Math.floor(-yScroll + Math.max(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)) + 1
+		const y1 = 0.5 + Math.floor(Math.min(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2))
+		const y2 = 0.5 + Math.floor(Math.max(state.contentState.rectCursor.y1, state.contentState.rectCursor.y2)) + 1
 		
 		const x1 = 0.5 + Math.floor(Editor.xAtTime(state, timeMin))
 		const x2 = 0.5 + Math.floor(Editor.xAtTime(state, timeMax))

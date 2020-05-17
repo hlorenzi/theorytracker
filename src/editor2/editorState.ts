@@ -49,7 +49,7 @@ export default interface EditorState
         posPrev: { x: number, y: number }
         time: Rational
         track: number,
-        trackY: number,
+        trackPos: { x: number, y: number }
         trackYRaw: number,
         row: number,
 
@@ -70,7 +70,7 @@ export default interface EditorState
             timeScrollOrigin: number
             rangeOrigin: Range
             trackOrigin: number
-            trackYOrigin: number
+            trackPosOrigin: { x: number, y: number }
             trackYRawOrigin: number
             trackYScrollOrigin: number
             rowOrigin: number
@@ -78,7 +78,7 @@ export default interface EditorState
 
             posDelta: { x: number, y: number }
             timeDelta: Rational
-            trackYDelta: number
+            trackPosDelta: { x: number, y: number }
             rowDelta: number
         }
 

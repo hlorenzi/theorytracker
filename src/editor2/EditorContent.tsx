@@ -1,12 +1,13 @@
 import React from "react"
 import Editor from "./editor"
+import EditorState from "./editorState"
 import { AppState, AppDispatch, ContentStateManager } from "../App"
 import { Rect } from "../dockable/dockableData"
 
 
 interface EditorContentProps
 {
-	state: ContentStateManager<any>
+	state: ContentStateManager<EditorState>
 	contentId: number
 	appDispatch: AppDispatch
 	contentDispatch: (action: any) => void
@@ -156,9 +157,9 @@ export function EditorContent(props: EditorContentProps)
 		
 		const mouseAction =
 			state.contentState.mouse.action || 
-			(state.contentState.mouse.hover && state.contentState.mouse.hover.action)
+			(state.contentState.mouse.hover && state.contentState.mouse.hover.action)!
 		
-		if (state.contentState.mouse.draw || mouseAction & (Editor.actionDraw))
+		if (state.contentState.tracks.some((tr: any) => !!tr.draw) || mouseAction & (Editor.actionDraw))
 			refCanvas.current!.style.cursor = "crosshair"
 		else if (mouseAction & (Editor.actionDragTime))
 			refCanvas.current!.style.cursor = (state.contentState.mouse.down ? "grabbing" : "grab")
