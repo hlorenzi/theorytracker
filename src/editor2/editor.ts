@@ -10,6 +10,7 @@ import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import * as Theory from "../theory/theory"
+import DockableData from "../dockable/DockableData"
 
 
 export default class Editor
@@ -65,6 +66,8 @@ export default class Editor
     static reduce_init(state: ContentStateManager<EditorState>, action: any)
     {
         state.contentState = {
+			x: 0,
+			y: 0,
             w: 0,
 			h: 0,
 
@@ -144,6 +147,8 @@ export default class Editor
     static reduce_resize(state: ContentStateManager<EditorState>, action: any)
     {
         state.mergeContentState({
+			x: action.x,
+			y: action.y,
             w: action.w,
             h: action.h,
         })
@@ -476,8 +481,16 @@ export default class Editor
 				action: 0,
 			}
 		})
-		
-		if (action.rightButton || state.contentState.keys[state.appState.prefs.editor.keyPan])
+
+		Editor.popupClear(state)
+
+		if (action.rightButton && state.contentState.mouse.hover)
+		{
+			Editor.selectionClear(state)
+			Editor.selectionAdd(state, state.contentState.mouse.hover.id)
+			Track.execute("popup", state, state.contentState.mouse.track)
+		}
+		else if (action.rightButton || state.contentState.keys[state.appState.prefs.editor.keyPan])
 		{
 			state.mergeContentState({
 				mouse: { ...state.contentState.mouse,
@@ -654,6 +667,25 @@ export default class Editor
 			else if (mouseY < threshold)
 				trackState.mergeTrackState({ yScroll: trackState.trackState.yScroll - speed })
 		}
+	}
+	
+	
+	static popup(state: ContentStateManager<EditorState>, trackIndex: number, popup: any)
+	{
+		const x = state.contentState.x + state.contentState.trackHeaderW
+		const y = state.contentState.y + Editor.trackY(state, trackIndex)
+
+        state.mergeAppState({
+            popup: { ...popup,
+				rect: popup.rect.displace(x, y),
+			}
+        })
+	}
+	
+	
+	static popupClear(state: ContentStateManager<EditorState>)
+	{
+        state.mergeAppState({ popup: null })
 	}
 	
 	
@@ -888,7 +920,7 @@ export default class Editor
 
     static keyAt(state: ContentStateManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Key
     {
-        const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project,trackId)
+        const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project, trackId)
         const keyChangeTrackTimedElems = state.appState.project.timedLists.get(keyChangeTrackId)
         if (!keyChangeTrackTimedElems)
 			return Editor.defaultKey()
@@ -897,11 +929,30 @@ export default class Editor
 		if (keyCh)
 			return (keyCh as Project.KeyChange).key
 
-        const firstKeyCh = keyChangeTrackTimedElems.findFirst() as (Project.KeyChange | null)
+        const firstKeyCh = keyChangeTrackTimedElems.findFirst()
 		if (firstKeyCh)
 			return (firstKeyCh as Project.KeyChange).key
 			
 		return Editor.defaultKey()
+    }
+    
+
+    static meterAt(state: ContentStateManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Meter
+    {
+        const meterChangeTrackId = Project.meterChangeTrackForTrack(state.appState.project, trackId)
+        const meterChangeTrackTimedElems = state.appState.project.timedLists.get(meterChangeTrackId)
+        if (!meterChangeTrackTimedElems)
+			return Editor.defaultMeter()
+			
+		const meterCh = meterChangeTrackTimedElems.findActiveAt(time)
+		if (meterCh)
+			return (meterCh as Project.MeterChange).meter
+
+        const firstMeterCh = meterChangeTrackTimedElems.findFirst()
+		if (firstMeterCh)
+			return (firstMeterCh as Project.MeterChange).meter
+			
+		return Editor.defaultMeter()
     }
 
 

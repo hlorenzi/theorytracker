@@ -1,12 +1,15 @@
 import React from "react"
-import DockableData, { Root, Panel, Content, Rect, Layout, Divider, Anchor } from "./DockableData"
+import DockableData, { Root, Panel, Content, Layout, Divider, Anchor } from "./DockableData"
 import { AppState, AppDispatch, ContentStateManager } from "../App"
+import Rect from "../util/rect"
 
 
 interface DockableRootProps
 {
     root: Root
     setRoot: ((newRoot: Root) => void)
+
+    rect: Rect
 
     contents: { [id: number]: Content }
     contentTypeToComponent: (type: string) => any
@@ -19,47 +22,18 @@ interface DockableRootProps
 export default function DockableRoot(props: DockableRootProps)
 {
     const rootRef = React.useRef<HTMLDivElement>(null)
-    const [rect, setRect] = React.useState<Rect>({ x1: 0, x2: 0, y1: 0, y2: 0 })
     
 
     const layout = React.useMemo(() =>
     {
-        if (!rect)
+        if (!props.rect)
             return null
         
-        return DockableData.getLayout(props.root, rect)
+        return DockableData.getLayout(props.root, props.rect)
 
-    }, [rect, props.root])
+    }, [props.rect, props.root])
 
-
-    React.useEffect(() =>
-    {
-        if (!rootRef.current)
-            return
-            
-        const onResize = () =>
-        {
-            const elemRect = rootRef.current!.getBoundingClientRect()
-            setRect({
-                x1: elemRect.x,
-                x2: elemRect.x + elemRect.width,
-                y1: elemRect.y,
-                y2: elemRect.y + elemRect.height,
-            })
-        }
-
-        onResize()
-        
-        window.addEventListener("resize", onResize)
-
-        return () =>
-        {
-            window.removeEventListener("resize", onResize)
-        }
-
-    }, [rootRef.current])
-
-
+    
     const mouseData = useMouseHandling(props, layout, rootRef)
 
 

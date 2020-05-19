@@ -82,7 +82,7 @@ export default class Key
 	
 	degreeForChroma(chroma: number): number
 	{
-		return this._chromaToDegree[chroma]
+		return Utils.mod(this._chromaToDegree[chroma], this.scale.chromas.length)
 	}
 	
 	

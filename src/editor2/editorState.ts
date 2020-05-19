@@ -6,6 +6,8 @@ import Range from "../util/range"
 
 export default interface EditorState
 {
+    x: number
+    y: number
     w: number
     h: number
 

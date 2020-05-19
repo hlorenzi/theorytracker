@@ -2,7 +2,7 @@ import React from "react"
 import Editor from "./editor"
 import EditorState from "./editorState"
 import { AppState, AppDispatch, ContentStateManager } from "../App"
-import { Rect } from "../dockable/dockableData"
+import Rect from "../util/rect"
 
 
 interface EditorContentProps
@@ -48,6 +48,8 @@ export function EditorContent(props: EditorContentProps)
 			return
 		
 		const rect = refDiv.current!.getBoundingClientRect()
+		const x = Math.floor(rect.x)
+		const y = Math.floor(rect.y)
 		const w = Math.floor(rect.width)
 		const h = Math.floor(rect.height)
 		
@@ -58,6 +60,8 @@ export function EditorContent(props: EditorContentProps)
 
 		props.contentDispatch({
 			type: "resize",
+			x,
+			y,
 			w,
 			h,
 		})

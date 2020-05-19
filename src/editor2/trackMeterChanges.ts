@@ -137,9 +137,26 @@ export default class TrackMeterChanges
     {
         const visibleRange = Editor.visibleTimeRange(state.contentStateManager)
 
-		for (const meterCh of TrackMeterChanges.iterAtRange(state, visibleRange))
+        const firstMeter = Editor.meterAt(state.contentStateManager, state.trackState.trackId, visibleRange.start)
+        let shouldDrawFirstKey = true
+
+        for (const meterCh of TrackMeterChanges.iterAtRange(state, visibleRange))
+        {
+            if (shouldDrawFirstKey)
+            {
+                const x = Editor.xAtTime(state.contentStateManager, meterCh.time)
+                if (x > 80)
+                    TrackMeterChanges.renderMeterChangeLabel(state, ctx, firstMeter)
+            }
+
             TrackMeterChanges.renderMeterChange(state, ctx, meterCh)
-        
+            shouldDrawFirstKey = false
+        }
+
+        if (shouldDrawFirstKey)
+            TrackMeterChanges.renderMeterChangeLabel(state, ctx, firstMeter)
+    
+            
         const draw = state.trackState.draw
         if (draw)
         {
@@ -159,6 +176,20 @@ export default class TrackMeterChanges
 		ctx.beginPath()
 		ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, 0, Math.PI * 2)
 		ctx.fill()
+	}
+	
+	
+	static renderMeterChangeLabel(state: TrackStateManager<TrackMeterChangesState>, ctx: CanvasRenderingContext2D, meter: Theory.Meter)
+	{
+        const rect = TrackMeterChanges.knobRectForMeterChange(state, new Rational(0))
+        const x = 5
+		
+		ctx.fillStyle = state.appState.prefs.editor.meterChangeColor
+		
+		ctx.font = "14px Verdana"
+		ctx.textAlign = "left"
+		ctx.textBaseline = "middle"
+		ctx.fillText(meter.numerator + " / " + meter.denominator, x, rect.y + rect.h / 2)
 	}
 	
 	

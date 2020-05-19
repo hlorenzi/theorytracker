@@ -1,3 +1,6 @@
+import Rect from "../util/rect"
+
+
 export interface Root
 {
     idNext: number
@@ -38,15 +41,6 @@ export interface Content
 {
     type: string
     state: any
-}
-
-
-export interface Rect
-{
-    x1: number
-    x2: number
-    y1: number
-    y2: number
 }
 
 
@@ -308,9 +302,9 @@ export default class DockableData
             {
                 const xSplit = rect.x1 + Math.round((rect.x2 - rect.x1) * panel.subdivSize)
 
-                const rect1: Rect = { ...rect, x2: xSplit }
-                const rect2: Rect = { ...rect, x1: xSplit }
-                const rectDivider: Rect = { ...rect, x1: xSplit, x2: xSplit }
+                const rect1 = rect.withX2(xSplit)
+                const rect2 = rect.withX1(xSplit)
+                const rectDivider = rect.withX1(xSplit).withX2(xSplit)
 
                 DockableData.traverseLayout(panel.subpanels[0], rect1, layout)
                 DockableData.traverseLayout(panel.subpanels[1], rect2, layout)
@@ -327,9 +321,9 @@ export default class DockableData
             {
                 const ySplit = rect.y1 + Math.round((rect.y2 - rect.y1) * panel.subdivSize)
 
-                const rect1: Rect = { ...rect, y2: ySplit }
-                const rect2: Rect = { ...rect, y1: ySplit }
-                const rectDivider: Rect = { ...rect, y1: ySplit, y2: ySplit }
+                const rect1 = rect.withY2(ySplit)
+                const rect2 = rect.withY1(ySplit)
+                const rectDivider = rect.withY1(ySplit).withY2(ySplit)
 
                 DockableData.traverseLayout(panel.subpanels[0], rect1, layout)
                 DockableData.traverseLayout(panel.subpanels[1], rect2, layout)
@@ -364,7 +358,7 @@ export default class DockableData
             x: rect.x2 - 1,
             y: yMid,
             mode: DockingMode.Right,
-            previewRect: { ...rect, x1: rect.x1 + (rect.x2 - rect.x1) * 3 / 4 },
+            previewRect: rect.withX1(rect.x1 + (rect.x2 - rect.x1) * 3 / 4),
         })
 
         layout.anchors.push({
@@ -372,7 +366,7 @@ export default class DockableData
             x: rect.x1 + 1,
             y: yMid,
             mode: DockingMode.Left,
-            previewRect: { ...rect, x2: rect.x1 + (rect.x2 - rect.x1) / 4 },
+            previewRect: rect.withX2(rect.x1 + (rect.x2 - rect.x1) / 4),
         })
 
         layout.anchors.push({
@@ -380,7 +374,7 @@ export default class DockableData
             x: xMid,
             y: rect.y2 - 1,
             mode: DockingMode.Bottom,
-            previewRect: { ...rect, y1: rect.y1 + (rect.y2 - rect.y1) * 3 / 4 },
+            previewRect: rect.withY1(rect.y1 + (rect.y2 - rect.y1) * 3 / 4),
         })
 
         layout.anchors.push({
@@ -388,7 +382,7 @@ export default class DockableData
             x: xMid,
             y: rect.y1 + 1,
             mode: DockingMode.Top,
-            previewRect: { ...rect, y2: rect.y1 + (rect.y2 - rect.y1) / 4 },
+            previewRect: rect.withY2(rect.y1 + (rect.y2 - rect.y1) / 4),
         })
     }
 
@@ -405,5 +399,12 @@ export default class DockableData
         DockableData.traverseLayout(root.rootPanel, rect, layout)
 
         return layout
+    }
+
+
+    static getContentRect(root: Root, rect: Rect, contentId: number): Rect | undefined
+    {
+        const layout = DockableData.getLayout(root, rect)
+        return layout.panelRects.find(p => p.panel.contentIds.some(c => c === contentId))!.rect
     }
 }

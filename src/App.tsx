@@ -5,10 +5,15 @@ import { EditorContent } from "./editor2/EditorContent"
 import EditorState from "./editor2/editor"
 import Project from "./project/project2"
 import Immutable from "immutable"
+import Rect from "./util/rect"
+import Popup from "./Popup"
 
 
 export default function App(props: {})
 {
+    const rootRef = React.useRef<HTMLDivElement>(null)
+
+    
     const appInit = (): AppState =>
     {
         let root = DockableData.makeRoot()
@@ -32,6 +37,7 @@ export default function App(props: {})
         console.log(Project.getDefault())
 
         return {
+            dockableRect: new Rect(0, 0, 0, 0),
             dockableRoot: root,
             dockableContents: {
                 0: {
@@ -43,6 +49,8 @@ export default function App(props: {})
                     state: null,
                 },
             },
+
+            popup: null,
 
             project: Project.getDefault(),
             selection: Immutable.Set<number>(),
@@ -91,23 +99,84 @@ export default function App(props: {})
         newRoot,
     })
 
-    return <DockableRoot
-        root={ appState.dockableRoot }
-        setRoot={ setDockableRoot }
-        contents={ appState.dockableContents }
-        contentTypeToComponent={ contentTypeToComponent }
-        appState={ appState }
-        appDispatch={ appDispatch }
-    />
+    React.useEffect(() =>
+    {
+        if (!rootRef.current)
+            return
+            
+        const onResize = () =>
+        {
+            const elemRect = rootRef.current!.getBoundingClientRect()
+
+            appDispatch({
+                type: "appResize",
+                rect: new Rect(
+                    elemRect.x,
+                    elemRect.y,
+                    elemRect.width,
+                    elemRect.height),
+            })
+        }
+
+        onResize()
+        
+        window.addEventListener("resize", onResize)
+
+        return () =>
+        {
+            window.removeEventListener("resize", onResize)
+        }
+
+    }, [rootRef.current])
+
+
+    return <>
+        <div ref={ rootRef } style={{
+            position: "absolute",
+            top: "0px",
+            left: "0px",
+            width: "100vw",
+            height: "100vh",
+            pointerEvents: "none",
+        }}/>
+        
+        <DockableRoot
+            root={ appState.dockableRoot }
+            rect={ appState.dockableRect }
+            setRoot={ setDockableRoot }
+            contents={ appState.dockableContents }
+            contentTypeToComponent={ contentTypeToComponent }
+            appState={ appState }
+            appDispatch={ appDispatch }
+        />
+
+        { !appState.popup ? null :
+            <Popup
+                appState={ appState }
+                appDispatch={ appDispatch }
+                rect={ appState.popup.rect }
+                popupElem={ appState.popup.element }
+                popupProps={ appState.popup.props }
+            />
+        }
+    </>
 }
 
 
 export interface AppState
 {
+    dockableRect: Rect
     dockableRoot: Root
     dockableContents:
     {
         [id: number]: Content
+    }
+
+    popup: null |
+    {
+        element: any
+        props: any
+        rect: Rect
     }
 
     project: Project
@@ -238,6 +307,17 @@ function reduce(state: AppState, action: any): AppState
             state = action.newState
             break
         }
+
+
+        case "appResize":
+        {
+            state = {
+                ...state,
+                dockableRect: action.rect,
+            }
+            break
+        }
+
 
         case "contentStateSet":
         {

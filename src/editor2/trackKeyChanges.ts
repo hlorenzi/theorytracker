@@ -7,6 +7,7 @@ import Range from "../util/range"
 import Project from "../project/project2"
 import Rational from "../util/rational"
 import * as Theory from "../theory/theory"
+import PopupKeyChange from "./PopupKeyChange"
 
 
 export default class TrackKeyChanges
@@ -101,6 +102,22 @@ export default class TrackKeyChanges
 	}
 	
 	
+	static popup(state: TrackStateManager<TrackKeyChangesState>)
+	{
+        const elemId = state.contentState.mouse.hover!.id
+        const elem = state.appState.project.elems.get(elemId) as Project.KeyChange
+
+        Editor.popup(state.contentStateManager, state.trackIndex,
+        {
+            element: PopupKeyChange,
+            props: {
+                elemIds: [elemId],
+            },
+            rect: TrackKeyChanges.knobRectForKeyChange(state, elem.time),
+        })
+	}
+	
+	
 	static elemsAt(state: TrackStateManager<TrackKeyChangesState>, region: any): Project.ID[]
 	{
         const elems = []
@@ -137,9 +154,25 @@ export default class TrackKeyChanges
     {
         const visibleRange = Editor.visibleTimeRange(state.contentStateManager)
 
-		for (const keyCh of TrackKeyChanges.iterAtRange(state, visibleRange))
+        const firstKey = Editor.keyAt(state.contentStateManager, state.trackState.trackId, visibleRange.start)
+        let shouldDrawFirstKey = true
+
+        for (const keyCh of TrackKeyChanges.iterAtRange(state, visibleRange))
+        {
+            if (shouldDrawFirstKey)
+            {
+                const x = Editor.xAtTime(state.contentStateManager, keyCh.time)
+                if (x > 80)
+                    TrackKeyChanges.renderKeyChangeLabel(state, ctx, firstKey)
+            }
+
             TrackKeyChanges.renderKeyChange(state, ctx, keyCh)
-            
+            shouldDrawFirstKey = false
+        }
+
+        if (shouldDrawFirstKey)
+            TrackKeyChanges.renderKeyChangeLabel(state, ctx, firstKey)
+        
         const draw = state.trackState.draw
         if (draw)
         {
@@ -159,6 +192,20 @@ export default class TrackKeyChanges
 		ctx.beginPath()
 		ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, 0, Math.PI * 2)
 		ctx.fill()
+	}
+	
+	
+	static renderKeyChangeLabel(state: TrackStateManager<TrackKeyChangesState>, ctx: CanvasRenderingContext2D, key: Theory.Key)
+	{
+        const rect = TrackKeyChanges.knobRectForKeyChange(state, new Rational(0))
+        const x = 5
+		
+		ctx.fillStyle = state.appState.prefs.editor.keyChangeColor
+		
+		ctx.font = "14px Verdana"
+		ctx.textAlign = "left"
+		ctx.textBaseline = "middle"
+		ctx.fillText(key.str, x, rect.y + rect.h / 2)
 	}
 	
 	

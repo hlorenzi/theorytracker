@@ -23,6 +23,12 @@ export default class Rect
 			Math.abs(x2 - x1),
 			Math.abs(y2 - y1))
 	}
+
+
+	clone(): Rect
+	{
+		return new Rect(this.x, this.y, this.w, this.h)
+	}
 	
 	
 	get x1(): number
@@ -46,6 +52,36 @@ export default class Rect
 	get y2(): number
 	{
 		return this.y + this.h
+	}
+
+
+	withX1(value: number): Rect
+	{
+		return Rect.fromVertices(value, this.y1, this.x2, this.y2)
+	}
+
+
+	withY1(value: number): Rect
+	{
+		return Rect.fromVertices(this.x1, value, this.x2, this.y2)
+	}
+
+
+	withX2(value: number): Rect
+	{
+		return Rect.fromVertices(this.x1, this.y1, value, this.y2)
+	}
+
+
+	withY2(value: number): Rect
+	{
+		return Rect.fromVertices(this.x1, this.y1, this.x2, value)
+	}
+
+
+	displace(x: number, y: number): Rect
+	{
+		return new Rect(this.x + x, this.y + y, this.w, this.h)
 	}
 	
 	
