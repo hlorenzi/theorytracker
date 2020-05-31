@@ -2,7 +2,7 @@ import React from "react"
 import ButtonList from "../toolbox/ButtonList"
 import DropdownMenu from "../toolbox/DropdownMenu"
 import Editor from "./editor"
-import { AppState, AppDispatch } from "../App"
+import { AppState, AppDispatch, ContentStateManager } from "../App"
 import Rect from "../util/rect"
 import Project from "../project/project2"
 import * as Theory from "../theory/theory"
@@ -10,15 +10,23 @@ import * as Theory from "../theory/theory"
 
 interface PopupKeyChangeProps
 {
-	appState: AppState
+	state: ContentStateManager<PopupKeyChangeState>
+	contentId: number
 	appDispatch: AppDispatch
+	contentDispatch: (action: any) => void
+	rect: Rect
+}
+
+
+interface PopupKeyChangeState
+{
 	elemIds: Project.ID[]
 }
 
 
 export default function PopupKeyChange(props: PopupKeyChangeProps)
 {
-	const elem = props.appState.project.elems.get(props.elemIds[0])
+	const elem = props.state.appState.project.elems.get(props.state.contentState.elemIds[0])
 	if (!elem)
 		return null
 
@@ -98,8 +106,8 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 	const changeKey = (newKey: Theory.Key) =>
 	{
 		const newKeyCh = Project.Element.withChanges(keyCh, { key: newKey })
-		const project = Project.upsertTimedElement(props.appState.project, newKeyCh)
-		props.appDispatch({ type: "appStateSet", newState: { ...props.appState, project }})
+		const project = Project.upsertTimedElement(props.state.appState.project, newKeyCh)
+		props.appDispatch({ type: "appStateSet", newState: { ...props.state.appState, project }})
 	}
 
 
@@ -108,7 +116,7 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 		<div style={{
 			marginBottom: "0.5em",
 			fontSize: "1.25em",
-			color: props.appState.prefs.editor.keyChangeColor,
+			color: props.state.appState.prefs.editor.keyChangeColor,
 		}}>
 			Key Change
 		</div>

@@ -107,14 +107,12 @@ export default class TrackKeyChanges
         const elemId = state.contentState.mouse.hover!.id
         const elem = state.appState.project.elems.get(elemId) as Project.KeyChange
 
+        const knob = TrackKeyChanges.knobRectForKeyChange(state, elem.time)
+
         Editor.popup(state.contentStateManager, state.trackIndex,
-        {
-            element: PopupKeyChange,
-            props: {
-                elemIds: [elemId],
-            },
-            rect: TrackKeyChanges.knobRectForKeyChange(state, elem.time),
-        })
+            "inspector",
+            new Rect(knob.x2 + 10, knob.y2 + 10, 350, 250),
+            { elemIds: [elemId] })
 	}
 	
 	

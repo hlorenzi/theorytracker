@@ -7,6 +7,7 @@ import Project from "./project/project2"
 import Immutable from "immutable"
 import Rect from "./util/rect"
 import Popup from "./Popup"
+import PopupKeyChange from "./editor2/PopupKeyChange"
 
 
 export default function App(props: {})
@@ -34,23 +35,19 @@ export default function App(props: {})
         root = DockableData.addPanel(root, 6, DockingMode.Bottom, 4)
         console.log(root)
 
-        console.log(Project.getDefault())
-
         return {
+            contentIdNext: 6,
             dockableRect: new Rect(0, 0, 0, 0),
             dockableRoot: root,
-            dockableContents: {
-                0: {
+            dockableContents: Immutable.Map<number, Content>()
+                .set(0, {
                     type: "editor",
                     state: null,
-                },
-                1: {
+                })
+                .set(1, {
                     type: "editor",
                     state: null,
-                },
-            },
-
-            popup: null,
+                }),
 
             project: Project.getDefault(),
             selection: Immutable.Set<number>(),
@@ -85,7 +82,7 @@ export default function App(props: {})
                     mouseDragXLockedDistance: 10,
                     mouseDragYLockedDistance: 10,
 
-                    mouseEdgeScrollThreshold: 60,
+                    mouseEdgeScrollThreshold: 10,
                     mouseEdgeScrollSpeed: 1,
                 },
             },
@@ -149,35 +146,16 @@ export default function App(props: {})
             appState={ appState }
             appDispatch={ appDispatch }
         />
-
-        { !appState.popup ? null :
-            <Popup
-                appState={ appState }
-                appDispatch={ appDispatch }
-                rect={ appState.popup.rect }
-                popupElem={ appState.popup.element }
-                popupProps={ appState.popup.props }
-            />
-        }
     </>
 }
 
 
 export interface AppState
 {
+    contentIdNext: number
     dockableRect: Rect
     dockableRoot: Root
-    dockableContents:
-    {
-        [id: number]: Content
-    }
-
-    popup: null |
-    {
-        element: any
-        props: any
-        rect: Rect
-    }
+    dockableContents: Immutable.Map<number, Content>
 
     project: Project
     selection: Immutable.Set<number>
@@ -250,7 +228,7 @@ export class ContentStateManager<T>
 
     get contentState(): T
     {
-        return this.appState.dockableContents[this.contentId].state
+        return this.appState.dockableContents.get(this.contentId)!.state
     }
 
 
@@ -258,13 +236,11 @@ export class ContentStateManager<T>
     {
         this.appState = {
             ...this.appState,
-            dockableContents: {
-                ...this.appState.dockableContents,
-                [this.contentId]: {
-                    ...this.appState.dockableContents[this.contentId],
-                    state: newState,
-                }
-            }
+            dockableContents: this.appState.dockableContents.set(this.contentId,
+            {
+                ...this.appState.dockableContents.get(this.contentId)!,
+                state: newState,
+            }),
         }
     }
 
@@ -276,13 +252,49 @@ export class ContentStateManager<T>
             ...newState,
         }
     }
+
+
+    createPopup(type: string, state: any, rect: Rect)
+    {
+        this.appState = {
+            ...this.appState,
+            contentIdNext: this.appState.contentIdNext + 1,
+            dockableRoot: DockableData.addFloatingPanel(
+                this.appState.dockableRoot,
+                rect,
+                this.appState.contentIdNext),
+            dockableContents: this.appState.dockableContents.set(this.appState.contentIdNext,
+            {
+                type,
+                state,
+            }),
+        }
+    }
+
+
+    removePopup(type: string)
+    {
+        let root = this.appState.dockableRoot
+        for (const [key, value] of this.appState.dockableContents)
+        {
+            if (value.type === type)
+                root = DockableData.removeFloatingContent(root, key)
+        }
+
+        this.appState = {
+            ...this.appState,
+            contentIdNext: this.appState.contentIdNext + 1,
+            dockableRoot: root,
+        }
+    }
 }
 
 
 function reduce(state: AppState, action: any): AppState
 {
     const shouldLog = 
-        action.type !== "contentDispatch"
+        action.type !== "contentDispatch" &&
+        action.type !== "dockableRootSet"
     
     if (shouldLog)
     {
@@ -319,7 +331,7 @@ function reduce(state: AppState, action: any): AppState
         }
 
 
-        case "contentStateSet":
+        /*case "contentStateSet":
         {
             state = {
                 ...state,
@@ -332,11 +344,11 @@ function reduce(state: AppState, action: any): AppState
                 }
             }
             break
-        }
+        }*/
 
         case "contentDispatch":
         {
-            const content = state.dockableContents[action.contentId]
+            const content = state.dockableContents.get(action.contentId)!
             const reducer = contentTypeToReducer(content.type)
 
             const stateManager = new ContentStateManager(state, action.contentId)
@@ -366,8 +378,8 @@ function contentTypeToComponent(type: string): any
 {
     switch (type)
     {
-        case "editor":
-            return EditorContent
+        case "editor": return EditorContent
+        case "inspector": return PopupKeyChange
 
         default:
             throw "invalid content type"
@@ -379,8 +391,8 @@ function contentTypeToReducer(type: string): any
 {
     switch (type)
     {
-        case "editor":
-            return EditorState.reduce
+        case "editor": return EditorState.reduce
+        case "inspector": return null
 
         default:
             throw "invalid content type"

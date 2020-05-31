@@ -5,7 +5,7 @@ export interface Root
 {
     idNext: number
     rootPanel: Panel
-    //floatingPanels: FloatingPanel[]
+    floatingPanels: FloatingPanel[]
 }
 
 
@@ -37,6 +37,13 @@ export interface Panel
 }
 
 
+export interface FloatingPanel
+{
+    panel: Panel
+    rect: Rect
+}
+
+
 export interface Content
 {
     type: string
@@ -48,6 +55,7 @@ export interface PanelRect
 {
     panel: Panel
     rect: Rect
+    floating: boolean
 }
 
 
@@ -92,7 +100,8 @@ export default class DockableData
                 subpanels: [],
                 subdivMode: SubdivMode.LeftRight,
                 subdivSize: 0.5,
-            }
+            },
+            floatingPanels: [],
         }
     }
 
@@ -167,6 +176,13 @@ export default class DockableData
         return {
             ...root,
             rootPanel: DockableData.modifyPanel(root.rootPanel, wantedId, modifyFn),
+            floatingPanels: root.floatingPanels.map(fp =>
+            {
+                if (fp.panel.id == wantedId)
+                    return { ...fp, panel: modifyFn(fp.panel) }
+
+                return fp
+            })
         }
     }
 
@@ -180,6 +196,73 @@ export default class DockableData
                 contentIds: [...panel.contentIds, contentId]
             }
         })
+    }
+
+
+    static addFloatingPanel(root: Root, rect: Rect, contentIds: number | number[]): Root
+    {
+        const contentIdsArray = Array.isArray(contentIds) ? contentIds : [contentIds]
+
+        const newFloatingPanels = [
+            ...root.floatingPanels,
+            {
+                panel: {
+                    id: root.idNext,
+                    curContent: 0,
+                    contentIds: contentIdsArray,
+                    subpanels: [],
+                    subdivMode: SubdivMode.LeftRight,
+                    subdivSize: 0.5,
+                },
+                rect,
+            },
+        ]
+
+        return {
+            ...root,
+            idNext: root.idNext + 1,
+            floatingPanels: newFloatingPanels,
+        }
+    }
+
+
+    static moveFloatingPanel(root: Root, panelId: number, newRect: Rect): Root
+    {
+        return {
+            ...root,
+            floatingPanels: root.floatingPanels.map(fp =>
+            {
+                if (fp.panel.id !== panelId)
+                    return fp
+
+                return {
+                    ...fp,
+                    rect: newRect,
+                }
+            })
+        }
+    }
+
+
+    static removeFloatingPanel(root: Root, panelId: number): Root
+    {
+        return {
+            ...root,
+            floatingPanels: root.floatingPanels.filter(fp => fp.panel.id !== panelId),
+        }
+    }
+
+
+    static removeFloatingContent(root: Root, contentId: number): Root
+    {
+        const panel = root.floatingPanels.find(fp => fp.panel.contentIds.some(c => c === contentId))
+        if (!panel)
+            return root
+        
+        return {
+            ...root,
+            floatingPanels: root.floatingPanels.filter(fp => fp !== panel),
+        }
     }
 
 
@@ -342,6 +425,7 @@ export default class DockableData
             layout.panelRects.push({
                 panel,
                 rect,
+                floating: false,
             })
 
             layout.anchors.push({
@@ -355,7 +439,7 @@ export default class DockableData
 
         layout.anchors.push({
             panel,
-            x: rect.x2 - 1,
+            x: rect.x2 - 10,
             y: yMid,
             mode: DockingMode.Right,
             previewRect: rect.withX1(rect.x1 + (rect.x2 - rect.x1) * 3 / 4),
@@ -363,7 +447,7 @@ export default class DockableData
 
         layout.anchors.push({
             panel,
-            x: rect.x1 + 1,
+            x: rect.x1 + 10,
             y: yMid,
             mode: DockingMode.Left,
             previewRect: rect.withX2(rect.x1 + (rect.x2 - rect.x1) / 4),
@@ -372,7 +456,7 @@ export default class DockableData
         layout.anchors.push({
             panel,
             x: xMid,
-            y: rect.y2 - 1,
+            y: rect.y2 - 10,
             mode: DockingMode.Bottom,
             previewRect: rect.withY1(rect.y1 + (rect.y2 - rect.y1) * 3 / 4),
         })
@@ -380,7 +464,7 @@ export default class DockableData
         layout.anchors.push({
             panel,
             x: xMid,
-            y: rect.y1 + 1,
+            y: rect.y1 + 10,
             mode: DockingMode.Top,
             previewRect: rect.withY2(rect.y1 + (rect.y2 - rect.y1) / 4),
         })
@@ -397,6 +481,9 @@ export default class DockableData
         }
 
         DockableData.traverseLayout(root.rootPanel, rect, layout)
+
+        for (const floatingPanel of root.floatingPanels)
+            layout.panelRects.push({ ...floatingPanel, floating: true })
 
         return layout
     }

@@ -32,7 +32,8 @@ export default class Editor
 			action.type !== "mouseMove" &&
 			action.type !== "keyDown" &&
 			action.type !== "keyUp" &&
-			action.type !== "keyCommand"
+			action.type !== "keyCommand" &&
+			action.type !== "resize"
 		)
 		
 		if (shouldLog)
@@ -670,22 +671,18 @@ export default class Editor
 	}
 	
 	
-	static popup(state: ContentStateManager<EditorState>, trackIndex: number, popup: any)
+	static popup(state: ContentStateManager<EditorState>, trackIndex: number, type: string, rect: Rect, popupState: any)
 	{
 		const x = state.contentState.x + state.contentState.trackHeaderW
 		const y = state.contentState.y + Editor.trackY(state, trackIndex)
 
-        state.mergeAppState({
-            popup: { ...popup,
-				rect: popup.rect.displace(x, y),
-			}
-        })
+		state.createPopup(type, popupState, rect.displace(x, y))
 	}
 	
 	
 	static popupClear(state: ContentStateManager<EditorState>)
 	{
-        state.mergeAppState({ popup: null })
+        state.removePopup("inspector")
 	}
 	
 	

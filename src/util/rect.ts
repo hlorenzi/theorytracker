@@ -55,6 +55,30 @@ export default class Rect
 	}
 
 
+	withX(value: number): Rect
+	{
+		return new Rect(value, this.y, this.w, this.h)
+	}
+
+
+	withY(value: number): Rect
+	{
+		return new Rect(this.x, value, this.w, this.h)
+	}
+
+
+	withW(value: number): Rect
+	{
+		return new Rect(this.x, this.y, value, this.h)
+	}
+
+
+	withH(value: number): Rect
+	{
+		return new Rect(this.x, this.y, this.w, value)
+	}
+
+
 	withX1(value: number): Rect
 	{
 		return Rect.fromVertices(value, this.y1, this.x2, this.y2)
@@ -82,6 +106,16 @@ export default class Rect
 	displace(x: number, y: number): Rect
 	{
 		return new Rect(this.x + x, this.y + y, this.w, this.h)
+	}
+
+
+	expand(amount: number): Rect
+	{
+		return Rect.fromVertices(
+			this.x1 - amount,
+			this.y1 - amount,
+			this.x2 + amount,
+			this.y2 + amount)
 	}
 	
 	
