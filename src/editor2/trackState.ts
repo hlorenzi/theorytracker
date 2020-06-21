@@ -4,6 +4,7 @@ export default interface TrackState
     trackIndex: number,
     trackId: number,
 
+    y: number,
     h: number,
     yScroll: number,
 

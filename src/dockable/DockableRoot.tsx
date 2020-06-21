@@ -14,6 +14,7 @@ interface DockableRootProps
 
     contents: Immutable.Map<number, Content>
     contentTypeToComponent: (type: string) => any
+    contentTypeToTitle: (type: string, contentState: ContentStateManager<any>) => string
 
     appState: AppState
     appDispatch: AppDispatch
@@ -128,83 +129,88 @@ function Panel(props: any)
         gridTemplate: "auto 1fr / 1fr",
     }}>
 
-        <div id={ "dockable_header_" + panelRect.panel.id } style={{
-            backgroundColor: "#444",
-            textAlign: "left",
-        }}>
+        { (() => {
+            const contentIds = panelRect.panel.contentIds
+            const contentIndex = panelRect.panel.curContent
 
-            { panelRect.panel.contentIds.map((cId, idx) =>
-                <div
-                    key={ cId }
-                    id={ "dockable_tab_" + cId }
-                    onContextMenu={ ev => ev.preventDefault() }
-                    style={{
-                        display: "inline-block",
-                        backgroundColor: panelRect.panel.curContent == idx ? "#222" : "#666",
-                        color: "#fff",
-                        borderRight: "1px solid #888",
-                        padding: "0.25em 0.5em",
-                        userSelect: "none",
-                }}>
-                    { "Content " + cId }
-                </div>
-            )}
+            if (contentIndex >= contentIds.length)
+                return null
 
-        </div>
+            const contentId = contentIds[contentIndex]
+            const content = rootProps.contents.get(contentId)
+            if (!content)
+                return null
 
-        <div style={{
-            backgroundColor: "#222",
-            color: "#fff",
-            width: "100%",
-            height: "100%",
-            minWidth: "0px",
-            minHeight: "0px",
-        }}>
-            { (() =>
+            const component = rootProps.contentTypeToComponent(content.type)
+            const contentStateSet = (newState: any) =>
             {
-                const contentIds = panelRect.panel.contentIds
-                const contentIndex = panelRect.panel.curContent
-
-                if (contentIndex >= contentIds.length)
-                    return null
-
-                const contentId = contentIds[contentIndex]
-                const content = rootProps.contents.get(contentId)
-                if (!content)
-                    return null
-
-                const component = rootProps.contentTypeToComponent(content.type)
-                const contentStateSet = (newState: any) =>
-                {
-                    rootProps.appDispatch({
-                        type: "contentStateSet",
-                        contentId,
-                        newState,
-                    })
-                }
-                
-                const contentDispatch = (action: any) =>
-                {
-                    rootProps.appDispatch({
-                        type: "contentDispatch",
-                        contentId,
-                        action,
-                    })
-                }
-                
-                return React.createElement(component, {
-                    state: new ContentStateManager<any>(rootProps.appState, contentId),
-                    appState: rootProps.appState,
-                    appDispatch: rootProps.appDispatch,
+                rootProps.appDispatch({
+                    type: "contentStateSet",
                     contentId,
-                    contentState: content.state,
-                    contentStateSet,
-                    contentDispatch,
-                    rect: panelRect,
+                    newState,
                 })
+            }
+            
+            const contentDispatch = (action: any) =>
+            {
+                rootProps.appDispatch({
+                    type: "contentDispatch",
+                    contentId,
+                    action,
+                })
+            }
 
-            })() }
-        </div>
+            const contentStateManager = new ContentStateManager<any>(rootProps.appState, contentId)
+
+            return <>
+                <div id={ "dockable_header_" + panelRect.panel.id } style={{
+                    backgroundColor: "#444",
+                    textAlign: "left",
+                }}>
+
+                    { panelRect.panel.contentIds.map((cId, idx) =>
+                        <div
+                            key={ cId }
+                            id={ "dockable_tab_" + cId }
+                            onContextMenu={ ev => ev.preventDefault() }
+                            style={{
+                                display: "inline-block",
+                                backgroundColor: panelRect.panel.curContent == idx ? "#222" : "#666",
+                                color: "#fff",
+                                borderRight: "1px solid #888",
+                                padding: "0.25em 0.5em",
+                                userSelect: "none",
+                        }}>
+                            { rootProps.contentTypeToTitle ?
+                                rootProps.contentTypeToTitle(content.type, contentStateManager) :
+                                "Content " + cId }
+                        </div>
+                    )}
+
+                </div>
+
+                <div style={{
+                    backgroundColor: "#222",
+                    color: "#fff",
+                    width: "100%",
+                    height: "100%",
+                    minWidth: "0px",
+                    minHeight: "0px",
+                    textAlign: "left",
+                }}>
+                        { React.createElement(component, {
+                            state: contentStateManager,
+                            appState: rootProps.appState,
+                            appDispatch: rootProps.appDispatch,
+                            contentId,
+                            contentState: content.state,
+                            contentStateSet,
+                            contentDispatch,
+                            rect: panelRect,
+                        })}
+                </div>
+            </>
+        })() }
 
     </div>
 }

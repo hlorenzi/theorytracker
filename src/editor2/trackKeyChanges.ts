@@ -111,7 +111,7 @@ export default class TrackKeyChanges
 
         Editor.popup(state.contentStateManager, state.trackIndex,
             "inspector",
-            new Rect(knob.x2 + 10, knob.y2 + 10, 350, 250),
+            new Rect(knob.x2 + 10, knob.y2 + 10, 450, 250),
             { elemIds: [elemId] })
 	}
 	

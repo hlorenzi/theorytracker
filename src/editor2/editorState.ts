@@ -14,6 +14,7 @@ export default interface EditorState
     trackHeaderW: number
 
     tracks: TrackState[]
+    trackScroll: number
 
     timeScroll: number
     timeScale: number
@@ -70,6 +71,7 @@ export default interface EditorState
             posOrigin: { x: number, y: number }
             timeOrigin: Rational
             timeScrollOrigin: number
+            trackScrollOrigin: number
             rangeOrigin: Range
             trackOrigin: number
             trackPosOrigin: { x: number, y: number }

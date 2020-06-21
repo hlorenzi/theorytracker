@@ -23,7 +23,7 @@ export default function App(props: {})
         root = DockableData.addPanel(root, 0, DockingMode.Full, 0)
         console.log(root)
         
-        root = DockableData.addPanel(root, 0, DockingMode.Bottom, 2)
+        /*root = DockableData.addPanel(root, 0, DockingMode.Bottom, 2)
         console.log(root)
         
         root = DockableData.addPanel(root, 2, DockingMode.Right, 1)
@@ -33,7 +33,7 @@ export default function App(props: {})
         console.log(root)
 
         root = DockableData.addPanel(root, 6, DockingMode.Bottom, 4)
-        console.log(root)
+        console.log(root)*/
 
         return {
             contentIdNext: 6,
@@ -143,6 +143,7 @@ export default function App(props: {})
             setRoot={ setDockableRoot }
             contents={ appState.dockableContents }
             contentTypeToComponent={ contentTypeToComponent }
+            contentTypeToTitle={ contentTypeToTitle }
             appState={ appState }
             appDispatch={ appDispatch }
         />
@@ -393,6 +394,19 @@ function contentTypeToReducer(type: string): any
     {
         case "editor": return EditorState.reduce
         case "inspector": return null
+
+        default:
+            throw "invalid content type"
+    }
+}
+
+
+function contentTypeToTitle(type: string, state: ContentStateManager<any>): any
+{
+    switch (type)
+    {
+        case "editor": return "Editor"
+        case "inspector": return "Inspector"
 
         default:
             throw "invalid content type"

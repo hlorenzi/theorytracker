@@ -180,11 +180,28 @@ export function EditorContent(props: EditorContentProps)
 		<div ref={ refDiv } style={{
 			width: "100%",
 			height: "100%",
+			position: "relative",
+			overflow: "hidden",
 		}}>
 			<canvas ref={ refCanvas } style={{
 				width: "100%",
 				height: "100%",
 			}}/>
+
+			{ props.state.contentState.tracks.map(track =>
+				<div style={{
+					position: "absolute",
+					left: 0,
+					top: track.y - props.state.contentState.trackScroll,
+					width: props.state.contentState.trackHeaderW,
+					height: track.h,
+					padding: "0.1em 0.25em",
+					pointerEvents: "none",
+				}}>
+					Track Name
+					<button style={{ pointerEvents: "auto" }}>Test</button>
+				</div>
+			)}
 		</div>
 	)
 }

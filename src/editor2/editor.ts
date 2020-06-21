@@ -11,6 +11,7 @@ import Range from "../util/range"
 import Rect from "../util/rect"
 import * as Theory from "../theory/theory"
 import DockableData from "../dockable/DockableData"
+import { stat } from "fs"
 
 
 export default class Editor
@@ -72,9 +73,10 @@ export default class Editor
             w: 0,
 			h: 0,
 
-			trackHeaderW: 120,
+			trackHeaderW: 200,
 			
 			tracks: [],
+			trackScroll: 0,
 
 			timeScroll: 0,
 			timeScale: 100,
@@ -127,6 +129,7 @@ export default class Editor
 					timeScrollOrigin: 0,
 					rangeOrigin: new Range(new Rational(), new Rational()),
 					trackOrigin: 0,
+					trackScrollOrigin: 0,
 					trackPosOrigin: { x: 0, y: 0 },
 					trackYRawOrigin: 0,
 					trackYScrollOrigin: 0,
@@ -190,7 +193,8 @@ export default class Editor
 					type: "notesPreview",
 					trackIndex: t,
 					trackId: state.appState.project.tracks[t].id,
-					h: 280,
+					y: 0,
+					h: 600,//280,
 					yScroll: 0,
 					pinned: false,
 				})
@@ -199,6 +203,7 @@ export default class Editor
 					type: "keyChanges",
 					trackIndex: t,
 					trackId: state.appState.project.tracks[t].id,
+					y: 0,
 					h: TrackKeyChanges.knobHeight,
 					yScroll: 0,
 					pinned: false,
@@ -208,10 +213,18 @@ export default class Editor
 					type: "meterChanges",
 					trackIndex: t,
 					trackId: state.appState.project.tracks[t].id,
+					y: 0,
 					h: TrackMeterChanges.knobHeight,
 					yScroll: 0,
 					pinned: false,
 				})
+		}
+	
+		let y = 0
+		for (let t = 0; t < tracks.length; t++)
+		{
+			tracks[t].y = y
+			y += tracks[t].h
 		}
 
 		state.mergeContentState({ tracks })
@@ -317,7 +330,8 @@ export default class Editor
 					timeScroll: state.contentState.mouse.drag.timeScrollOrigin - state.contentState.mouse.drag.posDelta.x / state.contentState.timeScale,
 				})
 
-				if (Track.execute("yScrollEnabled", state, state.contentState.mouse.drag.trackOrigin))
+				if (state.contentState.mouse.drag.posOrigin.x > state.contentState.trackHeaderW &&
+					Track.execute("yScrollEnabled", state, state.contentState.mouse.drag.trackOrigin))
 				{
 					const trackState = new TrackStateManager<TrackState>(state, state.contentState.mouse.drag.trackOrigin)
 					const yScroll =
@@ -325,6 +339,17 @@ export default class Editor
 						state.contentState.mouse.drag.posDelta.y
 		
 					trackState.mergeTrackState({ yScroll })
+				}
+				else
+				{
+					const lastTrack = state.contentState.tracks[state.contentState.tracks.length - 1]
+					const trackScroll =
+						Math.max(0,
+						Math.min(
+							lastTrack.y + lastTrack.h - state.contentState.h,
+							state.contentState.mouse.drag.trackScrollOrigin - state.contentState.mouse.drag.posDelta.y))
+					
+					state.mergeContentState({ trackScroll })
 				}
 			}
 			else if (state.contentState.mouse.action == Editor.actionSelectCursor)
@@ -472,6 +497,7 @@ export default class Editor
 					posOrigin: state.contentState.mouse.pos,
 					timeOrigin: state.contentState.mouse.time,
 					timeScrollOrigin: state.contentState.timeScroll,
+					trackScrollOrigin: state.contentState.trackScroll,
 					trackOrigin: state.contentState.mouse.track,
 					trackPosOrigin: state.contentState.mouse.trackPos,
 					trackYRawOrigin: state.contentState.mouse.trackYRaw,
@@ -856,27 +882,22 @@ export default class Editor
 
 	static trackY(state: ContentStateManager<EditorState>, trackIndex: number): number
 	{
-		let yTrack = 0
-		for (let t = 0; t < state.contentState.tracks.length; t++)
-		{
-			if (t == trackIndex)
-				return yTrack
-
-			yTrack += state.contentState.tracks[t].h
-		}
-
-		return state.contentState.h
+		return state.contentState.tracks[trackIndex].y - state.contentState.trackScroll
 	}
 
 
 	static trackAtY(state: ContentStateManager<EditorState>, y: number): number
 	{
-		let yTrack = 0
+		y += state.contentState.trackScroll
+
+		if (y < 0)
+			return 0
+
 		for (let t = 0; t < state.contentState.tracks.length; t++)
 		{
-			yTrack += state.contentState.tracks[t].h
+			const track = state.contentState.tracks[t]
 
-			if (y <= yTrack)
+			if (y >= track.y && y <= track.y + track.h)
 				return t
 		}
 
@@ -988,7 +1009,7 @@ export default class Editor
 
 		ctx.restore()
 		
-		let y = 0
+		let y = -state.contentState.trackScroll
 		for (let t = 0; t < state.contentState.tracks.length; t++)
 		{
 			ctx.save()

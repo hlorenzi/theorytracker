@@ -111,32 +111,36 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 	}
 
 
-	return <>
+	return <div style={{
+		padding: "0.5em",
+	}}>
 
 		<div style={{
 			marginBottom: "0.5em",
-			fontSize: "1.25em",
+			fontSize: "1.125em",
 			color: props.state.appState.prefs.editor.keyChangeColor,
+			textAlign: "center",
 		}}>
-			Key Change
-		</div>
-
-		{/*<div style={{
-			marginBottom: "0.5em",
-			color: "#fff",
-		}}>
+			[Key Change]<br/>
 			{ (elem as Project.KeyChange).key.str }
-		</div>*/}
+		</div>
 
 		<div style={{
 			display: "grid",
-			gridTemplate: "auto auto auto 1em auto / auto",
+			gridTemplate: "auto auto auto 1em auto / auto auto",
 			gridRowGap: "0.25em",
-			justifyItems: "center",
+			gridColumnGap: "0.25em",
+			justifyItems: "start",
+			alignItems: "center",
 
 			minWidth: 0,
 			maxWidth: "max-content",
 		}}>
+			<div style={{
+				justifySelf: "right",
+			}}>
+				Tonic
+			</div>
 
 			<ButtonList
 				items={ tonicLetterOptions }
@@ -144,11 +148,23 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 				onChange={ onChangeTonicLetter }
 			/>
 
+			<div style={{
+				justifySelf: "right",
+			}}>
+				Accidental
+			</div>
+
 			<ButtonList
 				items={ tonicAccidentalOptions }
 				selected={ key.tonic.accidental }
 				onChange={ onChangeTonicAccidental }
 			/>
+
+			<div style={{
+				justifySelf: "right",
+			}}>
+				Scale
+			</div>
 
 			<DropdownMenu
 				items={ scaleOptions }
@@ -157,6 +173,13 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 			/>
 
 			<div/>
+			<div/>
+
+			<div style={{
+				justifySelf: "right",
+			}}>
+				Pitches
+			</div>
 
 			<ButtonList
 				multiple
@@ -167,5 +190,5 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 
 		</div>
 
-	</>
+	</div>
 }
