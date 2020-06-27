@@ -6,8 +6,10 @@ import EditorState from "./editor2/editor"
 import Project from "./project/project2"
 import Immutable from "immutable"
 import Rect from "./util/rect"
-import Popup from "./Popup"
-import PopupKeyChange from "./editor2/PopupKeyChange"
+import MenuBar from "./popup/MenuBar"
+import Popup from "./popup/Popup"
+import PopupContext from "./popup/PopupContext"
+import InspectorContent from "./editor2/InspectorContent"
 
 
 export default function App(props: {})
@@ -48,6 +50,8 @@ export default function App(props: {})
                     type: "editor",
                     state: null,
                 }),
+
+            popup: null,
 
             project: Project.getDefault(),
             selection: Immutable.Set<number>(),
@@ -127,14 +131,22 @@ export default function App(props: {})
     }, [rootRef.current])
 
 
-    return <>
+    return <div style={{
+        position: "absolute",
+        top: "0px",
+        left: "0px",
+        width: "100vw",
+        height: "100vh",
+        display: "grid",
+        gridTemplate: "auto 1fr / 1fr",
+    }}>
+        <MenuBar/>
+
         <div ref={ rootRef } style={{
-            position: "absolute",
-            top: "0px",
-            left: "0px",
-            width: "100vw",
-            height: "100vh",
+            width: "100%",
+            height: "100%",
             pointerEvents: "none",
+            zIndex: -1000,
         }}/>
         
         <DockableRoot
@@ -147,7 +159,17 @@ export default function App(props: {})
             appState={ appState }
             appDispatch={ appDispatch }
         />
-    </>
+
+        { !appState.popup ? null :
+            <PopupContext.Provider value={{ appState, appDispatch }}>
+                <Popup
+                    rect={ appState.popup.rect }
+                    popupElem={ appState.popup.elem }
+                    popupProps={ appState.popup.props }
+                />
+            </PopupContext.Provider>
+        }
+    </div>
 }
 
 
@@ -161,6 +183,13 @@ export interface AppState
     project: Project
     selection: Immutable.Set<number>
     prefs: AppPreferences
+
+    popup: null |
+    {
+        rect: Rect
+        elem: any
+        props: any
+    }
 }
 
 
@@ -255,7 +284,7 @@ export class ContentStateManager<T>
     }
 
 
-    createPopup(type: string, state: any, rect: Rect)
+    createFloating(type: string, state: any, rect: Rect)
     {
         this.appState = {
             ...this.appState,
@@ -273,7 +302,7 @@ export class ContentStateManager<T>
     }
 
 
-    removePopup(type: string)
+    removeFloating(type: string)
     {
         let root = this.appState.dockableRoot
         for (const [key, value] of this.appState.dockableContents)
@@ -286,6 +315,28 @@ export class ContentStateManager<T>
             ...this.appState,
             contentIdNext: this.appState.contentIdNext + 1,
             dockableRoot: root,
+        }
+    }
+
+
+    createPopup(rect: Rect, elem: any, props: any)
+    {
+        this.appState = {
+            ...this.appState,
+            popup: {
+                rect,
+                elem,
+                props,
+            }
+        }
+    }
+
+
+    removePopup()
+    {
+        this.appState = {
+            ...this.appState,
+            popup: null,
         }
     }
 }
@@ -327,6 +378,16 @@ function reduce(state: AppState, action: any): AppState
             state = {
                 ...state,
                 dockableRect: action.rect,
+            }
+            break
+        }
+
+
+        case "appRemovePopup":
+        {
+            state = {
+                ...state,
+                popup: null,
             }
             break
         }
@@ -380,7 +441,7 @@ function contentTypeToComponent(type: string): any
     switch (type)
     {
         case "editor": return EditorContent
-        case "inspector": return PopupKeyChange
+        case "inspector": return InspectorContent
 
         default:
             throw "invalid content type"

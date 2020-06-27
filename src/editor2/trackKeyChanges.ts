@@ -7,7 +7,6 @@ import Range from "../util/range"
 import Project from "../project/project2"
 import Rational from "../util/rational"
 import * as Theory from "../theory/theory"
-import PopupKeyChange from "./PopupKeyChange"
 
 
 export default class TrackKeyChanges

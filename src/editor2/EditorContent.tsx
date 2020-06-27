@@ -199,7 +199,7 @@ export function EditorContent(props: EditorContentProps)
 					pointerEvents: "none",
 				}}>
 					Track Name
-					<button style={{ pointerEvents: "auto" }}>Test</button>
+					{/*<button style={{ pointerEvents: "auto" }}>Test</button>*/}
 				</div>
 			)}
 		</div>

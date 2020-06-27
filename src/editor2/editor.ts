@@ -12,6 +12,7 @@ import Rect from "../util/rect"
 import * as Theory from "../theory/theory"
 import DockableData from "../dockable/DockableData"
 import { stat } from "fs"
+import TrackPopup from "./TrackPopup"
 
 
 export default class Editor
@@ -511,6 +512,15 @@ export default class Editor
 
 		Editor.popupClear(state)
 
+		if (action.rightButton && state.contentState.mouse.pos.x < state.contentState.trackHeaderW)
+		{
+			state.createPopup(
+				new Rect(
+					state.contentState.x + state.contentState.mouse.pos.x,
+					state.contentState.y + state.contentState.mouse.pos.y,
+					0, 0),
+				TrackPopup, {})
+		}
 		if (action.rightButton && state.contentState.mouse.hover)
 		{
 			Editor.selectionClear(state)
@@ -702,13 +712,13 @@ export default class Editor
 		const x = state.contentState.x + state.contentState.trackHeaderW
 		const y = state.contentState.y + Editor.trackY(state, trackIndex)
 
-		state.createPopup(type, popupState, rect.displace(x, y))
+		state.createFloating(type, popupState, rect.displace(x, y))
 	}
 	
 	
 	static popupClear(state: ContentStateManager<EditorState>)
 	{
-        state.removePopup("inspector")
+        state.removeFloating("inspector")
 	}
 	
 	

@@ -42,8 +42,8 @@ export default function DockableRoot(props: DockableRootProps)
     const anchorColor = "#0bf"
 
     return <div style={{
-        width: "100vw",
-        height: "100vh",
+        width: "100%",
+        height: "100%",
     }}>
 
         { !layout ? null : layout.panelRects.map(panelRect =>
@@ -182,7 +182,9 @@ function Panel(props: any)
                                 userSelect: "none",
                         }}>
                             { rootProps.contentTypeToTitle ?
-                                rootProps.contentTypeToTitle(content.type, contentStateManager) :
+                                rootProps.contentTypeToTitle(
+                                    rootProps.contents.get(cId)!.type,
+                                    new ContentStateManager<any>(rootProps.appState, contentId)) :
                                 "Content " + cId }
                         </div>
                     )}
