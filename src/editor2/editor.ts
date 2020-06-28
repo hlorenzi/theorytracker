@@ -1,4 +1,4 @@
-import { ContentStateManager } from "../App"
+import { ContentManager, AppReducer } from "../AppState"
 import EditorState from "./editorState"
 import Track from "./track"
 import TrackState from "./trackState"
@@ -27,7 +27,7 @@ export default class Editor
 	static actionStretchTimeEnd   = 0x80
 
 
-	static reduce(state: ContentStateManager<EditorState>, action: any)
+	/*static reduce(state: ContentReducer<EditorState>, action: any)
 	{
 		const shouldLog = (
 			action.type !== "playbackStep" &&
@@ -46,7 +46,7 @@ export default class Editor
 		
 		const reducer =
 			(Editor as any)["reduce_" + action.type] as
-			(state: ContentStateManager<EditorState>, action: any) => void
+			(state: ContentReducer<EditorState>, action: any) => void
 		
 		if (reducer)
 		{
@@ -63,10 +63,10 @@ export default class Editor
 			console.error("unhandled Editor.action", action)
             console.log("")
         }
-    }
+    }*/
 
 
-    static reduce_init(state: ContentStateManager<EditorState>, action: any)
+    static init(state: ContentManager<EditorState>)
     {
         state.contentState = {
 			x: 0,
@@ -149,7 +149,7 @@ export default class Editor
     }
 
 
-    static reduce_resize(state: ContentStateManager<EditorState>, action: any)
+    static resize(state: ContentManager<EditorState>, action: any)
     {
         state.mergeContentState({
 			x: action.x,
@@ -158,32 +158,9 @@ export default class Editor
             h: action.h,
         })
 	}
-	
-	
-	static reduce_keyDown(state: ContentStateManager<EditorState>, action: any)
-	{
-        state.mergeContentState({
-			keys: { ...state.contentState.keys, [action.key]: true },
-		})
-	}
-	
-	
-	static reduce_keyUp(state: ContentStateManager<EditorState>, action: any)
-	{
-		let keys = { ...state.contentState.keys }
-		delete keys[action.key]
-		
-        state.mergeContentState({ keys })
-	}
-	
-	
-	static reduce_keyCommand(state: ContentStateManager<EditorState>, action: any)
-	{
-		
-	}
-	
 
-	static reduce_tracksRefresh(state: ContentStateManager<EditorState>, action: any)
+
+	static tracksRefresh(state: ContentManager<EditorState>)
     {
 		const tracks: TrackState[] = []
 
@@ -235,7 +212,30 @@ export default class Editor
 	}
 	
 	
-	static reduce_mouseMove(state: ContentStateManager<EditorState>, action: any)
+	static reduce_keyDown(state: ContentManager<EditorState>, action: any)
+	{
+        state.mergeContentState({
+			keys: { ...state.contentState.keys, [action.key]: true },
+		})
+	}
+	
+	
+	static reduce_keyUp(state: ContentManager<EditorState>, action: any)
+	{
+		let keys = { ...state.contentState.keys }
+		delete keys[action.key]
+		
+        state.mergeContentState({ keys })
+	}
+	
+	
+	static reduce_keyCommand(state: ContentManager<EditorState>, action: any)
+	{
+		
+	}
+	
+	
+	static reduce_mouseMove(state: ContentManager<EditorState>, action: any)
 	{
 		const track = Editor.trackAtY(state, state.contentState.mouse.pos.y)
 		const trackDrag = !state.contentState.mouse.down ? track : state.contentState.mouse.drag.trackOrigin
@@ -387,7 +387,7 @@ export default class Editor
 	}
 
 
-	static drag(state: ContentStateManager<EditorState>)
+	static drag(state: ContentManager<EditorState>)
 	{
 		let mouseActionBlocked = 0
 		if (state.contentState.mouse.drag.xLocked)
@@ -480,7 +480,7 @@ export default class Editor
 	}
 	
 	
-	static reduce_mouseDown(state: ContentStateManager<EditorState>, action: any)
+	static reduce_mouseDown(state: ContentManager<EditorState>, action: any)
 	{
 		if (state.contentState.mouse.down)
 			return
@@ -514,7 +514,8 @@ export default class Editor
 
 		if (action.rightButton && state.contentState.mouse.pos.x < state.contentState.trackHeaderW)
 		{
-			state.createPopup(
+			state.appState = AppReducer.createPopup(
+				state.appState,
 				new Rect(
 					state.contentState.x + state.contentState.mouse.pos.x,
 					state.contentState.y + state.contentState.mouse.pos.y,
@@ -608,7 +609,7 @@ export default class Editor
 	}
 	
 	
-	static reduce_mouseUp(state: ContentStateManager<EditorState>, action: any)
+	static reduce_mouseUp(state: ContentManager<EditorState>, action: any)
 	{
 		if (!state.contentState.mouse.down)
 			return state
@@ -627,7 +628,7 @@ export default class Editor
 	}
 	
 	
-	static reduce_mouseWheel(state: ContentStateManager<EditorState>, action: any)
+	static reduce_mouseWheel(state: ContentManager<EditorState>, action: any)
 	{
 		if (Math.abs(action.deltaX) > 0)
 		{
@@ -671,7 +672,7 @@ export default class Editor
 	}
 
 			
-	static handleEdgeScroll(state: ContentStateManager<EditorState>, handleYScroll: boolean)
+	static handleEdgeScroll(state: ContentManager<EditorState>, handleYScroll: boolean)
 	{
 		const threshold = state.appState.prefs.editor.mouseEdgeScrollThreshold
 		const speed = state.appState.prefs.editor.mouseEdgeScrollSpeed
@@ -707,22 +708,22 @@ export default class Editor
 	}
 	
 	
-	static popup(state: ContentStateManager<EditorState>, trackIndex: number, type: string, rect: Rect, popupState: any)
+	static popup(state: ContentManager<EditorState>, trackIndex: number, type: string, rect: Rect, popupState: any)
 	{
 		const x = state.contentState.x + state.contentState.trackHeaderW
 		const y = state.contentState.y + Editor.trackY(state, trackIndex)
 
-		state.createFloating(type, popupState, rect.displace(x, y))
+		state.appState = AppReducer.createFloating(state.appState, type, popupState, rect.displace(x, y))
 	}
 	
 	
-	static popupClear(state: ContentStateManager<EditorState>)
+	static popupClear(state: ContentManager<EditorState>)
 	{
-        state.removeFloating("inspector")
+		state.appState = AppReducer.removeFloating(state.appState, "inspector")
 	}
 	
 	
-	static cursorSetVisible(state: ContentStateManager<EditorState>, visible: boolean)
+	static cursorSetVisible(state: ContentManager<EditorState>, visible: boolean)
 	{
 		state.mergeContentState({
 			cursor: {
@@ -733,7 +734,7 @@ export default class Editor
 	}
 	
 	
-	static cursorPlace(state: ContentStateManager<EditorState>, time: Rational | null, trackIndex: number | null)
+	static cursorPlace(state: ContentManager<EditorState>, time: Rational | null, trackIndex: number | null)
 	{
 		if (trackIndex !== null)
 			trackIndex = Math.max(0, Math.min(state.contentState.tracks.length - 1, trackIndex))
@@ -751,7 +752,7 @@ export default class Editor
 	}
 	
 	
-	static cursorDrag(state: ContentStateManager<EditorState>, time: Rational | null, trackIndex: number | null)
+	static cursorDrag(state: ContentManager<EditorState>, time: Rational | null, trackIndex: number | null)
 	{
 		if (trackIndex !== null)
 			trackIndex = Math.max(0, Math.min(state.contentState.tracks.length - 1, trackIndex))
@@ -767,7 +768,7 @@ export default class Editor
 	}
 
 
-	static selectionAdd(state: ContentStateManager<EditorState>, id: number)
+	static selectionAdd(state: ContentManager<EditorState>, id: number)
 	{
 		state.mergeAppState({
 			selection: state.appState.selection.add(id),
@@ -775,7 +776,7 @@ export default class Editor
 	}
 
 
-	static selectionAddAtCursor(state: ContentStateManager<EditorState>)
+	static selectionAddAtCursor(state: ContentManager<EditorState>)
 	{
 		const trackMin = Math.min(state.contentState.cursor.track1, state.contentState.cursor.track2)
 		const trackMax = Math.max(state.contentState.cursor.track1, state.contentState.cursor.track2)
@@ -801,7 +802,7 @@ export default class Editor
 	}
 
 
-	static selectionAddAtRectCursor(state: ContentStateManager<EditorState>)
+	static selectionAddAtRectCursor(state: ContentManager<EditorState>)
 	{
 		const track = state.contentState.rectCursor.track
 		
@@ -824,7 +825,7 @@ export default class Editor
 	}
 
 
-	static selectionRemove(state: ContentStateManager<EditorState>, id: number)
+	static selectionRemove(state: ContentManager<EditorState>, id: number)
 	{
 		state.mergeAppState({
 			selection: state.appState.selection.remove(id),
@@ -832,7 +833,7 @@ export default class Editor
 	}
 
 
-	static selectionClear(state: ContentStateManager<EditorState>)
+	static selectionClear(state: ContentManager<EditorState>)
 	{
 		state.mergeAppState({
 			selection: state.appState.selection.clear(),
@@ -840,7 +841,7 @@ export default class Editor
 	}
 
 
-	static selectionRange(state: ContentStateManager<EditorState>): Range | null
+	static selectionRange(state: ContentManager<EditorState>): Range | null
 	{
 		let range: Range | null = null
 
@@ -867,13 +868,13 @@ export default class Editor
 	}
 
 
-	static xAtTime(state: ContentStateManager<EditorState>, time: Rational): number
+	static xAtTime(state: ContentManager<EditorState>, time: Rational): number
 	{
 		return (time.asFloat() - state.contentState.timeScroll) * state.contentState.timeScale
 	}
 	
 	
-	static timeAtX(state: ContentStateManager<EditorState>, x: number, timeSnap?: Rational): Rational
+	static timeAtX(state: ContentManager<EditorState>, x: number, timeSnap?: Rational): Rational
 	{
 		timeSnap = timeSnap || state.contentState.timeSnap
 		const time = x / state.contentState.timeScale + state.contentState.timeScroll
@@ -881,7 +882,7 @@ export default class Editor
 	}
 	
 	
-	static timeRangeAtX(state: ContentStateManager<EditorState>, x1: number, x2: number, timeSnap?: Rational)
+	static timeRangeAtX(state: ContentManager<EditorState>, x1: number, x2: number, timeSnap?: Rational)
 	{
 		timeSnap = timeSnap || state.contentState.timeSnap
 		return new Range(
@@ -890,13 +891,13 @@ export default class Editor
 	}
 
 
-	static trackY(state: ContentStateManager<EditorState>, trackIndex: number): number
+	static trackY(state: ContentManager<EditorState>, trackIndex: number): number
 	{
 		return state.contentState.tracks[trackIndex].y - state.contentState.trackScroll
 	}
 
 
-	static trackAtY(state: ContentStateManager<EditorState>, y: number): number
+	static trackAtY(state: ContentManager<EditorState>, y: number): number
 	{
 		y += state.contentState.trackScroll
 
@@ -915,7 +916,7 @@ export default class Editor
 	}
 
 
-	static rectForTrack(state: ContentStateManager<EditorState>, trackIndex: number): Rect | null
+	static rectForTrack(state: ContentManager<EditorState>, trackIndex: number): Rect | null
 	{
 		let y = 0
 		for (let t = 0; t < state.contentState.tracks.length; t++)
@@ -938,7 +939,7 @@ export default class Editor
 	}
 	
 	
-	static visibleTimeRange(state: ContentStateManager<EditorState>): Range
+	static visibleTimeRange(state: ContentManager<EditorState>): Range
 	{
 		return new Range(
 			Editor.timeAtX(state, 0).subtract(state.contentState.timeSnap),
@@ -946,7 +947,7 @@ export default class Editor
 	}
     
 
-    static keyAt(state: ContentStateManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Key
+    static keyAt(state: ContentManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Key
     {
         const keyChangeTrackId = Project.keyChangeTrackForTrack(state.appState.project, trackId)
         const keyChangeTrackTimedElems = state.appState.project.timedLists.get(keyChangeTrackId)
@@ -965,7 +966,7 @@ export default class Editor
     }
     
 
-    static meterAt(state: ContentStateManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Meter
+    static meterAt(state: ContentManager<EditorState>, trackId: Project.ID, time: Rational): Theory.Meter
     {
         const meterChangeTrackId = Project.meterChangeTrackForTrack(state.appState.project, trackId)
         const meterChangeTrackTimedElems = state.appState.project.timedLists.get(meterChangeTrackId)
@@ -996,7 +997,7 @@ export default class Editor
 	}
 	
 	
-	static render(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D)
+	static render(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D)
 	{
 		ctx.save()
 		
@@ -1081,7 +1082,7 @@ export default class Editor
     }
 	
 	
-	static renderBackgroundMeasures(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D)
+	static renderBackgroundMeasures(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D)
 	{
 		const visibleRange = Editor.visibleTimeRange(state)
 		
@@ -1225,7 +1226,7 @@ export default class Editor
 	}
 	
 	
-	static renderCursorHighlight(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D)
+	static renderCursorHighlight(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D)
 	{
 		if (!state.contentState.cursor.visible)
 			return
@@ -1251,7 +1252,7 @@ export default class Editor
 	}
 	
 	
-	static renderCursorBeam(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D, time: Rational, tipOffsetSide: boolean)
+	static renderCursorBeam(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D, time: Rational, tipOffsetSide: boolean)
 	{
 		const trackMin = Math.min(state.contentState.cursor.track1, state.contentState.cursor.track2)
 		const trackMax = Math.max(state.contentState.cursor.track1, state.contentState.cursor.track2)
@@ -1281,7 +1282,7 @@ export default class Editor
 	}
 	
 	
-	static renderRectCursorHighlight(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D, trackIndex: number)
+	static renderRectCursorHighlight(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D, trackIndex: number)
 	{
 		if (state.contentState.mouse.action != Editor.actionSelectRect)
 			return
@@ -1302,7 +1303,7 @@ export default class Editor
 	}
 	
 	
-	static renderRectCursorContour(state: ContentStateManager<EditorState>, ctx: CanvasRenderingContext2D, trackIndex: number)
+	static renderRectCursorContour(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D, trackIndex: number)
 	{
 		if (state.contentState.mouse.action != Editor.actionSelectRect)
 			return

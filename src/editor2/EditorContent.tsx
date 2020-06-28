@@ -1,33 +1,22 @@
 import React from "react"
 import Editor from "./editor"
 import EditorState from "./editorState"
-import { AppState, AppDispatch, ContentStateManager } from "../App"
+import { AppState, AppReducer, ContentManager } from "../AppState"
+import { useAppManager } from "../AppContext"
 import Rect from "../util/rect"
 
 
 interface EditorContentProps
 {
-	state: ContentStateManager<EditorState>
 	contentId: number
-	appDispatch: AppDispatch
-	contentDispatch: (action: any) => void
 	rect: Rect
 }
 
 
 export function EditorContent(props: EditorContentProps)
 {
-	let state = props.state
-	if (!state.contentState)
-	{
-		window.setTimeout(() =>
-		{
-			props.contentDispatch({ type: "init" })
-			props.contentDispatch({ type: "tracksRefresh" })
-
-		}, 0)
-		return null
-	}
+	const appManager = useAppManager()
+	const contentCtx = appManager.makeContentManager<EditorState>(props.contentId)
 
 	const refDiv = React.useRef<HTMLDivElement>(null)
 	const refCanvas = React.useRef<HTMLCanvasElement>(null)
@@ -42,7 +31,7 @@ export function EditorContent(props: EditorContentProps)
 		}
 	}
 
-	const resize = () =>
+	const resize = (contentCtx: ContentManager<EditorState>) =>
 	{
 		if (!refDiv.current)
 			return
@@ -58,33 +47,28 @@ export function EditorContent(props: EditorContentProps)
 		refCanvas.current!.width = w
 		refCanvas.current!.height = h
 
-		props.contentDispatch({
-			type: "resize",
-			x,
-			y,
-			w,
-			h,
-		})
+		Editor.resize(contentCtx, { x, y, w, h })
 	}
 
 	React.useEffect(() =>
 	{
-		resize()
-
+		resize(contentCtx)
+		contentCtx.dispatch()
+		
 	}, [props.rect])
-
-	if (state.contentState.w == 0 && state.contentState.h == 0)
-		window.requestAnimationFrame(resize)
 
 	React.useEffect(() =>
 	{
+		if (!refCanvas.current)
+			return
+		
 		const preventDefault = (ev: Event) => ev.preventDefault()
 
-		
 		const onMouseMove = (ev: MouseEvent) =>
 		{
 			const pos = transformMousePos(refCanvas.current!, ev)
-			props.contentDispatch({ type: "mouseMove", pos })
+			Editor.reduce_mouseMove(contentCtx, { pos })
+			contentCtx.dispatch()
 		}
 		
 		const onMouseDown = (ev: MouseEvent) =>
@@ -95,39 +79,43 @@ export function EditorContent(props: EditorContentProps)
 			ev.preventDefault()
 			const pos = transformMousePos(refCanvas.current!, ev)
 
-			props.contentDispatch({ type: "mouseMove", pos })
-			props.contentDispatch({ type: "mouseDown", rightButton: ev.button != 0, ctrlKey: ev.ctrlKey })
+			Editor.reduce_mouseMove(contentCtx, { pos })
+			Editor.reduce_mouseDown(contentCtx, { rightButton: ev.button != 0, ctrlKey: ev.ctrlKey })
+			contentCtx.dispatch()
 		}
 		
 		const onMouseUp = (ev: MouseEvent) =>
 		{
 			const pos = transformMousePos(refCanvas.current!, ev)
-			props.contentDispatch({ type: "mouseMove", pos })
-			props.contentDispatch({ type: "mouseUp" })
-			props.contentDispatch({ type: "mouseMove", pos })
+			Editor.reduce_mouseMove(contentCtx, { pos })
+			Editor.reduce_mouseUp(contentCtx, { })
+			Editor.reduce_mouseMove(contentCtx, { pos })
+			contentCtx.dispatch()
 		}
 		
 		const onMouseWheel = (ev: MouseWheelEvent) =>
 		{
 			ev.preventDefault()
-			props.contentDispatch({ type: "mouseWheel", deltaX: ev.deltaX, deltaY: ev.deltaY })
+			Editor.reduce_mouseWheel(contentCtx, { deltaX: ev.deltaX, deltaY: ev.deltaY })
+			contentCtx.dispatch()
 		}
 	
 		const onKeyDown = (ev: KeyboardEvent) =>
 		{
-			props.contentDispatch({ type: "keyDown", key: ev.key.toLowerCase() })
-			props.contentDispatch({
-				type: "keyCommand",
+			Editor.reduce_keyDown(contentCtx, { key: ev.key.toLowerCase() })
+			Editor.reduce_keyCommand(contentCtx, {
 				ev,
 				key: ev.key.toLowerCase(),
 				ctrlKey: ev.ctrlKey,
 				shiftKey: ev.shiftKey,
 			})
+			contentCtx.dispatch()
 		}
 	
 		const onKeyUp = (ev: KeyboardEvent) =>
 		{
-			props.contentDispatch({ type: "keyUp", key: ev.key.toLowerCase() })
+			Editor.reduce_keyUp(contentCtx, { key: ev.key.toLowerCase() })
+			contentCtx.dispatch()
 		}
 		
 		window.addEventListener("mousemove", onMouseMove)
@@ -153,20 +141,23 @@ export function EditorContent(props: EditorContentProps)
 			refCanvas.current!.removeEventListener("contextmenu", preventDefault)
 		}
 		
-	}, [props.contentId])
+	}, [refCanvas.current, props.contentId])
 	
 	React.useEffect(() =>
 	{
-		Editor.render(state, refCanvas.current!.getContext("2d")!)
+		if (!refCanvas.current)
+			return
+
+		Editor.render(contentCtx, refCanvas.current!.getContext("2d")!)
 		
 		const mouseAction =
-			state.contentState.mouse.action || 
-			(state.contentState.mouse.hover && state.contentState.mouse.hover.action)!
+			contentCtx.contentState.mouse.action || 
+			(contentCtx.contentState.mouse.hover && contentCtx.contentState.mouse.hover.action)!
 		
-		if (state.contentState.tracks.some((tr: any) => !!tr.draw) || mouseAction & (Editor.actionDraw))
+		if (contentCtx.contentState.tracks.some((tr: any) => !!tr.draw) || mouseAction & (Editor.actionDraw))
 			refCanvas.current!.style.cursor = "crosshair"
 		else if (mouseAction & (Editor.actionDragTime))
-			refCanvas.current!.style.cursor = (state.contentState.mouse.down ? "grabbing" : "grab")
+			refCanvas.current!.style.cursor = (contentCtx.contentState.mouse.down ? "grabbing" : "grab")
 		else if (mouseAction & (Editor.actionPan))
 			refCanvas.current!.style.cursor = "move"
 		else if (mouseAction & (Editor.actionStretchTimeStart | Editor.actionStretchTimeEnd))
@@ -174,8 +165,22 @@ export function EditorContent(props: EditorContentProps)
 		else
 			refCanvas.current!.style.cursor = "text"
 		
-	}, [props.state.appState])
+	}, [refCanvas.current, contentCtx.appState])
 	
+	if (!contentCtx.contentState)
+	{
+		window.requestAnimationFrame(() =>
+		{
+			Editor.init(contentCtx)
+			resize(contentCtx)
+			Editor.tracksRefresh(contentCtx)
+			contentCtx.dispatch()
+
+		})
+		return null
+	}
+
+
 	return (
 		<div ref={ refDiv } style={{
 			width: "100%",
@@ -188,18 +193,17 @@ export function EditorContent(props: EditorContentProps)
 				height: "100%",
 			}}/>
 
-			{ props.state.contentState.tracks.map(track =>
-				<div style={{
+			{ contentCtx.contentState.tracks.map((track, i) =>
+				<div key={ i } style={{
 					position: "absolute",
 					left: 0,
-					top: track.y - props.state.contentState.trackScroll,
-					width: props.state.contentState.trackHeaderW,
+					top: track.y - contentCtx.contentState.trackScroll,
+					width: contentCtx.contentState.trackHeaderW,
 					height: track.h,
 					padding: "0.1em 0.25em",
 					pointerEvents: "none",
 				}}>
 					Track Name
-					{/*<button style={{ pointerEvents: "auto" }}>Test</button>*/}
 				</div>
 			)}
 		</div>

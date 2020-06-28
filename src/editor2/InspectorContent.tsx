@@ -2,31 +2,33 @@ import React from "react"
 import ButtonList from "../toolbox/ButtonList"
 import DropdownMenu from "../toolbox/DropdownMenu"
 import Editor from "./editor"
-import { AppState, AppDispatch, ContentStateManager } from "../App"
+import { AppState } from "../AppState"
 import Rect from "../util/rect"
 import Project from "../project/project2"
 import * as Theory from "../theory/theory"
+import { useAppManager } from "../AppContext"
 
 
-interface PopupKeyChangeProps
+interface InspectorContentProps
 {
-	state: ContentStateManager<PopupKeyChangeState>
 	contentId: number
-	appDispatch: AppDispatch
-	contentDispatch: (action: any) => void
 	rect: Rect
 }
 
 
-interface PopupKeyChangeState
+interface InspectorState
 {
 	elemIds: Project.ID[]
 }
 
 
-export default function PopupKeyChange(props: PopupKeyChangeProps)
+export default function InspectorContent(props: InspectorContentProps)
 {
-	const elem = props.state.appState.project.elems.get(props.state.contentState.elemIds[0])
+	const appManager = useAppManager()
+	const contentCtx = appManager.makeContentManager<InspectorState>(props.contentId)
+
+
+	const elem = contentCtx.appState.project.elems.get(contentCtx.contentState.elemIds[0])
 	if (!elem)
 		return null
 
@@ -95,9 +97,7 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 
 	const onChangeScale = (item: any) =>
 	{
-		console.log(item)
 		const scale = Theory.Scale.fromId(item.value)
-		console.log(scale)
 		const newKey = new Theory.Key(key.tonic, scale)
 		changeKey(newKey)
 	}
@@ -106,8 +106,9 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 	const changeKey = (newKey: Theory.Key) =>
 	{
 		const newKeyCh = Project.Element.withChanges(keyCh, { key: newKey })
-		const project = Project.upsertTimedElement(props.state.appState.project, newKeyCh)
-		props.appDispatch({ type: "appStateSet", newState: { ...props.state.appState, project }})
+		const project = Project.upsertTimedElement(appManager.appState.project, newKeyCh)
+		appManager.mergeAppState({ project })
+		appManager.dispatch()
 	}
 
 
@@ -118,7 +119,7 @@ export default function PopupKeyChange(props: PopupKeyChangeProps)
 		<div style={{
 			marginBottom: "0.5em",
 			fontSize: "1.125em",
-			color: props.state.appState.prefs.editor.keyChangeColor,
+			color: appManager.appState.prefs.editor.keyChangeColor,
 			textAlign: "center",
 		}}>
 			[Key Change]<br/>

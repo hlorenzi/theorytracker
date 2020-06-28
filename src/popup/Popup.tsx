@@ -1,6 +1,7 @@
 import React from "react"
-import PopupContext from "./PopupContext"
 import Rect from "../util/rect"
+import { useAppManager } from "../AppContext"
+import { AppReducer } from "../AppState"
 
 
 interface PopupProps
@@ -13,12 +14,17 @@ interface PopupProps
 
 export default function Popup(props: PopupProps)
 {
-    const ctx = React.useContext(PopupContext)!
-
+    const appManager = useAppManager()
+    
+    const dismiss = () =>
+    {
+        appManager.appState = AppReducer.removePopup(appManager.appState)
+        appManager.dispatch()
+    }
 
     return <div
-        onClick={ () => ctx.appDispatch({ type: "appRemovePopup" })}
         onContextMenu={ ev => ev.preventDefault() }
+        onClick={ dismiss }
         style={{
             zIndex: 100000,
             position: "absolute",
@@ -32,8 +38,8 @@ export default function Popup(props: PopupProps)
         <div style={{
             zIndex: 100001,
             position: "absolute",
-            left: props.rect.x2 + 4,
-            top: props.rect.y2 + 4,
+            left: props.rect.x1,
+            top: props.rect.y2,
 
             backgroundColor: "#111",
             border: "1px solid #888",

@@ -1,15 +1,15 @@
-import { AppState, ContentStateManager } from "../App"
+import { AppState, ContentManager, AppReducer } from "../AppState"
 import EditorState from "./editorState"
 import TrackState from "./trackState"
 
 
 export default class TrackStateManager<T>
 {
-    contentStateManager: ContentStateManager<EditorState>
+    contentStateManager: ContentManager<EditorState>
     trackIndex: number
 
 
-    constructor(contentStateManager: ContentStateManager<EditorState>, trackIndex: number)
+    constructor(contentStateManager: ContentManager<EditorState>, trackIndex: number)
     {
         this.contentStateManager = contentStateManager
         this.trackIndex = trackIndex
@@ -24,7 +24,7 @@ export default class TrackStateManager<T>
 
     mergeAppState(newState: Partial<AppState>)
     {
-        this.contentStateManager.mergeAppState(newState)
+        this.contentStateManager.appState = AppReducer.merge(this.contentStateManager.appState, newState)
     }
 
 

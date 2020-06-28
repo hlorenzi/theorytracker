@@ -1,4 +1,4 @@
-import { ContentStateManager } from "../App"
+import { ContentManager } from "../AppState"
 import EditorState from "./editorState"
 import TrackStateManager from "./trackStateManager"
 import TrackNotesPreview from "./trackNotesPreview"
@@ -47,7 +47,7 @@ export default class Track
 	}
 	
 	
-	static execute(fnName: string, state: ContentStateManager<EditorState>, trackIndex: number, ...args: any[]): any
+	static execute(fnName: string, state: ContentManager<EditorState>, trackIndex: number, ...args: any[]): any
 	{
         const trackStateManager = new TrackStateManager<any>(state, trackIndex)
         

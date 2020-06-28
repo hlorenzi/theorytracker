@@ -1,6 +1,5 @@
 import React from "react"
 import DockableData, { Root, Panel, PanelRect, Content, Layout, Divider, Anchor, DockingMode } from "./DockableData"
-import { AppState, AppDispatch, ContentStateManager } from "../App"
 import Rect from "../util/rect"
 import Immutable from "immutable"
 
@@ -14,10 +13,7 @@ interface DockableRootProps
 
     contents: Immutable.Map<number, Content>
     contentTypeToComponent: (type: string) => any
-    contentTypeToTitle: (type: string, contentState: ContentStateManager<any>) => string
-
-    appState: AppState
-    appDispatch: AppDispatch
+    contentTypeToTitle: (type: string) => string
 }
 
 
@@ -138,29 +134,7 @@ function Panel(props: any)
 
             const contentId = contentIds[contentIndex]
             const content = rootProps.contents.get(contentId)
-            if (!content)
-                return null
-
-            const component = rootProps.contentTypeToComponent(content.type)
-            const contentStateSet = (newState: any) =>
-            {
-                rootProps.appDispatch({
-                    type: "contentStateSet",
-                    contentId,
-                    newState,
-                })
-            }
-            
-            const contentDispatch = (action: any) =>
-            {
-                rootProps.appDispatch({
-                    type: "contentDispatch",
-                    contentId,
-                    action,
-                })
-            }
-
-            const contentStateManager = new ContentStateManager<any>(rootProps.appState, contentId)
+            const component = !content ? null : rootProps.contentTypeToComponent(content.type)
 
             return <>
                 <div id={ "dockable_header_" + panelRect.panel.id } style={{
@@ -181,10 +155,8 @@ function Panel(props: any)
                                 padding: "0.25em 0.5em",
                                 userSelect: "none",
                         }}>
-                            { rootProps.contentTypeToTitle ?
-                                rootProps.contentTypeToTitle(
-                                    rootProps.contents.get(cId)!.type,
-                                    new ContentStateManager<any>(rootProps.appState, contentId)) :
+                            { rootProps.contentTypeToTitle && rootProps.contents.get(cId) ?
+                                rootProps.contentTypeToTitle(rootProps.contents.get(cId)!.type) :
                                 "Content " + cId }
                         </div>
                     )}
@@ -200,16 +172,10 @@ function Panel(props: any)
                     minHeight: "0px",
                     textAlign: "left",
                 }}>
-                        { React.createElement(component, {
-                            state: contentStateManager,
-                            appState: rootProps.appState,
-                            appDispatch: rootProps.appDispatch,
-                            contentId,
-                            contentState: content.state,
-                            contentStateSet,
-                            contentDispatch,
-                            rect: panelRect,
-                        })}
+                    { !component ? null : React.createElement(component, {
+                        contentId,
+                        rect: panelRect,
+                    })}
                 </div>
             </>
         })() }
