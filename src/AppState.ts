@@ -2,6 +2,8 @@ import DockableData, * as Dock from "./dockable/DockableData"
 import Project from "./project/project2"
 import Immutable from "immutable"
 import Rect from "./util/rect"
+import Editor from "./editor2/editor"
+import DockableRoot from "./dockable/DockableRoot"
 
 
 export interface AppState
@@ -65,7 +67,7 @@ export class AppReducer
     static makeNew(): AppState
     {
         let root = DockableData.makeRoot()
-        root = DockableData.addPanel(root, 0, Dock.DockingMode.Full, 1)
+        root = DockableData.addPanel(root, 1, Dock.DockingMode.Full, 1)
 
         return {
             contentIdNext: 2,
@@ -74,7 +76,7 @@ export class AppReducer
             dockableContents: Immutable.Map<number, Dock.Content>()
                 .set(1, {
                     type: "editor",
-                    state: null,
+                    state: Editor.makeNewFull(),
                 }),
 
             popup: null,
@@ -154,6 +156,75 @@ export class AppReducer
             ...AppReducer.getContent(state, contentId),
             ...newState,
         })
+    }
+
+
+    static createTab(appState: AppState, nextToContentId: number, type: string, state: any): AppState
+    {
+        const panel = DockableData.findPanelWithContent(appState.dockableRoot.rootPanel, nextToContentId)
+        if (!panel)
+            return appState
+
+        return {
+            ...appState,
+            contentIdNext: appState.contentIdNext + 1,
+            dockableRoot: DockableData.addPanel(
+                appState.dockableRoot,
+                panel.id,
+                Dock.DockingMode.Full,
+                appState.contentIdNext),
+            dockableContents: appState.dockableContents.set(appState.contentIdNext,
+            {
+                type,
+                state,
+            }),
+        }
+    }
+
+
+    static createOrUpdateTab(appState: AppState, nextToContentId: number, type: string, state: any): AppState
+    {
+        const updatablePanel = DockableData.findPanelWithType(appState.dockableRoot.rootPanel, type, appState.dockableContents)
+        if (updatablePanel)
+        {
+            const contentId = updatablePanel.contentIds.find(c => appState.dockableContents.get(c)!.type == type)!
+            const contentIndex = updatablePanel.contentIds.findIndex(c => c == contentId)
+
+            return {
+                ...appState,
+                dockableRoot: DockableData.modifyPanelFromRoot(
+                    appState.dockableRoot, updatablePanel.id, (oldPanel) =>
+                    {
+                        return { ...oldPanel,
+                            curContent: contentIndex,
+                        }
+                    }),
+                dockableContents: appState.dockableContents.set(contentId,
+                {
+                    type,
+                    state,
+                })
+            }
+        }
+
+        const panel = DockableData.findPanelWithContent(appState.dockableRoot.rootPanel, nextToContentId)
+        if (!panel)
+            return appState
+
+        return {
+            ...appState,
+            contentIdNext: appState.contentIdNext + 1,
+            dockableRoot: DockableData.addPanel(
+                appState.dockableRoot,
+                panel.id,
+                Dock.DockingMode.Full,
+                appState.contentIdNext),
+            dockableContents: appState.dockableContents.set(appState.contentIdNext,
+            {
+                type,
+                state,
+            }),
+        }
     }
 
 

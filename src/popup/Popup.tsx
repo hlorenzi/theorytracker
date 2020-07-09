@@ -1,5 +1,6 @@
 import React from "react"
 import Rect from "../util/rect"
+import { PopupContext } from "./PopupContext"
 import { useAppManager } from "../AppContext"
 import { AppReducer } from "../AppState"
 
@@ -7,14 +8,17 @@ import { AppReducer } from "../AppState"
 interface PopupProps
 {
     rect: Rect
-    popupElem: any
-    popupProps: any
+    isSub: boolean
+    popupElem?: any
+    popupProps?: any
+    children?: any
 }
 
 
 export default function Popup(props: PopupProps)
 {
     const appManager = useAppManager()
+    const [subOpen, setSubOpen] = React.useState<any>(null)
     
     const dismiss = () =>
     {
@@ -22,37 +26,45 @@ export default function Popup(props: PopupProps)
         appManager.dispatch()
     }
 
-    return <div
-        onContextMenu={ ev => ev.preventDefault() }
-        onClick={ dismiss }
-        style={{
-            zIndex: 100000,
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: "100vw",
-            height: "100vh",
-
-            backgroundColor: "transparent",
+    return <PopupContext.Provider value={{
+        curSubPopup: subOpen,
+        openSubPopup: setSubOpen,
+        itemIndex: 1,
     }}>
-        <div style={{
-            zIndex: 100001,
-            position: "absolute",
-            left: props.rect.x1,
-            top: props.rect.y2,
+        <div
+            onContextMenu={ ev => ev.preventDefault() }
+            onClick={ props.isSub ? undefined : dismiss }
+            style={{
+                zIndex: 100000,
+                position: "fixed",
+                left: 0,
+                top: 0,
+                width: "100vw",
+                height: "100vh",
 
-            backgroundColor: "#111",
-            border: "1px solid #888",
-
-            textAlign: "left",
-
-            display: "grid",
-            gridTemplate: "auto / auto",
-            gridAutoFlow: "row",
+                backgroundColor: "transparent",
+                pointerEvents: props.isSub ? "none" : undefined,
         }}>
-            { React.createElement(props.popupElem, {
-                ...props.popupProps
-            }) }
+            <div style={{
+                zIndex: 100001,
+                position: "absolute",
+                left: props.isSub ? props.rect.x2 : props.rect.x1,
+                top: props.isSub ? props.rect.y1 :props.rect.y2,
+
+                backgroundColor: "#111",
+                border: "1px solid #888",
+
+                textAlign: "left",
+
+                display: "grid",
+                gridTemplate: "auto / auto auto auto",
+                gridAutoFlow: "row",
+                pointerEvents: "auto",
+            }}>
+                { props.isSub ? props.children : React.createElement(props.popupElem, {
+                    ...props.popupProps
+                }) }
+            </div>
         </div>
-    </div>
+    </PopupContext.Provider>
 }

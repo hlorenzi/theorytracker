@@ -1,5 +1,5 @@
 import { ContentManager, AppReducer } from "../AppState"
-import EditorState from "./editorState"
+import EditorState, { EditorMode } from "./editorState"
 import Track from "./track"
 import TrackState from "./trackState"
 import TrackStateManager from "./trackStateManager"
@@ -27,48 +27,12 @@ export default class Editor
 	static actionStretchTimeEnd   = 0x80
 
 
-	/*static reduce(state: ContentReducer<EditorState>, action: any)
-	{
-		const shouldLog = (
-			action.type !== "playbackStep" &&
-			action.type !== "mouseMove" &&
-			action.type !== "keyDown" &&
-			action.type !== "keyUp" &&
-			action.type !== "keyCommand" &&
-			action.type !== "resize"
-		)
-		
-		if (shouldLog)
-		{
-            console.log("Editor.oldState", state.appState)
-			console.log("Editor.action", action)
-		}
-		
-		const reducer =
-			(Editor as any)["reduce_" + action.type] as
-			(state: ContentReducer<EditorState>, action: any) => void
-		
-		if (reducer)
-		{
-			reducer(state, action)
-			
-			if (shouldLog)
-			{
-				console.log("Editor.newState", state.appState)
-                console.log("")
-			}
-		}
-		else
-		{
-			console.error("unhandled Editor.action", action)
-            console.log("")
-        }
-    }*/
-
-
-    static init(state: ContentManager<EditorState>)
+	static makeNewFull(): EditorState
     {
-        state.contentState = {
+        return {
+			mode: EditorMode.Full,
+			modeTracks: [],
+
 			x: 0,
 			y: 0,
             w: 0,
@@ -79,7 +43,7 @@ export default class Editor
 			tracks: [],
 			trackScroll: 0,
 
-			timeScroll: 0,
+			timeScroll: -0.5,
 			timeScale: 100,
 			timeSnap: new Rational(1, 16),
 			timeSnapBase: new Rational(1, 16),
@@ -147,6 +111,21 @@ export default class Editor
 			},
         }
     }
+	
+
+	static makeNewNoteEditor(trackIds: number[]): EditorState
+    {
+		const state = Editor.makeNewFull()
+		state.mode = EditorMode.NoteEditor
+		state.modeTracks = trackIds
+		return state
+	}
+
+
+	static init(state: ContentManager<EditorState>)
+	{
+		state.contentState = Editor.makeNewFull()
+	}
 
 
     static resize(state: ContentManager<EditorState>, action: any)
@@ -166,38 +145,65 @@ export default class Editor
 
 		for (let t = 0; t < state.appState.project.tracks.length; t++)
 		{
-			if (state.appState.project.tracks[t].trackType == Project.TrackType.Notes)
-				tracks.push({
-					type: "notesPreview",
-					trackIndex: t,
-					trackId: state.appState.project.tracks[t].id,
-					y: 0,
-					h: 600,//280,
-					yScroll: 0,
-					pinned: false,
-				})
-			else if (state.appState.project.tracks[t].trackType == Project.TrackType.KeyChanges)
+			const track = state.appState.project.tracks[t]
+			if (track.trackType == Project.TrackType.Notes)
+			{
+				if (state.contentState.mode == EditorMode.Full)
+					tracks.push({
+						type: "notesPreview",
+						trackIndex: t,
+						trackId: track.id,
+						y: 0,
+						h: 40,
+						yScroll: 0,
+						pinned: false,
+					})
+				else if (state.contentState.modeTracks.some(t => t == track.id))
+					tracks.push({
+						type: "notes",
+						trackIndex: t,
+						trackId: track.id,
+						y: 0,
+						h: 0,
+						yScroll: 0,
+						pinned: false,
+					})
+			}
+			else if (track.trackType == Project.TrackType.KeyChanges)
 				tracks.push({
 					type: "keyChanges",
 					trackIndex: t,
-					trackId: state.appState.project.tracks[t].id,
+					trackId: track.id,
 					y: 0,
 					h: TrackKeyChanges.knobHeight,
 					yScroll: 0,
 					pinned: false,
 				})
-			else if (state.appState.project.tracks[t].trackType == Project.TrackType.MeterChanges)
+			else if (track.trackType == Project.TrackType.MeterChanges)
 				tracks.push({
 					type: "meterChanges",
 					trackIndex: t,
-					trackId: state.appState.project.tracks[t].id,
+					trackId: track.id,
 					y: 0,
 					h: TrackMeterChanges.knobHeight,
 					yScroll: 0,
 					pinned: false,
 				})
 		}
+
+		let fixedH = 0
+		for (let t = 0; t < tracks.length; t++)
+		{
+			if (tracks[t].h > 0)
+				fixedH += tracks[t].h
+		}
 	
+		for (let t = 0; t < tracks.length; t++)
+		{
+			if (tracks[t].h == 0)
+				tracks[t].h = state.contentState.h - fixedH
+		}
+
 		let y = 0
 		for (let t = 0; t < tracks.length; t++)
 		{
@@ -487,6 +493,7 @@ export default class Editor
 
 		const now = new Date()
 		const timeSinceLastDown = now.getTime() - state.contentState.mouse.downDate.getTime()
+		const isDoubleClick = timeSinceLastDown < 250
 
 		state.mergeContentState({
 			mouse: { ...state.contentState.mouse,
@@ -512,23 +519,7 @@ export default class Editor
 
 		Editor.popupClear(state)
 
-		if (action.rightButton && state.contentState.mouse.pos.x < state.contentState.trackHeaderW)
-		{
-			state.appState = AppReducer.createPopup(
-				state.appState,
-				new Rect(
-					state.contentState.x + state.contentState.mouse.pos.x,
-					state.contentState.y + state.contentState.mouse.pos.y,
-					0, 0),
-				TrackPopup, {})
-		}
-		if (action.rightButton && state.contentState.mouse.hover)
-		{
-			Editor.selectionClear(state)
-			Editor.selectionAdd(state, state.contentState.mouse.hover.id)
-			Track.execute("popup", state, state.contentState.mouse.track)
-		}
-		else if (action.rightButton || state.contentState.keys[state.appState.prefs.editor.keyPan])
+		if (action.rightButton || state.contentState.keys[state.appState.prefs.editor.keyPan])
 		{
 			state.mergeContentState({
 				mouse: { ...state.contentState.mouse,
@@ -569,7 +560,23 @@ export default class Editor
 		{
 			const selectMultiple = state.contentState.keys[state.appState.prefs.editor.keySelectMultiple]
 
-			if (state.contentState.mouse.hover)
+			if (isDoubleClick && state.contentState.mode == EditorMode.Full)
+			{
+				let noteEditorState = Editor.makeNewNoteEditor([state.contentState.tracks[state.contentState.mouse.track].trackId])
+				noteEditorState.timeScale = state.contentState.timeScale
+				noteEditorState.timeScroll = state.contentState.timeScroll
+
+				state.appState = AppReducer.createOrUpdateTab(
+					state.appState, state.contentId,
+					"editorNotes", noteEditorState)
+
+				state.mergeContentState({
+					mouse: { ...state.contentState.mouse,
+						down: false,
+					}
+				})
+			}
+			else if (state.contentState.mouse.hover)
 			{
 				const alreadySelected = state.appState.selection.has(state.contentState.mouse.hover.id)
 
@@ -617,6 +624,27 @@ export default class Editor
 		if (state.contentState.mouse.action == Editor.actionDraw)
 		{
 			Track.execute("drawEnd", state, state.contentState.mouse.track)
+		}
+		else if (state.contentState.mouse.action == Editor.actionPan &&
+			state.contentState.mouse.drag.xLocked &&
+			state.contentState.mouse.drag.yLocked)
+		{
+			if (state.contentState.mouse.pos.x < state.contentState.trackHeaderW)
+			{
+				state.appState = AppReducer.createPopup(
+					state.appState,
+					new Rect(
+						state.contentState.x + state.contentState.mouse.pos.x,
+						state.contentState.y + state.contentState.mouse.pos.y,
+						0, 0),
+					TrackPopup, {})
+			}
+			else if (state.contentState.mouse.hover)
+			{
+				Editor.selectionClear(state)
+				Editor.selectionAdd(state, state.contentState.mouse.hover.id)
+				Track.execute("popup", state, state.contentState.mouse.track)
+			}
 		}
 
 		state.mergeContentState({

@@ -102,6 +102,7 @@ export default function App(props: {})
             { !appStateRef.current.popup ? null :
                 <Popup
                     rect={ appStateRef.current.popup.rect }
+                    isSub={ false }
                     popupElem={ appStateRef.current.popup.elem }
                     popupProps={ appStateRef.current.popup.props }
                 />
@@ -116,6 +117,7 @@ function contentTypeToComponent(type: string): any
     switch (type)
     {
         case "editor": return EditorContent
+        case "editorNotes": return EditorContent
         case "inspector": return InspectorContent
 
         default:
@@ -128,7 +130,8 @@ function contentTypeToTitle(type: string): any
 {
     switch (type)
     {
-        case "editor": return "Editor"
+        case "editor": return "Project"
+        case "editorNotes": return "Note Track"
         case "inspector": return "Inspector"
 
         default:

@@ -4,8 +4,18 @@ import Rational from "../util/rational"
 import Range from "../util/range"
 
 
+export enum EditorMode
+{
+    Full,
+    NoteEditor,
+}
+
+
 export default interface EditorState
 {
+    mode: EditorMode
+    modeTracks: number[]
+
     x: number
     y: number
     w: number

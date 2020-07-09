@@ -48,6 +48,7 @@ export function EditorContent(props: EditorContentProps)
 		refCanvas.current!.height = h
 
 		Editor.resize(contentCtx, { x, y, w, h })
+		Editor.tracksRefresh(contentCtx)
 	}
 
 	React.useEffect(() =>
@@ -61,11 +62,18 @@ export function EditorContent(props: EditorContentProps)
 	{
 		if (!refCanvas.current)
 			return
+
+		const refresh = () =>
+		{
+			if (!contentCtx.contentState || contentCtx.contentState.tracks.length == 0)
+				resize(contentCtx)
+		}
 		
 		const preventDefault = (ev: Event) => ev.preventDefault()
 
 		const onMouseMove = (ev: MouseEvent) =>
 		{
+			refresh()
 			const pos = transformMousePos(refCanvas.current!, ev)
 			Editor.reduce_mouseMove(contentCtx, { pos })
 			contentCtx.dispatch()
@@ -76,6 +84,7 @@ export function EditorContent(props: EditorContentProps)
 			//if (window.document.activeElement)
 			//	window.document.activeElement.blur()
 
+			refresh()
 			ev.preventDefault()
 			const pos = transformMousePos(refCanvas.current!, ev)
 
@@ -86,6 +95,7 @@ export function EditorContent(props: EditorContentProps)
 		
 		const onMouseUp = (ev: MouseEvent) =>
 		{
+			refresh()
 			const pos = transformMousePos(refCanvas.current!, ev)
 			Editor.reduce_mouseMove(contentCtx, { pos })
 			Editor.reduce_mouseUp(contentCtx, { })
@@ -95,6 +105,7 @@ export function EditorContent(props: EditorContentProps)
 		
 		const onMouseWheel = (ev: MouseWheelEvent) =>
 		{
+			refresh()
 			ev.preventDefault()
 			Editor.reduce_mouseWheel(contentCtx, { deltaX: ev.deltaX, deltaY: ev.deltaY })
 			contentCtx.dispatch()
@@ -102,6 +113,7 @@ export function EditorContent(props: EditorContentProps)
 	
 		const onKeyDown = (ev: KeyboardEvent) =>
 		{
+			refresh()
 			Editor.reduce_keyDown(contentCtx, { key: ev.key.toLowerCase() })
 			Editor.reduce_keyCommand(contentCtx, {
 				ev,
@@ -114,6 +126,7 @@ export function EditorContent(props: EditorContentProps)
 	
 		const onKeyUp = (ev: KeyboardEvent) =>
 		{
+			refresh()
 			Editor.reduce_keyUp(contentCtx, { key: ev.key.toLowerCase() })
 			contentCtx.dispatch()
 		}
@@ -135,6 +148,9 @@ export function EditorContent(props: EditorContentProps)
 			window.removeEventListener("keydown",   onKeyDown)
 			window.removeEventListener("keyup",     onKeyUp)
 			
+			if (!refCanvas.current)
+				return
+		
 			refCanvas.current!.removeEventListener("mousedown",   onMouseDown)
 			refCanvas.current!.removeEventListener("wheel",       onMouseWheel)
 			refCanvas.current!.removeEventListener("mouseup",     preventDefault)
@@ -167,18 +183,19 @@ export function EditorContent(props: EditorContentProps)
 		
 	}, [refCanvas.current, contentCtx.appState])
 	
-	if (!contentCtx.contentState)
+	React.useEffect(() =>
 	{
-		window.requestAnimationFrame(() =>
+		if (!contentCtx.contentState || contentCtx.contentState.tracks.length == 0)
 		{
-			Editor.init(contentCtx)
-			resize(contentCtx)
-			Editor.tracksRefresh(contentCtx)
-			contentCtx.dispatch()
+			window.requestAnimationFrame(() =>
+			{
+				resize(contentCtx)
+				contentCtx.dispatch()
+			})
+			return
+		}
 
-		})
-		return null
-	}
+	}, [props.contentId])
 
 
 	return (

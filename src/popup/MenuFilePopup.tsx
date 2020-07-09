@@ -22,11 +22,21 @@ export default function MenuFilePopup(props: MenuFilePopupProps)
 
     return <>
         <PopupButton
-            text="New"
+            icon="📄"
+            label="New"
             onClick={ doNew }
         />
         <PopupButton
-            text="Open..."
+            icon="📂"
+            label="Open..."
         />
+        <PopupButton
+            label="Open Recent"
+        >
+            <PopupButton label="Test!"/>
+            <PopupButton label="Test!"/>
+            <PopupButton label="Test!"/>
+            <PopupButton label="Test!"/>
+        </PopupButton>
     </>
 }

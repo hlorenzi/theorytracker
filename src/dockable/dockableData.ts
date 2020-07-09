@@ -1,4 +1,5 @@
 import Rect from "../util/rect"
+import Immutable from "immutable"
 
 
 export interface Root
@@ -92,9 +93,9 @@ export default class DockableData
     static makeRoot(): Root
     {
         return {
-            idNext: 1,
+            idNext: 2,
             rootPanel: {
-                id: 0,
+                id: 1,
                 contentIds: [],
                 curContent: 0,
                 subpanels: [],
@@ -103,6 +104,57 @@ export default class DockableData
             },
             floatingPanels: [],
         }
+    }
+
+
+    static findPanelWithContent(panel: Panel, wantedContentId: number): Panel | null
+    {
+        if (panel.contentIds.some(c => c == wantedContentId))
+            return panel
+            
+        for (const subpanel of panel.subpanels)
+        {
+            const found = DockableData.findPanelWithContent(subpanel, wantedContentId)
+            if (found)
+                return found
+        }
+
+        return null
+    }
+
+
+    static findPanelWithType(panel: Panel, wantedType: string, contents: Immutable.Map<number, Content>): Panel | null
+    {
+        if (panel.contentIds.some(c => contents.get(c)!.type == wantedType))
+            return panel
+            
+        for (const subpanel of panel.subpanels)
+        {
+            const found = DockableData.findPanelWithType(subpanel, wantedType, contents)
+            if (found)
+                return found
+        }
+
+        return null
+    }
+
+
+    static findContentWithType(panel: Panel, wantedType: string, contents: Immutable.Map<number, Content>): number | null
+    {
+        for (const contentId of panel.contentIds)
+        {
+            if (contents.get(contentId)!.type == wantedType)
+                return contentId
+        }
+            
+        for (const subpanel of panel.subpanels)
+        {
+            const found = DockableData.findContentWithType(subpanel, wantedType, contents)
+            if (typeof found == "number")
+                return found
+        }
+
+        return null
     }
 
 

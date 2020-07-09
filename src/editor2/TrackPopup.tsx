@@ -12,10 +12,10 @@ export default function TrackPopup(props: TrackPopupProps)
 {
     return <>
         <PopupButton
-            text="Insert track before"
+            label="Insert track before"
         />
         <PopupButton
-            text="Insert track after"
+            label="Insert track after"
         />
     </>
 }

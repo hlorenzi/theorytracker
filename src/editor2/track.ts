@@ -1,6 +1,7 @@
 import { ContentManager } from "../AppState"
 import EditorState from "./editorState"
 import TrackStateManager from "./trackStateManager"
+import TrackNotes from "./trackNotes"
 import TrackNotesPreview from "./trackNotesPreview"
 import TrackKeyChanges from "./trackKeyChanges"
 import TrackMeterChanges from "./trackMeterChanges"
@@ -21,6 +22,7 @@ export default class Track
 	{
 		switch (type)
 		{
+			case "notes": return TrackNotes
 			case "notesPreview": return TrackNotesPreview
             case "keyChanges": return TrackKeyChanges
             case "meterChanges": return TrackMeterChanges
