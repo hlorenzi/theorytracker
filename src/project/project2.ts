@@ -203,11 +203,36 @@ export namespace Project
     }
 
 
+    export enum TrackInstrumentType
+    {
+        Sflib,
+    }
+
+
+    export interface TrackInstrument
+    {
+        instrumentType: TrackInstrumentType
+    }
+
+
+    export interface TrackInstrumentSflib extends TrackInstrument
+    {
+        instrumentId: string
+    }
+
+
     export class TrackNotes extends Track
     {
+        instrument: TrackInstrument
+
+
         constructor()
         {
             super(Project.TrackType.Notes)
+            this.instrument = <TrackInstrumentSflib>{
+                instrumentType: TrackInstrumentType.Sflib,
+                instrumentId: "arachno/grand_piano",
+            }
         }
     }
 

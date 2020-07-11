@@ -5,6 +5,7 @@ import Rect from "./util/rect"
 import Editor from "./editor2/editor"
 import DockableRoot from "./dockable/DockableRoot"
 import Rational from "./util/rational"
+import { SflibMeta } from "./playback/library"
 
 
 export interface AppState
@@ -23,6 +24,8 @@ export interface AppState
         timeAsFloat: number
         timeStart: Rational
     }
+
+    sflib: SflibMeta
 
     popup: null |
     {
@@ -96,6 +99,11 @@ export class AppReducer
                 time: new Rational(0),
                 timeAsFloat: 0,
                 timeStart: new Rational(0),
+            },
+
+            sflib: {
+                ready: false,
+                collections: [],
             },
 
             prefs: {

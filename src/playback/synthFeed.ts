@@ -10,7 +10,7 @@ export default class SynthFeed
     {
         const chordVolumeMul = 0.5
         
-        const addNoteEvent = (tickStart: Rational, duration: Rational, instrument: number, pitch: number, volume: number) =>
+        const addNoteEvent = (trackId: number, tickStart: Rational, duration: Rational, midiPitch: number, volume: number) =>
         {
             const offsetStart = tickStart.subtract(startTick)
             
@@ -29,7 +29,7 @@ export default class SynthFeed
                 return
             
             //console.log("event note [" + pitch + "] at tick " + tickStart.toString() + " = " + timeStart + " s")
-            synth.addNoteEvent(timeStart, instrument, MathUtils.midiToHertz(pitch), volume, timeDuration)
+            synth.addNoteEvent(trackId, timeStart, midiPitch, volume, timeDuration)
         }
         
         // Register notes.
@@ -49,7 +49,7 @@ export default class SynthFeed
                 if (note.range.end.compare(startTick) <= 0)
                     continue
                 
-                addNoteEvent(note.range.start, note.range.duration, 0, note.pitch, 1)
+                addNoteEvent(track.id, note.range.start, note.range.duration, note.pitch, 1)
             }
         }
     }

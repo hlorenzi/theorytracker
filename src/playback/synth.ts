@@ -1,40 +1,94 @@
-import { Instrument } from "./instrument"
+import Project from "../project/project2"
+import { sflibGetInstrument } from "./libraryCache"
+import { AppState } from "../AppState"
+import { SflibMeta } from "./library"
+import { InstrumentSflib } from "./instrumentSflib"
+
+
+interface NoteEvent
+{
+    trackId: number
+    time: number
+    midiPitch: number
+    volume: number
+    duration: number
+}
+
+
+interface PlayingNote
+{
+    event: NoteEvent
+    remainingDuration: number
+}
 
 
 export class Synth
 {
     audioCtx: AudioContext
-	audioCtxOutput: GainNode
+    audioCtxOutput: GainNode
+    audioTracks: InstrumentSflib[]
+
+    cachedTracks: Project.Track[] = []
+
 	time: number
-	noteEvents: any[]
-	playingNotes: any[]
-	instruments: any[]
+	noteEvents: NoteEvent[]
+	playingNotes: PlayingNote[]
 
 
 	constructor()
 	{
-		this.audioCtx     = new AudioContext()
-		this.time         = 0
-		this.noteEvents   = []
-		this.playingNotes = []
-		
+        this.audioCtx = new AudioContext()
+        this.audioTracks = []
+
 		this.audioCtxOutput = this.audioCtx.createGain()
 		this.audioCtxOutput.connect(this.audioCtx.destination)
-		this.audioCtxOutput.gain.value = 0.5
+		this.audioCtxOutput.gain.value = 0.25
 		
-		const piano = new Instrument(this,
-		[
-			[  55.0, "audio/piano/a1.mp3"],
-			[ 110.0, "audio/piano/a2.mp3"],
-			[ 220.0, "audio/piano/a3.mp3"],
-			[ 440.0, "audio/piano/a4.mp3"],
-			[ 880.0, "audio/piano/a5.mp3"],
-			[1760.0, "audio/piano/a6.mp3"],
-			//[3520.0, "audio/piano/a7.mp3"]
-		])
-		
-		this.instruments = [piano, piano]
-	}
+		this.time = 0
+		this.noteEvents = []
+		this.playingNotes = []
+    }
+
+
+    destroy()
+    {
+        this.audioCtx.close()
+    }
+
+
+    reset()
+    {
+    }
+    
+
+    async prepare(sflibMeta: SflibMeta, project: Project)
+    {
+        await this.audioCtx.audioWorklet.addModule("/build/sflibWorklet.js")
+
+        if (this.cachedTracks !== project.tracks)
+        {
+            for (const audioTrack of this.audioTracks)
+                audioTrack.destroy()
+
+            this.audioTracks = []
+            
+            for (const track of project.tracks)
+            {
+                if (track.trackType == Project.TrackType.Notes)
+                {
+                    const trackNotes = <Project.TrackNotes>track
+                    if (trackNotes.instrument.instrumentType == Project.TrackInstrumentType.Sflib)
+                    {
+                        const audioTrack = new InstrumentSflib(this, track.id)
+                        await audioTrack.prepare(sflibMeta, <Project.TrackInstrumentSflib>trackNotes.instrument)
+                        this.audioTracks.push(audioTrack)
+                    }
+                }
+            }
+        }
+
+        this.cachedTracks = project.tracks
+    }
 	
 	
 	isFinished()
@@ -45,19 +99,18 @@ export class Synth
 
 	play()
 	{
-		this.noteEvents.sort(function (a, b) { return a.time - b.time })
+        this.noteEvents.sort(function (a, b) { return a.time - b.time })
 	}
 
 
 	stopAll()
 	{
 		this.time = 0
-		this.noteEvents = []
-		
-		for (let i = 0; i < this.playingNotes.length; i++)
-			this.playingNotes[i].stop()
-		
+        this.noteEvents = []
 		this.playingNotes = []
+        
+        for (const audioTrack of this.audioTracks)
+            audioTrack.stop()
 	}
 
 
@@ -71,23 +124,17 @@ export class Synth
 			this.noteEvents[noteEventsProcessed].time <= this.time)
 		{
 			const ev = this.noteEvents[noteEventsProcessed]
-			noteEventsProcessed++
-			
-			let noteData =
-				this.instruments[ev.instrumentIndex].playNote(this, ev.frequency, ev.volume, ev.duration)
+            noteEventsProcessed++
+            
+            this.audioTracks.find(t => t.trackId == ev.trackId)!.noteOn(ev.midiPitch)
+
+            const playingNote =
+            {
+                event: ev,
+                remainingDuration: ev.duration,
+            }
 				
-			noteData.process = (deltaTime: number) =>
-			{
-				return this.instruments[ev.instrumentIndex].processNote(this, noteData, deltaTime)
-			}
-			
-			noteData.stop = () =>
-			{
-				this.instruments[ev.instrumentIndex].stopNote(this, noteData)
-			}
-				
-			this.playingNotes.push(noteData)
-			//console.log("play note " + ev.frequency)
+			this.playingNotes.push(playingNote)
 		}
 		
 		// Remove processed events.
@@ -96,22 +143,24 @@ export class Synth
 		// Update audio output.
 		for (let i = this.playingNotes.length - 1; i >= 0; i--)
 		{
-			if (this.playingNotes[i].process(deltaTime))
-				this.playingNotes.splice(i, 1)
+            const note = this.playingNotes[i]
+            note.remainingDuration -= deltaTime
+            if (note.remainingDuration <= 0)
+            {
+                this.audioTracks.find(t => t.trackId == note.event.trackId)!.noteOff(note.event.midiPitch)
+                this.playingNotes.splice(i, 1)
+            }
 		}
 	}
 
 
-	addNoteEvent(time: number, instrumentIndex: number, frequency: number, volume: number, duration: number)
+	addNoteEvent(trackId: number, time: number, midiPitch: number, volume: number, duration: number)
 	{
-		if (!isFinite(frequency))
-			return
-		
 		this.noteEvents.push(
 		{
+            trackId,
 			time: time + this.time,
-			instrumentIndex,
-			frequency,
+			midiPitch,
 			volume,
 			duration
 		})

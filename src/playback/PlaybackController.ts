@@ -5,7 +5,7 @@ import SynthFeed from "./synthFeed"
 import Rational from "../util/rational"
 
 
-const synth = new Synth()
+let synth: Synth | null = null
 
 
 export function usePlaybackController(appManager: AppManager)
@@ -22,7 +22,10 @@ export function usePlaybackController(appManager: AppManager)
             requestAnimationFrame(() =>
             {
                 playData.current.playing = false
-                synth.stopAll()
+
+                if (synth)
+                    synth.stopAll()
+
                 appManager.mergeAppState({
                     playback: { ...appManager.appState.playback,
                         playing: false,
@@ -41,7 +44,7 @@ export function usePlaybackController(appManager: AppManager)
         {
             const measuresPerSecond = (120 / 4 / 60)
             
-            synth.process(deltaTime / 1000)
+            synth!.process(deltaTime / 1000)
             const timeAsFloat = appManager.appState.playback.timeAsFloat + deltaTime / 1000 * measuresPerSecond
             appManager.mergeAppState({
                 playback: { ...appManager.appState.playback,
@@ -59,7 +62,10 @@ export function usePlaybackController(appManager: AppManager)
     {
         requestAnimationFrame(() =>
         {
-            synth.stopAll()
+            if (!synth)
+                synth = new Synth()
+
+            synth.reset()
             SynthFeed.feed(appManager.appState.project, synth, appManager.appState.playback.timeStart)
             synth.play()
             
@@ -74,7 +80,11 @@ export function usePlaybackController(appManager: AppManager)
             })
             appManager.dispatch()
 
-            requestAnimationFrame(processFrame)
+            requestAnimationFrame(async () =>
+            {
+                await synth!.prepare(appManager.appState.sflib, appManager.appState.project)
+                requestAnimationFrame(processFrame)
+            })
         })
     }
 }

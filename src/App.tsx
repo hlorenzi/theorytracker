@@ -12,6 +12,7 @@ import MenuBar from "./popup/MenuBar"
 import Popup from "./popup/Popup"
 import InspectorContent from "./editor2/InspectorContent"
 import { usePlaybackController } from "./playback/PlaybackController"
+import { useSoundfontLibrary } from "./playback/library"
 
 
 const initialAppState = AppReducer.makeNew()
@@ -42,6 +43,7 @@ export default function App(props: {})
         (newState) => appDispatch(newState))
 
     const playbackController = usePlaybackController(appManager)
+    const soundfontLibrary = useSoundfontLibrary(appManager)
 
     React.useEffect(() =>
     {
