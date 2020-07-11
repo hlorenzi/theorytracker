@@ -4,6 +4,7 @@ import { useAppManager } from "../AppContext"
 import Project from "../project/project2"
 import { AppReducer } from "../AppState"
 import MenuFilePopup from "./MenuFilePopup"
+import PlaybackToolbox from "./PlaybackToolbox"
 
 
 interface MenuBarProps
@@ -55,7 +56,7 @@ function MenuBarItem(props: MenuBarItemProps)
 }
 
 
-export default function Popup(props: MenuBarProps)
+export default function MenuBr(props: MenuBarProps)
 {
     return <div
         style={{
@@ -71,6 +72,8 @@ export default function Popup(props: MenuBarProps)
             label="File"
             popupElem={ MenuFilePopup }
         />
+
+        <PlaybackToolbox/>
         
     </div>
 }

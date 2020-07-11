@@ -172,7 +172,7 @@ export default class TrackNotesPreview
 			const fillStyle = CanvasUtils.fillStyleForDegree(ctx, key.degreeForMidi(note.pitch) + mode)
 			const hovering = !!state.contentState.mouse.hover && state.contentState.mouse.hover.id == note.id
 			const selected = state.appState.selection.contains(note.id)
-			const playing = false//state.playback.playing && note.range.overlapsPoint(state.playback.time)
+			const playing = state.appState.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
 			TrackNotesPreview.renderNote(state, ctx, note.range, row, xMin, xMax, fillStyle, hovering, selected, playing)
         }
     }

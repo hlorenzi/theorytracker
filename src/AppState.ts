@@ -4,6 +4,7 @@ import Immutable from "immutable"
 import Rect from "./util/rect"
 import Editor from "./editor2/editor"
 import DockableRoot from "./dockable/DockableRoot"
+import Rational from "./util/rational"
 
 
 export interface AppState
@@ -15,6 +16,13 @@ export interface AppState
 
     project: Project
     selection: Immutable.Set<number>
+    playback:
+    {
+        playing: boolean
+        time: Rational
+        timeAsFloat: number
+        timeStart: Rational
+    }
 
     popup: null |
     {
@@ -83,6 +91,12 @@ export class AppReducer
 
             project: Project.getDefault(),
             selection: Immutable.Set<number>(),
+            playback: {
+                playing: false,
+                time: new Rational(0),
+                timeAsFloat: 0,
+                timeStart: new Rational(0),
+            },
 
             prefs: {
                 editor: {

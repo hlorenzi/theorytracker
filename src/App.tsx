@@ -11,6 +11,7 @@ import Rect from "./util/rect"
 import MenuBar from "./popup/MenuBar"
 import Popup from "./popup/Popup"
 import InspectorContent from "./editor2/InspectorContent"
+import { usePlaybackController } from "./playback/PlaybackController"
 
 
 const initialAppState = AppReducer.makeNew()
@@ -39,6 +40,8 @@ export default function App(props: {})
         () => appStateRef.current,
         (newState) => appStateRef.current = newState,
         (newState) => appDispatch(newState))
+
+    const playbackController = usePlaybackController(appManager)
 
     React.useEffect(() =>
     {

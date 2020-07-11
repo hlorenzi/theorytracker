@@ -611,6 +611,11 @@ export default class Editor
 						action: Editor.actionSelectCursor,
 					}
 				})
+				state.mergeAppState({
+					playback: { ...state.appState.playback,
+						timeStart: state.contentState.mouse.time,
+					}
+				})
 			}
 		}
 	}
@@ -1079,26 +1084,29 @@ export default class Editor
 			ctx.stroke()
 		}
 		
+		ctx.save()
+		ctx.translate(state.contentState.trackHeaderW, 0)
+
+		ctx.beginPath()
+		ctx.rect(
+			0,
+			0,
+			state.contentState.w - state.contentState.trackHeaderW,
+			state.contentState.h)
+		ctx.clip()
+
 		if (state.contentState.cursor.visible)
 		{
-			ctx.save()
-			ctx.translate(state.contentState.trackHeaderW, 0)
-
-			ctx.beginPath()
-			ctx.rect(
-				0,
-				0,
-				state.contentState.w - state.contentState.trackHeaderW,
-				state.contentState.h)
-			ctx.clip()
-
 			const timeMin = state.contentState.cursor.time1.min(state.contentState.cursor.time2)!
 			const timeMax = state.contentState.cursor.time1.max(state.contentState.cursor.time2)!
 			Editor.renderCursorBeam(state, ctx, timeMin, false)
 			Editor.renderCursorBeam(state, ctx, timeMax, true)
-
-			ctx.restore()
 		}
+		
+		if (state.appState.playback.playing)
+			Editor.renderPlaybackBeam(state, ctx, state.appState.playback.time)
+
+		ctx.restore()
         
 		ctx.strokeStyle = state.appState.prefs.editor.trackVBorderColor
 		ctx.beginPath()
@@ -1251,6 +1259,27 @@ export default class Editor
 			ctx.lineTo(keyChX, state.contentState.h)
 			ctx.stroke()
 		}
+	}
+	
+	
+	static renderPlaybackBeam(state: ContentManager<EditorState>, ctx: CanvasRenderingContext2D, time: Rational)
+	{
+		const trackMin = 0
+		const trackMax = state.contentState.tracks.length - 1
+		
+		const x = 0.5 + Math.floor(Editor.xAtTime(state, time))
+		
+		ctx.strokeStyle = state.appState.prefs.editor.playbackCursorColor
+		ctx.lineCap = "square"
+		ctx.lineWidth = 1
+		
+		const y1 = 0.5 + Math.floor(Editor.trackY(state, trackMin))
+		const y2 = 0.5 + Math.floor(Editor.trackY(state, trackMax) + state.contentState.tracks[trackMax].h)
+		
+		ctx.beginPath()
+		ctx.lineTo(x, y1)
+		ctx.lineTo(x, y2)
+		ctx.stroke()
 	}
 	
 	
