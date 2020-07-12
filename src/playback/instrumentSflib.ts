@@ -20,13 +20,13 @@ export class InstrumentSflib
 
 	async prepare(sflibMeta: SflibMeta, trackInstrument: Project.TrackInstrumentSflib)
 	{
-        const instrument = await sflibGetInstrument(sflibMeta, trackInstrument.instrumentId)
+        const instrument = await sflibGetInstrument(sflibMeta, trackInstrument.collectionId, trackInstrument.instrumentId)
         if (!instrument)
             throw "missing sflib instrument"
 
         this.audioWorklet = new AudioWorkletNode(this.synth.audioCtx, "SflibAudioProcessor")
-        this.audioWorklet .connect(this.synth.audioCtxOutput)
-        this.audioWorklet .port.postMessage({
+        this.audioWorklet.connect(this.synth.audioCtxOutput)
+        this.audioWorklet.port.postMessage({
             type: "setInstrument",
             outputSampleRate: this.synth.audioCtx.sampleRate,
             instrument

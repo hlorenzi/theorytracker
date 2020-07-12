@@ -60,6 +60,9 @@ export function usePlaybackController(appManager: AppManager)
 
     if (appManager.appState.playback.playing && !playData.current.playing)
     {
+        playData.current.playing = true
+        playData.current.timestamp = -1
+
         requestAnimationFrame(() =>
         {
             if (!synth)
@@ -69,9 +72,6 @@ export function usePlaybackController(appManager: AppManager)
             SynthFeed.feed(appManager.appState.project, synth, appManager.appState.playback.timeStart)
             synth.play()
             
-            playData.current.playing = true
-            playData.current.timestamp = -1
-
             appManager.mergeAppState({
                 playback: { ...appManager.appState.playback,
                     time: appManager.appState.playback.timeStart,

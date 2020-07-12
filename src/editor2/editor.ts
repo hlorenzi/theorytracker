@@ -636,13 +636,21 @@ export default class Editor
 		{
 			if (state.contentState.mouse.pos.x < state.contentState.trackHeaderW)
 			{
-				state.appState = AppReducer.createPopup(
+				Editor.popup(state, state.contentState.mouse.track,
+					"trackInstrument",
+					new Rect(
+						state.contentState.mouse.pos.x,
+						state.contentState.mouse.pos.y,
+						350, 500),
+					{ elemIds: [state.contentState.tracks[state.contentState.mouse.track].trackId] })
+
+				/*state.appState = AppReducer.createPopup(
 					state.appState,
 					new Rect(
 						state.contentState.x + state.contentState.mouse.pos.x,
 						state.contentState.y + state.contentState.mouse.pos.y,
 						0, 0),
-					TrackPopup, {})
+					TrackPopup, {})*/
 			}
 			else if (state.contentState.mouse.hover)
 			{

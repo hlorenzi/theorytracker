@@ -111,10 +111,10 @@ function Panel(props: any)
 
     return <div key={ panelRect.panel.id } style={{
         position: "absolute",
-        left: (panelRect.rect.x1) + "px",
-        top: (panelRect.rect.y1) + "px",
-        width: (panelRect.rect.x2 - panelRect.rect.x1 - 1) + "px",
-        height: (panelRect.rect.y2 - panelRect.rect.y1 - 1) + "px",
+        left: (panelRect.rect.x) + "px",
+        top: (panelRect.rect.y) + "px",
+        width: (panelRect.rect.w - 1) + "px",
+        height: (panelRect.rect.h - 1) + "px",
         borderBottom: "1px solid #888",
         borderRight: "1px solid #888",
         borderTop: !panelRect.floating ? undefined : "1px solid #888",

@@ -5,13 +5,13 @@ import zlib from "zlib"
 const sflibCache = new Map<string, SflibInstrument>()
 
 
-export async function sflibGetInstrument(meta: SflibMeta, id: string): Promise<SflibInstrument | null>
+export async function sflibGetInstrument(meta: SflibMeta, collectionId: string, instrumentId: string): Promise<SflibInstrument | null>
 {
+    const id = collectionId + "/" + instrumentId
     const cached = sflibCache.get(id)
     if (cached)
         return cached
 
-    const [collectionId, instrumentId] = id.split("/")
     const collMeta = meta.collections.find(c => c.id == collectionId)
     if (!collMeta)
         return null

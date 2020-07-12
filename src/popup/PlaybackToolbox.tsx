@@ -19,7 +19,11 @@ export default function PlaybackToolbox(props: {})
         const handleSpacebarKey = (ev: KeyboardEvent) =>
         {
             if (ev.key == " ")
+            {
+                ev.preventDefault()
+                ev.stopPropagation()
                 togglePlayback()
+            }
         }
 
         window.addEventListener("keydown", handleSpacebarKey)

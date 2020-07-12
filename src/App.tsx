@@ -11,6 +11,7 @@ import Rect from "./util/rect"
 import MenuBar from "./popup/MenuBar"
 import Popup from "./popup/Popup"
 import InspectorContent from "./editor2/InspectorContent"
+import TrackInstrumentContent from "./editor2/TrackInstrumentContent"
 import { usePlaybackController } from "./playback/PlaybackController"
 import { useSoundfontLibrary } from "./playback/library"
 
@@ -124,6 +125,7 @@ function contentTypeToComponent(type: string): any
         case "editor": return EditorContent
         case "editorNotes": return EditorContent
         case "inspector": return InspectorContent
+        case "trackInstrument": return TrackInstrumentContent
 
         default:
             throw "invalid content type"
@@ -138,6 +140,7 @@ function contentTypeToTitle(type: string): any
         case "editor": return "Project"
         case "editorNotes": return "Note Track"
         case "inspector": return "Inspector"
+        case "trackInstrument": return "Instrument Select"
 
         default:
             throw "invalid content type"

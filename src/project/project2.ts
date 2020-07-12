@@ -43,11 +43,12 @@ export class Project
         for (let i = 0; i < 16; i++)
             project = Project.upsertRangedElement(project, new Project.Note(track3Id, Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 60 + i % 8))
 
-        const track4Id = project.nextId
+        /*const track4Id = project.nextId
         project = Project.upsertTrack(project, new Project.TrackNotes())
         for (let i = 0; i < 16; i++)
             project = Project.upsertRangedElement(project, new Project.Note(track4Id, Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 68 - (i % 8)))
-
+        */
+       
         return project
     }
 
@@ -217,6 +218,7 @@ export namespace Project
 
     export interface TrackInstrumentSflib extends TrackInstrument
     {
+        collectionId: string
         instrumentId: string
     }
 
@@ -231,7 +233,8 @@ export namespace Project
             super(Project.TrackType.Notes)
             this.instrument = <TrackInstrumentSflib>{
                 instrumentType: TrackInstrumentType.Sflib,
-                instrumentId: "arachno/grand_piano",
+                collectionId: "arachno",
+                instrumentId: "grand_piano",
             }
         }
     }
