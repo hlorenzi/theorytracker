@@ -14,7 +14,7 @@ export default class SynthFeed
         {
             const offsetStart = tickStart.subtract(startTick)
             
-            const measuresPerSecond = 120 / 4 / 60//(project.baseBpm / 4 / 60)
+            const measuresPerSecond = project.baseBpm / 4 / 60
             
             let timeStart = offsetStart.asFloat() / measuresPerSecond
             let timeDuration = duration.asFloat() / measuresPerSecond

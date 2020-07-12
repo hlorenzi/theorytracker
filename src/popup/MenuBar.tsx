@@ -56,7 +56,7 @@ function MenuBarItem(props: MenuBarItemProps)
 }
 
 
-export default function MenuBr(props: MenuBarProps)
+export default function MenuBar(props: MenuBarProps)
 {
     return <div
         style={{

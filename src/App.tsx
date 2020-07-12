@@ -113,6 +113,13 @@ export default function App(props: {})
                     popupProps={ appStateRef.current.popup.props }
                 />
             }
+
+            <input
+                id="gInputFileOpen"
+                type="file"
+                accept=".mid,.json,.txt"
+                style={{ display: "none" }}
+            />
         </div>
     </AppContext.Provider>
 }

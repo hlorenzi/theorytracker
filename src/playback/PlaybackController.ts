@@ -42,7 +42,7 @@ export function usePlaybackController(appManager: AppManager)
         
         if (deltaTime > 0 && deltaTime < 250)
         {
-            const measuresPerSecond = (120 / 4 / 60)
+            const measuresPerSecond = (appManager.appState.project.baseBpm / 4 / 60)
             
             synth!.process(deltaTime / 1000)
             const timeAsFloat = appManager.appState.playback.timeAsFloat + deltaTime / 1000 * measuresPerSecond

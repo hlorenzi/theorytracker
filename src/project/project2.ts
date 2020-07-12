@@ -9,6 +9,7 @@ import * as Theory from "../theory/theory"
 export class Project
 {
     nextId: Project.ID
+    baseBpm: number
     tracks: Project.Track[]
     timedLists: Immutable.Map<Project.ID, ListOfPoints<Project.TimedElement>>
     rangedLists: Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>
@@ -18,6 +19,7 @@ export class Project
     constructor()
     {
         this.nextId = 1
+        this.baseBpm = 120
         this.tracks = []
         this.timedLists = Immutable.Map<Project.ID, ListOfPoints<Project.TimedElement>>()
         this.rangedLists = Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>()
