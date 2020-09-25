@@ -118,6 +118,18 @@ export class Synth
 	{
 		this.time += deltaTime
 		
+		// Update audio output.
+		for (let i = this.playingNotes.length - 1; i >= 0; i--)
+		{
+            const note = this.playingNotes[i]
+            note.remainingDuration -= deltaTime
+            if (note.remainingDuration <= 0)
+            {
+                this.audioTracks.find(t => t.trackId == note.event.trackId)!.noteOff(note.event.midiPitch)
+                this.playingNotes.splice(i, 1)
+            }
+		}
+		
 		// Process pending note events up to the current time.
 		let noteEventsProcessed = 0
 		while (noteEventsProcessed < this.noteEvents.length &&
@@ -139,18 +151,6 @@ export class Synth
 		
 		// Remove processed events.
 		this.noteEvents.splice(0, noteEventsProcessed)
-		
-		// Update audio output.
-		for (let i = this.playingNotes.length - 1; i >= 0; i--)
-		{
-            const note = this.playingNotes[i]
-            note.remainingDuration -= deltaTime
-            if (note.remainingDuration <= 0)
-            {
-                this.audioTracks.find(t => t.trackId == note.event.trackId)!.noteOff(note.event.midiPitch)
-                this.playingNotes.splice(i, 1)
-            }
-		}
 	}
 
 

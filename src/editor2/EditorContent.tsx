@@ -130,7 +130,7 @@ export function EditorContent(props: EditorContentProps)
 			Editor.reduce_keyUp(contentCtx, { key: ev.key.toLowerCase() })
 			contentCtx.dispatch()
 		}
-		
+
 		window.addEventListener("mousemove", onMouseMove)
 		window.addEventListener("mouseup",   onMouseUp)
 		window.addEventListener("keydown",   onKeyDown)

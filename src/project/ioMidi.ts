@@ -104,7 +104,8 @@ export default class IoMidi
 				const onTick  = Rational.fromFloat(noteOn.time  / midi.ticksPerQuarterNote / 4, 27720)
 				const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, 27720)
 				
-                project = Project.upsertRangedElement(project, new Project.Note(trackId, new Range(onTick, offTick), noteOn.key))
+				project = Project.upsertRangedElement(project,
+					new Project.Note(trackId, new Range(onTick, offTick), noteOn.key))
 			}
 		}
 		
