@@ -1,9 +1,9 @@
-import DockableData, * as Dock from "./dockable/DockableData"
+import DockableData, * as Dock from "./dockable/state"
 import Project from "./project/project2"
 import Immutable from "immutable"
 import Rect from "./util/rect"
 import Editor from "./editor2/editor"
-import DockableRoot from "./dockable/DockableRoot"
+import Dockable from "./dockable/Dockable"
 import Rational from "./util/rational"
 import { SflibMeta } from "./playback/library"
 
@@ -12,7 +12,7 @@ export interface AppState
 {
     contentIdNext: number
     dockableRect: Rect
-    dockableRoot: Dock.Root
+    dockableRoot: Dock.State
     dockableContents: Immutable.Map<number, Dock.Content>
 
     project: Project
@@ -78,7 +78,7 @@ export class AppReducer
     static makeNew(): AppState
     {
         let root = DockableData.makeRoot()
-        root = DockableData.addPanel(root, 1, Dock.DockingMode.Full, 1)
+        root = DockableData.addPanel(root, 1, Dock.DockMode.Full, 1)
 
         return {
             contentIdNext: 2,
@@ -193,7 +193,7 @@ export class AppReducer
             dockableRoot: DockableData.addPanel(
                 appState.dockableRoot,
                 panel.id,
-                Dock.DockingMode.Full,
+                Dock.DockMode.Full,
                 appState.contentIdNext),
             dockableContents: appState.dockableContents.set(appState.contentIdNext,
             {
@@ -239,7 +239,7 @@ export class AppReducer
             dockableRoot: DockableData.addPanel(
                 appState.dockableRoot,
                 panel.id,
-                Dock.DockingMode.Full,
+                Dock.DockMode.Full,
                 appState.contentIdNext),
             dockableContents: appState.dockableContents.set(appState.contentIdNext,
             {

@@ -1,35 +1,63 @@
 import React from "react"
-import DockableData, { Root, Panel, PanelRect, Content, Layout, Divider, Anchor, DockingMode } from "./DockableData"
+import * as DockableData from "./state"
+import { WindowContext } from "./windowContext"
 import Rect from "../util/rect"
 import Immutable from "immutable"
+import styled from "styled-components"
 
 
-interface DockableRootProps
+const colorVoid = "#202225"
+const colorPanelBkg = "#2f3136"
+
+
+interface DockableProps
 {
-    root: Root
-    setRoot: ((newRoot: Root) => void)
+    state: DockableData.State
+    setState: ((newRoot: DockableData.State) => void)
 
-    rect: Rect
-
-    contents: Immutable.Map<number, Content>
-    contentTypeToComponent: (type: string) => any
-    contentTypeToTitle: (type: string) => string
+    contentIdToComponent?: (id: DockableData.WindowId) => any
+    contentIdToTitle?: (id: DockableData.WindowId) => string
 }
 
 
-export default function DockableRoot(props: DockableRootProps)
+export function Container(props: DockableProps)
 {
+    const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
     const rootRef = React.useRef<HTMLDivElement>(null)
+
+
+    React.useLayoutEffect(() =>
+    {
+        const onResize = () =>
+        {
+            if (!rootRef.current)
+                return
     
+            const elemRect = rootRef.current!.getBoundingClientRect()
+
+            setRect(new Rect(
+                elemRect.x,
+                elemRect.y,
+                elemRect.width,
+                elemRect.height))
+        }
+
+        onResize()
+
+        window.addEventListener("resize", onResize)
+        return () => window.removeEventListener("resize", onResize)
+
+    }, [rootRef.current])
+
 
     const layout = React.useMemo(() =>
     {
-        if (!props.rect)
+        if (!rect)
             return null
         
-        return DockableData.getLayout(props.root, props.rect)
+        return DockableData.getLayout(props.state, rect)
 
-    }, [props.rect, props.root])
+    }, [rect, props.state])
 
     
     const mouseData = useMouseHandling(props, layout, rootRef)
@@ -39,7 +67,8 @@ export default function DockableRoot(props: DockableRootProps)
 
     return <div style={{
         width: "100%",
-        height: "100%",
+        height: "100vh",
+        backgroundColor: colorVoid,
     }}>
 
         { !layout ? null : layout.panelRects.map(panelRect =>
@@ -70,10 +99,10 @@ export default function DockableRoot(props: DockableRootProps)
                 width: "0px",
                 height: "0px",
 
-                borderTop: (anchorSize) + "px solid " + (anchor.mode == DockingMode.Bottom || anchor.mode == DockingMode.Full ? anchorColor : "transparent"), 
-                borderBottom: (anchorSize) + "px solid " + (anchor.mode == DockingMode.Top || anchor.mode == DockingMode.Full ? anchorColor : "transparent"), 
-                borderLeft: (anchorSize) + "px solid " + (anchor.mode == DockingMode.Right || anchor.mode == DockingMode.Full ? anchorColor : "transparent"), 
-                borderRight: (anchorSize) + "px solid " + (anchor.mode == DockingMode.Left || anchor.mode == DockingMode.Full ? anchorColor : "transparent"), 
+                borderTop: (anchorSize) + "px solid " + (anchor.mode == DockableData.DockMode.Bottom || anchor.mode == DockableData.DockMode.Full ? anchorColor : "transparent"), 
+                borderBottom: (anchorSize) + "px solid " + (anchor.mode == DockableData.DockMode.Top || anchor.mode == DockableData.DockMode.Full ? anchorColor : "transparent"), 
+                borderLeft: (anchorSize) + "px solid " + (anchor.mode == DockableData.DockMode.Right || anchor.mode == DockableData.DockMode.Full ? anchorColor : "transparent"), 
+                borderRight: (anchorSize) + "px solid " + (anchor.mode == DockableData.DockMode.Left || anchor.mode == DockableData.DockMode.Full ? anchorColor : "transparent"), 
             }}/>
         )}
 
@@ -104,81 +133,109 @@ export default function DockableRoot(props: DockableRootProps)
 }
 
 
+const DivPanel = styled.div`
+    border: 1px solid ${ colorVoid };
+
+    &:hover
+    {
+        border: 1px solid #fff;
+    }
+`
+
+
 function Panel(props: any)
 {
-    const rootProps: DockableRootProps = props.rootProps
-    const panelRect: PanelRect = props.panelRect
+    const rootProps: DockableProps = props.rootProps
+    const panelRect: DockableData.PanelRect = props.panelRect
 
     return <div key={ panelRect.panel.id } style={{
         position: "absolute",
         left: (panelRect.rect.x) + "px",
         top: (panelRect.rect.y) + "px",
-        width: (panelRect.rect.w - 1) + "px",
-        height: (panelRect.rect.h - 1) + "px",
-        borderBottom: "1px solid #888",
-        borderRight: "1px solid #888",
-        borderTop: !panelRect.floating ? undefined : "1px solid #888",
-        borderLeft: !panelRect.floating ? undefined : "1px solid #888",
-        overflow: "hidden",
+        width: (panelRect.rect.w) + "px",
+        height: (panelRect.rect.h) + "px",
+        boxSizing: "border-box",
 
-        display: "grid",
-        gridTemplate: "auto 1fr / 1fr",
+        backgroundColor: colorVoid,
+        borderRadius: "0.5em",
+        padding: "0.25em",
     }}>
+        <DivPanel style={{
+            backgroundColor: colorPanelBkg,
+            borderRadius: "0.5em",
+            boxSizing: "border-box",
+            width: "100%",
+            height: "100%",
+            
+            display: "grid",
+            gridTemplate: "auto 1fr / 1fr",
+            overflow: "hidden",
+        }}>
 
-        { (() => {
-            const contentIds = panelRect.panel.contentIds
-            const contentIndex = panelRect.panel.curContent
+            { (() => {
+                const contentIds = panelRect.panel.windowIds
+                const contentIndex = panelRect.panel.curWindowIndex
 
-            if (contentIndex >= contentIds.length)
-                return null
+                if (contentIndex >= contentIds.length)
+                    return null
 
-            const contentId = contentIds[contentIndex]
-            const content = rootProps.contents.get(contentId)
-            const component = !content ? null : rootProps.contentTypeToComponent(content.type)
+                return <>
+                    <div id={ "dockable_header_" + panelRect.panel.id } style={{
+                        backgroundColor: colorVoid,
+                        textAlign: "left",
+                    }}>
 
-            return <>
-                <div id={ "dockable_header_" + panelRect.panel.id } style={{
-                    backgroundColor: "#444",
-                    textAlign: "left",
-                }}>
+                        { panelRect.panel.windowIds.map((cId, idx) =>
+                            <div
+                                key={ cId }
+                                id={ "dockable_tab_" + cId }
+                                onContextMenu={ ev => ev.preventDefault() }
+                                style={{
+                                    display: "inline-block",
+                                    backgroundColor: panelRect.panel.curWindowIndex == idx ? colorPanelBkg : colorVoid,
+                                    color: "#fff",
+                                    padding: "0.25em 0.5em",
+                                    marginRight: "0.25em",
+                                    userSelect: "none",
+                                    borderTopRightRadius: "0.5em",
+                                    borderTopLeftRadius: "0.5em",
+                            }}>
+                                { rootProps.contentIdToTitle ?
+                                    rootProps.contentIdToTitle(cId) :
+                                    "Content " + cId }
+                            </div>
+                        )}
 
-                    { panelRect.panel.contentIds.map((cId, idx) =>
-                        <div
-                            key={ cId }
-                            id={ "dockable_tab_" + cId }
-                            onContextMenu={ ev => ev.preventDefault() }
-                            style={{
-                                display: "inline-block",
-                                backgroundColor: panelRect.panel.curContent == idx ? "#222" : "#666",
-                                color: "#fff",
-                                borderRight: "1px solid #888",
-                                padding: "0.25em 0.5em",
-                                userSelect: "none",
+                    </div>
+
+                    { panelRect.panel.windowIds.map((cId, idx) =>
+                    {
+                        const component = !rootProps.contentIdToComponent ? null : rootProps.contentIdToComponent(cId)
+
+                        return <WindowContext.Provider key={ cId } value={{
+                            contentId: cId,
                         }}>
-                            { rootProps.contentTypeToTitle && rootProps.contents.get(cId) ?
-                                rootProps.contentTypeToTitle(rootProps.contents.get(cId)!.type) :
-                                "Content " + cId }
-                        </div>
-                    )}
-
-                </div>
-
-                <div style={{
-                    backgroundColor: "#222",
-                    color: "#fff",
-                    width: "100%",
-                    height: "100%",
-                    minWidth: "0px",
-                    minHeight: "0px",
-                    textAlign: "left",
-                }}>
-                    { !component ? null : React.createElement(component, {
-                        contentId,
-                        rect: panelRect,
+                            <div style={{
+                                display: panelRect.panel.curWindowIndex == idx ? "block" : "none",
+                                color: "#fff",
+                                width: "100%",
+                                height: "100%",
+                                minWidth: "0px",
+                                minHeight: "0px",
+                                textAlign: "left",
+                            }}>
+                                { !component ? null : React.createElement(component, {
+                                    key: cId,
+                                    contentId: cId,
+                                    rect: panelRect,
+                                })}
+                            </div>
+                        </WindowContext.Provider>
                     })}
-                </div>
-            </>
-        })() }
+                </>
+            })() }
+
+        </DivPanel>
 
     </div>
 }
@@ -198,20 +255,20 @@ interface MouseHandlingState
 {
     cursor: string | undefined
     draggingPanelPos: MousePos | null
-    draggingAnchor: Anchor | null
+    draggingAnchor: DockableData.Anchor | null
     blockEvents: boolean
 
     mouseDown: boolean
     mouseDownPos: MousePos
     mousePosLast: MousePos
     mouseAction: MouseAction
-    curHoverDivider: Divider | null
+    curHoverDivider: DockableData.Divider | null
     curHoverPanelId: number | null
     curHoverTabContentId: number | null
     curDragOrigRect: Rect | null
     curDragContentIds: number[] | null
     curDragFloatingPanelId: number | null
-    curAnchor: Anchor | null
+    curAnchor: DockableData.Anchor | null
 }
 
 
@@ -222,7 +279,7 @@ interface MousePos
 }
 
 
-function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootDivRef: React.RefObject<HTMLDivElement>)
+function useMouseHandling(props: DockableProps, layout: DockableData.Layout | null, rootDivRef: React.RefObject<HTMLDivElement>)
 {
     const transformMouse = (ev: MouseEvent): MousePos =>
     {
@@ -244,8 +301,8 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
     }
 
 
-    const rootRef = React.useRef(props.root)
-    rootRef.current = props.root
+    const rootRef = React.useRef(props.state)
+    rootRef.current = props.state
 
     const layoutRef = React.useRef(layout)
     layoutRef.current = layout
@@ -341,7 +398,7 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
                     
                     state.curHoverPanelId = panelLayout.panel.id
 
-                    for (const contentId of panelLayout.panel.contentIds)
+                    for (const contentId of panelLayout.panel.windowIds)
                     {
                         const tabElem = document.getElementById("dockable_tab_" + contentId)
                         if (!tabElem)
@@ -370,9 +427,9 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
 
                 const newRoot = DockableData.modifyPanelFromRoot(
                     rootRef.current, divider.panel.id,
-                    (panel) => ({ ...panel, subdivSize: newSize }))
+                    (panel) => ({ ...panel, splitSize: newSize }))
 
-                props.setRoot(newRoot)
+                props.setState(newRoot)
                 refresh()
             }
             else if (state.mouseAction == MouseAction.MoveHeaderStart)
@@ -392,21 +449,21 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
                     {
                         const dragPanelLayout = layoutRef.current!.panelRects.find(p => p.panel.id === state.curHoverPanelId)!
                         state.curDragFloatingPanelId = state.curHoverPanelId
-                        state.curDragContentIds = dragPanelLayout.panel.contentIds
+                        state.curDragContentIds = dragPanelLayout.panel.windowIds
                         state.curDragOrigRect = dragPanelLayout.rect
                     }
-                    else if (state.curHoverTabContentId === null || dragPanel.contentIds.length <= 1)
+                    else if (state.curHoverTabContentId === null || dragPanel.windowIds.length <= 1)
                     {
                         const dragPanelLayout = layoutRef.current!.panelRects.find(p => p.panel.id === state.curHoverPanelId)!
-                        state.curDragContentIds = dragPanel.contentIds
+                        state.curDragContentIds = dragPanel.windowIds
                         state.curDragOrigRect = dragPanelLayout.rect
                         let newRoot = DockableData.removePanel(rootRef.current, state.curHoverPanelId!)
                         state.curDragFloatingPanelId = rootRef.current.idNext
                         newRoot = DockableData.addFloatingPanel(
                             newRoot,
                             dragPanelLayout.rect,
-                            dragPanel.contentIds)
-                        props.setRoot(newRoot)
+                            dragPanel.windowIds)
+                        props.setState(newRoot)
                     }
                     else
                     {
@@ -415,11 +472,11 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
                         state.curDragOrigRect = dragPanelLayout.rect
                         let newRoot = DockableData.modifyPanelFromRoot(rootRef.current, state.curHoverPanelId!, (panel) =>
                         {
-                            const newContentIds = panel.contentIds.filter(cId => cId != state.curHoverTabContentId)
+                            const newContentIds = panel.windowIds.filter(cId => cId != state.curHoverTabContentId)
                             return {
                                 ...panel,
-                                contentIds: newContentIds,
-                                curContent: Math.min(panel.curContent, newContentIds.length - 1),
+                                windowIds: newContentIds,
+                                curWindowIndex: Math.min(panel.curWindowIndex, newContentIds.length - 1),
                             }
                         })
 
@@ -428,7 +485,7 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
                             newRoot,
                             dragPanelLayout.rect,
                             [state.curHoverTabContentId])
-                        props.setRoot(newRoot)
+                        props.setState(newRoot)
                     }
                 }
 
@@ -440,7 +497,7 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
                 ev.stopPropagation()
 
                 let nearestDist = 50 * 50//Infinity
-                let nearestAnchor: Anchor | null = null
+                let nearestAnchor: DockableData.Anchor | null = null
 
                 for (const anchor of layoutRef.current!.anchors)
                 {
@@ -461,7 +518,7 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
 
                 const newRect = state.curDragOrigRect!.displace(xDelta, yDelta)
 
-                props.setRoot(DockableData.moveFloatingPanel(rootRef.current, state.curDragFloatingPanelId!, newRect))
+                props.setState(DockableData.moveFloatingPanel(rootRef.current, state.curDragFloatingPanelId!, newRect))
 
                 refresh()
             }
@@ -490,11 +547,11 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
 
                 if (state.curHoverTabContentId !== null)
                 {
-                    props.setRoot(DockableData.modifyPanelFromRoot(rootRef.current, state.curHoverPanelId!, (panel) =>
+                    props.setState(DockableData.modifyPanelFromRoot(rootRef.current, state.curHoverPanelId!, (panel) =>
                     {
                         return {
                             ...panel,
-                            curContent: panel.contentIds.findIndex(cId => cId === state.curHoverTabContentId),
+                            curWindowIndex: panel.windowIds.findIndex(cId => cId === state.curHoverTabContentId),
                         }
                     }))
                 }
@@ -523,7 +580,7 @@ function useMouseHandling(props: DockableRootProps, layout: Layout | null, rootD
                         state.curAnchor!.mode,
                         state.curDragContentIds!)
 
-                    props.setRoot(newRoot)
+                    props.setState(newRoot)
                 }
             }
 

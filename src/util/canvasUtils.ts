@@ -1,4 +1,4 @@
-import * as Theory from "../theory/theory"
+import * as Theory from "../theory"
 import MathUtils from "./mathUtils"
 
 

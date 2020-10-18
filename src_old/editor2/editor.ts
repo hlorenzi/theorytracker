@@ -10,7 +10,7 @@ import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import * as Theory from "../theory/theory"
-import DockableData from "../dockable/DockableData"
+import DockableData from "../dockable/state"
 import { stat } from "fs"
 import TrackPopup from "./TrackPopup"
 

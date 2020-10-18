@@ -1,5 +1,4 @@
-// @ts-ignore
-import Rational from "../util/rational.js"
+import Rational from "../util/rational"
 
 
 export default class Meter

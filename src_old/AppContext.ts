@@ -1,6 +1,5 @@
 import React from "react"
 import { AppManager } from "./AppState"
-import { Content } from "./dockable/DockableData"
 
 
 interface AppContextProps
