@@ -1,5 +1,6 @@
 import * as Editor from "./index"
 import * as Project from "../project"
+import Range from "../util/range"
 
 
 export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: number }): boolean
@@ -67,25 +68,39 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             if (mouseAction & Editor.EditorAction.DragTime)
                 changes.range = rangedElem.range.displace(data.state.drag.timeDelta)
             
-            /*if (mouseAction & Editor.EditorAction.StretchTimeStart)
+            if (mouseAction & Editor.EditorAction.StretchTimeStart &&
+                data.state.drag.origin.range)
             {
-                changes.range = rangedElem.range.stretch(mouseDrag.timeDelta, mouseDrag.rangeOrigin.end, mouseDrag.rangeOrigin.start)
-                if (rangedElem.range.start.compare(mouseDrag.rangeOrigin.start) == 0)
-                    changes.range = new Range(changes.range.start.snap(state.contentState.timeSnap), changes.range.end)
+                changes.range = rangedElem.range.stretch(
+                    data.state.drag.timeDelta,
+                    data.state.drag.origin.range.end,
+                    data.state.drag.origin.range.start)
+
+                if (rangedElem.range.start.compare(data.state.drag.origin.range.start) == 0)
+                    changes.range = new Range(
+                        changes.range.start.snap(data.state.timeSnap),
+                        changes.range.end)
                     
                 changes.range = changes.range.sorted()
             }
 
-            if (mouseAction & Editor.EditorAction.StretchTimeEnd)
+            if (mouseAction & Editor.EditorAction.StretchTimeEnd &&
+                data.state.drag.origin.range)
             {
-                changes.range = rangedElem.range.stretch(mouseDrag.timeDelta, mouseDrag.rangeOrigin.start, mouseDrag.rangeOrigin.end)
-                if (rangedElem.range.end.compare(mouseDrag.rangeOrigin.end) == 0)
-                    changes.range = new Range(changes.range.start, changes.range.end.snap(state.contentState.timeSnap))
+                changes.range = rangedElem.range.stretch(
+                    data.state.drag.timeDelta,
+                    data.state.drag.origin.range.start,
+                    data.state.drag.origin.range.end)
+
+                if (rangedElem.range.end.compare(data.state.drag.origin.range.end) == 0)
+                    changes.range = new Range(
+                        changes.range.start,
+                        changes.range.end.snap(data.state.timeSnap))
 
                 changes.range = changes.range.sorted()
             }
         
-            if (mouseAction & Editor.EditorAction.DragRow)
+            /*if (mouseAction & Editor.EditorAction.DragRow)
             {
                 const note = rangedElem as Project.Note
                 const key = Editor.keyAt(state, state.contentState.tracks[state.contentState.drag.trackOrigin].trackId, rangedElem.range.start)

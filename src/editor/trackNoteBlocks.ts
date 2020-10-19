@@ -37,43 +37,52 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
         const margin = 10
         const checkRange = Editor.timeRangeAtX(data, pos.x - margin, pos.x + margin)
+
+        let hoverDrag = null
+        let hoverStretch = null
         
         for (const noteBlock of this.iterAtRange(data, checkRange))
         {
-            const margin = 2
+            const margin = 8
 
             const x1 = Editor.xAtTime(data, noteBlock.range.start)
             const x2 = Editor.xAtTime(data, noteBlock.range.end)
 
-            const rectExact = new Rect(
-                x1 - margin,
+            const rectDrag = new Rect(
+                x1,
                 0,
                 x2 - x1,
                 this.renderRect.h)
 
-            const rect = new Rect(
-                rectExact.x - margin,
-                rectExact.y,
-                rectExact.w + margin * 2,
-                rectExact.h)
+            const rectStretch = new Rect(
+                x1 - margin,
+                0,
+                x2 - x1 + margin * 2,
+                this.renderRect.h)
 
-            const exactHover = rectExact.contains(pos)
-
-            let action = Editor.EditorAction.None
-            if (exactHover)
-                action = Editor.EditorAction.DragTime
-
-            if (action != Editor.EditorAction.None)
+            if (rectDrag.contains(pos))
             {
-                data.state.hover = 
+                hoverDrag =
                 {
                     id: noteBlock.id,
                     range: noteBlock.range,
-                    action,
+                    action: Editor.EditorAction.DragTime,
                 }
-                break
+            }
+            else if (rectStretch.contains(pos))
+            {
+                hoverStretch =
+                {
+                    id: noteBlock.id,
+                    range: noteBlock.range,
+                    action: pos.x < (x1 + x2) / 2 ?
+                        Editor.EditorAction.StretchTimeStart :
+                        Editor.EditorAction.StretchTimeEnd
+                }
             }
         }
+
+        data.state.hover = hoverDrag ?? hoverStretch
     }
 
 
@@ -83,8 +92,22 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
 		for (const noteBlock of this.iterAtRange(data, visibleRange))
 		{
+            const selected = data.state.selection.contains(noteBlock.id)
+            if (selected)
+                continue
+            
 			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
+			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
+			this.renderNoteBlock(data, noteBlock, hovering, selected, playing)
+        }
+
+		for (const noteBlock of this.iterAtRange(data, visibleRange))
+		{
 			const selected = data.state.selection.contains(noteBlock.id)
+            if (!selected)
+                continue
+            
+			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
 			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
 			this.renderNoteBlock(data, noteBlock, hovering, selected, playing)
         }

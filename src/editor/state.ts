@@ -53,6 +53,7 @@ export interface EditorState
         origin:
         {
             point: EditorPoint
+            range: Range | null
             timeScroll: number
             trackScroll: number
             project: Project.Root
@@ -280,6 +281,24 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
         trackIndex,
         trackPos,
     }
+}
+
+
+export function selectionRange(data: EditorUpdateData): Range | null
+{
+    let range: Range | null = null
+
+    for (const id of data.state.selection)
+    {
+        const elem = data.project.elems.get(id) as any
+        if (!elem)
+            continue
+
+        const rangedElem = elem as Project.RangedElement
+        range = Range.merge(range, rangedElem.range)
+    }
+
+    return range
 }
 
 

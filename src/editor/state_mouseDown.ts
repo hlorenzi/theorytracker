@@ -17,6 +17,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         origin:
         {
             point: { ...data.state.mouse.point },
+            range: null,
             timeScroll: data.state.timeScroll,
             trackScroll: data.state.trackScroll,
             project: data.project,
@@ -43,7 +44,8 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             data.state.selection = data.state.selection.add(data.state.hover.id)
         else
             data.state.selection = data.state.selection.remove(data.state.hover.id)
-        
+
+        data.state.drag.origin.range = Editor.selectionRange(data)
         data.state.mouse.action = data.state.hover.action
     }
     else
