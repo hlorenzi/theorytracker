@@ -22,7 +22,7 @@ export function render(data: Editor.EditorUpdateData)
         data.state.renderRect.h)
     data.ctx.clip()
 
-    //Editor.renderCursorHighlight(state, ctx)
+    renderCursorHighlight(data)
     renderBackgroundMeasures(data)
 
     data.ctx.restore()
@@ -63,25 +63,24 @@ export function render(data: Editor.EditorUpdateData)
     }
     
     data.ctx.save()
-    data.ctx.translate(data.state.trackHeaderW, 0)
 
     data.ctx.beginPath()
     data.ctx.rect(
-        0,
+        data.state.trackHeaderW,
         0,
         data.state.renderRect.w - data.state.trackHeaderW,
         data.state.renderRect.h)
     data.ctx.clip()
 
-    /*if (data.state.cursor.visible)
+    if (data.state.cursor.visible)
     {
         const timeMin = data.state.cursor.time1.min(data.state.cursor.time2)!
         const timeMax = data.state.cursor.time1.max(data.state.cursor.time2)!
-        Editor.renderCursorBeam(state, ctx, timeMin, false)
-        Editor.renderCursorBeam(state, ctx, timeMax, true)
+        renderCursorBeam(data, timeMin, false)
+        renderCursorBeam(data, timeMax, true)
     }
     
-    if (data.state.appState.playback.playing)
+    /*if (data.state.appState.playback.playing)
         Editor.renderPlaybackBeam(state, ctx, data.state.appState.playback.time)*/
 
     data.ctx.restore()
@@ -225,7 +224,63 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
         
         data.ctx.beginPath()
         data.ctx.moveTo(keyChX, 0)
-        data.ctx.lineTo(keyChX, data.state.contentState.h)
+        data.ctx.lineTo(keyChX, data.data.state.h)
         data.ctx.stroke()
     }*/
+}
+	
+	
+function renderCursorHighlight(data: Editor.EditorUpdateData)
+{
+    if (!data.state.cursor.visible)
+        return
+    
+    const timeMin = data.state.cursor.time1.min(data.state.cursor.time2)!
+    const timeMax = data.state.cursor.time1.max(data.state.cursor.time2)!
+    const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    
+    if (trackMin < 0 || trackMax < 0 ||
+        trackMin >= data.state.tracks.length ||
+        trackMax >= data.state.tracks.length)
+        return
+    
+        const y1 = 0.5 + Math.floor(Editor.trackY(data, trackMin))
+    const y2 = 0.5 + Math.floor(Editor.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
+    
+    const x1 = Editor.xAtTime(data, timeMin)
+    const x2 = Editor.xAtTime(data, timeMax)
+    
+    data.ctx.fillStyle = data.prefs.editor.selectionBkgColor
+    data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+}
+
+
+function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffsetSide: boolean)
+{
+    const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    
+    if (trackMin < 0 || trackMax < 0 ||
+        trackMin >= data.state.tracks.length ||
+        trackMax >= data.state.tracks.length)
+        return
+    
+    const x = 0.5 + Math.floor(Editor.xAtTime(data, time))
+    
+    data.ctx.strokeStyle = data.prefs.editor.selectionCursorColor
+    data.ctx.lineCap = "square"
+    data.ctx.lineWidth = 1
+    
+    const headSize = 7 * (tipOffsetSide ? -1 : 1)
+
+    const y1 = 0.5 + Math.floor(Editor.trackY(data, trackMin))
+    const y2 = 0.5 + Math.floor(Editor.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
+    
+    data.ctx.beginPath()
+    data.ctx.moveTo(x + headSize, y1)
+    data.ctx.lineTo(x,            y1)
+    data.ctx.lineTo(x,            y2)
+    data.ctx.lineTo(x + headSize, y2)
+    data.ctx.stroke()
 }

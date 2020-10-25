@@ -38,7 +38,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         const alreadySelected = data.state.selection.has(data.state.hover.id)
 
         if (!selectMultiple && !alreadySelected)
-            data.state.selection = data.state.selection.clear()
+            Editor.selectionClear(data)
 
         if (!alreadySelected || !selectMultiple)
             data.state.selection = data.state.selection.add(data.state.hover.id)
@@ -47,10 +47,18 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
 
         data.state.drag.origin.range = Editor.selectionRange(data)
         data.state.mouse.action = data.state.hover.action
+        data.state.cursor.visible = false
     }
     else
     {
         if (!selectMultiple)
-            data.state.selection = data.state.selection.clear()
+            Editor.selectionClear(data)
+
+        data.state.mouse.action = Editor.EditorAction.SelectCursor
+        data.state.cursor.visible = true
+        data.state.cursor.time1 = data.state.cursor.time2 =
+            data.state.mouse.point.time
+        data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
+            data.state.mouse.point.trackIndex
     }
 }

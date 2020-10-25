@@ -40,6 +40,15 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
 
         return true
     }
+    else if (data.state.mouse.action == Editor.EditorAction.SelectCursor)
+    {
+        data.state.cursor.time2 = data.state.mouse.point.time
+        data.state.cursor.trackIndex2 = data.state.mouse.point.trackIndex
+
+        Editor.selectionClear(data)
+        Editor.selectionAddAtCursor(data)
+        return true
+    }
     else
     {
         let blockedActions = Editor.EditorAction.None

@@ -20,7 +20,10 @@ export class EditorTrackNoteBlocks extends EditorTrack
     }
 
 
-    *iterAtRange(data: Editor.EditorUpdateData, range: Range): Generator<Project.NoteBlock, void, void>
+    *iterAtRange(
+        data: Editor.EditorUpdateData,
+        range: Range)
+        : Generator<Project.NoteBlock, void, void>
     {
         const trackElems = data.project.rangedLists.get(this.projectTrackId)
         if (!trackElems)
@@ -28,6 +31,17 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
         for (const noteBlock of trackElems.iterAtRange(range))
             yield noteBlock as Project.NoteBlock
+    }
+
+
+    *elemsAtRegion(
+        data: Editor.EditorUpdateData,
+        range: Range,
+        verticalRegion?: { y1: number, y2: number })
+        : Generator<Project.ID, void, void>
+    {
+        for (const note of this.iterAtRange(data, range))
+            yield note.id
     }
 	
 	

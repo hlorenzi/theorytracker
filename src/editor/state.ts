@@ -37,6 +37,15 @@ export interface EditorState
     timeSnap: Rational
     timeSnapBase: Rational
 
+    cursor:
+    {
+        visible: boolean
+        time1: Rational
+        time2: Rational
+        trackIndex1: number
+        trackIndex2: number
+    }
+
     keysDown: Set<string>,
 
     mouse:
@@ -115,6 +124,15 @@ export function init(): EditorState
         timeScale: 100,
         timeSnap: new Rational(1, 16),
         timeSnapBase: new Rational(1, 16),
+
+        cursor:
+        {
+            visible: true,
+            time1: new Rational(0),
+            time2: new Rational(0),
+            trackIndex1: 0,
+            trackIndex2: 0,
+        },
 
         keysDown: new Set<string>(),
 
@@ -292,6 +310,12 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
 }
 
 
+export function selectionClear(data: EditorUpdateData)
+{
+    data.state.selection = data.state.selection.clear()
+}
+
+
 export function selectionRange(data: EditorUpdateData): Range | null
 {
     let range: Range | null = null
@@ -307,6 +331,26 @@ export function selectionRange(data: EditorUpdateData): Range | null
     }
 
     return range
+}
+
+
+export function selectionAddAtCursor(data: EditorUpdateData)
+{
+    const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    
+    const time1 = data.state.cursor.time1
+    const time2 = data.state.cursor.time2
+    if (time1.compare(time2) != 0)
+    {
+        const range = new Range(time1, time2, false, false).sorted()
+
+        for (let t = trackMin; t <= trackMax; t++)
+        {
+            for (const id of data.state.tracks[t].elemsAtRegion(data, range))
+                data.state.selection = data.state.selection.add(id)
+        }
+    }
 }
 
 
