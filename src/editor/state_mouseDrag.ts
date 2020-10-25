@@ -59,8 +59,8 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
 		{
 			const elem = data.state.drag.origin.project.elems.get(id)
 			if (!elem)
-				continue
-            
+                continue
+                
             const rangedElem = elem as any as Project.RangedElement
 			
 			let changes: any = {}
@@ -110,9 +110,9 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             }*/
             
             const newRangedElem = Project.RangedElement.withChanges(rangedElem, changes)
-                
+            
             data.project = Project.Root.upsertRangedElement(
-                data.state.drag.origin.project,
+                data.project,
                 newRangedElem)
         }
         

@@ -10,7 +10,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     data.state.mouse.down = true
     data.state.mouse.action = Editor.EditorAction.None
 
-    const selectMultiple = false
+    const selectMultiple = data.state.keysDown.has("control")
 
     data.state.drag =
     {

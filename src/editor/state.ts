@@ -37,6 +37,8 @@ export interface EditorState
     timeSnap: Rational
     timeSnapBase: Rational
 
+    keysDown: Set<string>,
+
     mouse:
     {
         down: boolean
@@ -46,6 +48,8 @@ export interface EditorState
 
         point: EditorPoint
         pointPrev: EditorPoint
+
+        wheelDate: Date
     }
 
     drag:
@@ -112,6 +116,8 @@ export function init(): EditorState
         timeSnap: new Rational(1, 16),
         timeSnapBase: new Rational(1, 16),
 
+        keysDown: new Set<string>(),
+
         mouse:
         {
             down: false,
@@ -134,6 +140,8 @@ export function init(): EditorState
                 trackIndex: 0,
                 trackPos: { x: 0, y: 0 },
             },
+
+            wheelDate: new Date(),
         },
 
         drag:
@@ -198,14 +206,14 @@ export function refreshTracks(data: EditorUpdateData)
 
 export function xAtTime(data: EditorUpdateData, time: Rational): number
 {
-    return (time.asFloat() - data.state.timeScroll) * data.state.timeScale + data.state.trackHeaderW
+    return (time.asFloat() - data.state.timeScroll) * data.state.timeScale
 }
 
 
 export function timeAtX(data: EditorUpdateData, x: number, timeSnap?: Rational): Rational
 {
     timeSnap = timeSnap || data.state.timeSnap
-    const time = (x - data.state.trackHeaderW) / data.state.timeScale + data.state.timeScroll
+    const time = x / data.state.timeScale + data.state.timeScroll
     return Rational.fromFloat(time, timeSnap.denominator)
 }
 

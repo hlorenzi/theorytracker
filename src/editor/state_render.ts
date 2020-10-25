@@ -14,11 +14,9 @@ export function render(data: Editor.EditorUpdateData)
     data.ctx.fillRect(0, 0, data.state.renderRect.w, data.state.renderRect.h)
 
     data.ctx.save()
-    data.ctx.translate(data.state.trackHeaderW, 0)
-
     data.ctx.beginPath()
     data.ctx.rect(
-        0,
+        data.state.trackHeaderW,
         0,
         data.state.renderRect.w - data.state.trackHeaderW,
         data.state.renderRect.h)

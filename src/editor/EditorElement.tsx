@@ -166,18 +166,46 @@ export function EditorElement()
             render()
             setCursor(updateData.state)
         }
+		
+		const onMouseWheel = (ev: WheelEvent) =>
+		{
+			ev.preventDefault()
+            const updateData = makeUpdateData()
+			Editor.mouseWheel(updateData, ev.deltaX, ev.deltaY)
+            render()
+		}
+		
+		const onKeyDown = (ev: KeyboardEvent) =>
+		{
+            const updateData = makeUpdateData()
+			Editor.keyDown(updateData, ev.key.toLowerCase())
+        }
+		
+		const onKeyUp = (ev: KeyboardEvent) =>
+		{
+            const updateData = makeUpdateData()
+			Editor.keyUp(updateData, ev.key.toLowerCase())
+        }
         
         refCanvas.current!.addEventListener("mousemove", onMouseMove)
         refCanvas.current!.addEventListener("mousedown", onMouseDown)
         refCanvas.current!.addEventListener("mouseup", onMouseUp)
+        refCanvas.current!.addEventListener("wheel", onMouseWheel)
         refCanvas.current!.addEventListener("contextmenu", preventDefault)
+
+        window.addEventListener("keydown", onKeyDown)
+        window.addEventListener("keyup", onKeyUp)
 
         return () =>
         {
             refCanvas.current!.removeEventListener("mousemove", onMouseMove)
             refCanvas.current!.removeEventListener("mousedown", onMouseDown)
             refCanvas.current!.removeEventListener("mouseup", onMouseUp)
+            refCanvas.current!.removeEventListener("wheel", onMouseWheel)
             refCanvas.current!.removeEventListener("contextmenu", preventDefault)
+
+            window.removeEventListener("keydown", onKeyDown)
+            window.removeEventListener("keyup", onKeyUp)
         }
 
     }, [refCanvas.current])
