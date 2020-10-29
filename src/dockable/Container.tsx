@@ -67,7 +67,7 @@ export function Container(props: DockableProps)
 
     return <div style={{
         width: "100%",
-        height: "100vh",
+        height: "100%",
         backgroundColor: colorVoid,
     }}>
 
@@ -120,7 +120,7 @@ export function Container(props: DockableProps)
         }
 
         <div ref={ rootRef } style={{
-            position: "absolute",
+            position: "relative",
             top: "0px",
             left: "0px",
             width: "100%",

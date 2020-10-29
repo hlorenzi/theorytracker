@@ -11,8 +11,8 @@ export class Root
     nextId: Project.ID
     baseBpm: number
     tracks: Project.Track[]
-    rangedLists: Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>
-    elems: Immutable.Map<number, Project.Element>
+    lists: Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>
+    elems: Immutable.Map<Project.ID, Project.Element>
 
 
     constructor()
@@ -20,8 +20,8 @@ export class Root
         this.nextId = 1
         this.baseBpm = 120
         this.tracks = []
-        this.rangedLists = Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>()
-        this.elems = Immutable.Map<number, Project.Element>()
+        this.lists = Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>()
+        this.elems = Immutable.Map<Project.ID, Project.Element>()
     }
 
 
@@ -32,7 +32,7 @@ export class Root
         const track3Id = project.nextId
         project = Root.upsertTrack(project, new Project.TrackNotes())
         for (let i = 0; i < 16; i++)
-            project = Root.upsertRangedElement(project, new Project.NoteBlock(
+            project = Root.upsertElement(project, new Project.NoteBlock(
                 track3Id,
                 Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4))))
 
@@ -82,7 +82,7 @@ export class Root
 	}
 
 
-	static upsertRangedElement(project: Root, elem: Project.RangedElement, remove: boolean = false): Root
+	static upsertElement(project: Root, elem: Project.RangedElement): Root
 	{
         let nextId = project.nextId
 		
@@ -90,15 +90,55 @@ export class Root
 		{
 			elem = Project.Element.withChanges(elem, { id: nextId })
 			nextId++
-		}
+        }
+        
+        const prevElem = project.elems.get(elem.id)
+        const changeParent = !!prevElem && prevElem.parentId != elem.parentId
 
-        let rangedList = project.rangedLists.get(elem.parentId) || new ListOfRanges()
-        rangedList = rangedList.add(elem)
+        if (!changeParent)
+        {
+            let list = project.lists.get(elem.parentId) || new ListOfRanges()
+            list = list.upsert(elem)
 
-        let elems = project.elems.set(elem.id, elem)
-        let rangedLists = project.rangedLists.set(elem.parentId, rangedList)
+            let elems = project.elems.set(elem.id, elem)
+            let lists = project.lists.set(elem.parentId, list)
+            return Object.assign({}, project, { nextId, elems, lists })
+        }
+        else if (elem.parentId < 0)
+        {
+            let prevList = project.lists.get(prevElem!.parentId) || new ListOfRanges()
+            prevList = prevList.removeById(prevElem!.id)
 
-        return Object.assign({}, project, { nextId, elems, rangedLists })
+            let elems = project.elems.delete(elem.id)
+            let lists = project.lists.set(prevElem!.parentId, prevList)
+
+            /*console.log("delete elem " + elem.id + " from " + prevElem!.parentId)
+            console.log(prevList.findById(elem.id))
+            console.log(elems.get(elem.id))*/
+
+            return Object.assign({}, project, { nextId, elems, lists })
+        }
+        else
+        {
+            let prevList = project.lists.get(prevElem!.parentId) || new ListOfRanges()
+            prevList = prevList.removeById(prevElem!.id)
+
+            let nextList = project.lists.get(elem.parentId) || new ListOfRanges()
+            nextList = nextList.upsert(elem)
+
+            /*console.log("change parent from " + prevElem!.parentId + " to " + elem.parentId)
+            console.log(prevElem!)
+            console.log(prevList.findById(elem.id))
+            console.log(elem)
+            console.log(nextList.findById(elem.id))*/
+
+            let elems = project.elems.set(elem.id, elem)
+            let lists = project.lists
+                .set(prevElem!.parentId, prevList)
+                .set(elem.parentId, nextList)
+
+            return Object.assign({}, project, { nextId, elems, lists })
+        }
     }
     
 

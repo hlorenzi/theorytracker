@@ -27,6 +27,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         yLocked: true,
         posDelta: { x: 0, y: 0 },
         timeDelta: new Rational(0),
+        trackDelta: 0,
     }
 
     if (rightButton)// || state.contentState.keys[state.appState.prefs.editor.keyPan])
@@ -35,18 +36,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     }
     else if (data.state.hover)
     {
-        const alreadySelected = data.state.selection.has(data.state.hover.id)
-
-        if (!selectMultiple && !alreadySelected)
-            Editor.selectionClear(data)
-
-        if (!alreadySelected || !selectMultiple)
-            data.state.selection = data.state.selection.add(data.state.hover.id)
-        else
-            data.state.selection = data.state.selection.remove(data.state.hover.id)
-
-        data.state.drag.origin.range = Editor.selectionRange(data)
-        data.state.mouse.action = data.state.hover.action
+        Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
     }
     else
@@ -54,11 +44,14 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         if (!selectMultiple)
             Editor.selectionClear(data)
 
-        data.state.mouse.action = Editor.EditorAction.SelectCursor
-        data.state.cursor.visible = true
-        data.state.cursor.time1 = data.state.cursor.time2 =
-            data.state.mouse.point.time
-        data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
-            data.state.mouse.point.trackIndex
+        if (data.state.mouse.point.pos.x > data.state.trackHeaderW)
+        {
+            data.state.mouse.action = Editor.EditorAction.SelectCursor
+            data.state.cursor.visible = true
+            data.state.cursor.time1 = data.state.cursor.time2 =
+                data.state.mouse.point.time
+            data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
+                data.state.mouse.point.trackIndex
+        }
     }
 }

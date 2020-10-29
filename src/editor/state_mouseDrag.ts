@@ -20,6 +20,9 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     data.state.drag.timeDelta =
         data.state.mouse.point.time.subtract(data.state.drag.origin.point.time)
 
+    data.state.drag.trackDelta =
+        data.state.mouse.point.trackIndex - data.state.drag.origin.point.trackIndex
+
     data.state.drag.xLocked =
         data.state.drag.xLocked &&
         Math.abs(data.state.drag.posDelta.x) < data.prefs.editor.mouseDragXLockedDistance
@@ -62,12 +65,17 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
 		if (data.state.drag.yLocked)
 			blockedActions |= Editor.EditorAction.DragRow
 
-		const mouseAction = data.state.mouse.action & ~blockedActions
+        const mouseAction = data.state.mouse.action & ~blockedActions
+        
+        let newProject = data.state.drag.origin.project
 
 		for (const id of data.state.selection)
 		{
 			const elem = data.state.drag.origin.project.elems.get(id)
 			if (!elem)
+                continue
+
+            if (elem.type == Project.ElementType.Track)
                 continue
                 
             const rangedElem = elem as any as Project.RangedElement
@@ -117,14 +125,22 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 const newPitch = key.midiForDegree(Math.floor(degree + mouseDrag.rowDelta))
                 changes.pitch = newPitch
             }*/
+
+            if (data.state.drag.trackDelta != 0)
+            {
+                const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
+                const newTrackIndex = Math.max(0, Math.min(data.state.tracks.length - 1, origTrackIndex + data.state.drag.trackDelta))
+                changes.parentId = data.state.tracks[newTrackIndex].projectTrackId
+            }
             
             const newRangedElem = Project.RangedElement.withChanges(rangedElem, changes)
             
-            data.project = Project.Root.upsertRangedElement(
-                data.project,
+            newProject = Project.Root.upsertElement(
+                newProject,
                 newRangedElem)
         }
-        
+
+        data.project = newProject
         return true
     }
 

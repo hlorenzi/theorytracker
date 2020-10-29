@@ -1,26 +1,26 @@
 import React from "react"
 import Rect from "../util/rect"
-import Popup from "./Popup"
-import { usePopup } from "./PopupContext"
+import { Root } from "./Root"
+import { usePopupRoot } from "./popupContext"
 
 
 interface PopupButtonProps
 {
     icon?: any
     label: any
-    onClick?: (ev: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
+    onClick?: (ev: React.MouseEvent) => void
     children?: any
 }
 
 
-export default function PopupButton(props: PopupButtonProps)
+export function Button(props: PopupButtonProps)
 {
     const buttonRef = React.useRef<HTMLButtonElement>(null)
-    const popupCtx = usePopup()
+    const popupRootCtx = usePopupRoot()
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
 
-    const index = popupCtx.itemIndex
-    popupCtx.itemIndex++
+    const index = popupRootCtx.itemIndex
+    popupRootCtx.itemIndex++
 
     React.useEffect(() =>
     {
@@ -32,7 +32,7 @@ export default function PopupButton(props: PopupButtonProps)
 
         const onEnter = () =>
         {
-            popupCtx.openSubPopup(buttonRef.current)
+            popupRootCtx.openSubPopup(buttonRef.current)
         }
 
         const onLeave = () =>
@@ -50,11 +50,24 @@ export default function PopupButton(props: PopupButtonProps)
 
     }, [])
 
+    const onClick = (ev: React.MouseEvent) =>
+    {
+        if (props.onClick)
+        {
+            props.onClick(ev)
+        }
+        else
+        {
+            ev.preventDefault()
+            ev.stopPropagation()
+        }
+    }
+
     return <>
         <button
             ref={ buttonRef }
             className="popupButton"
-            onClick={ props.onClick }
+            onClick={ onClick }
             style={{
                 border: "0px",
                 padding: "0.5em 1em",
@@ -114,10 +127,10 @@ export default function PopupButton(props: PopupButtonProps)
             { !props.children ? "" : "▶" }
         </div>
 
-        { !buttonRef.current || !props.children || popupCtx.curSubPopup !== buttonRef.current ? null :
-            <Popup isSub={ true } rect={ rect }>
+        { !buttonRef.current || !props.children || popupRootCtx.curSubPopup !== buttonRef.current ? null :
+            <Root isSub={ true } rect={ rect }>
                 { props.children }
-            </Popup>
+            </Root>
         }
     </>
 }

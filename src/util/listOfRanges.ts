@@ -111,22 +111,6 @@ export default class ListOfRanges<T extends Element>
 	}
 	
 	
-	add(elem: T): ListOfRanges<T>
-	{
-		return this.upsert(elem)
-	}
-	
-	
-	addMany(elems: T[]): ListOfRanges<T>
-	{
-		let newList: ListOfRanges<T> = this
-		for (const elem of elems)
-			newList = newList.add(elem)
-		
-		return newList
-	}
-	
-	
 	update(elem: T): ListOfRanges<T>
 	{
 		if (!this.idMap.get(elem.id))
@@ -159,6 +143,16 @@ export default class ListOfRanges<T extends Element>
 		}
 		
 		newList.idMap = newList.idMap.set(elem.id, elem)
+		return newList
+	}
+	
+	
+	upsertMany(elems: T[]): ListOfRanges<T>
+	{
+		let newList: ListOfRanges<T> = this
+		for (const elem of elems)
+			newList = newList.upsert(elem)
+		
 		return newList
 	}
 	

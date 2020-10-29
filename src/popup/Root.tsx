@@ -1,32 +1,32 @@
 import React from "react"
 import Rect from "../util/rect"
-import { PopupContext } from "./PopupContext"
-import { useAppManager } from "../AppContext"
-import { AppReducer } from "../AppState"
+import { PopupRootContext, usePopup } from "./popupContext"
 
 
-interface PopupProps
+interface PopupRootProps
 {
-    rect: Rect
-    isSub: boolean
+    rect?: Rect
+    isSub?: boolean
     popupElem?: any
     popupProps?: any
     children?: any
 }
 
 
-export default function Popup(props: PopupProps)
+export function Root(props: PopupRootProps)
 {
-    const appManager = useAppManager()
+    const popupCtx = usePopup()
+    const rect = props.rect ?? popupCtx.ref.current.rect
     const [subOpen, setSubOpen] = React.useState<any>(null)
     
-    const dismiss = () =>
+    const dismiss = (ev: any) =>
     {
-        appManager.appState = AppReducer.removePopup(appManager.appState)
-        appManager.dispatch()
+        ev.preventDefault()
+        popupCtx.ref.current.elem = null
+        popupCtx.commit()
     }
 
-    return <PopupContext.Provider value={{
+    return <PopupRootContext.Provider value={{
         curSubPopup: subOpen,
         openSubPopup: setSubOpen,
         itemIndex: 1,
@@ -34,6 +34,7 @@ export default function Popup(props: PopupProps)
         <div
             onContextMenu={ ev => ev.preventDefault() }
             onClick={ props.isSub ? undefined : dismiss }
+            //onMouseDown={ props.isSub ? undefined : dismiss }
             style={{
                 zIndex: 100000,
                 position: "fixed",
@@ -48,11 +49,14 @@ export default function Popup(props: PopupProps)
             <div style={{
                 zIndex: 100001,
                 position: "absolute",
-                left: props.isSub ? props.rect.x2 : props.rect.x1,
-                top: props.isSub ? props.rect.y1 :props.rect.y2,
+                left: props.isSub ? rect.x2 : rect.x1,
+                top: props.isSub ? rect.y1 :rect.y2,
 
-                backgroundColor: "#111",
-                border: "1px solid #888",
+                backgroundColor: "#2f3136",
+                border: "1px solid #fff",
+                borderRadius: "0.5em",
+                overflow: "hidden",
+                boxShadow: "0 0.5em 0.5em 0.5em #0004",
 
                 textAlign: "left",
 
@@ -61,10 +65,8 @@ export default function Popup(props: PopupProps)
                 gridAutoFlow: "row",
                 pointerEvents: "auto",
             }}>
-                { props.isSub ? props.children : React.createElement(props.popupElem, {
-                    ...props.popupProps
-                }) }
+                { props.children }
             </div>
         </div>
-    </PopupContext.Provider>
+    </PopupRootContext.Provider>
 }

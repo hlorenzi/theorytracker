@@ -32,6 +32,30 @@ export function render(data: Editor.EditorUpdateData)
     {
         data.ctx.save()
         data.ctx.translate(0, y)
+
+        const hover = !!data.state.hover && data.state.hover.id == data.state.tracks[t].projectTrackId
+        const selected = data.state.selection.has(data.state.tracks[t].projectTrackId)
+
+        data.ctx.fillStyle = "#000"
+        data.ctx.strokeStyle = "transparent"
+        if (selected)
+        {
+            data.ctx.fillStyle = "#222"
+            data.ctx.strokeStyle = "#fff"
+        }
+        else if (hover)
+        {
+            data.ctx.fillStyle = "#000"
+            data.ctx.strokeStyle = "#888"
+        }
+        
+        data.ctx.beginPath()
+        data.ctx.rect(
+            0.5, 1.5,
+            data.state.trackHeaderW - 1,
+            data.state.tracks[t].renderRect.h - 2)
+        data.ctx.fill()
+        data.ctx.stroke()
         
         data.ctx.beginPath()
         data.ctx.rect(

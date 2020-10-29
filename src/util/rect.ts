@@ -25,6 +25,17 @@ export default class Rect
 	}
 
 
+	static fromElement(elem: HTMLElement)
+	{
+		const clientRect = elem.getBoundingClientRect()
+		return new Rect(
+			clientRect.left,
+			clientRect.top,
+			clientRect.width,
+			clientRect.height)
+	}
+
+
 	clone(): Rect
 	{
 		return new Rect(this.x, this.y, this.w, this.h)

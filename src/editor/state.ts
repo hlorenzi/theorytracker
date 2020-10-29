@@ -1,8 +1,10 @@
 import Immutable from "immutable"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
+import * as Popup from "../popup"
 import * as Theory from "../theory"
 import Rational from "../util/rational"
+import { RefState } from "../util/refState"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import { EditorTrack } from "./track"
@@ -20,6 +22,7 @@ export enum EditorAction
     DragRow = 0x20,
     StretchTimeStart = 0x40,
     StretchTimeEnd = 0x80,
+    DragTrack = 0x100,
 }
 
 
@@ -77,6 +80,7 @@ export interface EditorState
 
         posDelta: { x: number, y: number }
         timeDelta: Rational
+        trackDelta: number
     }
 
     hover: EditorHover | null
@@ -107,6 +111,7 @@ export interface EditorUpdateData
     prefs: Prefs.Prefs
     project: Project.Root
     ctx: CanvasRenderingContext2D
+    popup: RefState<Popup.PopupContextProps>
 }
 
 
@@ -120,7 +125,7 @@ export function init(): EditorState
         tracks: [],
         trackScroll: 0,
 
-        timeScroll: -0.5,
+        timeScroll: -2.5,
         timeScale: 100,
         timeSnap: new Rational(1, 16),
         timeSnapBase: new Rational(1, 16),
@@ -169,6 +174,7 @@ export function init(): EditorState
             yLocked: true,
             posDelta: { x: 0, y: 0 },
             timeDelta: new Rational(0),
+            trackDelta: 0,
         },
         
         hover: null,
@@ -251,7 +257,26 @@ export function trackY(data: EditorUpdateData, trackIndex: number): number
 }
 
 
-export function trackAtY(data: EditorUpdateData, y: number): number
+export function trackAtY(data: EditorUpdateData, y: number): number | null
+{
+    y += data.state.trackScroll
+
+    if (y < 0)
+        return null
+
+    for (let t = 0; t < data.state.tracks.length; t++)
+    {
+        const track = data.state.tracks[t]
+
+        if (y >= track.renderRect.y && y <= track.renderRect.y + track.renderRect.h)
+            return t
+    }
+
+    return null
+}
+
+
+export function trackAtYClamped(data: EditorUpdateData, y: number): number
 {
     y += data.state.trackScroll
 
@@ -295,7 +320,7 @@ export function rectForTrack(data: EditorUpdateData, trackIndex: number): Rect |
 
 export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): EditorPoint
 {
-    const trackIndex = trackAtY(data, pos.y)
+    const trackIndex = trackAtYClamped(data, pos.y)
     const time = timeAtX(data, pos.x)
     
     const trackPosY = pos.y - trackY(data, data.state.mouse.point.trackIndex)
@@ -322,8 +347,11 @@ export function selectionRange(data: EditorUpdateData): Range | null
 
     for (const id of data.state.selection)
     {
-        const elem = data.project.elems.get(id) as any
+        const elem = data.project.elems.get(id) as Project.Element
         if (!elem)
+            continue
+
+        if (elem.type == Project.ElementType.Track)
             continue
 
         const rangedElem = elem as Project.RangedElement
@@ -331,6 +359,26 @@ export function selectionRange(data: EditorUpdateData): Range | null
     }
 
     return range
+}
+
+
+export function selectionToggleHover(
+    data: EditorUpdateData,
+    hover: EditorHover,
+    selectMultiple: boolean)
+{
+    const alreadySelected = data.state.selection.has(hover.id)
+
+    if (!selectMultiple && !alreadySelected)
+        selectionClear(data)
+
+    if (!alreadySelected || !selectMultiple)
+        data.state.selection = data.state.selection.add(hover.id)
+    else
+        data.state.selection = data.state.selection.remove(hover.id)
+
+    data.state.drag.origin.range = selectionRange(data)
+    data.state.mouse.action = hover.action
 }
 
 

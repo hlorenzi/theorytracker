@@ -1,3 +1,4 @@
+import React from "react"
 import * as Editor from "./index"
 import * as Project from "../project"
 import Rect from "../util/rect"
@@ -6,6 +7,7 @@ import Range from "../util/range"
 
 export class EditorTrack
 {
+    projectTrackId: Project.ID = -1
     renderRect: Rect = new Rect(0, 0, 0, 0);
 
 
@@ -16,6 +18,12 @@ export class EditorTrack
         : Generator<Project.ID, void, void>
     {
         
+    }
+
+
+    contextMenu(data: Editor.EditorUpdateData): JSX.Element | null
+    {
+        return null
     }
 
 

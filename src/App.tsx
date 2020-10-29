@@ -2,6 +2,8 @@ import React, { useRef } from "react"
 import * as Dockable from "./dockable"
 import * as Project from "./project"
 import * as Prefs from "./prefs"
+import * as Popup from "./popup"
+import * as Menubar from "./menubar"
 import { useRefState } from "./util/refState"
 import EditorWindow from "./windows/EditorWindow"
 import WindowTest from "./windows/WindowTest"
@@ -27,15 +29,48 @@ export default function App()
 
     const projectCtx = useRefState(() => Project.Root.getDefault())
     const prefsCtx = useRefState(() => Prefs.getDefault())
+    const popupCtx = useRefState(() => Popup.getDefaultCtx())
 
     return <>
         <Project.ProjectContext.Provider value={ projectCtx }>
         <Prefs.PrefsContext.Provider value={ prefsCtx }>
-            <Dockable.Container
-                state={ dockableState }
-                setState={ (state: Dockable.State) => setDockableState(state) }
-                contentIdToComponent={ contentIdToComponent }
-            />
+        <Popup.PopupContext.Provider value={ popupCtx }>
+            <div style={{
+                display: "grid",
+                gridTemplate: "auto 1fr / 1fr",
+                width: "100vw",
+                height: "100vh",
+            }}>
+
+                <Menubar.Root>
+                    <Menubar.Item label="File">
+                        <Popup.Root>
+                            <Popup.Button label="New"/>
+                            <Popup.Button label="Open..."/>
+                        </Popup.Root>
+                    </Menubar.Item>
+                    <Menubar.Item label="Edit">
+                        <Popup.Root>
+                        </Popup.Root>
+                    </Menubar.Item>
+                    <Menubar.Item label="View">
+                        <Popup.Root>
+                        </Popup.Root>
+                    </Menubar.Item>
+                </Menubar.Root>
+
+                <Dockable.Container
+                    state={ dockableState }
+                    setState={ (state: Dockable.State) => setDockableState(state) }
+                    contentIdToComponent={ contentIdToComponent }
+                />
+
+            </div>
+
+            { !popupCtx.ref.current.elem ? null :
+                <popupCtx.ref.current.elem/>
+            }
+        </Popup.PopupContext.Provider>
         </Prefs.PrefsContext.Provider>
         </Project.ProjectContext.Provider>
     </>

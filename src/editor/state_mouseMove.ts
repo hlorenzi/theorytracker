@@ -1,3 +1,5 @@
+import Range from "../util/range"
+import Rational from "../util/rational"
 import * as Editor from "./index"
 
 
@@ -12,10 +14,27 @@ export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     const hoverPrev = data.state.hover
     data.state.hover = null
 
-    for (let t = 0; t < data.state.tracks.length; t++)
+    if (data.state.mouse.point.pos.x < data.state.trackHeaderW)
     {
-        if (t == data.state.mouse.point.trackIndex)
-            data.state.tracks[t].hover(data)
+        const trackIndex = Editor.trackAtY(data, data.state.mouse.point.pos.y)
+        if (trackIndex !== null)
+        {
+            const track = data.state.tracks[trackIndex]
+            data.state.hover =
+            {
+                action: Editor.EditorAction.DragTrack,
+                id: track.projectTrackId,
+                range: new Range(new Rational(0), new Rational(0)),
+            }
+        }
+    }
+    else
+    {
+        for (let t = 0; t < data.state.tracks.length; t++)
+        {
+            if (t == data.state.mouse.point.trackIndex)
+                data.state.tracks[t].hover(data)
+        }
     }
 
     if (data.state.hover && hoverPrev)

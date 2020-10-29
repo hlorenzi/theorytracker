@@ -2,9 +2,11 @@ import React from "react"
 import * as Editor from "./index"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
+import * as Popup from "../popup"
 import { useRefState } from "../util/refState"
 import Rect from "../util/rect"
 import { EditorUpdateData } from "./state"
+import styled from "styled-components"
 
 
 declare class ResizeObserver
@@ -15,6 +17,21 @@ declare class ResizeObserver
 }
 
 
+const StyledTrackButton = styled.button`
+    pointer-events: auto;
+    color: #fff;
+    border: 1px solid #888;
+    border-radius: 0.5em;
+    background-color: #2f3136;
+    padding: 0.5em 1em;
+
+    &:hover
+    {
+        border: 1px solid #fff;
+    }
+`
+
+
 export function EditorElement()
 {
     const refDiv = React.useRef<HTMLDivElement | null>(null)
@@ -23,6 +40,7 @@ export function EditorElement()
     const editorState = useRefState(() => Editor.init())
     const project = Project.useProject()
     const prefs = Prefs.usePrefs()
+    const popup = Popup.usePopup()
 
     const makeUpdateData: () => EditorUpdateData = () =>
     {
@@ -30,6 +48,7 @@ export function EditorElement()
             state: editorState.ref.current,
             project: project.ref.current,
             prefs: prefs.ref.current,
+            popup,
             ctx: null!,
         }
     }
@@ -115,7 +134,7 @@ export function EditorElement()
             
             /*if (contentCtx.contentState.tracks.some((tr: any) => !!tr.draw) || mouseAction & (Editor.actionDraw))
                 refCanvas.current!.style.cursor = "crosshair"
-            else*/ if (mouseAction & (Editor.EditorAction.DragTime))
+            else*/ if (mouseAction & (Editor.EditorAction.DragTime | Editor.EditorAction.DragTrack))
                 cursor = (state.mouse.down ? "grabbing" : "grab")
             else if (mouseAction & (Editor.EditorAction.Pan))
                 cursor = "move"
@@ -186,6 +205,13 @@ export function EditorElement()
             const updateData = makeUpdateData()
 			Editor.keyUp(updateData, ev.key.toLowerCase())
         }
+		
+		const onRefreshProjectTracks = (ev: Event) =>
+		{
+            const updateData = makeUpdateData()
+            Editor.refreshTracks(updateData)
+            render()
+        }
         
         refCanvas.current!.addEventListener("mousemove", onMouseMove)
         refCanvas.current!.addEventListener("mousedown", onMouseDown)
@@ -195,6 +221,8 @@ export function EditorElement()
 
         window.addEventListener("keydown", onKeyDown)
         window.addEventListener("keyup", onKeyUp)
+
+        window.addEventListener("refreshProjectTracks", onRefreshProjectTracks)
 
         return () =>
         {
@@ -206,10 +234,40 @@ export function EditorElement()
 
             window.removeEventListener("keydown", onKeyDown)
             window.removeEventListener("keyup", onKeyUp)
+
+            window.removeEventListener("refreshProjectTracks", onRefreshProjectTracks)
         }
 
     }, [refCanvas.current])
 
+
+    const yTrackEnd =
+        editorState.ref.current.tracks.length == 0 ?
+            0 :
+            editorState.ref.current.tracks[editorState.ref.current.tracks.length - 1].renderRect.y2
+
+    const onAddTrack = () =>
+    {
+        let proj = project.ref.current
+        proj = Project.Root.upsertTrack(proj, new Project.TrackNotes())
+        project.ref.current = proj
+        project.commit()
+        
+        const ev = new Event("refreshProjectTracks")
+        window.dispatchEvent(ev)
+    }
+
+    const onTrackOptions = (ev: React.MouseEvent, trackIndex: number) =>
+    {
+        popup.ref.current.elem = () =>
+        {
+            return <Popup.Root>
+                <Popup.Button label="Delete"/>
+            </Popup.Root>
+        }
+        popup.ref.current.rect = Rect.fromElement(ev.target as HTMLElement)
+        popup.commit()
+    }
 
 	return (
 		<div ref={ refDiv } style={{
@@ -223,19 +281,51 @@ export function EditorElement()
                 height: "100%",
 			}}/>
 
-			{ /*contentCtx.contentState.tracks.map((track, i) =>
+			{ editorState.ref.current.tracks.map((track, i) =>
 				<div key={ i } style={{
 					position: "absolute",
 					left: 0,
-					top: track.y - contentCtx.contentState.trackScroll,
-					width: contentCtx.contentState.trackHeaderW,
-					height: track.h,
-					padding: "0.1em 0.25em",
-					pointerEvents: "none",
+					top: track.renderRect.y - editorState.ref.current.trackScroll,
+					width: editorState.ref.current.trackHeaderW,
+                    height: track.renderRect.h,
+                    boxSizing: "border-box",
+					padding: "1em 1em",
+                    userSelect: "none",
+                    pointerEvents: "none",
+
+                    display: "grid",
+                    gridTemplate: "1fr / 1fr auto",
+                    alignItems: "center",
 				}}>
-					Track Name
+					<div>Track Name</div>
+                    <StyledTrackButton
+                        onClick={ ev => onTrackOptions(ev, i) }
+                    >
+                        ...{/*🔧*/}
+                    </StyledTrackButton>
 				</div>
-			)*/ }
+			)}
+
+            <div style={{
+                position: "absolute",
+                left: 0,
+                top: yTrackEnd - editorState.ref.current.trackScroll,
+                width: editorState.ref.current.trackHeaderW,
+                height: 100,
+                boxSizing: "border-box",
+                padding: "1em 1em",
+                userSelect: "none",
+                pointerEvents: "none",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "start",
+            }}>
+                <StyledTrackButton
+                    onClick={ onAddTrack }
+                >
+                    +{/*➕*/}
+                </StyledTrackButton>
+            </div>
 		</div>
 	)
 }

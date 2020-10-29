@@ -1,5 +1,7 @@
+import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
+import * as Popup from "../popup"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
@@ -9,9 +11,6 @@ import { EditorTrack } from "./track"
 
 export class EditorTrackNoteBlocks extends EditorTrack
 {
-    projectTrackId: Project.ID
-
-
     constructor(projectTrackId: Project.ID, h: number)
     {
         super()
@@ -25,7 +24,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
         range: Range)
         : Generator<Project.NoteBlock, void, void>
     {
-        const trackElems = data.project.rangedLists.get(this.projectTrackId)
+        const trackElems = data.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
@@ -42,6 +41,15 @@ export class EditorTrackNoteBlocks extends EditorTrack
     {
         for (const note of this.iterAtRange(data, range))
             yield note.id
+    }
+
+
+    contextMenu(data: Editor.EditorUpdateData)
+    {
+        return <>
+            <Popup.Button label="Change duration"/>
+            <Popup.Button label="Change pitch"/>
+        </>
     }
 	
 	
