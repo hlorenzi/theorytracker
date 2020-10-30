@@ -31,6 +31,12 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
         data.state.drag.yLocked &&
         Math.abs(data.state.drag.posDelta.y) < data.prefs.editor.mouseDragYLockedDistance
     
+    if (!data.state.drag.yLocked)
+    {
+        data.state.drag.trackInsertionBefore =
+            Editor.trackInsertionAtY(data, data.state.mouse.point.pos.y)
+    }
+
     if (data.state.mouse.action == Editor.EditorAction.Pan)
     {
         data.state.timeScroll =
@@ -52,6 +58,10 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
         Editor.selectionAddAtCursor(data)
         return true
     }
+    else if (data.state.mouse.action == Editor.EditorAction.DragTrack)
+    {
+        return true
+    }
     else
     {
         let blockedActions = Editor.EditorAction.None
@@ -63,7 +73,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 Editor.EditorAction.StretchTimeStart
 
 		if (data.state.drag.yLocked)
-			blockedActions |= Editor.EditorAction.DragRow
+            blockedActions |= Editor.EditorAction.DragRow
 
         const mouseAction = data.state.mouse.action & ~blockedActions
         

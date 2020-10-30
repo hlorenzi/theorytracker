@@ -81,6 +81,7 @@ export interface EditorState
         posDelta: { x: number, y: number }
         timeDelta: Rational
         trackDelta: number
+        trackInsertionBefore: number
     }
 
     hover: EditorHover | null
@@ -127,7 +128,7 @@ export function init(): EditorState
 
         timeScroll: -2.5,
         timeScale: 100,
-        timeSnap: new Rational(1, 16),
+        timeSnap: new Rational(1, 8),
         timeSnapBase: new Rational(1, 16),
 
         cursor:
@@ -175,6 +176,7 @@ export function init(): EditorState
             posDelta: { x: 0, y: 0 },
             timeDelta: new Rational(0),
             trackDelta: 0,
+            trackInsertionBefore: -1,
         },
         
         hover: null,
@@ -200,7 +202,7 @@ export function refreshTracks(data: EditorUpdateData)
         const track = data.project.tracks[t]
         if (track.trackType == Project.TrackType.Notes)
         {
-            tracks.push(new EditorTrackNoteBlocks(track.id, 120))
+            tracks.push(new EditorTrackNoteBlocks(track.id, 80))
         }
     }
 
@@ -253,6 +255,9 @@ export function timeRangeAtX(data: EditorUpdateData, x1: number, x2: number, tim
 
 export function trackY(data: EditorUpdateData, trackIndex: number): number
 {
+    if (trackIndex < 0 || trackIndex >= data.state.tracks.length)
+        return 0
+    
     return data.state.tracks[trackIndex].renderRect.y - data.state.trackScroll
 }
 
@@ -292,6 +297,25 @@ export function trackAtYClamped(data: EditorUpdateData, y: number): number
     }
 
     return data.state.tracks.length - 1
+}
+
+
+export function trackInsertionAtY(data: EditorUpdateData, y: number): number
+{
+    y += data.state.trackScroll
+
+    if (y < 0)
+        return 0
+
+    for (let t = 0; t < data.state.tracks.length; t++)
+    {
+        const track = data.state.tracks[t]
+
+        if (y <= track.renderRect.y + track.renderRect.h / 2)
+            return t
+    }
+
+    return data.state.tracks.length
 }
 
 

@@ -46,7 +46,11 @@ export class Root
     }
 
 
-	static upsertTrack(project: Root, track: Project.Track, remove: boolean = false): Root
+	static upsertTrack(
+        project: Root,
+        track: Project.Track,
+        remove: boolean = false,
+        insertBefore: number = -1): Root
 	{
         let nextId = project.nextId
         let tracks = project.tracks
@@ -61,11 +65,29 @@ export class Root
             tracks = tracks.filter(t => t.id !== track.id)
 		}
 		
-        if (!remove)
+        if (remove)
+        {
+            const trackIndex = tracks.findIndex(t => t.id === track.id)
+            if (trackIndex >= 0)
+                tracks = [
+                    ...tracks.slice(0, trackIndex),
+                    ...tracks.slice(trackIndex + 1)
+                ]
+        }
+        else
         {
             const trackIndex = tracks.findIndex(t => t.id === track.id)
             if (trackIndex < 0)
-                tracks = [...tracks, track]
+            {
+                if (insertBefore < 0)
+                    tracks = [...tracks, track]
+                else
+                    tracks = [
+                        ...tracks.slice(0, insertBefore),
+                        track,
+                        ...tracks.slice(insertBefore)
+                    ]
+            }
             else
                 tracks = [
                     ...tracks.slice(0, trackIndex),
@@ -75,7 +97,9 @@ export class Root
         }
 
         let elems = project.elems
-        if (!remove)
+        if (remove)
+            elems = elems.delete(track.id)
+        else
             elems = elems.set(track.id, track)
 
         return Object.assign({}, project, { nextId, elems, tracks })

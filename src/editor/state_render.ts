@@ -85,6 +85,29 @@ export function render(data: Editor.EditorUpdateData)
 
         y = y2
     }
+
+    if (data.state.mouse.down &&
+        data.state.mouse.action == Editor.EditorAction.DragTrack &&
+        data.state.drag.trackInsertionBefore >= 0)
+    {
+        data.ctx.save()
+
+        const y =
+            -data.state.trackScroll +
+                (data.state.tracks.length == 0 ? 0 :
+                data.state.drag.trackInsertionBefore >= data.state.tracks.length ?
+                    data.state.tracks[data.state.tracks.length - 1].renderRect.y2 :
+                data.state.tracks[data.state.drag.trackInsertionBefore].renderRect.y)
+
+        data.ctx.strokeStyle = data.prefs.editor.selectionCursorColor
+        data.ctx.lineWidth = 3
+        data.ctx.beginPath()
+        data.ctx.moveTo(0, y + 0.5)
+        data.ctx.lineTo(data.state.renderRect.w, y + 0.5)
+        data.ctx.stroke()
+
+        data.ctx.restore()
+    }
     
     data.ctx.save()
 
@@ -293,18 +316,30 @@ function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffs
     const x = 0.5 + Math.floor(Editor.xAtTime(data, time))
     
     data.ctx.strokeStyle = data.prefs.editor.selectionCursorColor
+    data.ctx.fillStyle = data.prefs.editor.selectionCursorColor
     data.ctx.lineCap = "square"
     data.ctx.lineWidth = 1
     
-    const headSize = 7 * (tipOffsetSide ? -1 : 1)
+    const headYSize = 7
+    const headXSize = headYSize * (tipOffsetSide ? -1 : 1)
 
     const y1 = 0.5 + Math.floor(Editor.trackY(data, trackMin))
     const y2 = 0.5 + Math.floor(Editor.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
     
     data.ctx.beginPath()
-    data.ctx.moveTo(x + headSize, y1)
-    data.ctx.lineTo(x,            y1)
-    data.ctx.lineTo(x,            y2)
-    data.ctx.lineTo(x + headSize, y2)
+    data.ctx.moveTo(x,             y1 + headYSize)
+    data.ctx.lineTo(x + headXSize, y1)
+    data.ctx.lineTo(x,             y1)
+    data.ctx.fill()
+
+    data.ctx.beginPath()
+    data.ctx.moveTo(x,             y2 - headYSize)
+    data.ctx.lineTo(x + headXSize, y2)
+    data.ctx.lineTo(x,             y2)
+    data.ctx.fill()
+
+    data.ctx.beginPath()
+    data.ctx.moveTo(x, y1)
+    data.ctx.lineTo(x, y2)
     data.ctx.stroke()
 }

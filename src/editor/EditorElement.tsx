@@ -182,6 +182,16 @@ export function EditorElement()
             const pos = transformMousePos(refCanvas.current!, ev)
             Editor.mouseMove(updateData, pos)
             Editor.mouseUp(updateData)
+
+            if (updateData.project !== project.ref.current)
+            {
+                project.ref.current = updateData.project
+                project.commit()
+                
+                const ev = new Event("refreshProjectTracks")
+                window.dispatchEvent(ev)
+            }
+
             render()
             setCursor(updateData.state)
         }

@@ -10,7 +10,8 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     data.state.mouse.down = true
     data.state.mouse.action = Editor.EditorAction.None
 
-    const selectMultiple = data.state.keysDown.has("control")
+    const selectMultiple = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
+    const forcePan = data.state.keysDown.has(data.prefs.editor.keyPan)
 
     data.state.drag =
     {
@@ -28,9 +29,10 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         posDelta: { x: 0, y: 0 },
         timeDelta: new Rational(0),
         trackDelta: 0,
+        trackInsertionBefore: -1,
     }
 
-    if (rightButton)// || state.contentState.keys[state.appState.prefs.editor.keyPan])
+    if (rightButton || forcePan)
     {
         data.state.mouse.action = Editor.EditorAction.Pan
     }
