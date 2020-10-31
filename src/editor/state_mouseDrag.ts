@@ -62,6 +62,13 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     {
         return true
     }
+    else if (data.state.mouse.action == Editor.EditorAction.Pencil)
+    {
+        for (let t = 0; t < data.state.tracks.length; t++)
+            data.state.tracks[t].pencilDrag(data)
+        
+        return true
+    }
     else
     {
         let blockedActions = Editor.EditorAction.None
@@ -88,22 +95,20 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             if (elem.type == Project.ElementType.Track)
                 continue
                 
-            const rangedElem = elem as any as Project.RangedElement
-			
 			let changes: any = {}
 
             if (mouseAction & Editor.EditorAction.DragTime)
-                changes.range = rangedElem.range.displace(data.state.drag.timeDelta)
+                changes.range = elem.range.displace(data.state.drag.timeDelta)
             
             if (mouseAction & Editor.EditorAction.StretchTimeStart &&
                 data.state.drag.origin.range)
             {
-                changes.range = rangedElem.range.stretch(
+                changes.range = elem.range.stretch(
                     data.state.drag.timeDelta,
                     data.state.drag.origin.range.end,
                     data.state.drag.origin.range.start)
 
-                if (rangedElem.range.start.compare(data.state.drag.origin.range.start) == 0)
+                if (elem.range.start.compare(data.state.drag.origin.range.start) == 0)
                     changes.range = new Range(
                         changes.range.start.snap(data.state.timeSnap),
                         changes.range.end)
@@ -114,12 +119,12 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             if (mouseAction & Editor.EditorAction.StretchTimeEnd &&
                 data.state.drag.origin.range)
             {
-                changes.range = rangedElem.range.stretch(
+                changes.range = elem.range.stretch(
                     data.state.drag.timeDelta,
                     data.state.drag.origin.range.start,
                     data.state.drag.origin.range.end)
 
-                if (rangedElem.range.end.compare(data.state.drag.origin.range.end) == 0)
+                if (elem.range.end.compare(data.state.drag.origin.range.end) == 0)
                     changes.range = new Range(
                         changes.range.start,
                         changes.range.end.snap(data.state.timeSnap))
@@ -143,11 +148,9 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 changes.parentId = data.state.tracks[newTrackIndex].projectTrackId
             }
             
-            const newRangedElem = Project.RangedElement.withChanges(rangedElem, changes)
-            
             newProject = Project.Root.upsertElement(
                 newProject,
-                newRangedElem)
+                Project.elemModify(elem, changes))
         }
 
         data.project = newProject

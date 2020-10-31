@@ -33,6 +33,30 @@ export class EditorTrack
     }
 
 
+    pencilClear(data: Editor.EditorUpdateData)
+    {
+        
+    }
+
+
+    pencilHover(data: Editor.EditorUpdateData)
+    {
+        
+    }
+
+
+    pencilDrag(data: Editor.EditorUpdateData)
+    {
+        
+    }
+
+
+    pencilComplete(data: Editor.EditorUpdateData)
+    {
+        
+    }
+
+
     render(data: Editor.EditorUpdateData)
     {
 

@@ -29,7 +29,13 @@ export default class Range
 		return new Range(
 			start,
 			start.add(duration))
-    }
+	}
+	
+
+	static dummy(): Range
+	{
+		return new Range(new Rational(0), new Rational(0))
+	}
     
 
     get duration(): Rational

@@ -17,7 +17,7 @@ export enum EditorAction
     Pan = 0x01,
     SelectCursor = 0x02,
     SelectRect = 0x04,
-    Draw = 0x08,
+    Pencil = 0x08,
     DragTime = 0x10,
     DragRow = 0x20,
     StretchTimeStart = 0x40,
@@ -378,8 +378,7 @@ export function selectionRange(data: EditorUpdateData): Range | null
         if (elem.type == Project.ElementType.Track)
             continue
 
-        const rangedElem = elem as Project.RangedElement
-        range = Range.merge(range, rangedElem.range)
+        range = Range.merge(range, elem.range)
     }
 
     return range
@@ -406,6 +405,12 @@ export function selectionToggleHover(
 }
 
 
+export function selectionAdd(data: EditorUpdateData, id: Project.ID)
+{
+    data.state.selection = data.state.selection.add(id)
+}
+
+
 export function selectionAddAtCursor(data: EditorUpdateData)
 {
     const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
@@ -420,7 +425,7 @@ export function selectionAddAtCursor(data: EditorUpdateData)
         for (let t = trackMin; t <= trackMax; t++)
         {
             for (const id of data.state.tracks[t].elemsAtRegion(data, range))
-                data.state.selection = data.state.selection.add(id)
+                selectionAdd(data, id)
         }
     }
 }

@@ -11,7 +11,7 @@ export class Root
     nextId: Project.ID
     baseBpm: number
     tracks: Project.Track[]
-    lists: Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>
+    lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>
     elems: Immutable.Map<Project.ID, Project.Element>
 
 
@@ -20,7 +20,7 @@ export class Root
         this.nextId = 1
         this.baseBpm = 120
         this.tracks = []
-        this.lists = Immutable.Map<Project.ID, ListOfRanges<Project.RangedElement>>()
+        this.lists = Immutable.Map<Project.ID, ListOfRanges<Project.Element>>()
         this.elems = Immutable.Map<Project.ID, Project.Element>()
     }
 
@@ -30,18 +30,13 @@ export class Root
         let project = new Root()
 
         const track3Id = project.nextId
-        project = Root.upsertTrack(project, new Project.TrackNotes())
+        project = Root.upsertTrack(project, Project.makeTrackNotes())
         for (let i = 0; i < 16; i++)
-            project = Root.upsertElement(project, new Project.NoteBlock(
+            project = Root.upsertElement(project, Project.makeNoteBlock(
                 track3Id,
                 Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4))))
 
-        /*const track4Id = project.nextId
-        project = Project.upsertTrack(project, new Project.TrackNotes())
-        for (let i = 0; i < 16; i++)
-            project = Project.upsertRangedElement(project, new Project.Note(track4Id, Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)), 68 - (i % 8)))
-        */
-       
+        console.log(project)
         return project
     }
 
@@ -55,9 +50,9 @@ export class Root
         let nextId = project.nextId
         let tracks = project.tracks
 		
-		if (!track.id)
+		if (track.id < 0)
 		{
-			track = track.withChanges({ id: nextId })
+			track = Project.elemModify(track, { id: nextId })
 			nextId++
 		}
 		else
@@ -106,13 +101,13 @@ export class Root
 	}
 
 
-	static upsertElement(project: Root, elem: Project.RangedElement): Root
+	static upsertElement(project: Root, elem: Project.Element): Root
 	{
         let nextId = project.nextId
 		
-		if (!elem.id)
+		if (elem.id < 0)
 		{
-			elem = Project.Element.withChanges(elem, { id: nextId })
+			elem = Project.elemModify(elem, { id: nextId })
 			nextId++
         }
         

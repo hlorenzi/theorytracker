@@ -259,7 +259,7 @@ export function EditorElement()
     const onAddTrack = () =>
     {
         let proj = project.ref.current
-        proj = Project.Root.upsertTrack(proj, new Project.TrackNotes())
+        proj = Project.Root.upsertTrack(proj, Project.makeTrackNotes())
         project.ref.current = proj
         project.commit()
         

@@ -23,7 +23,7 @@ export interface Prefs
         keyChangeColor: string
 
         keyPan: string
-        keyDraw: string
+        keyPencil: string
         keySelectMultiple: string
         keySelectRect: string
 
@@ -62,7 +62,7 @@ export function getDefault(): Prefs
             keyChangeColor: "#f0c",
         
             keyPan: " ",
-            keyDraw: "a",
+            keyPencil: "a",
             keySelectMultiple: "control",
             keySelectRect: "shift",
         

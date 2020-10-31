@@ -14,6 +14,9 @@ export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     const hoverPrev = data.state.hover
     data.state.hover = null
 
+    for (let t = 0; t < data.state.tracks.length; t++)
+        data.state.tracks[t].pencilClear(data)
+
     if (data.state.mouse.point.pos.x < data.state.trackHeaderW)
     {
         const trackIndex = Editor.trackAtY(data, data.state.mouse.point.pos.y)
@@ -27,6 +30,15 @@ export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 range: new Range(new Rational(0), new Rational(0)),
             }
         }
+    }
+    else if (data.state.keysDown.has(data.prefs.editor.keyPencil))
+    {
+        for (let t = 0; t < data.state.tracks.length; t++)
+        {
+            if (t == data.state.mouse.point.trackIndex)
+                data.state.tracks[t].pencilHover(data)
+        }
+        return true
     }
     else
     {

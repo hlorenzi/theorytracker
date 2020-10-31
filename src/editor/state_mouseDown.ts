@@ -36,6 +36,12 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     {
         data.state.mouse.action = Editor.EditorAction.Pan
     }
+    else if (data.state.keysDown.has(data.prefs.editor.keyPencil))
+    {
+        Editor.selectionClear(data)
+        data.state.mouse.action = Editor.EditorAction.Pencil
+        data.state.cursor.visible = false
+    }
     else if (data.state.hover)
     {
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)

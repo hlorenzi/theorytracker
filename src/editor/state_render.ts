@@ -151,7 +151,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
 
     for (let [meterCh1Raw, meterCh2Raw] of [[null as Project.MeterChange | null, null as Project.MeterChange | null]])// meterChangeList.iterActiveAtRangePairwise(visibleRange))
     {
-        meterCh1Raw = new Project.MeterChange(0, Range.fromPoint(new Rational(0)), new Theory.Meter(4, 4))
+        meterCh1Raw = Project.makeMeterChange(0, new Rational(0), new Theory.Meter(4, 4))
 
         let timeMin = (meterCh1Raw ? meterCh1Raw.range.start : null)
         let timeMax = (meterCh2Raw ? meterCh2Raw.range.start : visibleRange.end)

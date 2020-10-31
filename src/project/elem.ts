@@ -1,8 +1,18 @@
 import Range from "../util/range"
 import * as Theory from "../theory"
+import Rational from "../util/rational"
 
 
 export type ID = number
+
+
+export interface Element
+{
+    type: ElementType
+    id: ID
+    parentId: ID
+    range: Range
+}
 
 
 export enum ElementType
@@ -15,27 +25,6 @@ export enum ElementType
 }
 
 
-export class Element
-{
-    type: ElementType = -1
-    id: ID = 0
-    parentId: ID = 0
-
-
-    constructor(type: ElementType, parentId: ID)
-    {
-        this.type = type
-        this.parentId = parentId
-    }
-
-
-    static withChanges<T>(original: T, changes: any): T
-    {
-        return Object.assign({}, original, changes)
-    }
-}
-
-
 export enum TrackType
 {
     Notes,
@@ -44,117 +33,60 @@ export enum TrackType
 }
 
 
-export class Track extends Element
+export interface Track extends Element
 {
-    trackType: TrackType = 0
-
-
-    constructor(trackType: TrackType)
-    {
-        super(ElementType.Track, 0)
-        this.trackType = trackType
-    }
-
-
-    withChanges(changes: any): this
-    {
-        return Object.assign({}, this, changes)
-    }
+    trackType: TrackType
 }
 
 
-export enum TrackInstrumentType
+export interface NoteBlock extends Element
 {
-    Sflib,
+    
 }
 
 
-export interface TrackInstrument
-{
-    instrumentType: TrackInstrumentType
-}
-
-
-export interface TrackInstrumentSflib extends TrackInstrument
-{
-    collectionId: string
-    instrumentId: string
-}
-
-
-export class TrackNotes extends Track
-{
-    instrument: TrackInstrument
-
-
-    constructor()
-    {
-        super(TrackType.Notes)
-        this.instrument = <TrackInstrumentSflib>{
-            instrumentType: TrackInstrumentType.Sflib,
-            collectionId: "arachno",
-            instrumentId: "grand_piano",
-        }
-    }
-}
-
-
-export class RangedElement extends Element
-{
-    range: Range
-
-
-    constructor(type: ElementType, parentId: ID, range: Range)
-    {
-        super(type, parentId)
-        this.range = range
-    }
-}
-
-
-export class NoteBlock extends RangedElement
-{
-    constructor(parentId: ID, range: Range)
-    {
-        super(ElementType.NoteBlock, parentId, range)
-    }
-}
-
-
-export class Note extends RangedElement
-{
-    pitch: number
-
-
-    constructor(parentId: ID, range: Range, pitch: number)
-    {
-        super(ElementType.Note, parentId, range)
-        this.pitch = pitch
-    }
-}
-
-
-export class KeyChange extends RangedElement
-{
-    key: Theory.Key
-
-
-    constructor(parentId: ID, range: Range, key: Theory.Key)
-    {
-        super(ElementType.KeyChange, parentId, range)
-        this.key = key
-    }
-}
-
-
-export class MeterChange extends RangedElement
+export interface MeterChange extends Element
 {
     meter: Theory.Meter
+}
 
 
-    constructor(parentId: ID, range: Range, meter: Theory.Meter)
-    {
-        super(ElementType.MeterChange, parentId, range)
-        this.meter = meter
+export function elemModify<T>(original: T, changes: Partial<T>): T
+{
+    return { ...original, ...changes }
+}
+
+
+export function makeTrackNotes(): Track
+{
+    return {
+        type: ElementType.Track,
+        id: -1,
+        parentId: 0,
+        trackType: TrackType.Notes,
+        range: Range.dummy(),
+    }
+}
+
+
+export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
+{
+    return {
+        type: ElementType.NoteBlock,
+        id: -1,
+        parentId,
+        range,
+    }
+}
+
+
+export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Meter): MeterChange
+{
+    return {
+        type: ElementType.MeterChange,
+        id: -1,
+        parentId,
+        range: Range.fromPoint(time),
+        meter,
     }
 }

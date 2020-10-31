@@ -11,11 +11,19 @@ import { EditorTrack } from "./track"
 
 export class EditorTrackNoteBlocks extends EditorTrack
 {
+    pencil: null |
+    {
+        time1: Rational
+        time2: Rational
+    }
+
+
     constructor(projectTrackId: Project.ID, h: number)
     {
         super()
         this.projectTrackId = projectTrackId
         this.renderRect = new Rect(0, 0, 0, h)
+        this.pencil = null
     }
 
 
@@ -108,6 +116,53 @@ export class EditorTrackNoteBlocks extends EditorTrack
     }
 
 
+    pencilClear(data: Editor.EditorUpdateData)
+    {
+        this.pencil = null
+    }
+
+
+    pencilHover(data: Editor.EditorUpdateData)
+    {
+        const time = data.state.mouse.point.time
+
+        this.pencil =
+        {
+            time1: time,
+            time2: time.add(data.state.timeSnap.multiply(new Rational(4))),
+        }
+    }
+
+
+    pencilDrag(data: Editor.EditorUpdateData)
+    {
+		if (this.pencil)
+		{
+            this.pencil.time2 = data.state.mouse.point.time
+            
+            const time1X = Editor.xAtTime(data, this.pencil.time1)
+            const time2X = Editor.xAtTime(data, this.pencil.time2)
+			if (Math.abs(time1X - time2X) < 5)
+                this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
+        }
+    }
+	
+	
+	pencilComplete(data: Editor.EditorUpdateData)
+	{
+		if (this.pencil)
+		{
+            const elem = Project.makeNoteBlock(
+                this.projectTrackId,
+                new Range(this.pencil.time1, this.pencil.time2).sorted())
+
+            const id = data.project.nextId
+            data.project = Project.Root.upsertElement(data.project, elem)
+            Editor.selectionAdd(data, id)
+		}
+	}
+
+
     render(data: Editor.EditorUpdateData)
     {
         const visibleRange = Editor.visibleTimeRange(data)
@@ -120,7 +175,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
             
 			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
 			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderNoteBlock(data, noteBlock, hovering, selected, playing)
+			this.renderNoteBlock(data, noteBlock.range, hovering, selected, playing)
         }
 
 		for (const noteBlock of this.iterAtRange(data, visibleRange))
@@ -131,20 +186,31 @@ export class EditorTrackNoteBlocks extends EditorTrack
             
 			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
 			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderNoteBlock(data, noteBlock, hovering, selected, playing)
+			this.renderNoteBlock(data, noteBlock.range, hovering, selected, playing)
+        }
+
+        if (this.pencil)
+        {
+            data.ctx.save()
+            data.ctx.globalAlpha = 0.4
+
+            const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
+            this.renderNoteBlock(data, range, false, false, false)
+            
+            data.ctx.restore()
         }
     }
 
 
     renderNoteBlock(
         data: Editor.EditorUpdateData,
-        noteBlock: Project.NoteBlock,
+        range: Range,
         hovering: boolean,
         selected: boolean,
         playing: boolean)
     {
-        const x1 = Editor.xAtTime(data, noteBlock.range.start) + 0.5
-        const x2 = Editor.xAtTime(data, noteBlock.range.end) + 0.5 - 1
+        const x1 = Editor.xAtTime(data, range.start) + 0.5
+        const x2 = Editor.xAtTime(data, range.end) + 0.5 - 1
 
         const y1 = 0
         const y2 = this.renderRect.h
