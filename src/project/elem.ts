@@ -36,6 +36,7 @@ export enum TrackType
 export interface Track extends Element
 {
     trackType: TrackType
+    name: string
 }
 
 
@@ -71,6 +72,7 @@ export function makeTrackNotes(): Track
         parentId: 0,
         trackType: TrackType.Notes,
         range: Range.dummy(),
+        name: "New Track",
     }
 }
 
@@ -83,6 +85,7 @@ export function makeTrackKeyChanges(): Track
         parentId: 0,
         trackType: TrackType.KeyChanges,
         range: Range.dummy(),
+        name: "Key Changes",
     }
 }
 
@@ -95,6 +98,7 @@ export function makeTrackMeterChanges(): Track
         parentId: 0,
         trackType: TrackType.MeterChanges,
         range: Range.dummy(),
+        name: "Meter Changes",
     }
 }
 

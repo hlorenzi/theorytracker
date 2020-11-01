@@ -23,7 +23,7 @@ const StyledTrackButton = styled.button`
     border: 1px solid #888;
     border-radius: 0.5em;
     background-color: #2f3136;
-    padding: 0.5em 1em;
+    padding: 0.1em 0.3em;
 
     &:hover
     {
@@ -134,7 +134,7 @@ export function EditorElement()
             
             if (state.tracks.some((tr: any) => !!tr.pencil) || mouseAction & Editor.EditorAction.Pencil)
                 cursor = "crosshair"
-            else if (mouseAction & (Editor.EditorAction.DragTime | Editor.EditorAction.DragTrack))
+            else if (mouseAction & (Editor.EditorAction.DragTime | Editor.EditorAction.DragTrackHeader))
                 cursor = (state.mouse.down ? "grabbing" : "grab")
             else if (mouseAction & Editor.EditorAction.Pan)
                 cursor = "move"
@@ -299,7 +299,7 @@ export function EditorElement()
 					width: editorState.ref.current.trackHeaderW,
                     height: track.renderRect.h,
                     boxSizing: "border-box",
-					padding: "1em 1em",
+					padding: "0.1em 0.5em",
                     userSelect: "none",
                     pointerEvents: "none",
                     overflow: "hidden",
@@ -308,7 +308,7 @@ export function EditorElement()
                     gridTemplate: "1fr / 1fr auto",
                     alignItems: "center",
 				}}>
-					<div>Track Name</div>
+					<div>{ track.name }</div>
                     <StyledTrackButton
                         onClick={ ev => onTrackOptions(ev, i) }
                     >
@@ -333,7 +333,9 @@ export function EditorElement()
             }}>
                 <StyledTrackButton
                     onClick={ onAddTrack }
-                >
+                    style={{
+                        padding: "0.5em 1em",
+                }}>
                     +{/*➕*/}
                 </StyledTrackButton>
             </div>

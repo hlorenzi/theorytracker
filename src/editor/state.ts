@@ -22,9 +22,10 @@ export enum EditorAction
     Pencil = 0x08,
     DragTime = 0x10,
     DragRow = 0x20,
-    StretchTimeStart = 0x40,
-    StretchTimeEnd = 0x80,
-    DragTrack = 0x100,
+    DragTrack = 0x40,
+    DragTrackHeader = 0x80,
+    StretchTimeStart = 0x100,
+    StretchTimeEnd = 0x200,
 }
 
 
@@ -204,15 +205,15 @@ export function refreshTracks(data: EditorUpdateData)
         const track = data.project.tracks[t]
         if (track.trackType == Project.TrackType.Notes)
         {
-            tracks.push(new EditorTrackNoteBlocks(track.id, 80))
+            tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 80))
         }
         else if (track.trackType == Project.TrackType.KeyChanges)
         {
-            tracks.push(new EditorTrackKeyChanges(track.id, 25))
+            tracks.push(new EditorTrackKeyChanges(track.id, track.name, 25))
         }
         else if (track.trackType == Project.TrackType.MeterChanges)
         {
-            tracks.push(new EditorTrackMeterChanges(track.id, 25))
+            tracks.push(new EditorTrackMeterChanges(track.id, track.name, 25))
         }
     }
 

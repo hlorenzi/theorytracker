@@ -18,10 +18,11 @@ export class EditorTrackNoteBlocks extends EditorTrack
     }
 
 
-    constructor(projectTrackId: Project.ID, h: number)
+    constructor(projectTrackId: Project.ID, name: string, h: number)
     {
         super()
         this.projectTrackId = projectTrackId
+        this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
         this.acceptedElemTypes.add(Project.ElementType.NoteBlock)
         this.pencil = null
@@ -97,7 +98,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
                 {
                     id: noteBlock.id,
                     range: noteBlock.range,
-                    action: Editor.EditorAction.DragTime,
+                    action: Editor.EditorAction.DragTime | Editor.EditorAction.DragTrack,
                 }
             }
             else if (rectStretch.contains(pos))

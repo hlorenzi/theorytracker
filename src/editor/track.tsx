@@ -12,6 +12,7 @@ export const MARKER_WIDTH = 12
 export class EditorTrack
 {
     projectTrackId: Project.ID = -1
+    name: string = ""
     renderRect: Rect = new Rect(0, 0, 0, 0)
     acceptedElemTypes: Set<Project.ElementType> = new Set<Project.ElementType>()
     pencil: any

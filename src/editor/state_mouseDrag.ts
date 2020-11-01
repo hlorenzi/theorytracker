@@ -58,7 +58,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
         Editor.selectionAddAtCursor(data)
         return true
     }
-    else if (data.state.mouse.action == Editor.EditorAction.DragTrack)
+    else if (data.state.mouse.action == Editor.EditorAction.DragTrackHeader)
     {
         return true
     }
@@ -141,7 +141,8 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 changes.pitch = newPitch
             }*/
 
-            if (data.state.drag.trackDelta != 0)
+            if (mouseAction & Editor.EditorAction.DragTrack &&
+                data.state.drag.trackDelta != 0)
             {
                 const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
                 const newTrackIndex = Math.max(0, Math.min(data.state.tracks.length - 1, origTrackIndex + data.state.drag.trackDelta))

@@ -87,7 +87,7 @@ export function render(data: Editor.EditorUpdateData)
     }
 
     if (data.state.mouse.down &&
-        data.state.mouse.action == Editor.EditorAction.DragTrack &&
+        data.state.mouse.action == Editor.EditorAction.DragTrackHeader &&
         data.state.drag.trackInsertionBefore >= 0)
     {
         data.ctx.save()

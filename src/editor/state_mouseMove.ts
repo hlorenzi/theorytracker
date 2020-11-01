@@ -25,7 +25,7 @@ export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             const track = data.state.tracks[trackIndex]
             data.state.hover =
             {
-                action: Editor.EditorAction.DragTrack,
+                action: Editor.EditorAction.DragTrackHeader,
                 id: track.projectTrackId,
                 range: new Range(new Rational(0), new Rational(0)),
             }

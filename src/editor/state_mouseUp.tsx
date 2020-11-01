@@ -12,7 +12,7 @@ export function mouseUp(data: Editor.EditorUpdateData)
 
     data.state.mouse.down = false
     
-    if (data.state.mouse.action == Editor.EditorAction.DragTrack)
+    if (data.state.mouse.action == Editor.EditorAction.DragTrackHeader)
     {
         handleTrackDragRelease(data)
     }
