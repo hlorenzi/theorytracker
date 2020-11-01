@@ -23,6 +23,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
         super()
         this.projectTrackId = projectTrackId
         this.renderRect = new Rect(0, 0, 0, h)
+        this.acceptedElemTypes.add(Project.ElementType.NoteBlock)
         this.pencil = null
     }
 

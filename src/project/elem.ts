@@ -45,6 +45,12 @@ export interface NoteBlock extends Element
 }
 
 
+export interface KeyChange extends Element
+{
+    key: Theory.Key
+}
+
+
 export interface MeterChange extends Element
 {
     meter: Theory.Meter
@@ -69,6 +75,30 @@ export function makeTrackNotes(): Track
 }
 
 
+export function makeTrackKeyChanges(): Track
+{
+    return {
+        type: ElementType.Track,
+        id: -1,
+        parentId: 0,
+        trackType: TrackType.KeyChanges,
+        range: Range.dummy(),
+    }
+}
+
+
+export function makeTrackMeterChanges(): Track
+{
+    return {
+        type: ElementType.Track,
+        id: -1,
+        parentId: 0,
+        trackType: TrackType.MeterChanges,
+        range: Range.dummy(),
+    }
+}
+
+
 export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
 {
     return {
@@ -88,5 +118,17 @@ export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Mete
         parentId,
         range: Range.fromPoint(time),
         meter,
+    }
+}
+
+
+export function makeKeyChange(parentId: ID, time: Rational, key: Theory.Key): KeyChange
+{
+    return {
+        type: ElementType.KeyChange,
+        id: -1,
+        parentId,
+        range: Range.fromPoint(time),
+        key,
     }
 }

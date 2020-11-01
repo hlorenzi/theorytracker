@@ -43,4 +43,10 @@ export default class Meter
 	{
 		return 1
 	}
+
+
+	get str(): string
+	{
+		return this.numerator + " / " + this.denominator
+	}
 }

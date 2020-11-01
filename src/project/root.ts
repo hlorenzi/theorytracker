@@ -29,6 +29,18 @@ export class Root
     {
         let project = new Root()
 
+        const track1Id = project.nextId
+        project = Root.upsertTrack(project, Project.makeTrackKeyChanges())
+        
+        const track2Id = project.nextId
+        project = Root.upsertTrack(project, Project.makeTrackMeterChanges())
+
+        project = Root.upsertElement(project, Project.makeKeyChange(
+            track1Id, new Rational(0), Theory.Key.parse("D Major")))
+
+        project = Root.upsertElement(project, Project.makeMeterChange(
+            track2Id, new Rational(0), new Theory.Meter(4, 4)))
+
         const track3Id = project.nextId
         project = Root.upsertTrack(project, Project.makeTrackNotes())
         for (let i = 0; i < 16; i++)
@@ -161,13 +173,13 @@ export class Root
     }
     
 
-    static keyChangeTrackForTrack(project: Root, trackId: Project.ID): Project.ID
+    static keyChangeTrackId(project: Root): Project.ID
     {
         return 1
     }
     
 
-    static meterChangeTrackForTrack(project: Root, trackId: Project.ID): Project.ID
+    static meterChangeTrackId(project: Root): Project.ID
     {
         return 2
     }

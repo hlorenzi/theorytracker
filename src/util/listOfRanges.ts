@@ -72,7 +72,7 @@ export default class ListOfRanges<T extends Element>
 		}
 		
 		const end = this.bucketFn(range.end)
-		while (end > newBuckets[newBuckets.length - 1].start + 1)
+		while (end >= newBuckets[newBuckets.length - 1].start + 1)
 		{
 			const newBucket = new Bucket<T>(newBuckets[newBuckets.length - 1].start + 1)
 			newBuckets = [ ...newBuckets, newBucket ]
@@ -88,7 +88,7 @@ export default class ListOfRanges<T extends Element>
 	{
 		const start = this.bucketFn(range.start)
 		const end = this.bucketFn(range.end)
-		
+
 		let b = BinarySearch.find(this.buckets, (bucket) => start - bucket.start)
 		
 		if (b > 0 && start < this.buckets[b - 1].start + 1)
@@ -227,6 +227,30 @@ export default class ListOfRanges<T extends Element>
 			}
 			
 			firstBucket = false
+		}
+	}
+	
+	
+	*iterActiveAtRangePairwise(range: Range): Generator<[T | null, T | null], void, void>
+	{
+		if (this.idMap.size == 0)
+		{
+			yield [ null, null ]
+			return
+		}
+
+		let prevItem = this.findPrevious(range.start)
+		
+		while (true)
+		{
+			const nextItem = this.findNextNotEqual(prevItem?.range.end ?? range.start)
+
+			yield [ prevItem, nextItem ]
+			
+			if (!nextItem)
+				break
+
+			prevItem = nextItem
 		}
 	}
 	

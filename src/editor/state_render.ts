@@ -146,13 +146,11 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
 {
     const visibleRange = Editor.visibleTimeRange(data)
     
-    //const meterChangeTrackId = Project.meterChangeTrackForTrack(data.state.appState.project, 0)
-    //const meterChangeList = data.state.appState.project.timedLists.get(meterChangeTrackId)!
+    const meterChangeTrackId = Project.Root.meterChangeTrackId(data.project)
+    const meterChangeList = data.project.lists.get(meterChangeTrackId)!
 
-    for (let [meterCh1Raw, meterCh2Raw] of [[null as Project.MeterChange | null, null as Project.MeterChange | null]])// meterChangeList.iterActiveAtRangePairwise(visibleRange))
+    for (let [meterCh1Raw, meterCh2Raw] of meterChangeList.iterActiveAtRangePairwise(visibleRange))
     {
-        meterCh1Raw = Project.makeMeterChange(0, new Rational(0), new Theory.Meter(4, 4))
-
         let timeMin = (meterCh1Raw ? meterCh1Raw.range.start : null)
         let timeMax = (meterCh2Raw ? meterCh2Raw.range.start : visibleRange.end)
 
@@ -258,22 +256,22 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
         }
     }
     
-    /*const keyChangeTrackId = Project.keyChangeTrackForTrack(data.state.appState.project, 0)
-    const keyChangeList = data.state.appState.project.timedLists.get(keyChangeTrackId)!
+    const keyChangeTrackId = Project.Root.keyChangeTrackId(data.project)
+    const keyChangeList = data.project.lists.get(keyChangeTrackId)!
 
     for (const keyCh of keyChangeList.iterAtRange(visibleRange))
     {
-        const keyChX = 0.5 + Math.floor(Editor.xAtTime(state, keyCh.time))
+        const keyChX = 0.5 + Math.floor(Editor.xAtTime(data, keyCh.range.start))
         
-        data.ctx.strokeStyle = data.state.appState.data.prefs.editor.keyChangeColor
+        data.ctx.strokeStyle = data.prefs.editor.keyChangeColor
         data.ctx.lineCap = "square"
         data.ctx.lineWidth = 1
         
         data.ctx.beginPath()
         data.ctx.moveTo(keyChX, 0)
-        data.ctx.lineTo(keyChX, data.data.state.h)
+        data.ctx.lineTo(keyChX, data.state.renderRect.h)
         data.ctx.stroke()
-    }*/
+    }
 }
 	
 	

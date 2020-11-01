@@ -9,6 +9,8 @@ import Range from "../util/range"
 import Rect from "../util/rect"
 import { EditorTrack } from "./track"
 import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
+import { EditorTrackKeyChanges } from "./trackKeyChanges"
+import { EditorTrackMeterChanges } from "./trackMeterChanges"
 
 
 export enum EditorAction
@@ -203,6 +205,14 @@ export function refreshTracks(data: EditorUpdateData)
         if (track.trackType == Project.TrackType.Notes)
         {
             tracks.push(new EditorTrackNoteBlocks(track.id, 80))
+        }
+        else if (track.trackType == Project.TrackType.KeyChanges)
+        {
+            tracks.push(new EditorTrackKeyChanges(track.id, 25))
+        }
+        else if (track.trackType == Project.TrackType.MeterChanges)
+        {
+            tracks.push(new EditorTrackMeterChanges(track.id, 25))
         }
     }
 
@@ -436,4 +446,16 @@ export function visibleTimeRange(data: EditorUpdateData): Range
     return new Range(
         timeAtX(data, 0).subtract(data.state.timeSnap),
         timeAtX(data, data.state.renderRect.w).add(data.state.timeSnap))
+}
+
+
+export function defaultKey(): Theory.Key
+{
+    return Theory.Key.parse("C Major")
+}
+
+
+export function defaultMeter(): Theory.Meter
+{
+    return new Theory.Meter(4, 4)
 }

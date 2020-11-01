@@ -145,7 +145,10 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             {
                 const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
                 const newTrackIndex = Math.max(0, Math.min(data.state.tracks.length - 1, origTrackIndex + data.state.drag.trackDelta))
-                changes.parentId = data.state.tracks[newTrackIndex].projectTrackId
+                const newTrack = data.state.tracks[newTrackIndex]
+
+                if (newTrack.acceptedElemTypes.has(elem.type))
+                    changes.parentId = newTrack.projectTrackId
             }
             
             newProject = Project.Root.upsertElement(

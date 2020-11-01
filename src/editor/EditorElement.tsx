@@ -132,11 +132,11 @@ export function EditorElement()
                 state.hover ? state.hover.action :
                 Editor.EditorAction.None
             
-            /*if (contentCtx.contentState.tracks.some((tr: any) => !!tr.draw) || mouseAction & (Editor.actionDraw))
-                refCanvas.current!.style.cursor = "crosshair"
-            else*/ if (mouseAction & (Editor.EditorAction.DragTime | Editor.EditorAction.DragTrack))
+            if (state.tracks.some((tr: any) => !!tr.pencil) || mouseAction & Editor.EditorAction.Pencil)
+                cursor = "crosshair"
+            else if (mouseAction & (Editor.EditorAction.DragTime | Editor.EditorAction.DragTrack))
                 cursor = (state.mouse.down ? "grabbing" : "grab")
-            else if (mouseAction & (Editor.EditorAction.Pan))
+            else if (mouseAction & Editor.EditorAction.Pan)
                 cursor = "move"
             else if (mouseAction & (Editor.EditorAction.StretchTimeStart | Editor.EditorAction.StretchTimeEnd))
                 cursor = "col-resize"
@@ -302,6 +302,7 @@ export function EditorElement()
 					padding: "1em 1em",
                     userSelect: "none",
                     pointerEvents: "none",
+                    overflow: "hidden",
 
                     display: "grid",
                     gridTemplate: "1fr / 1fr auto",
