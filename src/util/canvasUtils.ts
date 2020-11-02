@@ -5,18 +5,22 @@ import MathUtils from "./mathUtils"
 const fillPatterns = new Map()
 
 
-export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number): any
+export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number, external: boolean): any
 {
 	degree = MathUtils.mod(degree, 7)
 
+	const colorFn = external ? Theory.Utils.degreeToColorFaded : Theory.Utils.degreeToColor
+
 	if (Math.floor(degree) == degree)
-		return Theory.Utils.degreeToColor(degree)
+		return colorFn(degree)
+
+	const cacheKey = degree + (external ? 100 : 0)
 	
-	if (fillPatterns.has(degree))
-		return fillPatterns.get(degree)
+	if (fillPatterns.has(cacheKey))
+		return fillPatterns.get(cacheKey)
 	
-	const colorBefore = Theory.Utils.degreeToColor(MathUtils.mod(Math.floor(degree), 7))
-	const colorAfter  = Theory.Utils.degreeToColor(MathUtils.mod(Math.ceil(degree), 7))
+	const colorBefore = colorFn(MathUtils.mod(Math.floor(degree), 7))
+	const colorAfter  = colorFn(MathUtils.mod(Math.ceil(degree), 7))
 	
 	const canvas = document.createElement("canvas")
 	canvas.width = 24
@@ -42,7 +46,7 @@ export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number
 	ctxPatt.fill()
 	
 	const pattern = ctx.createPattern(canvas, "repeat")
-	fillPatterns.set(degree, pattern)
+	fillPatterns.set(cacheKey, pattern)
 	return pattern
 }
 

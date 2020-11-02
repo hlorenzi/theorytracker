@@ -18,8 +18,14 @@ export default class Utils
 		return map[str]
 	}
 
-	static degreeToRomanStr = (degree: number): string => ["I", "II", "III", "IV", "V", "VI", "VII"][degree]
-	static degreeToColor    = (degree: number): string => ["#f00", "#f80", "#fd0", "#0d0", "#00f", "#80f", "#f0f"][degree]
+	static degreeToRomanStr   = (degree: number): string =>
+		["I", "II", "III", "IV", "V", "VI", "VII"][degree]
+
+	static degreeToColor      = (degree: number): string =>
+		["#f00", "#f80", "#fd0", "#0d0", "#00f", "#80f", "#f0f"][degree]
+
+	static degreeToColorFaded = (degree: number): string =>
+		["#400", "#420", "#430", "#030", "#004", "#204", "#404"][degree]
 
 
 	static accidentalToStr(accidental: number, useUnicode: boolean = false): string

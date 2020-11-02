@@ -54,12 +54,59 @@ export class EditorTrackNotes extends EditorTrack
         range: Range)
         : Generator<Project.Note, void, void>
     {
-        const trackElems = data.project.lists.get(this.noteBlockId)
-        if (!trackElems)
+        const list = data.project.lists.get(this.noteBlockId)
+        if (!list)
             return
 
-        for (const elem of trackElems.iterAtRange(range.displace(this.parentStart(data).negate())))
+        for (const elem of list.iterAtRange(range.displace(this.parentStart(data).negate())))
             yield elem as Project.Note
+    }
+
+
+    *iterExternalNotesAtRange(
+        data: Editor.EditorUpdateData,
+        range: Range)
+        : Generator<[Project.Note, Project.NoteBlock], void, void>
+    {
+        for (const track of data.project.tracks)
+        {
+            if (track.trackType != Project.TrackType.Notes)
+                continue
+
+            const trackElems = data.project.lists.get(track.id)
+            if (!trackElems)
+                continue
+            
+            for (const noteBlock of trackElems.iterAtRange(range))
+            {
+                if (noteBlock.id == this.noteBlockId)
+                    continue
+                
+                if (noteBlock.type != Project.ElementType.NoteBlock)
+                    continue
+                    
+                const noteList = data.project.lists.get(noteBlock.id)
+                if (!noteList)
+                    continue
+
+                for (const elem of noteList.iterAtRange(range.displace(noteBlock.range.start.negate())))
+                {
+                    const newElem =
+                    {
+                        ...elem,
+                        range: elem.range
+                            .displace(noteBlock.range.start)
+                            .intersect(noteBlock.range)
+                            .displace(noteBlock.range.start.negate()),
+                    }
+
+                    if (newElem.range.duration.isZero())
+                        continue
+                    
+                    yield [newElem as Project.Note, noteBlock as Project.NoteBlock]
+                }
+            }
+        }
     }
 
 
@@ -101,6 +148,22 @@ export class EditorTrackNotes extends EditorTrack
             
             for (const note of this.iterNotesAtRange(data, new Range(time1, time2)))
                 yield [note, keyCh1, keyCh1X, keyCh2X]
+        }
+    }
+
+
+    *iterExternalNotesAndKeyChangesAtRange(
+        data: Editor.EditorUpdateData,
+        range: Range)
+        : Generator<[Project.Note, Project.NoteBlock, Project.KeyChange, number, number], void, void>
+    {
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        {
+            const time1 = keyCh1.range.start.max(range.start)!
+            const time2 = keyCh2.range.start.min(range.end)!
+            
+            for (const [note, noteBlock] of this.iterExternalNotesAtRange(data, new Range(time1, time2)))
+                yield [note, noteBlock, keyCh1, keyCh1X, keyCh2X]
         }
     }
 
@@ -173,15 +236,15 @@ export class EditorTrackNotes extends EditorTrack
 
     pencilHover(data: Editor.EditorUpdateData)
     {
-        const time = data.state.mouse.point.time.subtract(this.parentStart(data))
+        const time = data.state.mouse.point.time
         const key = Editor.keyAt(data, this.projectTrackId, time)
         const row = this.rowAtY(data, data.state.mouse.point.trackPos.y)
         const midiPitch = this.pitchForRow(data, row, key)
 
         this.pencil =
         {
-            time1: time,
-            time2: time.add(data.state.timeSnap.multiply(new Rational(4))),
+            time1: time.subtract(this.parentStart(data)),
+            time2: time.subtract(this.parentStart(data)).add(data.state.timeSnap.multiply(new Rational(4))),
             midiPitch,
         }
     }
@@ -334,44 +397,40 @@ export class EditorTrackNotes extends EditorTrack
 			}
         }
 
-		for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, visibleRange))
-		{
-            const selected = data.state.selection.contains(note.id)
-            if (selected)
-                continue
-
+        for (const [note, noteBlock, keyCh, xMin, xMax] of this.iterExternalNotesAndKeyChangesAtRange(data, visibleRange))
+        {
             const key = keyCh.key
-			const row = this.rowForPitch(data, note.midiPitch, key)
-			const mode = key.scale.metadata!.mode
-			const fillStyle = CanvasUtils.fillStyleForDegree(
-                data.ctx, key.degreeForMidi(note.midiPitch) + mode)
+            const row = this.rowForPitch(data, note.midiPitch, key)
+            const mode = key.scale.metadata!.mode
+            const fillStyle = CanvasUtils.fillStyleForDegree(
+                data.ctx, key.degreeForMidi(note.midiPitch) + mode, true)
 
-			const hovering = !!data.state.hover && data.state.hover.id == note.id
-            const playing = false
-            
-			this.renderNote(
-                data, note.range, parentStart, row, xMin, xMax, fillStyle,
-                hovering, selected, playing)
+            this.renderNote(
+                data, note.range, noteBlock.range.start, row, xMin, xMax, fillStyle,
+                true)
         }
 
-		for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, visibleRange))
-		{
-            const selected = data.state.selection.contains(note.id)
-            if (!selected)
-                continue
+        for (let layer = 0; layer < 2; layer++)
+        {
+            for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, visibleRange))
+            {
+                const selected = data.state.selection.contains(note.id)
+                if ((layer == 0) == selected)
+                    continue
 
-            const key = keyCh.key
-			const row = this.rowForPitch(data, note.midiPitch, key)
-			const mode = key.scale.metadata!.mode
-			const fillStyle = CanvasUtils.fillStyleForDegree(
-                data.ctx, key.degreeForMidi(note.midiPitch) + mode)
+                const key = keyCh.key
+                const row = this.rowForPitch(data, note.midiPitch, key)
+                const mode = key.scale.metadata!.mode
+                const fillStyle = CanvasUtils.fillStyleForDegree(
+                    data.ctx, key.degreeForMidi(note.midiPitch) + mode, false)
 
-			const hovering = !!data.state.hover && data.state.hover.id == note.id
-            const playing = false
-            
-			this.renderNote(
-                data, note.range, parentStart, row, xMin, xMax, fillStyle,
-                hovering, selected, playing)
+                const hovering = !!data.state.hover && data.state.hover.id == note.id
+                const playing = false
+                
+                this.renderNote(
+                    data, note.range, parentStart, row, xMin, xMax, fillStyle,
+                    false, hovering, selected, playing)
+            }
         }
 
         if (this.pencil)
@@ -380,11 +439,11 @@ export class EditorTrackNotes extends EditorTrack
             data.ctx.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-			const key = Editor.keyAt(data, this.projectTrackId, this.pencil.time1)
+			const key = Editor.keyAt(data, this.projectTrackId, this.pencil.time1.add(this.parentStart(data)))
 			const row = this.rowForPitch(data, this.pencil.midiPitch, key)
 			const mode = key.scale.metadata!.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(
-                data.ctx, key.degreeForMidi(this.pencil.midiPitch) + mode)
+                data.ctx, key.degreeForMidi(this.pencil.midiPitch) + mode, false)
 
 			this.renderNote(data, range, parentStart, row, -Infinity, Infinity, fillStyle)
             
@@ -400,11 +459,12 @@ export class EditorTrackNotes extends EditorTrack
         row: number,
         xMin: number, xMax: number,
         fillStyle: any,
+        external?: boolean,
         hovering?: boolean, selected?: boolean, playing?: boolean)
 	{
 		const rect = this.rectForNote(data, range, parentStart, row, xMin, xMax)
 		
-		data.ctx.fillStyle = fillStyle
+        data.ctx.fillStyle = fillStyle
 		
 		data.ctx.beginPath()
         data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
