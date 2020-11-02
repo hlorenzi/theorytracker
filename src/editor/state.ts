@@ -8,9 +8,10 @@ import { RefState } from "../util/refState"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import { EditorTrack } from "./track"
-import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
 import { EditorTrackKeyChanges } from "./trackKeyChanges"
 import { EditorTrackMeterChanges } from "./trackMeterChanges"
+import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
+import { EditorTrackNotes } from "./trackNotes"
 
 
 export enum EditorAction
@@ -29,19 +30,44 @@ export enum EditorAction
 }
 
 
+export enum Mode
+{
+    Project,
+    NoteBlock,
+}
+
+
+export interface ModeStack
+{
+    mode: Mode
+    modeNoteBlockId: Project.ID
+
+    timeScroll: number
+    timeScale: number
+    trackScroll: number
+}
+
+
 export interface EditorState
 {
+    modeStack: ModeStack[]
+    mode: Mode
+    modeNoteBlockId: Project.ID
+
     renderRect: Rect
 
     trackHeaderW: number
 
     tracks: EditorTrack[]
     trackScroll: number
+    trackScrollLocked: boolean
 
     timeScroll: number
     timeScale: number
     timeSnap: Rational
     timeSnapBase: Rational
+
+    noteRowH: number
 
     cursor:
     {
@@ -83,6 +109,7 @@ export interface EditorState
 
         posDelta: { x: number, y: number }
         timeDelta: Rational
+        rowDelta: number
         trackDelta: number
         trackInsertionBefore: number
     }
@@ -96,6 +123,7 @@ export interface EditorPoint
 {
     pos: { x: number, y: number }
     time: Rational
+    row: number
     trackIndex: number
     trackPos: { x: number, y: number }
 }
@@ -122,17 +150,24 @@ export interface EditorUpdateData
 export function init(): EditorState
 {
     return {
+        modeStack: [],
+        mode: Mode.Project,
+        modeNoteBlockId: -1,
+
         renderRect: new Rect(0, 0, 0, 0),
 
         trackHeaderW: 200,
         
         tracks: [],
         trackScroll: 0,
+        trackScrollLocked: true,
 
         timeScroll: -2.5,
         timeScale: 100,
         timeSnap: new Rational(1, 8),
         timeSnapBase: new Rational(1, 16),
+
+        noteRowH: 15,
 
         cursor:
         {
@@ -156,6 +191,7 @@ export function init(): EditorState
             {
                 pos: { x: 0, y: 0 },
                 time: new Rational(0),
+                row: 0,
                 trackIndex: 0,
                 trackPos: { x: 0, y: 0 },
             },
@@ -164,6 +200,7 @@ export function init(): EditorState
             {
                 pos: { x: 0, y: 0 },
                 time: new Rational(0),
+                row: 0,
                 trackIndex: 0,
                 trackPos: { x: 0, y: 0 },
             },
@@ -178,6 +215,7 @@ export function init(): EditorState
             yLocked: true,
             posDelta: { x: 0, y: 0 },
             timeDelta: new Rational(0),
+            rowDelta: 0,
             trackDelta: 0,
             trackInsertionBefore: -1,
         },
@@ -205,7 +243,14 @@ export function refreshTracks(data: EditorUpdateData)
         const track = data.project.tracks[t]
         if (track.trackType == Project.TrackType.Notes)
         {
-            tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 80))
+            if (data.state.mode == Mode.NoteBlock)
+            {
+                const noteBlock = data.project.elems.get(data.state.modeNoteBlockId)
+                if (noteBlock && track.id == noteBlock.parentId)
+                    tracks.push(new EditorTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
+            }
+            else
+                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 80))
         }
         else if (track.trackType == Project.TrackType.KeyChanges)
         {
@@ -217,6 +262,8 @@ export function refreshTracks(data: EditorUpdateData)
         }
     }
 
+    data.state.trackScrollLocked = false
+
     let fixedH = 0
     for (let t = 0; t < tracks.length; t++)
     {
@@ -227,7 +274,11 @@ export function refreshTracks(data: EditorUpdateData)
     for (let t = 0; t < tracks.length; t++)
     {
         if (tracks[t].renderRect.h == 0)
+        {
             tracks[t].renderRect.h = data.state.renderRect.h - fixedH
+            data.state.trackScroll = 0
+            data.state.trackScrollLocked = true
+        }
     }
 
     let y = 0
@@ -238,6 +289,48 @@ export function refreshTracks(data: EditorUpdateData)
     }
 
     data.state.tracks = tracks
+}
+
+
+export function modeStackPush(data: EditorUpdateData)
+{
+    const newStack =
+    {
+        mode: data.state.mode,
+        modeNoteBlockId: data.state.modeNoteBlockId,
+        timeScroll: data.state.timeScroll,
+        timeScale: data.state.timeScale,
+        trackScroll: data.state.trackScroll,
+    }
+
+    data.state.modeStack.push(newStack)
+    selectionClear(data)
+}
+
+
+export function modeStackPop(data: EditorUpdateData, index?: number)
+{
+    if (data.state.modeStack.length == 0)
+        return
+
+    if (index !== undefined)
+    {
+        if (index >= data.state.modeStack.length)
+            return
+
+        while (data.state.modeStack.length > index + 1)
+            data.state.modeStack.pop()
+    }
+    
+    const stackElem = data.state.modeStack.pop()!
+
+    data.state.mode = stackElem.mode
+    data.state.modeNoteBlockId = stackElem.modeNoteBlockId
+    data.state.timeScroll = stackElem.timeScroll
+    data.state.timeScale = stackElem.timeScale
+    data.state.trackScroll = stackElem.trackScroll
+
+    selectionClear(data)
 }
 
 
@@ -361,12 +454,53 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
     const trackPosY = pos.y - trackY(data, data.state.mouse.point.trackIndex)
     const trackPos = { x: pos.x, y: trackPosY }
 
+    const row = data.state.tracks[trackIndex].rowAtY(data, trackPosY)
+
     return {
         pos,
         time,
         trackIndex,
         trackPos,
+        row,
     }
+}
+    
+
+export function keyAt(data: EditorUpdateData, trackId: Project.ID, time: Rational): Theory.Key
+{
+    const keyChangeTrackId = Project.Root.keyChangeTrackId(data.project)
+    const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
+    if (!keyChangeTrackTimedElems)
+        return defaultKey()
+        
+    const keyCh = keyChangeTrackTimedElems.findActiveAt(time)
+    if (keyCh)
+        return (keyCh as Project.KeyChange).key
+
+    const firstKeyCh = keyChangeTrackTimedElems.findFirst()
+    if (firstKeyCh)
+        return (firstKeyCh as Project.KeyChange).key
+        
+    return defaultKey()
+}
+
+
+export function meterAt(data: EditorUpdateData, trackId: Project.ID, time: Rational): Theory.Meter
+{
+    const meterChangeTrackId = Project.Root.meterChangeTrackId(data.project)
+    const meterChangeTrackTimedElems = data.project.lists.get(meterChangeTrackId)
+    if (!meterChangeTrackTimedElems)
+        return defaultMeter()
+        
+    const meterCh = meterChangeTrackTimedElems.findActiveAt(time)
+    if (meterCh)
+        return (meterCh as Project.MeterChange).meter
+
+    const firstMeterCh = meterChangeTrackTimedElems.findFirst()
+    if (firstMeterCh)
+        return (firstMeterCh as Project.MeterChange).meter
+        
+    return defaultMeter()
 }
 
 

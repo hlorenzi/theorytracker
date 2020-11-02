@@ -20,6 +20,9 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     data.state.drag.timeDelta =
         data.state.mouse.point.time.subtract(data.state.drag.origin.point.time)
 
+    data.state.drag.rowDelta =
+        data.state.mouse.point.row - data.state.drag.origin.point.row
+
     data.state.drag.trackDelta =
         data.state.mouse.point.trackIndex - data.state.drag.origin.point.trackIndex
 
@@ -43,9 +46,10 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             data.state.drag.origin.timeScroll -
             (data.state.drag.posDelta.x / data.state.timeScale)
 
-        data.state.trackScroll =
-            data.state.drag.origin.trackScroll -
-            data.state.drag.posDelta.y
+        if (!data.state.trackScrollLocked)
+            data.state.trackScroll =
+                data.state.drag.origin.trackScroll -
+                data.state.drag.posDelta.y
 
         return true
     }
@@ -132,14 +136,16 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 changes.range = changes.range.sorted()
             }
         
-            /*if (mouseAction & Editor.EditorAction.DragRow)
+            if (mouseAction & Editor.EditorAction.DragRow &&
+                elem.type == Project.ElementType.Note)
             {
-                const note = rangedElem as Project.Note
-                const key = Editor.keyAt(state, state.contentState.tracks[state.contentState.drag.trackOrigin].trackId, rangedElem.range.start)
-                const degree = key.octavedDegreeForMidi(note.pitch)
-                const newPitch = key.midiForDegree(Math.floor(degree + mouseDrag.rowDelta))
-                changes.pitch = newPitch
-            }*/
+                const note = elem as Project.Note
+                const trackId = data.state.tracks[data.state.drag.origin.point.trackIndex].projectTrackId
+                const key = Editor.keyAt(data, trackId, note.range.start)
+                const degree = key.octavedDegreeForMidi(note.midiPitch)
+                const newPitch = key.midiForDegree(Math.floor(degree + data.state.drag.rowDelta))
+                changes.midiPitch = newPitch
+            }
 
             if (mouseAction & Editor.EditorAction.DragTrack &&
                 data.state.drag.trackDelta != 0)

@@ -15,6 +15,7 @@ export class EditorTrack
     name: string = ""
     renderRect: Rect = new Rect(0, 0, 0, 0)
     acceptedElemTypes: Set<Project.ElementType> = new Set<Project.ElementType>()
+    yScroll: number = 0
     pencil: any
 
 
@@ -35,6 +36,12 @@ export class EditorTrack
 
 
     hover(data: Editor.EditorUpdateData)
+    {
+        
+    }
+
+
+    doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
         
     }
@@ -62,6 +69,12 @@ export class EditorTrack
     {
         
     }
+	
+	
+	rowAtY(data: Editor.EditorUpdateData, y: number): number
+	{
+        return 0
+	}
 
 
     render(data: Editor.EditorUpdateData)

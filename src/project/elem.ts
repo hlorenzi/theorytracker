@@ -40,12 +40,6 @@ export interface Track extends Element
 }
 
 
-export interface NoteBlock extends Element
-{
-    
-}
-
-
 export interface KeyChange extends Element
 {
     key: Theory.Key
@@ -55,6 +49,18 @@ export interface KeyChange extends Element
 export interface MeterChange extends Element
 {
     meter: Theory.Meter
+}
+
+
+export interface NoteBlock extends Element
+{
+    
+}
+
+
+export interface Note extends Element
+{
+    midiPitch: number
 }
 
 
@@ -103,17 +109,6 @@ export function makeTrackMeterChanges(): Track
 }
 
 
-export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
-{
-    return {
-        type: ElementType.NoteBlock,
-        id: -1,
-        parentId,
-        range,
-    }
-}
-
-
 export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Meter): MeterChange
 {
     return {
@@ -134,5 +129,28 @@ export function makeKeyChange(parentId: ID, time: Rational, key: Theory.Key): Ke
         parentId,
         range: Range.fromPoint(time),
         key,
+    }
+}
+
+
+export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
+{
+    return {
+        type: ElementType.NoteBlock,
+        id: -1,
+        parentId,
+        range,
+    }
+}
+
+
+export function makeNote(parentId: ID, range: Range, midiPitch: number): Note
+{
+    return {
+        type: ElementType.Note,
+        id: -1,
+        parentId,
+        range,
+        midiPitch,
     }
 }

@@ -286,6 +286,31 @@ export default class ListOfRanges<T extends Element>
 		
 		return firstElem.range.merge(lastElem.range)
 	}
+
+
+	findFirst(): T | null
+	{
+		for (const elem of this.iterAll())
+			return elem
+
+		return null
+	}
+
+
+	findActiveAt(time: Rational): T | null
+	{
+		let result: T | null = null
+
+		for (const elem of this.iterAll())
+		{
+			if (elem.range.start.compare(time) > 0)
+				break
+
+			result = elem
+		}
+
+		return result
+	}
 	
 	
     findPreviousAnchor(fromPoint: Rational): Rational | null

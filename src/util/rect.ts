@@ -128,6 +128,16 @@ export default class Rect
 			this.x2 + amount,
 			this.y2 + amount)
 	}
+
+
+	expandW(amount: number): Rect
+	{
+		return Rect.fromVertices(
+			this.x1 - amount,
+			this.y1,
+			this.x2 + amount,
+			this.y2)
+	}
 	
 	
 	contains(p: { x: number, y: number }): boolean

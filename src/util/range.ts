@@ -92,6 +92,39 @@ export default class Range
 	}
 	
 	
+	intersect(other: Range | null): Range
+	{
+		return Range.intersect(this, other)!
+	}
+	
+	
+	static intersect(r1: Range | null, r2: Range | null): Range | null
+	{
+		if (r1 === null && r2 === null)
+			return null
+		
+		if (r1 === null)
+			return r2
+		
+		if (r2 === null)
+			return r1
+		
+		return new Range(
+			r1.start.max(r2.start)!,
+			r1.end.min(r2.end)!)
+	}
+
+
+	atZero(): Range
+	{
+		return new Range(
+			new Rational(0),
+			this.duration,
+			this.startInclusive,
+			this.endInclusive)
+	}
+	
+	
 	displace(offset: Rational): Range
 	{
 		return new Range(

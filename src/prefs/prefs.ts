@@ -27,6 +27,8 @@ export interface Prefs
         keySelectMultiple: string
         keySelectRect: string
 
+        mouseDoubleClickThresholdMs: number
+
         mouseDragXLockedDistance: number
         mouseDragYLockedDistance: number
 
@@ -65,6 +67,8 @@ export function getDefault(): Prefs
             keyPencil: "a",
             keySelectMultiple: "control",
             keySelectRect: "shift",
+
+            mouseDoubleClickThresholdMs: 300,
         
             mouseDragXLockedDistance: 10,
             mouseDragYLockedDistance: 10,

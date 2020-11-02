@@ -195,7 +195,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
             const measureX1 = 0.5 + Math.floor(Editor.xAtTime(data, time1))
             const measureX2 = 0.5 + Math.floor(Editor.xAtTime(data, time2))
 
-            if (measureAlternate)
+            if (true)//measureAlternate)
             {
                 const x1 = Math.min(meterCh2X, measureX1)
                 const x2 = Math.min(meterCh2X, measureX2)

@@ -3,7 +3,7 @@ import * as Editor from "./index"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
-import { useRefState } from "../util/refState"
+import { useRefState, RefState } from "../util/refState"
 import Rect from "../util/rect"
 import { EditorUpdateData } from "./state"
 import styled from "styled-components"
@@ -24,6 +24,7 @@ const StyledTrackButton = styled.button`
     border-radius: 0.5em;
     background-color: #2f3136;
     padding: 0.1em 0.3em;
+    cursor: pointer;
 
     &:hover
     {
@@ -32,12 +33,12 @@ const StyledTrackButton = styled.button`
 `
 
 
-export function EditorElement()
+export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 {
     const refDiv = React.useRef<HTMLDivElement | null>(null)
     const refCanvas = React.useRef<HTMLCanvasElement | null>(null)
 
-    const editorState = useRefState(() => Editor.init())
+    const editorState = props.state ?? useRefState(() => Editor.init())
     const project = Project.useProject()
     const prefs = Prefs.usePrefs()
     const popup = Popup.usePopup()
@@ -173,6 +174,7 @@ export function EditorElement()
             Editor.mouseDown(updateData, ev.button != 0)
             render()
             setCursor(updateData.state)
+            editorState.commit()
         }
         
 		const onMouseUp = (ev: MouseEvent) =>
@@ -188,12 +190,12 @@ export function EditorElement()
                 project.ref.current = updateData.project
                 project.commit()
                 
-                const ev = new Event("refreshProjectTracks")
-                window.dispatchEvent(ev)
+                window.dispatchEvent(new Event("refreshProjectTracks"))
             }
 
             render()
             setCursor(updateData.state)
+            editorState.commit()
         }
 		
 		const onMouseWheel = (ev: WheelEvent) =>
@@ -263,8 +265,7 @@ export function EditorElement()
         project.ref.current = proj
         project.commit()
         
-        const ev = new Event("refreshProjectTracks")
-        window.dispatchEvent(ev)
+        window.dispatchEvent(new Event("refreshProjectTracks"))
     }
 
     const onTrackOptions = (ev: React.MouseEvent, trackIndex: number) =>

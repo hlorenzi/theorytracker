@@ -38,8 +38,23 @@ export class EditorTrackNoteBlocks extends EditorTrack
         if (!trackElems)
             return
 
-        for (const noteBlock of trackElems.iterAtRange(range))
-            yield noteBlock as Project.NoteBlock
+        for (const elem of trackElems.iterAtRange(range))
+            yield elem as Project.NoteBlock
+    }
+
+
+    *iterNotesAtNoteBlock(
+        data: Editor.EditorUpdateData,
+        noteBlock: Project.NoteBlock,
+        range: Range)
+        : Generator<Project.Note, void, void>
+    {
+        const list = data.project.lists.get(noteBlock.id)
+        if (!list)
+            return
+
+        for (const elem of list.iterAtRange(range))
+            yield elem as Project.Note
     }
 
 
@@ -118,6 +133,19 @@ export class EditorTrackNoteBlocks extends EditorTrack
     }
 
 
+    doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
+    {
+        const elem = data.project.elems.get(elemId)
+        if (!elem || elem.type != Project.ElementType.NoteBlock)
+            return
+        
+        Editor.modeStackPush(data)
+        data.state.mode = Editor.Mode.NoteBlock
+        data.state.modeNoteBlockId = elemId
+        Editor.refreshTracks(data)
+    }
+
+
     pencilClear(data: Editor.EditorUpdateData)
     {
         this.pencil = null
@@ -177,7 +205,10 @@ export class EditorTrackNoteBlocks extends EditorTrack
             
 			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
 			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderNoteBlock(data, noteBlock.range, hovering, selected, playing)
+            this.renderNoteBlock(
+                data, noteBlock.range,
+                this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.intersect(noteBlock.range.atZero())),
+                hovering, selected, playing)
         }
 
 		for (const noteBlock of this.iterAtRange(data, visibleRange))
@@ -188,7 +219,10 @@ export class EditorTrackNoteBlocks extends EditorTrack
             
 			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
 			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderNoteBlock(data, noteBlock.range, hovering, selected, playing)
+			this.renderNoteBlock(
+                data, noteBlock.range,
+                this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.intersect(noteBlock.range.atZero())),
+                hovering, selected, playing)
         }
 
         if (this.pencil)
@@ -197,7 +231,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
             data.ctx.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-            this.renderNoteBlock(data, range, false, false, false)
+            this.renderNoteBlock(data, range, null, false, false, false)
             
             data.ctx.restore()
         }
@@ -207,18 +241,42 @@ export class EditorTrackNoteBlocks extends EditorTrack
     renderNoteBlock(
         data: Editor.EditorUpdateData,
         range: Range,
+        notes: Generator<Project.Note, void, void> | null,
         hovering: boolean,
         selected: boolean,
         playing: boolean)
     {
-        const x1 = Editor.xAtTime(data, range.start) + 0.5
-        const x2 = Editor.xAtTime(data, range.end) + 0.5 - 1
+        const x1 = Math.floor(Editor.xAtTime(data, range.start)) + 0.5
+        const x2 = Math.floor(Editor.xAtTime(data, range.end)) + 0.5 - 1
 
-        const y1 = 0
-        const y2 = this.renderRect.h
+        const y1 = 1.5
+        const y2 = this.renderRect.h - 0.5
 
 		data.ctx.fillStyle = (selected || playing) ? "#222" : "#000"
         data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+
+        if (notes)
+        {
+            data.ctx.fillStyle = "#fff"
+            for (const note of notes)
+            {
+                const noteH = 2
+                const noteSpacing = 1
+
+                const noteRange = note.range.displace(range.start)
+                const noteY = this.renderRect.h / 2 + (60 - note.midiPitch) * noteSpacing
+                const noteY1 = noteY - noteH / 2
+                const noteY2 = noteY + noteH / 2
+
+                const noteX1 = Math.max(x1, Math.min(x2,
+                    Editor.xAtTime(data, noteRange.start) + 0.5))
+
+                const noteX2 = Math.max(x1, Math.min(x2,
+                    Editor.xAtTime(data, noteRange.end) + 0.5))
+        
+                data.ctx.fillRect(noteX1, noteY1, noteX2 - noteX1, noteY2 - noteY1)
+            }
+        }
 		
         data.ctx.strokeStyle = (selected || playing) ? "#fff" : hovering ? "#888" : "#444"
         data.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)

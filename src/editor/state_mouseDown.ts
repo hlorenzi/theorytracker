@@ -7,11 +7,17 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     if (data.state.mouse.down)
         return
 
+    const prevDownDate = data.state.mouse.downDate
+
     data.state.mouse.down = true
+    data.state.mouse.downDate = new Date()
     data.state.mouse.action = Editor.EditorAction.None
 
     const selectMultiple = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
     const forcePan = data.state.keysDown.has(data.prefs.editor.keyPan)
+    const doubleClick =
+        data.state.mouse.downDate.getTime() - prevDownDate.getTime() <
+        data.prefs.editor.mouseDoubleClickThresholdMs
 
     data.state.drag =
     {
@@ -28,6 +34,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         yLocked: true,
         posDelta: { x: 0, y: 0 },
         timeDelta: new Rational(0),
+        rowDelta: 0,
         trackDelta: 0,
         trackInsertionBefore: -1,
     }
@@ -46,6 +53,15 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     {
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
+        
+        if (doubleClick)
+        {
+            for (let t = 0; t < data.state.tracks.length; t++)
+            {
+                if (t == data.state.mouse.point.trackIndex)
+                    data.state.tracks[t].doubleClick(data, data.state.hover.id)
+            }
+        }
     }
     else
     {

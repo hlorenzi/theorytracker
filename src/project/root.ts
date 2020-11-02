@@ -43,10 +43,17 @@ export class Root
 
         const track3Id = project.nextId
         project = Root.upsertTrack(project, Project.makeTrackNotes())
+
+        const noteBlockId = project.nextId
+        project = Root.upsertElement(project, Project.makeNoteBlock(
+            track3Id,
+            Range.fromStartDuration(new Rational(0), new Rational(2))))
+
         for (let i = 0; i < 16; i++)
-            project = Root.upsertElement(project, Project.makeNoteBlock(
-                track3Id,
-                Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4))))
+            project = Root.upsertElement(project, Project.makeNote(
+                noteBlockId,
+                Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
+                60 + i))
 
         console.log(project)
         return project
