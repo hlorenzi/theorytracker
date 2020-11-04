@@ -1,5 +1,6 @@
 import Immutable from "immutable"
 import * as Project from "../project"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
@@ -142,6 +143,7 @@ export interface EditorUpdateData
     state: EditorState
     prefs: Prefs.Prefs
     project: Project.Root
+    playback: Playback.PlaybackContextProps,
     ctx: CanvasRenderingContext2D
     popup: RefState<Popup.PopupContextProps>
 }

@@ -40,6 +40,7 @@ export default function EditorWindow()
         return {
             state: editorState.ref.current,
             project: null!,
+            playback: null!,
             prefs: null!,
             popup: null!,
             ctx: null!,

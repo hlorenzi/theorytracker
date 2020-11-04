@@ -36,7 +36,7 @@ export class Root
         project = Root.upsertTrack(project, Project.makeTrackMeterChanges())
 
         project = Root.upsertElement(project, Project.makeKeyChange(
-            track1Id, new Rational(0), Theory.Key.parse("D Major")))
+            track1Id, new Rational(0), Theory.Key.parse("C Major")))
 
         project = Root.upsertElement(project, Project.makeMeterChange(
             track2Id, new Rational(0), new Theory.Meter(4, 4)))
@@ -47,7 +47,7 @@ export class Root
         const noteBlockId = project.nextId
         project = Root.upsertElement(project, Project.makeNoteBlock(
             track3Id,
-            Range.fromStartDuration(new Rational(0), new Rational(2))))
+            Range.fromStartDuration(new Rational(0), new Rational(4))))
 
         for (let i = 0; i < 16; i++)
             project = Root.upsertElement(project, Project.makeNote(

@@ -127,8 +127,8 @@ export function render(data: Editor.EditorUpdateData)
         renderCursorBeam(data, timeMax, true)
     }
     
-    /*if (data.state.appState.playback.playing)
-        Editor.renderPlaybackBeam(state, ctx, data.state.appState.playback.time)*/
+    if (data.playback.playing)
+        renderPlaybackBeam(data, data.playback.playTime)
 
     data.ctx.restore()
     
@@ -339,5 +339,20 @@ function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffs
     data.ctx.beginPath()
     data.ctx.moveTo(x, y1)
     data.ctx.lineTo(x, y2)
+    data.ctx.stroke()
+}
+	
+	
+function renderPlaybackBeam(data: Editor.EditorUpdateData, time: Rational)
+{
+    const x = 0.5 + Math.floor(Editor.xAtTime(data, time))
+    
+    data.ctx.strokeStyle = data.prefs.editor.playbackCursorColor
+    data.ctx.lineCap = "square"
+    data.ctx.lineWidth = 1
+    
+    data.ctx.beginPath()
+    data.ctx.lineTo(x, 0)
+    data.ctx.lineTo(x, data.state.renderRect.h)
     data.ctx.stroke()
 }

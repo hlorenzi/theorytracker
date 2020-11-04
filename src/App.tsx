@@ -1,6 +1,7 @@
 import React, { useRef } from "react"
 import * as Dockable from "./dockable"
 import * as Project from "./project"
+import * as Playback from "./playback"
 import * as Prefs from "./prefs"
 import * as Popup from "./popup"
 import * as Menubar from "./menubar"
@@ -28,11 +29,13 @@ export default function App()
     }
 
     const projectCtx = useRefState(() => Project.Root.getDefault())
+    const playbackCtx = Playback.usePlaybackInit(projectCtx)
     const prefsCtx = useRefState(() => Prefs.getDefault())
     const popupCtx = useRefState(() => Popup.getDefaultCtx())
 
     return <>
         <Project.ProjectContext.Provider value={ projectCtx }>
+        <Playback.PlaybackContext.Provider value={ playbackCtx }>
         <Prefs.PrefsContext.Provider value={ prefsCtx }>
         <Popup.PopupContext.Provider value={ popupCtx }>
             <div style={{
@@ -57,6 +60,12 @@ export default function App()
                         <Popup.Root>
                         </Popup.Root>
                     </Menubar.Item>
+
+                    <button
+                        onClick={ () => window.dispatchEvent(new Event("playbackTogglePlaying")) }
+                    >
+                        { playbackCtx.ref.current.playing ? "Stop" : "Play" }
+                    </button>
                 </Menubar.Root>
 
                 <Dockable.Container
@@ -72,6 +81,7 @@ export default function App()
             }
         </Popup.PopupContext.Provider>
         </Prefs.PrefsContext.Provider>
+        </Playback.PlaybackContext.Provider>
         </Project.ProjectContext.Provider>
     </>
 }

@@ -1,6 +1,7 @@
 import React from "react"
 import * as Editor from "./index"
 import * as Project from "../project"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import { useRefState, RefState } from "../util/refState"
@@ -40,6 +41,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
     const editorState = props.state ?? useRefState(() => Editor.init())
     const project = Project.useProject()
+    const playback = Playback.usePlayback()
     const prefs = Prefs.usePrefs()
     const popup = Popup.usePopup()
 
@@ -48,6 +50,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         return {
             state: editorState.ref.current,
             project: project.ref.current,
+            playback: playback.ref.current,
             prefs: prefs.ref.current,
             popup,
             ctx: null!,
@@ -108,6 +111,12 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         return () => observer.unobserve(elem)
 
     }, [refDiv.current])
+
+    React.useEffect(() =>
+    {
+        render()
+        
+    }, [playback.update])
 
     React.useEffect(() =>
     {
