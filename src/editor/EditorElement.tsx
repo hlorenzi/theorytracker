@@ -86,11 +86,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         refCanvas.current.height = h
 
         const renderRect = new Rect(x, y, w, h)
-        console.log(renderRect)
 
         const updateData = makeUpdateData()
         Editor.resize(updateData, renderRect)
-
         render()
     }
 
@@ -114,6 +112,8 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
     React.useEffect(() =>
     {
+        const updateData = makeUpdateData()
+        Editor.scrollPlaybackTimeIntoView(updateData)
         render()
         
     }, [playback.update])
@@ -226,6 +226,13 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const updateData = makeUpdateData()
 			Editor.keyUp(updateData, ev.key.toLowerCase())
         }
+
+        const onRewind = (ev: Event) =>
+        {
+            const updateData = makeUpdateData()
+            Editor.rewind(updateData)
+            render()
+        }
 		
 		const onRefreshProjectTracks = (ev: Event) =>
 		{
@@ -243,6 +250,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         window.addEventListener("keydown", onKeyDown)
         window.addEventListener("keyup", onKeyUp)
 
+        window.addEventListener("timelineRewind", onRewind)
         window.addEventListener("refreshProjectTracks", onRefreshProjectTracks)
 
         return () =>
@@ -256,6 +264,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             window.removeEventListener("keydown", onKeyDown)
             window.removeEventListener("keyup", onKeyUp)
 
+            window.removeEventListener("timelineRewind", onRewind)
             window.removeEventListener("refreshProjectTracks", onRefreshProjectTracks)
         }
 

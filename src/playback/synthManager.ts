@@ -1,21 +1,20 @@
-import * as Synth from "./index"
-import { NotePlayback } from "./synthInstrument"
+import * as Playback from "./index"
 
 
 export interface NoteEvent
 {
     frequency: number
     volume: number
-	playback: NotePlayback
+	playback: Playback.NotePlayback
 }
 
 
-export class Manager
+export class SynthManager
 {
     audioCtx: AudioContext
 	audioCtxOutput: GainNode
 
-	instrument: Synth.Instrument
+	instrument: Playback.Instrument
 
 	noteEvents: NoteEvent[]
 
@@ -29,7 +28,7 @@ export class Manager
 		this.audioCtxOutput.connect(this.audioCtx.destination)
 		this.audioCtxOutput.gain.value = 0.5
 		
-		this.instrument = new Synth.Instrument(this,
+		this.instrument = new Playback.Instrument(this,
 		[
 			[  55.0, "audio/piano/a1.mp3"],
 			[ 110.0, "audio/piano/a2.mp3"],

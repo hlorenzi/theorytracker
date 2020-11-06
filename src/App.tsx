@@ -8,6 +8,7 @@ import * as Menubar from "./menubar"
 import { useRefState } from "./util/refState"
 import EditorWindow from "./windows/EditorWindow"
 import WindowTest from "./windows/WindowTest"
+import PlaybackToolbar from "./PlaybackToolbar"
 
 
 export default function App()
@@ -61,11 +62,7 @@ export default function App()
                         </Popup.Root>
                     </Menubar.Item>
 
-                    <button
-                        onClick={ () => window.dispatchEvent(new Event("playbackTogglePlaying")) }
-                    >
-                        { playbackCtx.ref.current.playing ? "Stop" : "Play" }
-                    </button>
+                    <PlaybackToolbar/>
                 </Menubar.Root>
 
                 <Dockable.Container

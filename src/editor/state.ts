@@ -43,8 +43,6 @@ export interface ModeStack
     mode: Mode
     modeNoteBlockId: Project.ID
 
-    timeScroll: number
-    timeScale: number
     trackScroll: number
 }
 
@@ -236,6 +234,15 @@ export function resize(data: EditorUpdateData, rect: Rect)
 }
 
 
+export function rewind(data: EditorUpdateData)
+{
+    data.state.cursor.visible = true
+    data.state.cursor.time1 = data.state.cursor.time2 = new Rational(0)
+    data.playback.setStartTime(new Rational(0))
+    scrollTimeIntoView(data, data.state.cursor.time1)
+}
+
+
 export function refreshTracks(data: EditorUpdateData)
 {
     const tracks: EditorTrack[] = []
@@ -300,8 +307,6 @@ export function modeStackPush(data: EditorUpdateData)
     {
         mode: data.state.mode,
         modeNoteBlockId: data.state.modeNoteBlockId,
-        timeScroll: data.state.timeScroll,
-        timeScale: data.state.timeScale,
         trackScroll: data.state.trackScroll,
     }
 
@@ -328,11 +333,50 @@ export function modeStackPop(data: EditorUpdateData, index?: number)
 
     data.state.mode = stackElem.mode
     data.state.modeNoteBlockId = stackElem.modeNoteBlockId
-    data.state.timeScroll = stackElem.timeScroll
-    data.state.timeScale = stackElem.timeScale
     data.state.trackScroll = stackElem.trackScroll
 
     selectionClear(data)
+}
+
+
+export function scrollTimeIntoView(data: EditorUpdateData, time: Rational)
+{
+    const range = visibleTimeRange(data)
+    const marginPixels = 100
+    const marginTime = Rational.fromFloat(marginPixels / data.state.timeScale, 10000)
+    if (time.compare(range.end.subtract(marginTime)) >= 0)
+    {
+        data.state.timeScroll =
+            data.playback.playTime.asFloat() -
+            (data.state.renderRect.w - data.state.trackHeaderW + marginPixels) / data.state.timeScale
+    }
+    else if (time.compare(range.start.add(marginTime)) <= 0)
+    {
+        data.state.timeScroll =
+            data.playback.playTime.asFloat() -
+            (data.state.trackHeaderW + marginPixels) / data.state.timeScale
+    }
+}
+
+
+export function scrollPlaybackTimeIntoView(data: EditorUpdateData)
+{
+    if (!data.playback.playing) 
+        return
+
+    if (data.state.mouse.down)
+        return
+
+    const range = visibleTimeRange(data)
+    const marginPixels = 100
+    const marginTime = Rational.fromFloat(marginPixels / data.state.timeScale, 10000)
+    if (data.playback.playTime.compare(range.end.subtract(marginTime)) >= 0 ||
+        data.playback.playTime.compare(range.start.add(marginTime)) <= 0)
+    {
+        data.state.timeScroll =
+            data.playback.playTime.asFloat() -
+            (data.state.trackHeaderW + marginPixels) / data.state.timeScale
+    }
 }
 
 
@@ -581,7 +625,7 @@ export function selectionAddAtCursor(data: EditorUpdateData)
 export function visibleTimeRange(data: EditorUpdateData): Range
 {
     return new Range(
-        timeAtX(data, 0).subtract(data.state.timeSnap),
+        timeAtX(data, data.state.trackHeaderW).subtract(data.state.timeSnap),
         timeAtX(data, data.state.renderRect.w).add(data.state.timeSnap))
 }
 

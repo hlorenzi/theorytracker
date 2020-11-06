@@ -75,7 +75,7 @@ export default function EditorWindow()
         return modes.map((mode, i) =>
         {
             const name = getModeName(mode)
-            return <>
+            return <React.Fragment key={ i }>
                 { i == 0 ? null :
                     " > "
                 }
@@ -84,7 +84,7 @@ export default function EditorWindow()
                 >
                     { name }
                 </StyledModeStackButton>
-            </>
+            </React.Fragment>
         })
 
     }, [editorState.update, editorState.ref.current.modeStack.length])

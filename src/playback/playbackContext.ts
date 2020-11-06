@@ -9,15 +9,21 @@ import Range from "../util/range"
 
 export interface PlaybackContextProps
 {
-    synth: Playback.Manager
+    synth: Playback.SynthManager
     playing: boolean
     timestamp: number
-    playTimeMs: number
-    playTimeMsPrev: number
+    startTime: Rational
+    playTimeFloat: number
+    playTimeFloatPrev: number
     playTime: Rational
     playTimePrev: Rational
     refreshTimeMs: number
-    curAnimationFrameRef: number
+    requestAnimationFrameId: number
+
+    setStartTime: (startTime: Rational) => void
+    startPlaying: () => void
+    stopPlaying: () => void
+    togglePlaying: () => void
 }
 
 
@@ -33,19 +39,42 @@ export function usePlayback(): RefState<PlaybackContextProps>
 
 export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<PlaybackContextProps>
 {
-    const synth = useRefState<PlaybackContextProps>(() =>
+    const playback = useRefState<PlaybackContextProps>(() =>
     {
         return {
-            synth: new Playback.Manager(),
+            synth: new Playback.SynthManager(),
             playing: false,
             timestamp: 0,
-            playTimeMs: 0,
-            playTimeMsPrev: 0,
+            startTime: new Rational(0),
+            playTimeFloat: 0,
+            playTimeFloatPrev: 0,
             playTime: new Rational(0),
             playTimePrev: new Rational(0),
             refreshTimeMs: 0,
 
-            curAnimationFrameRef: 0,
+            requestAnimationFrameId: 0,
+
+            setStartTime: (startTime: Rational) =>
+            {
+                window.dispatchEvent(new CustomEvent("playbackSetStartTime", {
+                    detail: { startTime },
+                }))
+            },
+
+            startPlaying: () =>
+            {
+                window.dispatchEvent(new CustomEvent("playbackStartPlaying"))
+            },
+
+            stopPlaying: () =>
+            {
+                window.dispatchEvent(new CustomEvent("playbackStopPlaying"))
+            },
+
+            togglePlaying: () =>
+            {
+                window.dispatchEvent(new CustomEvent("playbackTogglePlaying"))
+            },
         }
     })
 
@@ -53,74 +82,93 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
     {
         function processFrame(timestamp: number)
         {
-            const prevTimestamp = synth.ref.current.timestamp
+            const prevTimestamp = playback.ref.current.timestamp
             const deltaTimeMs = (prevTimestamp < 0 ? 0 : timestamp - prevTimestamp)
 
-            synth.ref.current.timestamp = timestamp
-            synth.ref.current.playTimeMsPrev = synth.ref.current.playTimeMs
-            synth.ref.current.playTimePrev = synth.ref.current.playTime
+            playback.ref.current.timestamp = timestamp
+            playback.ref.current.playTimeFloatPrev = playback.ref.current.playTimeFloat
+            playback.ref.current.playTimePrev = playback.ref.current.playTime
 
-            synth.ref.current.refreshTimeMs += deltaTimeMs
             
             if (deltaTimeMs > 0 && deltaTimeMs < 250)
             {
                 const measuresPerSecond = (120 / 4 / 60)
                 
-                synth.ref.current.synth.process(deltaTimeMs)
-                synth.ref.current.playTimeMs += deltaTimeMs * measuresPerSecond
-                synth.ref.current.playTime = Rational.fromFloat(synth.ref.current.playTimeMs / 1000, 10000)
+                playback.ref.current.synth.process(deltaTimeMs)
+                playback.ref.current.playTimeFloat += deltaTimeMs / 1000 * measuresPerSecond
+                playback.ref.current.playTime = Rational.fromFloat(playback.ref.current.playTimeFloat, 10000)
 
                 Playback.feedNotes(
-                    synth.ref.current.synth,
+                    playback.ref.current.synth,
                     projectRef.ref.current,
+                    playback.ref.current.playTimePrev.compare(playback.ref.current.startTime) == 0,
+                    playback.ref.current.startTime,
                     new Range(
-                        synth.ref.current.playTimePrev,
-                        synth.ref.current.playTime,
+                        playback.ref.current.playTimePrev,
+                        playback.ref.current.playTime,
                         true,
                         true))
 
-                if (synth.ref.current.refreshTimeMs > 1000 / 20)
+                playback.ref.current.refreshTimeMs += deltaTimeMs
+                if (playback.ref.current.refreshTimeMs > 1000 / 20)
                 {
-                    synth.ref.current.refreshTimeMs = 0
-                    synth.commit()
+                    playback.ref.current.refreshTimeMs = 0
+                    playback.commit()
                 }
             }
 
-            synth.ref.current.curAnimationFrameRef =
+            playback.ref.current.requestAnimationFrameId =
                 requestAnimationFrame(processFrame)
         }
 
         function setPlaying(playing: boolean)
         {
-            if (synth.ref.current.curAnimationFrameRef != 0)
+            if (playback.ref.current.requestAnimationFrameId != 0)
             {
-                synth.ref.current.synth.stopAll()
-                cancelAnimationFrame(synth.ref.current.curAnimationFrameRef)
-                synth.ref.current.curAnimationFrameRef = 0
+                playback.ref.current.synth.stopAll()
+                cancelAnimationFrame(playback.ref.current.requestAnimationFrameId)
+                playback.ref.current.requestAnimationFrameId = 0
             }
 
-            synth.ref.current.playing = playing
-            synth.ref.current.timestamp = 0
-            synth.ref.current.playTimeMs = 0
-            synth.ref.current.playTimeMsPrev = 0
-            synth.ref.current.playTime = new Rational(0)
-            synth.ref.current.playTimePrev = new Rational(0)
-            synth.ref.current.refreshTimeMs = 0
+            playback.ref.current.playing = playing
+            playback.ref.current.timestamp = 0
+            playback.ref.current.playTime = playback.ref.current.playTimePrev =
+                playback.ref.current.startTime
+            playback.ref.current.playTimeFloat = playback.ref.current.playTimeFloatPrev =
+                playback.ref.current.startTime.asFloat()
+            playback.ref.current.refreshTimeMs = 0
 
             if (playing)
             {
-                synth.ref.current.curAnimationFrameRef =
+                playback.ref.current.requestAnimationFrameId =
                     requestAnimationFrame(processFrame)
             }
 
-            synth.commit()
+            playback.commit()
         }
 
-        window.addEventListener("playbackSetPlaying", () => setPlaying(true))
+        window.addEventListener("playbackSetStartTime", (ev: Event) =>
+        {
+            const data = (ev as CustomEvent).detail
+            playback.ref.current.startTime = data.startTime
+            playback.commit()
+        })
+
+        window.addEventListener("playbackStartPlaying", () => setPlaying(true))
         window.addEventListener("playbackStopPlaying", () => setPlaying(false))
-        window.addEventListener("playbackTogglePlaying", () => setPlaying(!synth.ref.current.playing))
+        window.addEventListener("playbackTogglePlaying", () => setPlaying(!playback.ref.current.playing))
+
+        window.addEventListener("keydown", (ev: KeyboardEvent) =>
+        {
+            if (ev.key.toLowerCase() == " ")
+            {
+                ev.preventDefault()
+                ev.stopPropagation()
+                setPlaying(!playback.ref.current.playing)
+            }
+        })
 
     }, [])
 
-    return synth
+    return playback
 }

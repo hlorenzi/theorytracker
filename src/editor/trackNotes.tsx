@@ -405,9 +405,11 @@ export class EditorTrackNotes extends EditorTrack
             const fillStyle = CanvasUtils.fillStyleForDegree(
                 data.ctx, key.degreeForMidi(note.midiPitch) + mode, true)
 
+            const playing = data.playback.playing && note.range.displace(parentStart).overlapsPoint(data.playback.playTime)
+
             this.renderNote(
                 data, note.range, noteBlock.range.start, row, xMin, xMax, fillStyle,
-                true)
+                true, false, false, playing)
         }
 
         for (let layer = 0; layer < 2; layer++)
@@ -425,7 +427,7 @@ export class EditorTrackNotes extends EditorTrack
                     data.ctx, key.degreeForMidi(note.midiPitch) + mode, false)
 
                 const hovering = !!data.state.hover && data.state.hover.id == note.id
-                const playing = false
+                const playing = data.playback.playing && note.range.displace(parentStart).overlapsPoint(data.playback.playTime)
                 
                 this.renderNote(
                     data, note.range, parentStart, row, xMin, xMax, fillStyle,
@@ -469,7 +471,7 @@ export class EditorTrackNotes extends EditorTrack
 		data.ctx.beginPath()
         data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 		
-		if (hovering)
+		if (hovering || playing)
 		{
 			data.ctx.globalAlpha = 0.4
 			data.ctx.fillStyle = "#fff"

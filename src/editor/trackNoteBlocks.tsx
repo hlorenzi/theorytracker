@@ -197,32 +197,22 @@ export class EditorTrackNoteBlocks extends EditorTrack
     {
         const visibleRange = Editor.visibleTimeRange(data)
 
-		for (const noteBlock of this.iterAtRange(data, visibleRange))
-		{
-            const selected = data.state.selection.contains(noteBlock.id)
-            if (selected)
-                continue
-            
-			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
-			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-            this.renderNoteBlock(
-                data, noteBlock.range,
-                this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.intersect(noteBlock.range.atZero())),
-                hovering, selected, playing)
-        }
-
-		for (const noteBlock of this.iterAtRange(data, visibleRange))
-		{
-			const selected = data.state.selection.contains(noteBlock.id)
-            if (!selected)
-                continue
-            
-			const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
-			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderNoteBlock(
-                data, noteBlock.range,
-                this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.intersect(noteBlock.range.atZero())),
-                hovering, selected, playing)
+        for (let layer = 0; layer < 2; layer++)
+        {
+            for (const noteBlock of this.iterAtRange(data, visibleRange))
+            {
+                const selected = data.state.selection.contains(noteBlock.id)
+                if ((layer == 0) == selected)
+                    continue
+                
+                const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
+                const playing = data.playback.playing && noteBlock.range.overlapsPoint(data.playback.playTime)
+                
+                this.renderNoteBlock(
+                    data, noteBlock.range,
+                    this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.displace(noteBlock.range.start.negate())),
+                    hovering, selected, playing)
+            }
         }
 
         if (this.pencil)

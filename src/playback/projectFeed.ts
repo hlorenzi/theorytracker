@@ -6,8 +6,10 @@ import MathUtils from "../util/mathUtils"
 
 
 export function feedNotes(
-    synth: Playback.Manager,
+    synth: Playback.SynthManager,
     project: Project.Root,
+    isStart: boolean,
+    startTime: Rational,
     range: Range)
 {
     for (const [note, _] of iterNotesAtRange(project, range))
@@ -17,7 +19,8 @@ export function feedNotes(
             synth.releaseNote(
                 MathUtils.midiToHertz(note.midiPitch))
         }
-        else if (range.overlapsPoint(note.range.start))
+        else if (range.overlapsPoint(note.range.start) ||
+            (isStart && range.overlapsPoint(startTime)))
         {
             console.log("play " + note.midiPitch)
             synth.playNote(

@@ -1,5 +1,6 @@
 import * as Editor from "./index"
 import Rational from "../util/rational"
+import { EditorAction } from "./state"
 
 
 export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
@@ -53,6 +54,10 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     {
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
+
+        const range = Editor.selectionRange(data)
+        if (range)
+            data.playback.setStartTime(range.start)
         
         if (doubleClick)
         {
@@ -76,6 +81,8 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
                 data.state.mouse.point.time
             data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
                 data.state.mouse.point.trackIndex
+
+            data.playback.setStartTime(data.state.cursor.time1)
         }
     }
 }

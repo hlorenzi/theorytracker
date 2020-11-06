@@ -1,4 +1,4 @@
-import * as Synth from "./index"
+import * as Playback from "./index"
 
 
 export interface NoteVoice
@@ -39,11 +39,11 @@ const releaseDurationMs = 100
 //   ]
 export class Instrument
 {
-    synth: Synth.Manager
+    synth: Playback.SynthManager
     samples: Sample[]
 
 
-	constructor(synth: Synth.Manager, sampleDefs: [number, string][])
+	constructor(synth: Playback.SynthManager, sampleDefs: [number, string][])
 	{
 		this.synth = synth
 		
@@ -53,7 +53,7 @@ export class Instrument
 	}
 
 
-	load(synth: Synth.Manager, url: string, frequency: number): Sample
+	load(synth: Playback.SynthManager, url: string, frequency: number): Sample
 	{
 		let sample: Sample =
 		{
