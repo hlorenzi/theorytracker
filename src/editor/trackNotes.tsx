@@ -405,19 +405,19 @@ export class EditorTrackNotes extends EditorTrack
             const fillStyle = CanvasUtils.fillStyleForDegree(
                 data.ctx, key.degreeForMidi(note.midiPitch) + mode, true)
 
-            const playing = data.playback.playing && note.range.displace(parentStart).overlapsPoint(data.playback.playTime)
+            const playing = data.playback.playing && note.range.displace(noteBlock.range.start).overlapsPoint(data.playback.playTime)
 
             this.renderNote(
                 data, note.range, noteBlock.range.start, row, xMin, xMax, fillStyle,
                 true, false, false, playing)
         }
 
-        for (let layer = 0; layer < 2; layer++)
+        for (let layer = 0; layer < (data.playback.playing ? 1 : 2); layer++)
         {
             for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, visibleRange))
             {
                 const selected = data.state.selection.contains(note.id)
-                if ((layer == 0) == selected)
+                if (!data.playback.playing && (layer == 0) == selected)
                     continue
 
                 const key = keyCh.key
@@ -474,14 +474,14 @@ export class EditorTrackNotes extends EditorTrack
 		if (hovering || playing)
 		{
 			data.ctx.globalAlpha = 0.4
-			data.ctx.fillStyle = "#fff"
+			data.ctx.fillStyle = external ? "#888" : "#fff"
 			data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
 			data.ctx.globalAlpha = 1
 		}
 		
 		if (selected || playing)
 		{
-			data.ctx.strokeStyle = "#fff"
+			data.ctx.strokeStyle = external ? "#888" : "#fff"
 			data.ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h)
 		}
 	}

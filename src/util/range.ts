@@ -125,6 +125,16 @@ export default class Range
 	}
 	
 	
+	stretch(offset: Rational, pivot: Rational, origin: Rational): Range
+	{
+		return new Range(
+			this.start.stretch(offset, pivot, origin),
+			this.end.stretch(offset, pivot, origin),
+			this.startInclusive,
+			this.endInclusive)
+	}
+	
+	
 	displace(offset: Rational): Range
 	{
 		return new Range(
@@ -135,11 +145,21 @@ export default class Range
 	}
 	
 	
-	stretch(offset: Rational, pivot: Rational, origin: Rational): Range
+	subtract(offset: Rational): Range
 	{
 		return new Range(
-			this.start.stretch(offset, pivot, origin),
-			this.end.stretch(offset, pivot, origin),
+			this.start.subtract(offset),
+			this.end.subtract(offset),
+			this.startInclusive,
+			this.endInclusive)
+	}
+	
+	
+	grow(offset: Rational): Range
+	{
+		return new Range(
+			this.start.subtract(offset),
+			this.end.add(offset),
 			this.startInclusive,
 			this.endInclusive)
 	}

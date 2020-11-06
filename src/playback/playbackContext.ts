@@ -92,7 +92,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             
             if (deltaTimeMs > 0 && deltaTimeMs < 250)
             {
-                const measuresPerSecond = (120 / 4 / 60)
+                const measuresPerSecond = (projectRef.ref.current.baseBpm / 4 / 60)
                 
                 playback.ref.current.synth.process(deltaTimeMs)
                 playback.ref.current.playTimeFloat += deltaTimeMs / 1000 * measuresPerSecond
@@ -110,7 +110,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
                         true))
 
                 playback.ref.current.refreshTimeMs += deltaTimeMs
-                if (playback.ref.current.refreshTimeMs > 1000 / 20)
+                if (playback.ref.current.refreshTimeMs > 1000 / 30)
                 {
                     playback.ref.current.refreshTimeMs = 0
                     playback.commit()

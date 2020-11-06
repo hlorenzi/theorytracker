@@ -3,6 +3,7 @@ import * as Playback from "./index"
 
 export interface NoteEvent
 {
+	trackId: number
     frequency: number
     volume: number
 	playback: Playback.NotePlayback
@@ -74,19 +75,21 @@ export class SynthManager
 	}
 
 
-	playNote(frequency: number, volume: number)
+	playNote(trackId: number, frequency: number, volume: number)
 	{
 		if (!isFinite(frequency))
 			return
 		
 		for (const noteEvent of this.noteEvents)
 		{
-			if (noteEvent.frequency == frequency)
+			if (noteEvent.trackId == trackId &&
+				noteEvent.frequency == frequency)
 				noteEvent.playback.stop()
 		}
 		
 		this.noteEvents.push(
 		{
+			trackId,
 			frequency,
 			volume,
 			playback: this.instrument.playNote(frequency, volume),
@@ -94,14 +97,15 @@ export class SynthManager
 	}
 
 
-	releaseNote(frequency: number)
+	releaseNote(trackId: number, frequency: number)
 	{
 		if (!isFinite(frequency))
 			return
 
 		for (const noteEvent of this.noteEvents)
 		{
-			if (noteEvent.frequency == frequency)
+			if (noteEvent.trackId == trackId &&
+				noteEvent.frequency == frequency)
 				noteEvent.playback.release()
 		}
 	}

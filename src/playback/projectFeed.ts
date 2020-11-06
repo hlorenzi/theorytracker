@@ -12,18 +12,19 @@ export function feedNotes(
     startTime: Rational,
     range: Range)
 {
-    for (const [note, _] of iterNotesAtRange(project, range))
+    for (const [trackId, note] of iterNotesAtRange(project, range))
     {
         if (range.overlapsPoint(note.range.end))
         {
             synth.releaseNote(
+                trackId,
                 MathUtils.midiToHertz(note.midiPitch))
         }
         else if (range.overlapsPoint(note.range.start) ||
             (isStart && range.overlapsPoint(startTime)))
         {
-            console.log("play " + note.midiPitch)
             synth.playNote(
+                trackId,
                 MathUtils.midiToHertz(note.midiPitch),
                 1)
         }
@@ -34,7 +35,7 @@ export function feedNotes(
 function *iterNotesAtRange(
     project: Project.Root,
     range: Range)
-    : Generator<[Project.Note, Project.NoteBlock], void, void>
+    : Generator<[Project.ID, Project.Note], void, void>
 {
     for (const track of project.tracks)
     {
@@ -70,7 +71,7 @@ function *iterNotesAtRange(
                 if (!newElem.range.overlapsRange(range))
                     continue
                 
-                yield [newElem as Project.Note, noteBlock as Project.NoteBlock]
+                yield [track.id, newElem as Project.Note]
             }
         }
     }

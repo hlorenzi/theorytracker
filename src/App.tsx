@@ -9,6 +9,7 @@ import { useRefState } from "./util/refState"
 import EditorWindow from "./windows/EditorWindow"
 import WindowTest from "./windows/WindowTest"
 import PlaybackToolbar from "./PlaybackToolbar"
+import MenuFile from "./MenuFile"
 
 
 export default function App()
@@ -47,12 +48,7 @@ export default function App()
             }}>
 
                 <Menubar.Root>
-                    <Menubar.Item label="File">
-                        <Popup.Root>
-                            <Popup.Button label="New"/>
-                            <Popup.Button label="Open..."/>
-                        </Popup.Root>
-                    </Menubar.Item>
+                    <MenuFile/>
                     <Menubar.Item label="Edit">
                         <Popup.Root>
                         </Popup.Root>

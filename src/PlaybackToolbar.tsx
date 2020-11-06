@@ -1,14 +1,12 @@
 import React from "react"
-import * as Dockable from "./dockable"
-import * as Editor from "./editor"
 import * as Playback from "./playback"
-import { useRefState } from "./util/refState"
-import styled from "styled-components"
+import * as Project from "./project"
 
 
 export default function PlaybackToolbar()
 {
     const playback = Playback.usePlayback()
+    const project = Project.useProject()
 
 
     return <div style={{
@@ -37,5 +35,30 @@ export default function PlaybackToolbar()
         }}>
             { "◀◀" }
         </button>
+
+        <div style={{
+            alignSelf: "center",
+            color: "#fff",
+            margin: "0 0.5em",
+        }}>
+            Base BPM:
+        </div>
+
+        <input
+            type="number"
+            value={ project.ref.current.baseBpm }
+            onChange={ ev =>
+            {
+                project.ref.current.baseBpm = parseInt(ev.target.value)
+                project.commit()
+            }}
+            style={{
+                width: "4em",
+                backgroundColor: "transparent",
+                color: "#fff",
+                border: "1px solid #888",
+                borderRadius: "0.5em",
+                padding: "0 0.5em",
+        }}/>
     </div>
 }
