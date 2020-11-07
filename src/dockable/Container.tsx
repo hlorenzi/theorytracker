@@ -11,6 +11,23 @@ const colorVoid = "#202225"
 const colorPanelBkg = "#2f3136"
 
 
+const StyledCloseButton = styled.button`
+    pointer-events: auto;
+    color: #fff;
+    border: 1px solid #888;
+    border-radius: 0.5em;
+    background-color: #2f3136;
+    padding: 0.1em 0.3em;
+    cursor: pointer;
+    margin-left: 0.25em;
+    width: 1.5em;
+
+    &:hover
+    {
+        border: 1px solid #fff;
+    }
+`
+
 
 export function Container()
 {
@@ -142,6 +159,37 @@ function Panel(props: any)
     const dockable = Dockable.useDockable()
     const panelRect: DockableData.PanelRect = props.panelRect
 
+    const onCloseTab = (windowId: DockableData.WindowId) =>
+    {
+        const panel = DockableData.findPanelWithContent(dockable.ref.current.state.rootPanel, windowId)
+        if (panel)
+        {
+            if (panel.windowIds.length <= 1)
+            {
+                dockable.ref.current.state =
+                    DockableData.removePanel(dockable.ref.current.state, panel.id)
+            }
+            else
+            {
+                dockable.ref.current.state =
+                    DockableData.modifyPanelFromRoot(dockable.ref.current.state, panel.id, (panel) =>
+                    {
+                        const newContentIds = panel.windowIds.filter(cId => cId != windowId)
+                        return {
+                            ...panel,
+                            windowIds: newContentIds,
+                            curWindowIndex: Math.min(panel.curWindowIndex, newContentIds.length - 1),
+                        }
+                    })
+            }
+        }
+
+        dockable.ref.current.state =
+            DockableData.removeFloatingContent(dockable.ref.current.state, windowId)
+
+        dockable.commit()
+    }
+
     return <div key={ panelRect.panel.id } style={{
         position: "absolute",
         left: (panelRect.rect.x) + "px",
@@ -195,6 +243,12 @@ function Panel(props: any)
                                     borderTopLeftRadius: "0.5em",
                             }}>
                                 { "Content " + cId }
+                                <StyledCloseButton
+                                    id={ "dockable_close_" + cId }
+                                    onClick={ () => onCloseTab(cId) }
+                                >
+                                    x
+                                </StyledCloseButton>
                             </div>
                         )}
 
@@ -398,6 +452,13 @@ function useMouseHandling(layout: DockableData.Layout | null, rootDivRef: React.
 
                     for (const contentId of panelLayout.panel.windowIds)
                     {
+                        const closeElem = document.getElementById("dockable_close_" + contentId)
+                        if (closeElem && isMouseOverElem(mousePos, closeElem))
+                        {
+                            state.curHoverPanelId = null
+                            break
+                        }
+
                         const tabElem = document.getElementById("dockable_tab_" + contentId)
                         if (!tabElem)
                             continue

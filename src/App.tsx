@@ -8,6 +8,7 @@ import * as Menubar from "./menubar"
 import { useRefState } from "./util/refState"
 import PlaybackToolbar from "./PlaybackToolbar"
 import MenuFile from "./MenuFile"
+import MenuWindow from "./MenuWindow"
 
 
 export default function App()
@@ -33,15 +34,7 @@ export default function App()
 
                 <Menubar.Root>
                     <MenuFile/>
-                    <Menubar.Item label="Edit">
-                        <Popup.Root>
-                        </Popup.Root>
-                    </Menubar.Item>
-                    <Menubar.Item label="View">
-                        <Popup.Root>
-                        </Popup.Root>
-                    </Menubar.Item>
-
+                    <MenuWindow/>
                     <PlaybackToolbar/>
                 </Menubar.Root>
 
