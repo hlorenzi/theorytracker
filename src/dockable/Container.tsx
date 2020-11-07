@@ -1,4 +1,5 @@
 import React from "react"
+import * as Dockable from "./index"
 import * as DockableData from "./state"
 import { WindowContext } from "./windowContext"
 import Rect from "../util/rect"
@@ -10,18 +11,12 @@ const colorVoid = "#202225"
 const colorPanelBkg = "#2f3136"
 
 
-interface DockableProps
+
+export function Container()
 {
-    state: DockableData.State
-    setState: ((newRoot: DockableData.State) => void)
+    const dockable = Dockable.useDockable()
+    const state = dockable.ref.current.state
 
-    contentIdToComponent?: (id: DockableData.WindowId) => any
-    contentIdToTitle?: (id: DockableData.WindowId) => string
-}
-
-
-export function Container(props: DockableProps)
-{
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
     const rootRef = React.useRef<HTMLDivElement>(null)
 
@@ -55,12 +50,12 @@ export function Container(props: DockableProps)
         if (!rect)
             return null
         
-        return DockableData.getLayout(props.state, rect)
+        return DockableData.getLayout(state, rect)
 
-    }, [rect, props.state])
+    }, [rect, state])
 
     
-    const mouseData = useMouseHandling(props, layout, rootRef)
+    const mouseData = useMouseHandling(layout, rootRef)
 
     const anchorSize = 5
     const anchorColor = "#0bf"
@@ -74,7 +69,6 @@ export function Container(props: DockableProps)
         { !layout ? null : layout.panelRects.map(panelRect =>
             <Panel
                 key={ panelRect.panel.id }
-                rootProps={ props }
                 panelRect={ panelRect }
             />
         )}
@@ -145,7 +139,7 @@ const DivPanel = styled.div`
 
 function Panel(props: any)
 {
-    const rootProps: DockableProps = props.rootProps
+    const dockable = Dockable.useDockable()
     const panelRect: DockableData.PanelRect = props.panelRect
 
     return <div key={ panelRect.panel.id } style={{
@@ -200,9 +194,7 @@ function Panel(props: any)
                                     borderTopRightRadius: "0.5em",
                                     borderTopLeftRadius: "0.5em",
                             }}>
-                                { rootProps.contentIdToTitle ?
-                                    rootProps.contentIdToTitle(cId) :
-                                    "Content " + cId }
+                                { "Content " + cId }
                             </div>
                         )}
 
@@ -210,10 +202,15 @@ function Panel(props: any)
 
                     { panelRect.panel.windowIds.map((cId, idx) =>
                     {
-                        const component = !rootProps.contentIdToComponent ? null : rootProps.contentIdToComponent(cId)
+                        const component = !dockable.ref.current.contentIdToComponent ? null :
+                            dockable.ref.current.contentIdToComponent(cId)
+
+                        const data = !dockable.ref.current.contentIdToData ? null :
+                            dockable.ref.current.contentIdToData(cId)
 
                         return <WindowContext.Provider key={ cId } value={{
                             contentId: cId,
+                            data,
                         }}>
                             <div style={{
                                 display: panelRect.panel.curWindowIndex == idx ? "block" : "none",
@@ -279,8 +276,10 @@ interface MousePos
 }
 
 
-function useMouseHandling(props: DockableProps, layout: DockableData.Layout | null, rootDivRef: React.RefObject<HTMLDivElement>)
+function useMouseHandling(layout: DockableData.Layout | null, rootDivRef: React.RefObject<HTMLDivElement>)
 {
+    const dockable = Dockable.useDockable()
+
     const transformMouse = (ev: MouseEvent): MousePos =>
     {
         return {
@@ -301,8 +300,7 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
     }
 
 
-    const rootRef = React.useRef(props.state)
-    rootRef.current = props.state
+    const rootRef = dockable.ref
 
     const layoutRef = React.useRef(layout)
     layoutRef.current = layout
@@ -426,10 +424,10 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
                 ))
 
                 const newRoot = DockableData.modifyPanelFromRoot(
-                    rootRef.current, divider.panel.id,
+                    rootRef.current.state, divider.panel.id,
                     (panel) => ({ ...panel, splitSize: newSize }))
 
-                props.setState(newRoot)
+                rootRef.current.setState(newRoot)
                 refresh()
             }
             else if (state.mouseAction == MouseAction.MoveHeaderStart)
@@ -444,7 +442,7 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
                 {
                     state.mouseAction = MouseAction.MoveHeader
 
-                    const dragPanel = DockableData.findPanel(rootRef.current.rootPanel, state.curHoverPanelId!)
+                    const dragPanel = DockableData.findPanel(rootRef.current.state.rootPanel, state.curHoverPanelId!)
                     if (!dragPanel)
                     {
                         const dragPanelLayout = layoutRef.current!.panelRects.find(p => p.panel.id === state.curHoverPanelId)!
@@ -457,20 +455,20 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
                         const dragPanelLayout = layoutRef.current!.panelRects.find(p => p.panel.id === state.curHoverPanelId)!
                         state.curDragContentIds = dragPanel.windowIds
                         state.curDragOrigRect = dragPanelLayout.rect
-                        let newRoot = DockableData.removePanel(rootRef.current, state.curHoverPanelId!)
-                        state.curDragFloatingPanelId = rootRef.current.idNext
+                        let newRoot = DockableData.removePanel(rootRef.current.state, state.curHoverPanelId!)
+                        state.curDragFloatingPanelId = rootRef.current.state.idNext
                         newRoot = DockableData.addFloatingPanel(
                             newRoot,
                             dragPanelLayout.rect,
                             dragPanel.windowIds)
-                        props.setState(newRoot)
+                        rootRef.current.setState(newRoot)
                     }
                     else
                     {
                         const dragPanelLayout = layoutRef.current!.panelRects.find(p => p.panel.id === state.curHoverPanelId)!
                         state.curDragContentIds = [state.curHoverTabContentId]
                         state.curDragOrigRect = dragPanelLayout.rect
-                        let newRoot = DockableData.modifyPanelFromRoot(rootRef.current, state.curHoverPanelId!, (panel) =>
+                        let newRoot = DockableData.modifyPanelFromRoot(rootRef.current.state, state.curHoverPanelId!, (panel) =>
                         {
                             const newContentIds = panel.windowIds.filter(cId => cId != state.curHoverTabContentId)
                             return {
@@ -480,12 +478,12 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
                             }
                         })
 
-                        state.curDragFloatingPanelId = rootRef.current.idNext
+                        state.curDragFloatingPanelId = rootRef.current.state.idNext
                         newRoot = DockableData.addFloatingPanel(
                             newRoot,
                             dragPanelLayout.rect,
                             [state.curHoverTabContentId])
-                        props.setState(newRoot)
+                        rootRef.current.setState(newRoot)
                     }
                 }
 
@@ -518,7 +516,7 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
 
                 const newRect = state.curDragOrigRect!.displace(xDelta, yDelta)
 
-                props.setState(DockableData.moveFloatingPanel(rootRef.current, state.curDragFloatingPanelId!, newRect))
+                rootRef.current.setState(DockableData.moveFloatingPanel(rootRef.current.state, state.curDragFloatingPanelId!, newRect))
 
                 refresh()
             }
@@ -547,7 +545,7 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
 
                 if (state.curHoverTabContentId !== null)
                 {
-                    props.setState(DockableData.modifyPanelFromRoot(rootRef.current, state.curHoverPanelId!, (panel) =>
+                    rootRef.current.setState(DockableData.modifyPanelFromRoot(rootRef.current.state, state.curHoverPanelId!, (panel) =>
                     {
                         return {
                             ...panel,
@@ -572,7 +570,7 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
             {
                 if (state.curAnchor)
                 {
-                    let newRoot = DockableData.removeFloatingPanel(rootRef.current, state.curDragFloatingPanelId!)
+                    let newRoot = DockableData.removeFloatingPanel(rootRef.current.state, state.curDragFloatingPanelId!)
                     
                     newRoot = DockableData.addPanel(
                         newRoot,
@@ -580,7 +578,7 @@ function useMouseHandling(props: DockableProps, layout: DockableData.Layout | nu
                         state.curAnchor!.mode,
                         state.curDragContentIds!)
 
-                    props.setState(newRoot)
+                    rootRef.current.setState(newRoot)
                 }
             }
 

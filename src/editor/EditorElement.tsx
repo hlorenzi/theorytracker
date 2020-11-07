@@ -4,6 +4,7 @@ import * as Project from "../project"
 import * as Playback from "../playback"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
+import * as Dockable from "../dockable"
 import { useRefState, RefState } from "../util/refState"
 import Rect from "../util/rect"
 import { EditorUpdateData } from "./state"
@@ -44,6 +45,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     const playback = Playback.usePlayback()
     const prefs = Prefs.usePrefs()
     const popup = Popup.usePopup()
+    const dockable = Dockable.useDockable()
 
     const makeUpdateData: () => EditorUpdateData = () =>
     {
@@ -53,6 +55,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             playback: playback.ref.current,
             prefs: prefs.ref.current,
             popup,
+            dockable,
             ctx: null!,
         }
     }
@@ -120,6 +123,14 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
     React.useEffect(() =>
     {
+        const updateData = makeUpdateData()
+        Editor.refreshTracks(updateData)
+        render()
+
+    }, [project.ref.current.tracks])
+
+    React.useEffect(() =>
+    {
         if (!refCanvas.current)
             return
 
@@ -176,6 +187,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         
 		const onMouseDown = (ev: MouseEvent) =>
 		{
+            if (document.activeElement instanceof HTMLElement)
+                document.activeElement.blur()
+
             ev.preventDefault()
             const updateData = makeUpdateData()
             const pos = transformMousePos(refCanvas.current!, ev)
@@ -279,7 +293,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     const onAddTrack = () =>
     {
         let proj = project.ref.current
-        proj = Project.Root.upsertTrack(proj, Project.makeTrackNotes())
+        proj = Project.upsertTrack(proj, Project.makeTrackNotes())
         project.ref.current = proj
         project.commit()
         

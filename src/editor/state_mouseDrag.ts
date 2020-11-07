@@ -158,7 +158,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                     changes.parentId = newTrack.projectTrackId
             }
             
-            newProject = Project.Root.upsertElement(
+            newProject = Project.upsertElement(
                 newProject,
                 Project.elemModify(elem, changes))
         }

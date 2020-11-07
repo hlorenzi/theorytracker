@@ -3,7 +3,7 @@ import * as Dockable from "../dockable"
 import * as Project from "../project"
 
 
-export default function WindowTest()
+export function Test()
 {
     const count = Dockable.useWindowRef(0)
 

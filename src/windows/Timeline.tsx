@@ -31,7 +31,7 @@ const StyledModeStackButton = styled.button`
 `
 
 
-export default function EditorWindow()
+export function Timeline()
 {
     const editorState = useRefState(() => Editor.init())
 
@@ -43,6 +43,7 @@ export default function EditorWindow()
             playback: null!,
             prefs: null!,
             popup: null!,
+            dockable: null!,
             ctx: null!,
         }
     }

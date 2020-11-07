@@ -1,6 +1,10 @@
 import * as Editor from "./index"
+import * as Project from "../project"
+import * as Windows from "../windows"
 import Rational from "../util/rational"
+import Rect from "../util/rect"
 import { EditorAction } from "./state"
+import { ElementType } from "../project"
 
 
 export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
@@ -52,6 +56,8 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     }
     else if (data.state.hover)
     {
+        const elem = data.project.elems.get(data.state.hover.id)
+
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
 
@@ -65,6 +71,17 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             {
                 if (t == data.state.mouse.point.trackIndex)
                     data.state.tracks[t].doubleClick(data, data.state.hover.id)
+            }
+
+            if (elem && elem.type == Project.ElementType.Track)
+            {
+                data.dockable.ref.current.createFloating(
+                    Windows.TrackSettings,
+                    { trackId: elem.id },
+                    new Rect(
+                        data.state.renderRect.x + data.state.mouse.point.pos.x,
+                        data.state.renderRect.y + data.state.mouse.point.pos.y,
+                        1, 1))
             }
         }
     }

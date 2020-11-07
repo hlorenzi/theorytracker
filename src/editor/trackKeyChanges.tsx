@@ -114,7 +114,7 @@ export class EditorTrackKeyChanges extends EditorTrack
                 Editor.defaultKey())
 
             const id = data.project.nextId
-            data.project = Project.Root.upsertElement(data.project, elem)
+            data.project = Project.upsertElement(data.project, elem)
             Editor.selectionAdd(data, id)
 		}
 	}

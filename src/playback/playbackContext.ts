@@ -160,6 +160,9 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
         window.addEventListener("keydown", (ev: KeyboardEvent) =>
         {
+            if (document.activeElement && document.activeElement.tagName == "INPUT")
+                return
+
             if (ev.key.toLowerCase() == " ")
             {
                 ev.preventDefault()

@@ -187,7 +187,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
                 new Range(this.pencil.time1, this.pencil.time2).sorted())
 
             const id = data.project.nextId
-            data.project = Project.Root.upsertElement(data.project, elem)
+            data.project = Project.upsertElement(data.project, elem)
             Editor.selectionAdd(data, id)
 		}
 	}

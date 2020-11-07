@@ -115,7 +115,7 @@ export class EditorTrackNotes extends EditorTrack
         range: Range)
         : Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
     {
-        const keyChangeTrackId = Project.Root.keyChangeTrackId(data.project)
+        const keyChangeTrackId = Project.keyChangeTrackId(data.project)
         const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
         if (!keyChangeTrackTimedElems)
             return
@@ -274,7 +274,7 @@ export class EditorTrackNotes extends EditorTrack
                 this.pencil.midiPitch)
 
             const id = data.project.nextId
-            data.project = Project.Root.upsertElement(data.project, elem)
+            data.project = Project.upsertElement(data.project, elem)
             Editor.selectionAdd(data, id)
 		}
 	}

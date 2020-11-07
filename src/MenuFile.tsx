@@ -45,7 +45,7 @@ export default function PlaybackToolbar()
 
     const onNew = () =>
     {
-        project.ref.current = Project.Root.getDefault()
+        project.ref.current = Project.getDefault()
         project.commit()
         window.dispatchEvent(new Event("refreshProjectTracks"))
         window.dispatchEvent(new Event("timelineRewind"))

@@ -146,7 +146,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
 {
     const visibleRange = Editor.visibleTimeRange(data)
     
-    const meterChangeTrackId = Project.Root.meterChangeTrackId(data.project)
+    const meterChangeTrackId = Project.meterChangeTrackId(data.project)
     const meterChangeList = data.project.lists.get(meterChangeTrackId)!
 
     for (let [meterCh1Raw, meterCh2Raw] of meterChangeList.iterActiveAtRangePairwise(visibleRange))
@@ -256,7 +256,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
         }
     }
     
-    const keyChangeTrackId = Project.Root.keyChangeTrackId(data.project)
+    const keyChangeTrackId = Project.keyChangeTrackId(data.project)
     const keyChangeList = data.project.lists.get(keyChangeTrackId)!
 
     for (const keyCh of keyChangeList.iterAtRange(visibleRange))

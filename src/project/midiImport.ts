@@ -20,22 +20,22 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         return null
     }
     
-    let project = new Project.Root()
+    let project = Project.makeEmpty()
     
     const tempoEv = findFirstEvent("setTempo")
     const msPerQuarterNote = (tempoEv ? tempoEv.msPerQuarterNote : 500000)
     project.baseBpm = Math.round(60 * 1000 * 1000 / msPerQuarterNote)
     
     const track1Id = project.nextId
-    project = Project.Root.upsertTrack(project, Project.makeTrackKeyChanges())
+    project = Project.upsertTrack(project, Project.makeTrackKeyChanges())
     
     const track2Id = project.nextId
-    project = Project.Root.upsertTrack(project, Project.makeTrackMeterChanges())
+    project = Project.upsertTrack(project, Project.makeTrackMeterChanges())
 
-    project = Project.Root.upsertElement(project,
+    project = Project.upsertElement(project,
         Project.makeKeyChange(track1Id, new Rational(0), Theory.Key.parse("C Major")))
 
-    project = Project.Root.upsertElement(project,
+    project = Project.upsertElement(project,
         Project.makeMeterChange(track2Id, new Rational(0), new Theory.Meter(4, 4)))
 
     /*for (const track of midi.tracks)
@@ -76,7 +76,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     for (const track of midi.tracks)
     {
         const trackId = project.nextId
-        project = Project.Root.upsertTrack(project, Project.makeTrackNotes())
+        project = Project.upsertTrack(project, Project.makeTrackNotes())
 
         const notes = []
 
@@ -114,11 +114,11 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         for (const split of splitNotes)
         {
             const blockId = project.nextId
-            project = Project.Root.upsertElement(project,
+            project = Project.upsertElement(project,
                 Project.makeNoteBlock(trackId, split.range))
 
             for (const note of split.notes)
-                project = Project.Root.upsertElement(project,
+                project = Project.upsertElement(project,
                     Project.makeNote(blockId, note.range.subtract(split.range.start), note.midiPitch))
         }
     }

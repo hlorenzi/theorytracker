@@ -4,6 +4,7 @@ import * as Playback from "../playback"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
+import * as Dockable from "../dockable"
 import Rational from "../util/rational"
 import { RefState } from "../util/refState"
 import Range from "../util/range"
@@ -144,6 +145,7 @@ export interface EditorUpdateData
     playback: Playback.PlaybackContextProps,
     ctx: CanvasRenderingContext2D
     popup: RefState<Popup.PopupContextProps>
+    dockable: RefState<Dockable.DockableContextProps>
 }
 
 
@@ -259,7 +261,7 @@ export function refreshTracks(data: EditorUpdateData)
                     tracks.push(new EditorTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
             }
             else
-                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 80))
+                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 50))
         }
         else if (track.trackType == Project.TrackType.KeyChanges)
         {
@@ -514,7 +516,7 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
 
 export function keyAt(data: EditorUpdateData, trackId: Project.ID, time: Rational): Theory.Key
 {
-    const keyChangeTrackId = Project.Root.keyChangeTrackId(data.project)
+    const keyChangeTrackId = Project.keyChangeTrackId(data.project)
     const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
     if (!keyChangeTrackTimedElems)
         return defaultKey()
@@ -533,7 +535,7 @@ export function keyAt(data: EditorUpdateData, trackId: Project.ID, time: Rationa
 
 export function meterAt(data: EditorUpdateData, trackId: Project.ID, time: Rational): Theory.Meter
 {
-    const meterChangeTrackId = Project.Root.meterChangeTrackId(data.project)
+    const meterChangeTrackId = Project.meterChangeTrackId(data.project)
     const meterChangeTrackTimedElems = data.project.lists.get(meterChangeTrackId)
     if (!meterChangeTrackTimedElems)
         return defaultMeter()

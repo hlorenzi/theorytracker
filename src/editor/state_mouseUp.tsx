@@ -52,7 +52,7 @@ function handleTrackDragRelease(data: Editor.EditorUpdateData)
     }
 
     for (const track of selectedProjectTracks)
-        project = Project.Root.upsertTrack(project, track, true)
+        project = Project.upsertTrack(project, track, true)
 
     let beforeProjectTrackIndex = project.tracks.length
     if (data.state.drag.trackInsertionBefore < data.state.tracks.length)
@@ -62,7 +62,7 @@ function handleTrackDragRelease(data: Editor.EditorUpdateData)
     }
 
     for (const track of selectedProjectTracks.reverse())
-        project = Project.Root.upsertTrack(project, track, false, beforeProjectTrackIndex)
+        project = Project.upsertTrack(project, track, false, beforeProjectTrackIndex)
 
     data.project = project
 }
