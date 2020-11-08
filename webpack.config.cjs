@@ -19,7 +19,13 @@ module.exports =
 	
     resolve: {
 		extensions: [".ts", ".tsx", ".js", ".json"],
-		fallback: { "assert": false },
+		fallback: {
+			"assert": false,
+			/*"zlib": require.resolve("browserify-zlib"),
+			"util": require.resolve("util/"),
+			"buffer": require.resolve("buffer/"),
+			"stream": require.resolve("stream-browserify"),*/
+		},
 	},
 	
 	module:

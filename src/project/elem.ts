@@ -37,7 +37,27 @@ export interface Track extends Element
 {
     trackType: TrackType
     name: string
+    instruments: Instrument[]
 }
+
+
+export interface InstrumentBasic
+{
+    instrumentType: "basic"
+}
+
+
+export interface InstrumentSflib
+{
+    instrumentType: "sflib"
+    collectionId: string
+    instrumentId: string
+}
+
+
+export type Instrument =
+    InstrumentBasic |
+    InstrumentSflib
 
 
 export interface KeyChange extends Element
@@ -79,6 +99,11 @@ export function makeTrackNotes(): Track
         trackType: TrackType.Notes,
         range: Range.dummy(),
         name: "New Track",
+        instruments: [{
+            instrumentType: "sflib",
+            collectionId: "gm",
+            instrumentId: "piano_1",
+        }],
     }
 }
 
@@ -92,6 +117,7 @@ export function makeTrackKeyChanges(): Track
         trackType: TrackType.KeyChanges,
         range: Range.dummy(),
         name: "Key Changes",
+        instruments: [],
     }
 }
 
@@ -105,6 +131,7 @@ export function makeTrackMeterChanges(): Track
         trackType: TrackType.MeterChanges,
         range: Range.dummy(),
         name: "Meter Changes",
+        instruments: [],
     }
 }
 

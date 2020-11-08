@@ -10,6 +10,8 @@ import Range from "../util/range"
 export interface PlaybackContextProps
 {
     synth: Playback.SynthManager
+    synthLoaded: boolean
+
     playing: boolean
     timestamp: number
     startTime: Rational
@@ -43,6 +45,8 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
     {
         return {
             synth: new Playback.SynthManager(),
+            synthLoaded: false,
+
             playing: false,
             timestamp: 0,
             startTime: new Rational(0),
@@ -83,7 +87,9 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
         function processFrame(timestamp: number)
         {
             const prevTimestamp = playback.ref.current.timestamp
-            const deltaTimeMs = (prevTimestamp < 0 ? 0 : timestamp - prevTimestamp)
+            const deltaTimeMs =
+                !playback.ref.current.synthLoaded ? 0 :
+                (prevTimestamp < 0 ? 0 : timestamp - prevTimestamp)
 
             playback.ref.current.timestamp = timestamp
             playback.ref.current.playTimeFloatPrev = playback.ref.current.playTimeFloat
@@ -131,6 +137,8 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             }
 
             playback.ref.current.playing = playing
+            playback.ref.current.synthLoaded = false
+
             playback.ref.current.timestamp = 0
             playback.ref.current.playTime = playback.ref.current.playTimePrev =
                 playback.ref.current.startTime
@@ -140,6 +148,9 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
             if (playing)
             {
+                playback.ref.current.synth.prepare(projectRef.ref.current)
+                    .then(() => playback.ref.current.synthLoaded = true)
+
                 playback.ref.current.requestAnimationFrameId =
                     requestAnimationFrame(processFrame)
             }

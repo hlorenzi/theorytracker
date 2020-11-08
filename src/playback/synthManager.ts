@@ -1,13 +1,6 @@
 import * as Playback from "./index"
-
-
-export interface NoteEvent
-{
-	trackId: number
-    frequency: number
-    volume: number
-	playback: Playback.NotePlayback
-}
+import * as Project from "../project"
+import { Instrument } from "../project"
 
 
 export class SynthManager
@@ -15,36 +8,56 @@ export class SynthManager
     audioCtx: AudioContext
 	audioCtxOutput: GainNode
 
-	instrument: Playback.Instrument
-
-	noteEvents: NoteEvent[]
+	trackInstruments: Map<Project.ID, Playback.Instrument[]>
 
 
 	constructor()
 	{
-		this.audioCtx = new AudioContext()
-		this.noteEvents = []
+		this.trackInstruments = new Map<Project.ID, Playback.Instrument[]>()
 		
+		this.audioCtx = new AudioContext()
 		this.audioCtxOutput = this.audioCtx.createGain()
 		this.audioCtxOutput.connect(this.audioCtx.destination)
 		this.audioCtxOutput.gain.value = 0.5
-		
-		this.instrument = new Playback.Instrument(this,
-		[
-			[  55.0, "audio/piano/a1.mp3"],
-			[ 110.0, "audio/piano/a2.mp3"],
-			[ 220.0, "audio/piano/a3.mp3"],
-			[ 440.0, "audio/piano/a4.mp3"],
-			[ 880.0, "audio/piano/a5.mp3"],
-			[1760.0, "audio/piano/a6.mp3"],
-			//[3520.0, "audio/piano/a7.mp3"]
-		])
+	}
+
+
+	async prepare(project: Project.Root)
+	{
+		for (const [trackId, instruments] of this.trackInstruments)
+			await Promise.all(instruments.map(instr => instr.destroy()))
+
+		this.trackInstruments.clear()
+
+		for (const track of project.tracks)
+		{
+			if (track.trackType != Project.TrackType.Notes)
+				continue
+
+			const newInstruments: Playback.Instrument[] = []
+			for (const instrData of track.instruments)
+			{
+				switch (instrData.instrumentType)
+				{
+					case "basic":
+						newInstruments.push(new Playback.InstrumentBasic(this))
+						break
+					case "sflib":
+						newInstruments.push(new Playback.InstrumentSflib(
+							this, instrData.collectionId, instrData.instrumentId))
+						break
+				}
+			}
+
+			await Promise.all(newInstruments.map(instr => instr.prepare()))
+			this.trackInstruments.set(track.id, newInstruments)
+		}
 	}
 	
 	
 	isFinished()
 	{
-		return this.noteEvents.length == 0
+		return false
 	}
 
 
@@ -56,57 +69,38 @@ export class SynthManager
 
 	stopAll()
 	{
-		
-		for (let i = 0; i < this.noteEvents.length; i++)
-			this.noteEvents[i].playback.stop()
-		
-		this.noteEvents = []
+		for (const [trackId, instruments] of this.trackInstruments)
+			for (const instrument of instruments)
+				instrument.stopAll()
 	}
 
 
 	process(deltaTimeMs: number)
 	{
-		// Update audio output.
-		for (let i = this.noteEvents.length - 1; i >= 0; i--)
-		{
-			if (this.noteEvents[i].playback.process(deltaTimeMs))
-				this.noteEvents.splice(i, 1)
-		}
+		for (const [trackId, instruments] of this.trackInstruments)
+			for (const instrument of instruments)
+				instrument.process(deltaTimeMs)
 	}
 
 
-	playNote(trackId: number, frequency: number, volume: number)
+	playNote(trackId: Project.ID, noteId: Project.ID, frequency: number, volume: number)
 	{
-		if (!isFinite(frequency))
+		const instruments = this.trackInstruments.get(trackId)
+		if (!instruments)
 			return
-		
-		for (const noteEvent of this.noteEvents)
-		{
-			if (noteEvent.trackId == trackId &&
-				noteEvent.frequency == frequency)
-				noteEvent.playback.stop()
-		}
-		
-		this.noteEvents.push(
-		{
-			trackId,
-			frequency,
-			volume,
-			playback: this.instrument.playNote(frequency, volume),
-		})
+
+		for (const instrument of instruments)
+			instrument.playNote(noteId, frequency, volume)
 	}
 
 
-	releaseNote(trackId: number, frequency: number)
+	releaseNote(trackId: Project.ID, noteId: Project.ID)
 	{
-		if (!isFinite(frequency))
+		const instruments = this.trackInstruments.get(trackId)
+		if (!instruments)
 			return
 
-		for (const noteEvent of this.noteEvents)
-		{
-			if (noteEvent.trackId == trackId &&
-				noteEvent.frequency == frequency)
-				noteEvent.playback.release()
-		}
+		for (const instrument of instruments)
+			instrument.releaseNote(noteId)
 	}
 }

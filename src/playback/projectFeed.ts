@@ -18,13 +18,14 @@ export function feedNotes(
         {
             synth.releaseNote(
                 trackId,
-                MathUtils.midiToHertz(note.midiPitch))
+                note.id)
         }
         else if (range.overlapsPoint(note.range.start) ||
             (isStart && range.overlapsPoint(startTime)))
         {
             synth.playNote(
                 trackId,
+                note.id,
                 MathUtils.midiToHertz(note.midiPitch),
                 1)
         }
