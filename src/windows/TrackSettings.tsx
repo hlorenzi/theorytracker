@@ -58,17 +58,11 @@ export function TrackSettings()
 
     const onAddInstrument = () =>
     {
-        const newInstr: Project.InstrumentSflib = {
-            instrumentType: "sflib",
-            collectionId: "gm",
-            instrumentId: "piano_1",
-        }
-
         const newTrack: Project.Track = {
             ...track,
             instruments: [
                 ...track.instruments,
-                newInstr,
+                Project.makeInstrument(),
             ],
         }
 

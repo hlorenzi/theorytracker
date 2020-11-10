@@ -130,6 +130,7 @@ export class MidiFileReader
 	{
 		const isNoteOff = (event.code & 0xf0) == 0x80
 		const isNoteOn = (event.code & 0xf0) == 0x90
+		const isProgramChange = (event.code & 0xf0) == 0xc0
 		
 		if (isNoteOff || isNoteOn)
 		{
@@ -145,6 +146,13 @@ export class MidiFileReader
 			event.description =
 				(isNoteOff ? "[8*] Note Off: " : "[9*] Note On: ") +
 				noteName + noteOctave + ", Velocity: " + event.velocity
+		}
+		else if (isProgramChange)
+		{
+			event.kind = "programChange"
+			event.channel = (event.code & 0x0f)
+			event.program = event.rawData[0]
+			event.description = "Program Change: " + event.program
 		}
 	}
 	

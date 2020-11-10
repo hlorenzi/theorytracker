@@ -99,11 +99,36 @@ export function makeTrackNotes(): Track
         trackType: TrackType.Notes,
         range: Range.dummy(),
         name: "New Track",
-        instruments: [{
-            instrumentType: "sflib",
-            collectionId: "gm",
-            instrumentId: "piano_1",
-        }],
+        instruments: [makeInstrument()],
+    }
+}
+
+
+export function makeInstrument(): Instrument
+{
+    return makeInstrumentOfKind("sflib")
+}
+
+
+export function makeInstrumentOfKind(kind: string): Instrument
+{
+    switch (kind)
+    {
+        case "basic":
+        default:
+        {
+            return {
+                instrumentType: "basic",
+            }
+        }
+        case "sflib":
+        {
+            return {
+                instrumentType: "sflib",
+                collectionId: "gm",
+                instrumentId: "piano_1",
+            }
+        }
     }
 }
 

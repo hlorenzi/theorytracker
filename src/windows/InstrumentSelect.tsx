@@ -47,35 +47,7 @@ export function InstrumentSelect()
 
     const onChangeType = (newType: string) =>
     {
-        let newInstr = { ...props.getInstrument() }
-
-        switch (newType)
-        {
-            case "basic":
-            {
-                let instr: Project.InstrumentBasic =
-                {
-                    instrumentType: "basic",
-                }
-
-                newInstr = instr
-                break
-            }
-            case "sflib":
-            {
-                let instr: Project.InstrumentSflib =
-                {
-                    instrumentType: "sflib",
-                    collectionId: "gm",
-                    instrumentId: "piano_1",
-                }
-
-                newInstr = instr
-                break
-            }
-        }
-
-        props.setInstrument(newInstr)
+        props.setInstrument(Project.makeInstrumentOfKind(newType))
     }
 
 
