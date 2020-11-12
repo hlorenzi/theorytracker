@@ -271,7 +271,8 @@ export class EditorTrackNotes extends EditorTrack
             const elem = Project.makeNote(
                 this.noteBlockId,
                 new Range(this.pencil.time1, this.pencil.time2).sorted(),
-                this.pencil.midiPitch)
+                this.pencil.midiPitch,
+                0.5)
 
             const id = data.project.nextId
             data.project = Project.upsertElement(data.project, elem)

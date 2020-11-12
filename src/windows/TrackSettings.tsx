@@ -157,7 +157,7 @@ export function TrackSettings()
                     <StyledButton
                         onClick={ () => onEditInstrument(i) }
                     >
-                        { instrumentPreviewName(instr) }
+                        { Project.instrumentName(instr) }
                     </StyledButton>
                 </div>
             )}
@@ -171,15 +171,4 @@ export function TrackSettings()
             </div>
         </div>
     </div>
-}
-
-
-function instrumentPreviewName(instrument: Project.Instrument): string
-{
-    switch (instrument.instrumentType)
-    {
-        case "basic": return "Basic"
-        case "sflib": return instrument.collectionId + "/" + instrument.instrumentId
-        default: return "???"
-    }
 }

@@ -27,7 +27,7 @@ export function feedNotes(
                 trackId,
                 note.id,
                 MathUtils.midiToHertz(note.midiPitch),
-                1)
+                note.velocity)
         }
     }
 }

@@ -8,6 +8,7 @@ import * as Playback from "./playback"
 export default function MenuFile()
 {
     const project = Project.useProject()
+    const playback = Playback.usePlayback()
 
 
     React.useEffect(() =>
@@ -27,8 +28,8 @@ export default function MenuFile()
     
                 project.ref.current = Project.midiImport(bytes)
                 project.commit()
-                window.dispatchEvent(new Event("refreshProjectTracks"))
-                window.dispatchEvent(new Event("timelineRewind"))
+                playback.ref.current.stopPlaying()
+                window.dispatchEvent(new Event("timelineReset"))
             }
         }
     
@@ -47,8 +48,8 @@ export default function MenuFile()
     {
         project.ref.current = Project.getDefault()
         project.commit()
-        window.dispatchEvent(new Event("refreshProjectTracks"))
-        window.dispatchEvent(new Event("timelineRewind"))
+        playback.ref.current.stopPlaying()
+        window.dispatchEvent(new Event("timelineReset"))
     }
 
 

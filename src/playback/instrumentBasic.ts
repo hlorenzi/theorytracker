@@ -181,7 +181,7 @@ export class InstrumentBasic extends Playback.Instrument
 		
 		sourceNode.connect(envelopeNode)
 		envelopeNode.connect(volumeNode)
-        volumeNode.connect(this.synth.audioCtxOutput)
+        volumeNode.connect(this.synth.nodeGain)
         
 		sourceNode.start(0)
 		

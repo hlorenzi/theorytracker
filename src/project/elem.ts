@@ -1,5 +1,6 @@
 import Range from "../util/range"
 import * as Theory from "../theory"
+import * as Playback from "../playback"
 import Rational from "../util/rational"
 
 
@@ -81,6 +82,7 @@ export interface NoteBlock extends Element
 export interface Note extends Element
 {
     midiPitch: number
+    velocity: number
 }
 
 
@@ -129,6 +131,28 @@ export function makeInstrumentOfKind(kind: string): Instrument
                 instrumentId: "piano_1",
             }
         }
+    }
+}
+
+
+export function instrumentName(instrument: Instrument): string
+{
+    switch (instrument.instrumentType)
+    {
+        case "basic": return "Basic"
+        case "sflib":
+        {
+            const sflibMeta = Playback.getSflibMeta()
+            if (!sflibMeta)
+                return instrument.collectionId + "/" + instrument.instrumentId
+
+            const coll = sflibMeta.collections.find(c => c.id == instrument.collectionId)!
+            const instr = coll.instruments.find(i => i.id == instrument.instrumentId)!
+
+            return coll.name + "/" + instr.name
+        }
+
+        default: return "???"
     }
 }
 
@@ -196,7 +220,12 @@ export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
 }
 
 
-export function makeNote(parentId: ID, range: Range, midiPitch: number): Note
+export function makeNote(
+    parentId: ID,
+    range: Range,
+    midiPitch: number,
+    velocity: number)
+    : Note
 {
     return {
         type: ElementType.Note,
@@ -204,5 +233,6 @@ export function makeNote(parentId: ID, range: Range, midiPitch: number): Note
         parentId,
         range,
         midiPitch,
+        velocity,
     }
 }

@@ -63,7 +63,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             const tonicLetters     = [ 0,  4,  1,  5,  2,  6, 3, 0, 4, 1, 5, 2,  6, 3, 0, 4, 1, 5, 2,  6]
             const tonicAccidentals = [-1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0,  0, 1, 1, 1, 1, 1, 1,  1]
             const index = ev.accidentals + 7 + (ev.scale == 0 ? 0 : 2)
-            
+
             if (index < 0 || index >= tonicPitches.length)
                 continue
             
@@ -126,6 +126,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             notes.push({
                 range: new Range(onTick, offTick),
                 midiPitch: noteOn.key,
+                velocity: noteOn.velocity / 127,
                 channel: noteOn.channel,
                 midiTrackIndex: tr,
             })
@@ -135,20 +136,30 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     const notesByTracks = midi.format == 0 ?
         splitNotesBy(notes, note => note.channel) :
         splitNotesBy(notes, note => note.midiTrackIndex)
+
     
     for (const notesForTrack of notesByTracks)
     {
         const midiTrack = midi.tracks[notesForTrack[0].midiTrackIndex]
 
+        const findFirstEventOnChannelOrTrack = (ev: string) =>
+        {
+            if (midi.format == 0)
+                return findFirstEventOnChannel(notesForTrack[0].channel, ev)
+            else
+                return findFirstEventOnTrack(midiTrack, ev)
+        }
+
         const trackId = project.nextId
         const track = Project.makeTrackNotes()
 
+        const trackName = findFirstEventOnChannelOrTrack("trackName")
+        if (trackName)
+            track.name = trackName.text
+        
         const isDrumkit = notesForTrack.some((n: any) => n.channel == 9)
 
-        const programChange = midi.format == 0 ?
-            findFirstEventOnChannel(notesForTrack[0].channel, "programChange") :
-            findFirstEventOnTrack(midiTrack, "programChange")
-
+        const programChange = findFirstEventOnChannelOrTrack("programChange")
         if (programChange)
         {
             const gmSflib = Playback.getSflibMeta()!.collections.find(c => c.id == "gm")!
@@ -186,7 +197,11 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 
             for (const note of split.notes)
                 project = Project.upsertElement(project,
-                    Project.makeNote(blockId, note.range.subtract(split.range.start), note.midiPitch))
+                    Project.makeNote(
+                        blockId,
+                        note.range.subtract(split.range.start),
+                        note.midiPitch,
+                        note.velocity))
         }
     }
 
@@ -208,6 +223,7 @@ interface MidiNote
 {
     range: Range
     midiPitch: number
+    velocity: number
     channel: number
     midiTrackIndex: number
 }

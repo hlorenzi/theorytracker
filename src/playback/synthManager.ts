@@ -6,7 +6,8 @@ import { Instrument } from "../project"
 export class SynthManager
 {
     audioCtx: AudioContext
-	audioCtxOutput: GainNode
+	nodeGain: GainNode
+	nodeCompressor: DynamicsCompressorNode
 
 	trackInstruments: Map<Project.ID, Playback.Instrument[]>
 
@@ -16,9 +17,18 @@ export class SynthManager
 		this.trackInstruments = new Map<Project.ID, Playback.Instrument[]>()
 		
 		this.audioCtx = new AudioContext()
-		this.audioCtxOutput = this.audioCtx.createGain()
-		this.audioCtxOutput.connect(this.audioCtx.destination)
-		this.audioCtxOutput.gain.value = 0.5
+		this.nodeGain = this.audioCtx.createGain()
+		this.nodeGain.gain.value = 0.1
+
+		this.nodeCompressor = this.audioCtx.createDynamicsCompressor()
+		this.nodeCompressor.threshold.value = -10
+		this.nodeCompressor.knee.value = 12
+		this.nodeCompressor.ratio.value = 12
+		this.nodeCompressor.attack.value = 0
+		this.nodeCompressor.release.value = 0.05
+		
+		this.nodeGain.connect(this.nodeCompressor)
+		this.nodeCompressor.connect(this.audioCtx.destination)
 	}
 
 

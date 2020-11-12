@@ -245,6 +245,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         {
             const updateData = makeUpdateData()
             Editor.rewind(updateData)
+            editorState.commit()
             render()
         }
 		
@@ -252,6 +253,17 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		{
             const updateData = makeUpdateData()
             Editor.refreshTracks(updateData)
+            editorState.commit()
+            render()
+        }
+		
+		const onReset = (ev: Event) =>
+		{
+            const updateData = makeUpdateData()
+            Editor.modeStackPop(updateData, 0)
+            Editor.refreshTracks(updateData)
+            Editor.rewind(updateData)
+            editorState.commit()
             render()
         }
         
@@ -266,6 +278,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
         window.addEventListener("timelineRewind", onRewind)
         window.addEventListener("refreshProjectTracks", onRefreshProjectTracks)
+        window.addEventListener("timelineReset", onReset)
 
         return () =>
         {
@@ -280,6 +293,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
             window.removeEventListener("timelineRewind", onRewind)
             window.removeEventListener("refreshProjectTracks", onRefreshProjectTracks)
+            window.removeEventListener("timelineReset", onReset)
         }
 
     }, [refCanvas.current])
@@ -325,30 +339,22 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 			}}/>
 
 			{ editorState.ref.current.tracks.map((track, i) =>
-				<div key={ i } style={{
-					position: "absolute",
-					left: 0,
-					top: track.renderRect.y - editorState.ref.current.trackScroll,
-					width: editorState.ref.current.trackHeaderW,
-                    height: track.renderRect.h,
-                    boxSizing: "border-box",
-					padding: "0.1em 0.5em",
-                    userSelect: "none",
-                    pointerEvents: "none",
-                    overflow: "hidden",
+			{
+                const top = track.renderRect.y - editorState.ref.current.trackScroll
+                const width = editorState.ref.current.trackHeaderW
+                const height = track.renderRect.h
+                const props = {
+                    top, width, height,
+                    project: project.ref.current,
+                    track,
+                    onTrackSettings: (ev: React.MouseEvent) => onTrackOptions(ev, i)
+                }
 
-                    display: "grid",
-                    gridTemplate: "1fr / 1fr auto",
-                    alignItems: "center",
-				}}>
-					<div>{ track.name }</div>
-                    <StyledTrackButton
-                        onClick={ ev => onTrackOptions(ev, i) }
-                    >
-                        ...{/*🔧*/}
-                    </StyledTrackButton>
-				</div>
-			)}
+                if (track instanceof Editor.EditorTrackNoteBlocks)
+                    return <TrackHeaderNoteBlocks key={ i } { ...props }/>
+                else
+                    return <TrackHeader key={ i } { ...props }/>
+            })}
 
             <div style={{
                 position: "absolute",
@@ -374,4 +380,90 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             </div>
 		</div>
 	)
+}
+
+
+interface TrackHeaderProps
+{
+    top: number
+    width: number
+    height: number
+
+    project: Project.Root
+    track: Editor.EditorTrack
+    onTrackSettings: (ev: React.MouseEvent) => void
+}
+
+
+function TrackHeader(props: TrackHeaderProps)
+{
+    return <div style={{
+        position: "absolute",
+        left: 0,
+        top: props.top,
+        width: props.width,
+        height: props.height,
+        
+        boxSizing: "border-box",
+        padding: "0.1em 0.5em",
+        userSelect: "none",
+        pointerEvents: "none",
+        overflow: "hidden",
+
+        display: "grid",
+        gridTemplate: "1fr / 1fr auto",
+        alignItems: "center",
+    }}>
+        <div>
+            { props.track.name }
+        </div>
+        <StyledTrackButton
+            onClick={ props.onTrackSettings }
+        >
+            ...{/*🔧*/}
+        </StyledTrackButton>
+    </div>
+}
+
+
+function TrackHeaderNoteBlocks(props: TrackHeaderProps)
+{
+    const projectTrack = props.project.elems.get(props.track.projectTrackId) as Project.Track
+    
+    const instrumentName = !projectTrack || projectTrack.type != Project.ElementType.Track || projectTrack.instruments.length == 0 ?
+        null :
+        Project.instrumentName(projectTrack.instruments[0])
+        
+    return <div style={{
+        position: "absolute",
+        left: 0,
+        top: props.top,
+        width: props.width,
+        height: props.height,
+        
+        boxSizing: "border-box",
+        padding: "0.1em 0.5em",
+        userSelect: "none",
+        pointerEvents: "none",
+        overflow: "hidden",
+
+        display: "grid",
+        gridTemplate: "1fr / 1fr auto",
+        alignItems: "center",
+    }}>
+        <div>
+            { props.track.name }
+            { !instrumentName ? null :
+                <span style={{ fontSize: "0.8em" }}>
+                    <br/>
+                    { instrumentName }
+                </span>
+            }
+        </div>
+        <StyledTrackButton
+            onClick={ props.onTrackSettings }
+        >
+            ...{/*🔧*/}
+        </StyledTrackButton>
+    </div>
 }

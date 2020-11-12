@@ -6,6 +6,7 @@ import { timeStamp } from "console"
 
 interface Note
 {
+    zone: Playback.SflibInstrumentZone
     released: boolean
     releasedTimerMs: number
     nodeSrc: AudioBufferSourceNode
@@ -101,21 +102,33 @@ export class InstrumentSflib extends Playback.Instrument
         sourceNode.loop = zone.loopMode == "loop"
         sourceNode.loopStart = zone.startLoop / audioBuffer.sampleRate
         sourceNode.loopEnd = zone.endLoop / audioBuffer.sampleRate
+
+        const time = this.synth.audioCtx.currentTime
+        const delayTime = time + (zone.delayVolEnv || 0)
+        const attackTime = delayTime + (zone.attackVolEnv || 0.005)
+        const holdTime = attackTime + (zone.holdVolEnv || 0)
+        const decayTime = holdTime + (zone.decayVolEnv || 0)
+        const sustainLevel = zone.sustainVolEnv || 1
         
         let envelopeNode = this.synth.audioCtx.createGain()
-        envelopeNode.gain.value = 1
+        envelopeNode.gain.value = 0
+        envelopeNode.gain.setValueAtTime(0, delayTime)
+        envelopeNode.gain.linearRampToValueAtTime(1, attackTime)
+        envelopeNode.gain.setValueAtTime(1, holdTime)
+        envelopeNode.gain.linearRampToValueAtTime(sustainLevel, decayTime)
         
         let volumeNode = this.synth.audioCtx.createGain()
-        volumeNode.gain.value = 0.1 * desiredVolume
+        volumeNode.gain.value = desiredVolume
         
         sourceNode.connect(envelopeNode)
         envelopeNode.connect(volumeNode)
-        volumeNode.connect(this.synth.audioCtxOutput)
+        volumeNode.connect(this.synth.nodeGain)
         
         sourceNode.start(0)
         
 		const note: Note =
 		{
+            zone,
             released: false,
             releasedTimerMs: 0,
             nodeSrc: sourceNode,
@@ -125,7 +138,7 @@ export class InstrumentSflib extends Playback.Instrument
 
         this.notes.set(noteId, note)
     }
-    
+
 
     releaseNote(noteId: Project.ID)
     {
@@ -135,12 +148,14 @@ export class InstrumentSflib extends Playback.Instrument
         
 		if (!note.released)
 		{
-			note.released = true
-            note.nodeEnvelope.gain.setValueAtTime(
-                1, this.synth.audioCtx.currentTime)
+            note.released = true
+            
+            const time = this.synth.audioCtx.currentTime
+            const releaseTime = time + (note.zone.releaseVolEnv || 0) * 0.25
 
-            note.nodeEnvelope.gain.linearRampToValueAtTime(
-                0, this.synth.audioCtx.currentTime + 0.1)
+            note.nodeEnvelope.gain.cancelScheduledValues(time)
+            note.nodeEnvelope.gain.setValueAtTime(note.nodeEnvelope.gain.value, time)
+            note.nodeEnvelope.gain.linearRampToValueAtTime(0, releaseTime)
         }
     }
 
@@ -152,7 +167,9 @@ export class InstrumentSflib extends Playback.Instrument
             return
         
         note.released = true
-        note.releasedTimerMs = 100
+
+        const releaseTime = note.zone.releaseVolEnv || 0
+        note.releasedTimerMs = releaseTime * 1000
 
         note.nodeSrc.stop()
 
@@ -175,7 +192,8 @@ export class InstrumentSflib extends Playback.Instrument
             {
                 note.releasedTimerMs += deltaTimeMs
             
-                if (note.releasedTimerMs > 200)
+                const releaseTime = note.zone.releaseVolEnv || 0
+                if (note.releasedTimerMs > releaseTime * 1000)
                     this.stopNote(noteId)
             }
         }

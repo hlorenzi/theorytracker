@@ -116,7 +116,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
                         true))
 
                 playback.ref.current.refreshTimeMs += deltaTimeMs
-                if (playback.ref.current.refreshTimeMs > 1000 / 30)
+                if (true)//playback.ref.current.refreshTimeMs >= 1000 / 30)
                 {
                     playback.ref.current.refreshTimeMs = 0
                     playback.commit()

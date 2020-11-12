@@ -56,7 +56,8 @@ export function getDefault(): Root
         project = upsertElement(project, Project.makeNote(
             noteBlockId,
             Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
-            60 + i))
+            60 + i,
+            0.5))
 
     console.log(project)
     return project
