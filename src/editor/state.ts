@@ -112,6 +112,9 @@ export interface EditorState
         rowDelta: number
         trackDelta: number
         trackInsertionBefore: number
+
+        elemId: Project.ID
+        notePreviewLast: number | null
     }
 
     hover: EditorHover | null
@@ -220,6 +223,9 @@ export function init(): EditorState
             rowDelta: 0,
             trackDelta: 0,
             trackInsertionBefore: -1,
+
+            elemId: -1,
+            notePreviewLast: null,
         },
         
         hover: null,

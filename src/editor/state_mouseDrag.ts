@@ -145,6 +145,16 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 const degree = key.octavedDegreeForMidi(note.midiPitch)
                 const newPitch = key.midiForDegree(Math.floor(degree + data.state.drag.rowDelta))
                 changes.midiPitch = newPitch
+
+                if (elem.id == data.state.drag.elemId)
+                {
+                    if ((data.state.drag.notePreviewLast && newPitch != data.state.drag.notePreviewLast) ||
+                        (!data.state.drag.notePreviewLast && newPitch != note.midiPitch))
+                    {
+                        data.state.drag.notePreviewLast = newPitch
+                        data.playback.playNotePreview(trackId, newPitch, note.velocity)
+                    }
+                }
             }
 
             if (mouseAction & Editor.EditorAction.DragTrack &&

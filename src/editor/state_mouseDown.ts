@@ -42,6 +42,18 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         rowDelta: 0,
         trackDelta: 0,
         trackInsertionBefore: -1,
+
+        elemId: -1,
+        notePreviewLast: null,
+    }
+
+    const withTrackUnderMouse = (fn: (track: Editor.EditorTrack) => void) =>
+    {
+        for (let t = 0; t < data.state.tracks.length; t++)
+        {
+            if (t == data.state.mouse.point.trackIndex)
+                fn(data.state.tracks[t])
+        }
     }
 
     if (rightButton || forcePan)
@@ -53,13 +65,17 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         Editor.selectionClear(data)
         data.state.mouse.action = Editor.EditorAction.Pencil
         data.state.cursor.visible = false
+        withTrackUnderMouse(tr => tr.pencilStart(data))
     }
     else if (data.state.hover)
     {
         const elem = data.project.elems.get(data.state.hover.id)
+        data.state.drag.elemId = data.state.hover.id
 
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
+
+        withTrackUnderMouse(tr => tr.click(data, data.state.hover!.id))
 
         const range = Editor.selectionRange(data)
         if (range)
@@ -67,11 +83,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         
         if (doubleClick)
         {
-            for (let t = 0; t < data.state.tracks.length; t++)
-            {
-                if (t == data.state.mouse.point.trackIndex)
-                    data.state.tracks[t].doubleClick(data, data.state.hover.id)
-            }
+            withTrackUnderMouse(tr => tr.doubleClick(data, data.state.hover!.id))
 
             if (elem && elem.type == Project.ElementType.Track)
             {

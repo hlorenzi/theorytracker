@@ -41,6 +41,12 @@ export class EditorTrack
     }
 
 
+    click(data: Editor.EditorUpdateData, elemId: Project.ID)
+    {
+        
+    }
+
+
     doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
         
@@ -54,6 +60,12 @@ export class EditorTrack
 
 
     pencilHover(data: Editor.EditorUpdateData)
+    {
+        
+    }
+
+
+    pencilStart(data: Editor.EditorUpdateData)
     {
         
     }

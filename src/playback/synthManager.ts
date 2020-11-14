@@ -34,8 +34,13 @@ export class SynthManager
 
 	async prepare(project: Project.Root)
 	{
+		// TODO: Diff instruments and only modify what's needed
+
 		for (const [trackId, instruments] of this.trackInstruments)
+		{
+			instruments.forEach(instr => instr.stopAll())
 			await Promise.all(instruments.map(instr => instr.destroy()))
+		}
 
 		this.trackInstruments.clear()
 

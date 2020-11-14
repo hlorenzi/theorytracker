@@ -83,16 +83,12 @@ export function getSflibMeta()
 }
 
 
-const sflibCache = new Map<string, SflibInstrument>()
+// FIXME: Apparently, some kind of `WeakValueMap` is what I actually wanted here.
+const sflibCache = new WeakMap<SflibInstrumentMeta, SflibInstrument>()
 
 
 export async function sflibGetInstrument(collectionId: string, instrumentId: string): Promise<SflibInstrument | null>
 {
-    const id = collectionId + "/" + instrumentId
-    const cached = sflibCache.get(id)
-    if (cached)
-        return cached
-
     if (!sflibMeta)
         return null
 
@@ -104,6 +100,10 @@ export async function sflibGetInstrument(collectionId: string, instrumentId: str
     if (!instrMeta)
         return null
 
+    const cached = sflibCache.get(instrMeta)
+    if (cached)
+        return cached
+    
     const instrFilename = instrMeta.filename
 
     const data = await fetch(sflibUrl + collectionId + "/" + instrFilename)
@@ -113,6 +113,6 @@ export async function sflibGetInstrument(collectionId: string, instrumentId: str
 
     console.log("loaded sflib instrument", instr)
 
-    sflibCache.set(id, instr)
+    sflibCache.set(instrMeta, instr)
     return instr
 }

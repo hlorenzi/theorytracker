@@ -5,6 +5,7 @@ import { RefState, useRefState } from "../util/refState"
 import Rect from "../util/rect"
 import Rational from "../util/rational"
 import Range from "../util/range"
+import MathUtils from "../util/mathUtils"
 
 
 export interface PlaybackContextProps
@@ -30,6 +31,8 @@ export interface PlaybackContextProps
     startPlaying: () => void
     stopPlaying: () => void
     togglePlaying: () => void
+
+    playNotePreview: (trackId: Project.ID, midiPitch: number, volume: number) => void
 }
 
 
@@ -86,8 +89,24 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             {
                 window.dispatchEvent(new CustomEvent("playbackTogglePlaying"))
             },
+
+            playNotePreview: (trackId: Project.ID, midiPitch: number, volume: number) =>
+            {
+                window.dispatchEvent(new CustomEvent("playbackPlayNotePreview", {
+                    detail: { trackId, midiPitch, volume },
+                }))
+            }
         }
     })
+
+    React.useEffect(() =>
+    {
+        playback.ref.current.synthLoaded = false
+
+        playback.ref.current.synth.prepare(projectRef.ref.current)
+            .then(() => playback.ref.current.synthLoaded = true)
+
+    }, [Playback.getSflibMeta(), playback.ref.current.playing, projectRef.ref.current.tracks])
 
     React.useEffect(() =>
     {
@@ -177,7 +196,6 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
             playback.ref.current.playing = playing
             playback.ref.current.firstPlayingFrame = true
-            playback.ref.current.synthLoaded = false
 
             playback.ref.current.playTime = playback.ref.current.playTimePrev =
                 playback.ref.current.startTime
@@ -187,9 +205,6 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
             if (playing)
             {
-                playback.ref.current.synth.prepare(projectRef.ref.current)
-                    .then(() => playback.ref.current.synthLoaded = true)
-
                 playback.ref.current.requestAnimationFrameId =
                     requestAnimationFrame(processAnimationFrame)
 
@@ -208,6 +223,23 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             const data = (ev as CustomEvent).detail
             playback.ref.current.startTime = data.startTime
             playback.commit()
+        })
+
+        window.addEventListener("playbackPlayNotePreview", (ev: Event) =>
+        {
+            const data = (ev as CustomEvent).detail
+
+            playback.ref.current.synth.stopAll()
+            playback.ref.current.synth.playNote(
+                data.trackId, 0,
+                MathUtils.midiToHertz(data.midiPitch),
+                data.volume)
+
+            setTimeout(() =>
+            {
+                playback.ref.current.synth.releaseNote(data.trackId, 0)
+
+            }, 100)
         })
 
         window.addEventListener("playbackStartPlaying", () => setPlaying(true))

@@ -228,6 +228,17 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
+    click(data: Editor.EditorUpdateData, elemId: Project.ID)
+    {
+        const elem = data.project.elems.get(elemId)
+        if (elem && elem.type == Project.ElementType.Note)
+        {
+            const note = elem as Project.Note
+            data.playback.playNotePreview(this.projectTrackId, note.midiPitch, note.velocity)
+        }
+    }
+
+
     pencilClear(data: Editor.EditorUpdateData)
     {
         this.pencil = null
@@ -246,6 +257,15 @@ export class EditorTrackNotes extends EditorTrack
             time1: time.subtract(this.parentStart(data)),
             time2: time.subtract(this.parentStart(data)).add(data.state.timeSnap.multiply(new Rational(4))),
             midiPitch,
+        }
+    }
+
+
+    pencilStart(data: Editor.EditorUpdateData)
+    {
+		if (this.pencil)
+		{
+            data.playback.playNotePreview(this.projectTrackId, this.pencil.midiPitch, 0.5)
         }
     }
 
