@@ -112,6 +112,9 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
     {
         function processFrame(deltaTimeMs: number, canRedrawScreen: boolean)
         {
+            if (deltaTimeMs > 70)
+                return
+
             playback.ref.current.playTimeFloatPrev = playback.ref.current.playTimeFloat
             playback.ref.current.playTimePrev = playback.ref.current.playTime
 
@@ -155,9 +158,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
             if (deltaTimeMs > 0 && deltaTimeMs < 250)
             {
-                processFrame(
-                    playback.ref.current.firstPlayingFrame ? 1 : deltaTimeMs,
-                    true)
+                processFrame(deltaTimeMs, true)
             }
 
             playback.ref.current.requestAnimationFrameId =
@@ -228,6 +229,9 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
         window.addEventListener("playbackPlayNotePreview", (ev: Event) =>
         {
             const data = (ev as CustomEvent).detail
+
+            if (playback.ref.current.playing)
+                return
 
             playback.ref.current.synth.stopAll()
             playback.ref.current.synth.playNote(

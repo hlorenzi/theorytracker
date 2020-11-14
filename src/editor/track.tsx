@@ -18,6 +18,14 @@ export class EditorTrack
     yScroll: number = 0
     pencil: any
 
+    noCursor: boolean
+
+
+    constructor()
+    {
+        this.noCursor = false
+    }
+
 
     *elemsAtRegion(
         data: Editor.EditorUpdateData,

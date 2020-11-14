@@ -14,6 +14,7 @@ import { EditorTrackKeyChanges } from "./trackKeyChanges"
 import { EditorTrackMeterChanges } from "./trackMeterChanges"
 import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
 import { EditorTrackNotes } from "./trackNotes"
+import { EditorTrackNoteVelocities } from "./trackNoteVelocities"
 
 
 export enum EditorAction
@@ -129,6 +130,7 @@ export interface EditorPoint
     row: number
     trackIndex: number
     trackPos: { x: number, y: number }
+    originTrackPos: { x: number, y: number }
 }
 
 
@@ -199,6 +201,7 @@ export function init(): EditorState
                 row: 0,
                 trackIndex: 0,
                 trackPos: { x: 0, y: 0 },
+                originTrackPos: { x: 0, y: 0 },
             },
             
             pointPrev:
@@ -208,6 +211,7 @@ export function init(): EditorState
                 row: 0,
                 trackIndex: 0,
                 trackPos: { x: 0, y: 0 },
+                originTrackPos: { x: 0, y: 0 },
             },
 
             wheelDate: new Date(),
@@ -264,7 +268,10 @@ export function refreshTracks(data: EditorUpdateData)
             {
                 const noteBlock = data.project.elems.get(data.state.modeNoteBlockId)
                 if (noteBlock && track.id == noteBlock.parentId)
+                {
                     tracks.push(new EditorTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
+                    tracks.push(new EditorTrackNoteVelocities(track.id, data.state.modeNoteBlockId, 80))
+                }
             }
             else
                 tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 50))
@@ -510,12 +517,20 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
 
     const row = data.state.tracks[trackIndex].rowAtY(data, trackPosY)
 
+    let originTrackPos = trackPos
+    if (data.state.drag.origin)
+    {
+        const originTrackPosY = pos.y - trackY(data, data.state.drag.origin.point.trackIndex)
+        originTrackPos = { x: pos.x, y: originTrackPosY }
+    }
+    
     return {
         pos,
         time,
         trackIndex,
         trackPos,
         row,
+        originTrackPos,
     }
 }
     

@@ -21,6 +21,8 @@ export interface Prefs
 
         meterChangeColor: string
         keyChangeColor: string
+        noteVelocityMarkerColor: string
+        noteVelocityMarkerInactiveColor: string
 
         keyPan: string
         keyPencil: string
@@ -62,6 +64,8 @@ export function getDefault(): Prefs
         
             meterChangeColor: "#0cf",
             keyChangeColor: "#f0c",
+            noteVelocityMarkerColor: "#0c4",
+            noteVelocityMarkerInactiveColor: "#063",
         
             keyPan: " ",
             keyPencil: "a",

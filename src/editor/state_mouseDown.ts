@@ -47,25 +47,34 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         notePreviewLast: null,
     }
 
-    const withTrackUnderMouse = (fn: (track: Editor.EditorTrack) => void) =>
+    function withTrackAtMouse<T>(fn: (track: Editor.EditorTrack) => T | null)
     {
         for (let t = 0; t < data.state.tracks.length; t++)
         {
             if (t == data.state.mouse.point.trackIndex)
-                fn(data.state.tracks[t])
+                return fn(data.state.tracks[t])
         }
+
+        return null
     }
+
+    const trackAtMouseNoCursor = !!withTrackAtMouse(tr => tr.noCursor)
 
     if (rightButton || forcePan)
     {
         data.state.mouse.action = Editor.EditorAction.Pan
     }
-    else if (data.state.keysDown.has(data.prefs.editor.keyPencil))
+    else if (data.state.mouse.point.pos.x > data.state.trackHeaderW &&
+        (data.state.keysDown.has(data.prefs.editor.keyPencil) || trackAtMouseNoCursor))
     {
-        Editor.selectionClear(data)
+        if (!trackAtMouseNoCursor)
+        {
+            Editor.selectionClear(data)
+            data.state.cursor.visible = false
+        }
+
         data.state.mouse.action = Editor.EditorAction.Pencil
-        data.state.cursor.visible = false
-        withTrackUnderMouse(tr => tr.pencilStart(data))
+        withTrackAtMouse(tr => tr.pencilStart(data))
     }
     else if (data.state.hover)
     {
@@ -75,7 +84,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
 
-        withTrackUnderMouse(tr => tr.click(data, data.state.hover!.id))
+        withTrackAtMouse(tr => tr.click(data, data.state.hover!.id))
 
         const range = Editor.selectionRange(data)
         if (range)
@@ -83,7 +92,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         
         if (doubleClick)
         {
-            withTrackUnderMouse(tr => tr.doubleClick(data, data.state.hover!.id))
+            withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
 
             if (elem && elem.type == Project.ElementType.Track)
             {

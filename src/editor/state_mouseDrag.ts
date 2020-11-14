@@ -69,7 +69,10 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     else if (data.state.mouse.action == Editor.EditorAction.Pencil)
     {
         for (let t = 0; t < data.state.tracks.length; t++)
-            data.state.tracks[t].pencilDrag(data)
+        {
+            if (t == data.state.drag.origin.point.trackIndex)
+                data.state.tracks[t].pencilDrag(data)
+        }
         
         return true
     }
