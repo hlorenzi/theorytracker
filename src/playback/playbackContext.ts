@@ -13,14 +13,18 @@ export interface PlaybackContextProps
     synthLoaded: boolean
 
     playing: boolean
-    timestamp: number
+    firstPlayingFrame: boolean
     startTime: Rational
     playTimeFloat: number
     playTimeFloatPrev: number
     playTime: Rational
     playTimePrev: Rational
     refreshTimeMs: number
+
     requestAnimationFrameId: number
+    requestAnimationFrameTimestamp: number
+    requestAnimationFrameDate: Date
+    setIntervalId: number
 
     setStartTime: (startTime: Rational) => void
     startPlaying: () => void
@@ -48,15 +52,18 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             synthLoaded: false,
 
             playing: false,
-            timestamp: 0,
+            firstPlayingFrame: false,
             startTime: new Rational(0),
             playTimeFloat: 0,
             playTimeFloatPrev: 0,
             playTime: new Rational(0),
             playTimePrev: new Rational(0),
             refreshTimeMs: 0,
-
+            
             requestAnimationFrameId: 0,
+            requestAnimationFrameTimestamp: 0,
+            requestAnimationFrameDate: new Date(),
+            setIntervalId: 0,
 
             setStartTime: (startTime: Rational) =>
             {
@@ -84,47 +91,75 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
     React.useEffect(() =>
     {
-        function processFrame(timestamp: number)
+        function processFrame(deltaTimeMs: number, canRedrawScreen: boolean)
         {
-            const prevTimestamp = playback.ref.current.timestamp
+            playback.ref.current.playTimeFloatPrev = playback.ref.current.playTimeFloat
+            playback.ref.current.playTimePrev = playback.ref.current.playTime
+
+            const measuresPerSecond = (projectRef.ref.current.baseBpm / 4 / 60)
+            
+            playback.ref.current.synth.process(deltaTimeMs)
+            playback.ref.current.playTimeFloat += deltaTimeMs / 1000 * measuresPerSecond
+            playback.ref.current.playTime = Rational.fromFloat(playback.ref.current.playTimeFloat, 10000)
+
+            Playback.feedNotes(
+                playback.ref.current.synth,
+                projectRef.ref.current,
+                playback.ref.current.firstPlayingFrame,
+                playback.ref.current.startTime,
+                new Range(
+                    playback.ref.current.playTimePrev,
+                    playback.ref.current.playTime,
+                    true,
+                    true))
+
+            playback.ref.current.refreshTimeMs += deltaTimeMs
+            if (canRedrawScreen)// && playback.ref.current.refreshTimeMs >= 1000 / 30)
+            {
+                playback.ref.current.refreshTimeMs = 0
+                playback.commit()
+            }
+
+            playback.ref.current.firstPlayingFrame = false
+        }
+
+        function processAnimationFrame(timestamp: number)
+        {
+            const prevTimestamp = playback.ref.current.requestAnimationFrameTimestamp
+            playback.ref.current.requestAnimationFrameTimestamp = timestamp
+
+            playback.ref.current.requestAnimationFrameDate = new Date()
+
             const deltaTimeMs =
                 !playback.ref.current.synthLoaded ? 0 :
                 (prevTimestamp < 0 ? 0 : timestamp - prevTimestamp)
 
-            playback.ref.current.timestamp = timestamp
-            playback.ref.current.playTimeFloatPrev = playback.ref.current.playTimeFloat
-            playback.ref.current.playTimePrev = playback.ref.current.playTime
-
-            
             if (deltaTimeMs > 0 && deltaTimeMs < 250)
             {
-                const measuresPerSecond = (projectRef.ref.current.baseBpm / 4 / 60)
-                
-                playback.ref.current.synth.process(deltaTimeMs)
-                playback.ref.current.playTimeFloat += deltaTimeMs / 1000 * measuresPerSecond
-                playback.ref.current.playTime = Rational.fromFloat(playback.ref.current.playTimeFloat, 10000)
-
-                Playback.feedNotes(
-                    playback.ref.current.synth,
-                    projectRef.ref.current,
-                    playback.ref.current.playTimePrev.compare(playback.ref.current.startTime) == 0,
-                    playback.ref.current.startTime,
-                    new Range(
-                        playback.ref.current.playTimePrev,
-                        playback.ref.current.playTime,
-                        true,
-                        true))
-
-                playback.ref.current.refreshTimeMs += deltaTimeMs
-                if (true)//playback.ref.current.refreshTimeMs >= 1000 / 30)
-                {
-                    playback.ref.current.refreshTimeMs = 0
-                    playback.commit()
-                }
+                processFrame(
+                    playback.ref.current.firstPlayingFrame ? 1 : deltaTimeMs,
+                    true)
             }
 
             playback.ref.current.requestAnimationFrameId =
-                requestAnimationFrame(processFrame)
+                requestAnimationFrame(processAnimationFrame)
+        }
+
+        function processInterval(deltaTimeMs: number)
+        {
+            // Take over from requestAnimationFrame and
+            // process playback on the setInterval callback only if
+            // requestAnimationFrame was blocked (by e.g. being in the background)
+
+            const msSinceLastRequestAnimationFrame = 
+                (new Date().getTime()) -
+                playback.ref.current.requestAnimationFrameDate.getTime()
+
+            if (msSinceLastRequestAnimationFrame > 250 &&
+                deltaTimeMs > 0 && deltaTimeMs < 250)
+            {
+                processFrame(deltaTimeMs, false)
+            }
         }
 
         function setPlaying(playing: boolean)
@@ -132,14 +167,18 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             if (playback.ref.current.requestAnimationFrameId != 0)
             {
                 playback.ref.current.synth.stopAll()
+
                 cancelAnimationFrame(playback.ref.current.requestAnimationFrameId)
                 playback.ref.current.requestAnimationFrameId = 0
+
+                clearInterval(playback.ref.current.setIntervalId)
+                playback.ref.current.setIntervalId = 0
             }
 
             playback.ref.current.playing = playing
+            playback.ref.current.firstPlayingFrame = true
             playback.ref.current.synthLoaded = false
 
-            playback.ref.current.timestamp = 0
             playback.ref.current.playTime = playback.ref.current.playTimePrev =
                 playback.ref.current.startTime
             playback.ref.current.playTimeFloat = playback.ref.current.playTimeFloatPrev =
@@ -152,7 +191,13 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
                     .then(() => playback.ref.current.synthLoaded = true)
 
                 playback.ref.current.requestAnimationFrameId =
-                    requestAnimationFrame(processFrame)
+                    requestAnimationFrame(processAnimationFrame)
+
+                playback.ref.current.requestAnimationFrameTimestamp = 0
+                playback.ref.current.requestAnimationFrameDate = new Date()
+                
+                playback.ref.current.setIntervalId =
+                    setInterval(() => processInterval(1000 / 60), 1000 / 60)
             }
 
             playback.commit()

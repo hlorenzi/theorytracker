@@ -483,7 +483,7 @@ export class EditorTrackNotes extends EditorTrack
 		if (selected || playing)
 		{
 			data.ctx.strokeStyle = external ? "#888" : "#fff"
-			data.ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h)
+			data.ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1)
 		}
 	}
 }
