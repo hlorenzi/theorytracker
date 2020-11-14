@@ -123,35 +123,37 @@ export class EditorTrackKeyChanges extends EditorTrack
     render(data: Editor.EditorUpdateData)
     {
         const visibleRange = Editor.visibleTimeRange(data)
+        const activeKeyAtStart = Editor.keyAt(data, this.projectTrackId, visibleRange.start)
 
-		for (const elem of this.iterAtRange(data, visibleRange))
-		{
-            const selected = data.state.selection.contains(elem.id)
-            if (selected)
-                continue
+        let suppressStickyLabel = false
+        for (let layer = 0; layer < 2; layer++)
+        {
+            for (const keyCh of this.iterAtRange(data, visibleRange))
+            {
+                const selected = data.state.selection.contains(keyCh.id)
+                if ((layer == 0) == selected)
+                    continue
             
-			const hovering = !!data.state.hover && data.state.hover.id == elem.id
-			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderMarker(
-                data, elem.range.start,
-                data.prefs.editor.keyChangeColor,
-                elem.key.str,
-                hovering, selected, playing)
+                const hovering = !!data.state.hover && data.state.hover.id == keyCh.id
+                this.renderMarker(
+                    data, keyCh.range.start,
+                    data.prefs.editor.keyChangeColor,
+                    keyCh.key.str,
+                    hovering, selected)
+
+                const x = Editor.xAtTime(data, keyCh.range.start)
+                if (x > data.state.trackHeaderW && x < data.state.trackHeaderW + 100)
+                    suppressStickyLabel = true
+            }
         }
 
-		for (const elem of this.iterAtRange(data, visibleRange))
-		{
-			const selected = data.state.selection.contains(elem.id)
-            if (!selected)
-                continue
-            
-			const hovering = !!data.state.hover && data.state.hover.id == elem.id
-			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderMarker(
-                data, elem.range.start,
+        if (!suppressStickyLabel)
+        {
+            this.renderMarkerLabel(
+                data,
+                data.state.trackHeaderW + 5,
                 data.prefs.editor.keyChangeColor,
-                elem.key.str,
-                hovering, selected, playing)
+                activeKeyAtStart.str)
         }
 
         if (this.pencil)
@@ -163,7 +165,7 @@ export class EditorTrackKeyChanges extends EditorTrack
                 data, this.pencil.time,
                 data.prefs.editor.keyChangeColor,
                 null,
-                false, false, false)
+                false, false)
             
             data.ctx.restore()
         }

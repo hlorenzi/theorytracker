@@ -123,35 +123,37 @@ export class EditorTrackMeterChanges extends EditorTrack
     render(data: Editor.EditorUpdateData)
     {
         const visibleRange = Editor.visibleTimeRange(data)
+        const activeMeterAtStart = Editor.meterAt(data, this.projectTrackId, visibleRange.start)
 
-		for (const elem of this.iterAtRange(data, visibleRange))
-		{
-            const selected = data.state.selection.contains(elem.id)
-            if (selected)
-                continue
+        let suppressStickyLabel = false
+        for (let layer = 0; layer < 2; layer++)
+        {
+            for (const meterCh of this.iterAtRange(data, visibleRange))
+            {
+                const selected = data.state.selection.contains(meterCh.id)
+                if ((layer == 0) == selected)
+                    continue
             
-			const hovering = !!data.state.hover && data.state.hover.id == elem.id
-			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderMarker(
-                data, elem.range.start,
-                data.prefs.editor.meterChangeColor,
-                elem.meter.str,
-                hovering, selected, playing)
+                const hovering = !!data.state.hover && data.state.hover.id == meterCh.id
+                this.renderMarker(
+                    data, meterCh.range.start,
+                    data.prefs.editor.meterChangeColor,
+                    meterCh.meter.str,
+                    hovering, selected)
+                
+                const x = Editor.xAtTime(data, meterCh.range.start)
+                if (x > data.state.trackHeaderW && x < data.state.trackHeaderW + 100)
+                    suppressStickyLabel = true
+            }
         }
 
-		for (const elem of this.iterAtRange(data, visibleRange))
-		{
-			const selected = data.state.selection.contains(elem.id)
-            if (!selected)
-                continue
-            
-			const hovering = !!data.state.hover && data.state.hover.id == elem.id
-			const playing = false//data.state.playback.playing && note.range.overlapsPoint(state.appState.playback.time)
-			this.renderMarker(
-                data, elem.range.start,
+        if (!suppressStickyLabel)
+        {
+            this.renderMarkerLabel(
+                data,
+                data.state.trackHeaderW + 5,
                 data.prefs.editor.meterChangeColor,
-                elem.meter.str,
-                hovering, selected, playing)
+                activeMeterAtStart.str)
         }
 
         if (this.pencil)
@@ -163,7 +165,7 @@ export class EditorTrackMeterChanges extends EditorTrack
                 data, this.pencil.time,
                 data.prefs.editor.meterChangeColor,
                 null,
-                false, false, false)
+                false, false)
             
             data.ctx.restore()
         }

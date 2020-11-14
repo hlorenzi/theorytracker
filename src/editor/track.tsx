@@ -99,8 +99,7 @@ export class EditorTrack
         color: string,
         label: string | null,
         hovering: boolean,
-        selected: boolean,
-        playing: boolean)
+        selected: boolean)
     {
         const xCenter = Math.round(Editor.xAtTime(data, time))
         const x1 = xCenter - MARKER_WIDTH / 2
@@ -120,13 +119,8 @@ export class EditorTrack
         data.ctx.fillStyle = color
         data.ctx.fill()
 
-        if (label)
-        {
-            data.ctx.font = Math.floor(y2 - y1 - 10) + "px system-ui"
-            data.ctx.textAlign = "left"
-            data.ctx.textBaseline = "middle"
-            data.ctx.fillText(label, x2 + 5, (y1 + y2) / 2)
-        }
+        if (label && xCenter > data.state.trackHeaderW)
+            this.renderMarkerLabel(data, x2, color, label)
 
         if (hovering)
         {
@@ -139,5 +133,22 @@ export class EditorTrack
             data.ctx.strokeStyle = "#fff"
             data.ctx.stroke()
         }
+    }
+
+
+    renderMarkerLabel(
+        data: Editor.EditorUpdateData,
+        x: number,
+        color: string,
+        label: string)
+    {
+        const y1 = 0.5
+        const y2 = this.renderRect.h
+
+        data.ctx.fillStyle = color
+        data.ctx.font = Math.floor(y2 - y1 - 10) + "px system-ui"
+        data.ctx.textAlign = "left"
+        data.ctx.textBaseline = "middle"
+        data.ctx.fillText(label, x + 5, (y1 + y2) / 2)
     }
 }
