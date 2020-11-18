@@ -11,19 +11,30 @@ export const MARKER_WIDTH = 12
 
 export class EditorTrack
 {
-    projectTrackId: Project.ID = -1
-    name: string = ""
-    renderRect: Rect = new Rect(0, 0, 0, 0)
-    acceptedElemTypes: Set<Project.ElementType> = new Set<Project.ElementType>()
-    yScroll: number = 0
-    pencil: any
+    projectTrackId: Project.ID
+    name: string
+    renderRect: Rect
+    acceptedElemTypes: Set<Project.ElementType>
 
+    scrollEnabled: boolean
+    yScroll: number
+    
     noCursor: boolean
+    pencil: any
 
 
     constructor()
     {
+        this.projectTrackId = -1
+        this.name = ""
+        this.renderRect = new Rect(0, 0, 0, 0)
+        this.acceptedElemTypes = new Set<Project.ElementType>()
+
+        this.scrollEnabled = false
+        this.yScroll = 0
+
         this.noCursor = false
+        this.pencil = null
     }
 
 

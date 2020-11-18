@@ -25,6 +25,12 @@ export class Instrument
 	}
 
 
+	isFinished()
+	{
+		return true
+	}
+
+
 	playNote(noteId: Project.ID, desiredFreq: number, desiredVolume: number)
 	{
 		

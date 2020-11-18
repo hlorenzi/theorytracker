@@ -5,6 +5,7 @@ import * as Playback from "../playback"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Dockable from "../dockable"
+import * as UI from "../ui"
 import { useRefState, RefState } from "../util/refState"
 import Rect from "../util/rect"
 import { EditorUpdateData } from "./state"
@@ -345,12 +346,13 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 const height = track.renderRect.h
                 const props = {
                     top, width, height,
-                    project: project.ref.current,
+                    project,
                     track,
                     onTrackSettings: (ev: React.MouseEvent) => onTrackOptions(ev, i)
                 }
 
-                if (track instanceof Editor.EditorTrackNoteBlocks)
+                if (track instanceof Editor.EditorTrackNoteBlocks ||
+                    track instanceof Editor.EditorTrackNotes)
                     return <TrackHeaderNoteBlocks key={ i } { ...props }/>
                 else
                     return <TrackHeader key={ i } { ...props }/>
@@ -389,7 +391,7 @@ interface TrackHeaderProps
     width: number
     height: number
 
-    project: Project.Root
+    project: RefState<Project.Root>
     track: Editor.EditorTrack
     onTrackSettings: (ev: React.MouseEvent) => void
 }
@@ -428,11 +430,31 @@ function TrackHeader(props: TrackHeaderProps)
 
 function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 {
-    const projectTrack = props.project.elems.get(props.track.projectTrackId) as Project.Track
+    const projectTrack = props.project.ref.current.elems.get(props.track.projectTrackId) as Project.Track
     
     const instrumentName = !projectTrack || projectTrack.type != Project.ElementType.Track || projectTrack.instruments.length == 0 ?
         null :
         Project.instrumentName(projectTrack.instruments[0])
+
+
+    const onGetVolume = () =>
+    {
+        const track = props.project.ref.current.elems.get(props.track.projectTrackId) as Project.Track
+        return track.volume
+    }
+
+    const onChangeVolume = (newValue: number) =>
+    {
+        const track = props.project.ref.current.elems.get(props.track.projectTrackId) as Project.Track
+        const newTrack: Project.Track = {
+            ...track,
+            volume: Math.max(0, Math.min(1, newValue)),
+        }
+
+        props.project.ref.current = Project.upsertTrack(props.project.ref.current, newTrack)
+        props.project.commit()
+    }
+
         
     return <div style={{
         position: "absolute",
@@ -448,10 +470,12 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
         overflow: "hidden",
 
         display: "grid",
-        gridTemplate: "1fr / 1fr auto",
+        gridTemplate: "1fr auto auto 1fr / 1fr auto",
         alignItems: "center",
     }}>
-        <div>
+        <div/>
+        <div/>
+        <div style={{ fontSize: "0.8em" }}>
             { props.track.name }
             { !instrumentName ? null :
                 <span style={{ fontSize: "0.8em" }}>
@@ -465,5 +489,13 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
         >
             ...{/*🔧*/}
         </StyledTrackButton>
+
+        <div>
+            <UI.Dial
+                label="Vol"
+                getValue={ onGetVolume }
+                onChange={ onChangeVolume }
+            />
+        </div>
     </div>
 }

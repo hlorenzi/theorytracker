@@ -39,6 +39,25 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
                 
         return null
     }
+    
+    const findFirstControllerOnChannel = (channel: number, kind: string) =>
+    {
+        for (const track of midi.tracks)
+            for (const ev of track.events)
+                if (ev.kind == "controller" && ev.controllerName == kind && ev.channel == channel)
+                    return ev
+                
+        return null
+    }
+    
+    const findFirstControllerOnTrack = (midiTrack: any, kind: string) =>
+    {
+        for (const ev of midiTrack.events)
+            if (ev.kind == "controller" && ev.controllerName == kind)
+                return ev
+                
+        return null
+    }
 
     let project = Project.makeEmpty()
     
@@ -150,12 +169,24 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
                 return findFirstEventOnTrack(midiTrack, ev)
         }
 
+        const findFirstControllerOnChannelOrTrack = (ev: string) =>
+        {
+            if (midi.format == 0)
+                return findFirstControllerOnChannel(notesForTrack[0].channel, ev)
+            else
+                return findFirstControllerOnTrack(midiTrack, ev)
+        }
+
         const trackId = project.nextId
         const track = Project.makeTrackNotes()
 
         const trackName = findFirstEventOnChannelOrTrack("trackName")
         if (trackName)
             track.name = trackName.text
+
+        const trackVolume = findFirstControllerOnChannelOrTrack("channelVolumeCoarse")
+        if (trackVolume)
+            track.volume = trackVolume.controllerValue / 127
         
         const isDrumkit = notesForTrack.some((n: any) => n.channel == 9)
 
@@ -215,7 +246,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         project = Project.upsertElement(project,
             Project.makeMeterChange(trackMeterChanges, new Rational(0), new Theory.Meter(4, 4)))
     
-    return project//.withRefreshedRange()
+    return Project.withRefreshedRange(project)
 }
 
 

@@ -13,6 +13,17 @@ export function render(data: Editor.EditorUpdateData)
     data.ctx.fillStyle = data.prefs.editor.bkgColor
     data.ctx.fillRect(0, 0, data.state.renderRect.w, data.state.renderRect.h)
 
+    const visibleRange = Editor.visibleTimeRange(data)
+
+    const visibleX1 = Editor.xAtTime(data, visibleRange.start)
+    const visibleX2 = Editor.xAtTime(data, visibleRange.end)
+    const parentX1 = Editor.xAtTime(data, data.project.range.start)
+    const parentX2 = Editor.xAtTime(data, data.project.range.end)
+
+    data.ctx.fillStyle = data.prefs.editor.bkgVoidColor
+    data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, data.state.renderRect.h)
+    data.ctx.fillRect(parentX2, 0, visibleX2 - parentX2, data.state.renderRect.h)
+    
     data.ctx.save()
     data.ctx.beginPath()
     data.ctx.rect(

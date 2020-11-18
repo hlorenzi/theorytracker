@@ -32,6 +32,7 @@ export class EditorTrackNotes extends EditorTrack
         this.renderRect = new Rect(0, 0, 0, h)
         this.acceptedElemTypes.add(Project.ElementType.NoteBlock)
         this.pencil = null
+        this.scrollEnabled = true
     }
 
 
@@ -303,13 +304,13 @@ export class EditorTrackNotes extends EditorTrack
 
 	yForRow(data: Editor.EditorUpdateData, row: number): number
 	{
-		return this.renderRect.h / 2 - (row + 1) * data.state.noteRowH
+		return this.renderRect.h / 2 - (row + 1) * data.state.noteRowH - this.yScroll
 	}
 	
 	
 	rowAtY(data: Editor.EditorUpdateData, y: number): number
 	{
-        return -Math.floor((y - this.renderRect.h / 2) / data.state.noteRowH) - 1
+        return -Math.floor((y + this.yScroll - this.renderRect.h / 2) / data.state.noteRowH) - 1
 	}
 	
 	

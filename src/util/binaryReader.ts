@@ -55,7 +55,7 @@ export class BinaryReader
 		if ((x & 0x80) == 0)
 			return x
 		
-		return -((~x) + 1)
+		return -(0x100 - x)
 	}
 	
 	
@@ -160,7 +160,7 @@ export class BinaryReader
 		if ((x & 0x8000) == 0)
 			return x
 		
-		return -((~x) + 1)
+		return -(0x10000 - x)
 	}
 	
 	
@@ -170,7 +170,7 @@ export class BinaryReader
 		if ((x & 0x80000000) == 0)
 			return x
 		
-		return -((~x) + 1)
+		return -(0x100000000 - x)
 	}
 	
 	

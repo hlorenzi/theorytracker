@@ -25,6 +25,8 @@ export function mouseUp(data: Editor.EditorUpdateData)
     {
         handleContextMenu(data)
     }
+
+    data.project = Project.withRefreshedRange(data.project)
 }
 
 

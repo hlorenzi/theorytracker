@@ -40,6 +40,11 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             Editor.trackInsertionAtY(data, data.state.mouse.point.pos.y)
     }
 
+    function withTrackAtDragOrigin<T>(fn: (track: Editor.EditorTrack) => T)
+    {
+        return fn(data.state.tracks[data.state.drag.origin.point.trackIndex])
+    }
+
     if (data.state.mouse.action == Editor.EditorAction.Pan)
     {
         data.state.timeScroll =
@@ -50,6 +55,14 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             data.state.trackScroll =
                 data.state.drag.origin.trackScroll -
                 data.state.drag.posDelta.y
+
+        withTrackAtDragOrigin(tr =>
+        {
+            if (tr.scrollEnabled)
+                tr.yScroll =
+                    data.state.drag.origin.trackYScroll -
+                    data.state.drag.posDelta.y
+        })
 
         return true
     }
@@ -68,12 +81,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     }
     else if (data.state.mouse.action == Editor.EditorAction.Pencil)
     {
-        for (let t = 0; t < data.state.tracks.length; t++)
-        {
-            if (t == data.state.drag.origin.point.trackIndex)
-                data.state.tracks[t].pencilDrag(data)
-        }
-        
+        withTrackAtDragOrigin(tr => tr.pencilDrag(data))
         return true
     }
     else

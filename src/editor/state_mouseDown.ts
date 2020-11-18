@@ -32,6 +32,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             range: null,
             timeScroll: data.state.timeScroll,
             trackScroll: data.state.trackScroll,
+            trackYScroll: data.state.tracks[data.state.mouse.point.trackIndex].yScroll,
             project: data.project,
         },
 

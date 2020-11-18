@@ -39,6 +39,7 @@ export interface Track extends Element
     trackType: TrackType
     name: string
     instruments: Instrument[]
+    volume: number
 }
 
 
@@ -102,6 +103,7 @@ export function makeTrackNotes(): Track
         range: Range.dummy(),
         name: "New Track",
         instruments: [makeInstrument()],
+        volume: 1,
     }
 }
 
@@ -167,6 +169,7 @@ export function makeTrackKeyChanges(): Track
         range: Range.dummy(),
         name: "Key Changes",
         instruments: [],
+        volume: 1,
     }
 }
 
@@ -181,6 +184,7 @@ export function makeTrackMeterChanges(): Track
         range: Range.dummy(),
         name: "Meter Changes",
         instruments: [],
+        volume: 1,
     }
 }
 

@@ -102,6 +102,7 @@ export interface EditorState
             range: Range | null
             timeScroll: number
             trackScroll: number
+            trackYScroll: number
             project: Project.Root
         }
 
@@ -274,7 +275,7 @@ export function refreshTracks(data: EditorUpdateData)
                 }
             }
             else
-                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 50))
+                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 60))
         }
         else if (track.trackType == Project.TrackType.KeyChanges)
         {

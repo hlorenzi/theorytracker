@@ -130,6 +130,7 @@ export class MidiFileReader
 	{
 		const isNoteOff = (event.code & 0xf0) == 0x80
 		const isNoteOn = (event.code & 0xf0) == 0x90
+		const isController = (event.code & 0xf0) == 0xb0
 		const isProgramChange = (event.code & 0xf0) == 0xc0
 		
 		if (isNoteOff || isNoteOn)
@@ -146,6 +147,25 @@ export class MidiFileReader
 			event.description =
 				(isNoteOff ? "[8*] Note Off: " : "[9*] Note On: ") +
 				noteName + noteOctave + ", Velocity: " + event.velocity
+		}
+		else if (isController)
+		{
+			event.kind = "controller"
+			event.channel = (event.code & 0x0f)
+			event.controllerNumber = event.rawData[0]
+			event.controllerValue = event.rawData[1]
+
+			const controllerNames: any =
+			{
+				7: "channelVolumeCoarse",
+				39: "channelVolumeFine",
+			}
+
+			event.controllerName = controllerNames[event.controllerNumber]
+			event.description =
+				"Controller: " +
+				"[" + event.controllerNumber + "] " + event.controllerName +
+				": " + event.controllerValue
 		}
 		else if (isProgramChange)
 		{
@@ -194,14 +214,14 @@ export class MidiFileReader
 			event.description =
 				"[FF 51] Set Time Signature: " +
 				event.numerator + " / "+ event.denominator + ", " +
-				"ticks: " + event.scale + ", " +
-				"quarter note ticks: " + event.scale
+				"ticks: " + event.ticks + ", " +
+				"quarter note ticks: " + event.quarterNoteTicks
 		}
 		
 		else if (event.metaType == 0x59)
 		{
 			event.kind = "setKeySignature"
-			event.accidentals = r.readByte()
+			event.accidentals = r.readSByte()
 			event.scale = r.readByte()
 			event.description =
 				"[FF 51] Set Key Signature: " +

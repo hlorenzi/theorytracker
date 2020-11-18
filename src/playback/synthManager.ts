@@ -72,7 +72,16 @@ export class SynthManager
 	
 	isFinished()
 	{
-		return false
+		for (const [trackId, instruments] of this.trackInstruments)
+		{
+			for (const instrument of instruments)
+			{
+				if (!instrument.isFinished())
+					return false
+			}
+		}
+
+		return true
 	}
 
 

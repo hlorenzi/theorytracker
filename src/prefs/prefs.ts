@@ -3,6 +3,7 @@ export interface Prefs
     editor:
     {
         bkgColor: string
+        bkgVoidColor: string
         trackVBorderColor: string
         trackHBorderColor: string
         
@@ -46,6 +47,7 @@ export function getDefault(): Prefs
         editor:
         {
             bkgColor: "#202225",//"#29242e",
+            bkgVoidColor: "#0004",
             trackVBorderColor: "#888",
             trackHBorderColor: "#888",
             

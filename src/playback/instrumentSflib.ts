@@ -79,6 +79,12 @@ export class InstrumentSflib extends Playback.Instrument
 	}
 
 
+	isFinished()
+	{
+		return !this.sflibInstrument || this.notes.size == 0
+	}
+
+
 	playNote(noteId: Project.ID, desiredFreq: number, desiredVolume: number)
 	{
         if (!this.sflibInstrument)

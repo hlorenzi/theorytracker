@@ -143,6 +143,12 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             }
 
             playback.ref.current.firstPlayingFrame = false
+
+            if (playback.ref.current.playTime.compare(projectRef.ref.current.range.end) > 0 &&
+                playback.ref.current.synth.isFinished())
+            {
+                playback.ref.current.stopPlaying()
+            }
         }
 
         function processAnimationFrame(timestamp: number)
@@ -161,8 +167,11 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
                 processFrame(deltaTimeMs, true)
             }
 
-            playback.ref.current.requestAnimationFrameId =
-                requestAnimationFrame(processAnimationFrame)
+            if (playback.ref.current.playing)
+            {
+                playback.ref.current.requestAnimationFrameId =
+                    requestAnimationFrame(processAnimationFrame)
+            }
         }
 
         function processInterval(deltaTimeMs: number)

@@ -9,6 +9,7 @@ import ListOfRanges from "../util/listOfRanges"
 export interface Root
 {
     nextId: Project.ID
+    range: Range
     baseBpm: number
     tracks: Project.Track[]
     lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>
@@ -20,6 +21,7 @@ export function makeEmpty(): Root
 {
     return {
         nextId: 1,
+        range: new Range(new Rational(0), new Rational(4)),
         baseBpm: 120,
         tracks: [],
         lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>(),
@@ -118,7 +120,7 @@ export function upsertTrack(
     else
         elems = elems.set(track.id, track)
 
-    return Object.assign({}, project, { nextId, elems, tracks })
+    return { ...project, nextId, elems, tracks }
 }
 
 
@@ -142,7 +144,7 @@ export function upsertElement(project: Root, elem: Project.Element): Root
 
         let elems = project.elems.set(elem.id, elem)
         let lists = project.lists.set(elem.parentId, list)
-        return Object.assign({}, project, { nextId, elems, lists })
+        return { ...project, nextId, elems, lists }
     }
     else if (elem.parentId < 0)
     {
@@ -156,7 +158,7 @@ export function upsertElement(project: Root, elem: Project.Element): Root
         console.log(prevList.findById(elem.id))
         console.log(elems.get(elem.id))*/
 
-        return Object.assign({}, project, { nextId, elems, lists })
+        return { ...project, nextId, elems, lists }
     }
     else
     {
@@ -177,7 +179,7 @@ export function upsertElement(project: Root, elem: Project.Element): Root
             .set(prevElem!.parentId, prevList)
             .set(elem.parentId, nextList)
 
-        return Object.assign({}, project, { nextId, elems, lists })
+        return { ...project, nextId, elems, lists }
     }
 }
 
@@ -191,4 +193,19 @@ export function keyChangeTrackId(project: Root): Project.ID
 export function meterChangeTrackId(project: Root): Project.ID
 {
     return 2
+}
+
+
+export function withRefreshedRange(project: Root): Root
+{
+    let range = new Range(new Rational(0), new Rational(4));
+
+    for (const track of project.tracks)
+    {
+        const list = project.lists.get(track.id)
+        if (list)
+            range = range.merge(list.getTotalRange())
+    }
+
+    return { ...project, range }
 }

@@ -94,6 +94,12 @@ export class InstrumentBasic extends Playback.Instrument
 	}
 
 
+	isFinished()
+	{
+		return this.notes.size == 0
+	}
+
+
 	playNote(noteId: Project.ID, desiredFreq: number, desiredVolume: number)
 	{
         if (this.notes.has(noteId))
