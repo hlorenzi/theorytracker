@@ -44,36 +44,41 @@ export function Dial(props: DialProps)
 
 
     const refSvg = React.useRef<HTMLDivElement>(null)
+    const refState = React.useRef({
+        mouseDown: false,
+        mouseY: 0,
+        valueOrig: value,
+    })
 
 
     React.useEffect(() =>
     {
-        let mouseDown = false
-        let mouseY = 0
-        let valueOrig = value
-
         const onMouseDown = (ev: MouseEvent) =>
         {
             ev.preventDefault()
-            mouseDown = true
-            mouseY = ev.screenY
-            valueOrig = props.getValue?.() ?? 0
+            refState.current.mouseDown = true
+            refState.current.mouseY = ev.screenY
+            refState.current.valueOrig = props.getValue?.() ?? 0
         }
 
         const onMouseMove = (ev: MouseEvent) =>
         {
-            if (!mouseDown)
+            if (!refState.current.mouseDown)
                 return
             
             ev.preventDefault()
-            const newValue = valueOrig + (mouseY - ev.screenY) / 100
+            
+            const newValue =
+                refState.current.valueOrig +
+                (refState.current.mouseY - ev.screenY) / 100
+
             props.onChange?.(newValue)
             setUpdate((val) => !val)
         }
 
         const onMouseUp = (ev: MouseEvent) =>
         {
-            mouseDown = false
+            refState.current.mouseDown = false
         }
 
         const refSvgCurrent = refSvg.current

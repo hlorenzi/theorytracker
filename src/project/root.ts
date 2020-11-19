@@ -209,3 +209,13 @@ export function withRefreshedRange(project: Root): Root
 
     return { ...project, range }
 }
+
+
+export function getElem<T extends Project.Element>(project: Root, id: Project.ID): T | null
+{
+    const elem = project.elems.get(id)
+    if (!elem)
+        return null
+
+    return (elem as T)
+}

@@ -27,7 +27,7 @@ export function feedNotes(
                 track.id,
                 note.id,
                 MathUtils.midiToHertz(note.midiPitch),
-                track.volume * note.velocity)
+                Math.pow(track.volume * note.velocity, 1))
         }
     }
 }

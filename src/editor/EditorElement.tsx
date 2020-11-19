@@ -132,7 +132,8 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
     React.useEffect(() =>
     {
-        if (!refCanvas.current)
+        const refCanvasCurrent = refCanvas.current
+        if (!refCanvasCurrent)
             return
 
         const transformMousePos = (canvas: HTMLCanvasElement, ev: MouseEvent) =>
@@ -163,14 +164,14 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             else if (mouseAction & (Editor.EditorAction.StretchTimeStart | Editor.EditorAction.StretchTimeEnd))
                 cursor = "col-resize"
 
-            refCanvas.current!.style.cursor = cursor
+            refCanvasCurrent.style.cursor = cursor
         }
 
 		const onMouseMove = (ev: MouseEvent) =>
 		{
             ev.preventDefault()
             const updateData = makeUpdateData()
-            const pos = transformMousePos(refCanvas.current!, ev)
+            const pos = transformMousePos(refCanvasCurrent, ev)
             const needsRender1 = Editor.mouseMove(updateData, pos)
             const needsRender2 = Editor.mouseDrag(updateData, pos)
 
@@ -193,7 +194,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
             ev.preventDefault()
             const updateData = makeUpdateData()
-            const pos = transformMousePos(refCanvas.current!, ev)
+            const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
             Editor.mouseDown(updateData, ev.button != 0)
             render()
@@ -205,7 +206,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		{
             ev.preventDefault()
             const updateData = makeUpdateData()
-            const pos = transformMousePos(refCanvas.current!, ev)
+            const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
             Editor.mouseUp(updateData)
 
@@ -268,11 +269,11 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             render()
         }
         
-        refCanvas.current!.addEventListener("mousemove", onMouseMove)
-        refCanvas.current!.addEventListener("mousedown", onMouseDown)
-        refCanvas.current!.addEventListener("mouseup", onMouseUp)
-        refCanvas.current!.addEventListener("wheel", onMouseWheel)
-        refCanvas.current!.addEventListener("contextmenu", preventDefault)
+        refCanvasCurrent.addEventListener("mousemove", onMouseMove)
+        refCanvasCurrent.addEventListener("mousedown", onMouseDown)
+        refCanvasCurrent.addEventListener("mouseup", onMouseUp)
+        refCanvasCurrent.addEventListener("wheel", onMouseWheel)
+        refCanvasCurrent.addEventListener("contextmenu", preventDefault)
 
         window.addEventListener("keydown", onKeyDown)
         window.addEventListener("keyup", onKeyUp)
@@ -283,11 +284,11 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
         return () =>
         {
-            refCanvas.current!.removeEventListener("mousemove", onMouseMove)
-            refCanvas.current!.removeEventListener("mousedown", onMouseDown)
-            refCanvas.current!.removeEventListener("mouseup", onMouseUp)
-            refCanvas.current!.removeEventListener("wheel", onMouseWheel)
-            refCanvas.current!.removeEventListener("contextmenu", preventDefault)
+            refCanvasCurrent.removeEventListener("mousemove", onMouseMove)
+            refCanvasCurrent.removeEventListener("mousedown", onMouseDown)
+            refCanvasCurrent.removeEventListener("mouseup", onMouseUp)
+            refCanvasCurrent.removeEventListener("wheel", onMouseWheel)
+            refCanvasCurrent.removeEventListener("contextmenu", preventDefault)
 
             window.removeEventListener("keydown", onKeyDown)
             window.removeEventListener("keyup", onKeyUp)
@@ -315,7 +316,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         window.dispatchEvent(new Event("refreshProjectTracks"))
     }
 
-    const onTrackOptions = (ev: React.MouseEvent, trackIndex: number) =>
+    const onTrackSettings = (ev: React.MouseEvent, trackIndex: number) =>
     {
         popup.ref.current.elem = () =>
         {
@@ -327,7 +328,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         popup.commit()
     }
 
-	return (
+	return React.useMemo(() =>
 		<div ref={ refDiv } style={{
 			width: "100%",
 			height: "100%",
@@ -348,7 +349,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                     top, width, height,
                     project,
                     track,
-                    onTrackSettings: (ev: React.MouseEvent) => onTrackOptions(ev, i)
+                    onTrackSettings: (ev: React.MouseEvent) => onTrackSettings(ev, i)
                 }
 
                 if (track instanceof Editor.EditorTrackNoteBlocks ||
@@ -381,7 +382,11 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 </StyledTrackButton>
             </div>
 		</div>
-	)
+        , [
+            project.ref.current.tracks,
+            editorState.ref.current.tracks,
+            editorState.ref.current.trackScroll,
+        ])
 }
 
 
@@ -430,29 +435,38 @@ function TrackHeader(props: TrackHeaderProps)
 
 function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 {
-    const projectTrack = props.project.ref.current.elems.get(props.track.projectTrackId) as Project.Track
-    
-    const instrumentName = !projectTrack || projectTrack.type != Project.ElementType.Track || projectTrack.instruments.length == 0 ?
+    console.log("TrackHeaderNoteBlocks")
+    const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
+    if (!track || track.type != Project.ElementType.Track)
+        return null
+
+    const instrumentName = track.instruments.length == 0 ?
         null :
-        Project.instrumentName(projectTrack.instruments[0])
+        Project.instrumentName(track.instruments[0])
 
 
     const onGetVolume = () =>
     {
-        const track = props.project.ref.current.elems.get(props.track.projectTrackId) as Project.Track
+        const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
+        if (!track)
+            return 0
+
         return track.volume
     }
 
     const onChangeVolume = (newValue: number) =>
     {
-        const track = props.project.ref.current.elems.get(props.track.projectTrackId) as Project.Track
+        const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
+        if (!track)
+            return
+            
         const newTrack: Project.Track = {
             ...track,
             volume: Math.max(0, Math.min(1, newValue)),
         }
 
         props.project.ref.current = Project.upsertTrack(props.project.ref.current, newTrack)
-        props.project.commit()
+        //props.project.commit()
     }
 
         
@@ -470,20 +484,38 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
         overflow: "hidden",
 
         display: "grid",
-        gridTemplate: "1fr auto auto 1fr / 1fr auto",
+        gridTemplate: `1fr auto auto 1fr / auto 1fr auto`,
         alignItems: "center",
+        justifyItems: "start",
     }}>
         <div/>
         <div/>
-        <div style={{ fontSize: "0.8em" }}>
-            { props.track.name }
+        <div/>
+        
+        <div >
+            <div style={{
+                width: (props.width - 40) + "px",
+                fontSize: "0.8em",
+                textOverflow: "ellipsis",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+            }}>
+                { props.track.name }
+            </div>
+
             { !instrumentName ? null :
-                <span style={{ fontSize: "0.8em" }}>
-                    <br/>
+                <div style={{
+                    width: (props.width - 40) + "px",
+                    fontSize: "0.8em",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                }}>
                     { instrumentName }
-                </span>
+                </div>
             }
         </div>
+        <div/>
         <StyledTrackButton
             onClick={ props.onTrackSettings }
         >

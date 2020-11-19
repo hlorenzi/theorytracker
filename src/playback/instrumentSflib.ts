@@ -94,8 +94,8 @@ export class InstrumentSflib extends Playback.Instrument
             return
 
         const zone = this.sflibInstrument.zones.find(z =>
-            desiredFreq >= MathUtils.midiToHertz(z.minPitch) &&
-            desiredFreq <= MathUtils.midiToHertz(z.maxPitch))
+            desiredFreq >= MathUtils.midiToHertz(z.midiPitchMin) &&
+            desiredFreq <= MathUtils.midiToHertz(z.midiPitchMax))
 
         if (!zone)
             return
@@ -103,26 +103,26 @@ export class InstrumentSflib extends Playback.Instrument
         const audioBuffer = this.sampleBuffers[zone.sampleIndex]
 
         let sourceNode = this.synth.audioCtx.createBufferSource()
-        sourceNode.playbackRate.value = desiredFreq / MathUtils.midiToHertz(zone.basePitch)
+        sourceNode.playbackRate.value = desiredFreq / MathUtils.midiToHertz(zone.midiPitchBase)
         sourceNode.buffer = audioBuffer
         sourceNode.loop = zone.loopMode == "loop"
-        sourceNode.loopStart = zone.startLoop / audioBuffer.sampleRate
-        sourceNode.loopEnd = zone.endLoop / audioBuffer.sampleRate
+        sourceNode.loopStart = zone.loopStartIndex / audioBuffer.sampleRate
+        sourceNode.loopEnd = zone.loopEndIndex / audioBuffer.sampleRate
 
         const time = this.synth.audioCtx.currentTime
-        const delayTime = time + (zone.delayVolEnv || 0)
-        const attackTime = delayTime + (zone.attackVolEnv || 0.005)
-        const holdTime = attackTime + (zone.holdVolEnv || 0)
-        const decayTime = holdTime + (zone.decayVolEnv || 0)
-        const sustainLevel = zone.sustainVolEnv || 1
+        const delayTime = time + zone.volEnvDelaySec
+        const attackTime = delayTime + (zone.volEnvAttackSec || 0.005)
+        const holdTime = attackTime + zone.volEnvHoldSec
+        const decayTime = holdTime + zone.volEnvDecaySec
+        const sustainLevel = zone.volEnvSustain
         
         let envelopeNode = this.synth.audioCtx.createGain()
         envelopeNode.gain.value = 0
         envelopeNode.gain.setValueAtTime(0, delayTime)
         envelopeNode.gain.linearRampToValueAtTime(1, attackTime)
         envelopeNode.gain.setValueAtTime(1, holdTime)
-        envelopeNode.gain.linearRampToValueAtTime(sustainLevel, decayTime)
-        
+        envelopeNode.gain.exponentialRampToValueAtTime(sustainLevel || 0.0001, decayTime)
+
         let volumeNode = this.synth.audioCtx.createGain()
         volumeNode.gain.value = desiredVolume
         
@@ -157,11 +157,11 @@ export class InstrumentSflib extends Playback.Instrument
             note.released = true
             
             const time = this.synth.audioCtx.currentTime
-            const releaseTime = time + (note.zone.releaseVolEnv || 0) * 0.25
+            const releaseTime = time + note.zone.volEnvReleaseSec
 
             note.nodeEnvelope.gain.cancelScheduledValues(time)
             note.nodeEnvelope.gain.setValueAtTime(note.nodeEnvelope.gain.value, time)
-            note.nodeEnvelope.gain.linearRampToValueAtTime(0, releaseTime)
+            note.nodeEnvelope.gain.exponentialRampToValueAtTime(0.0001, releaseTime)
         }
     }
 
@@ -174,8 +174,7 @@ export class InstrumentSflib extends Playback.Instrument
         
         note.released = true
 
-        const releaseTime = note.zone.releaseVolEnv || 0
-        note.releasedTimerMs = releaseTime * 1000
+        note.releasedTimerMs = note.zone.volEnvReleaseSec * 1000
 
         note.nodeSrc.stop()
 
@@ -198,8 +197,13 @@ export class InstrumentSflib extends Playback.Instrument
             {
                 note.releasedTimerMs += deltaTimeMs
             
-                const releaseTime = note.zone.releaseVolEnv || 0
-                if (note.releasedTimerMs > releaseTime * 1000)
+                if (note.zone.loopMode != "loop")
+                {
+                    const sample = this.sampleBuffers[note.zone.sampleIndex]
+                    if (note.releasedTimerMs > sample.length / sample.sampleRate * 1000)
+                        this.stopNote(noteId)
+                }
+                else if (note.releasedTimerMs > note.zone.volEnvReleaseSec * 1000)
                     this.stopNote(noteId)
             }
         }

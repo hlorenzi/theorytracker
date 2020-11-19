@@ -42,23 +42,25 @@ export interface SflibInstrumentZone
 {
     sampleIndex: number
     sampleRate: number
-    startLoop: number
-    endLoop: number
+
+    loopStartIndex: number
+    loopEndIndex: number
     loopMode: string
 
-    minPitch: number
-    maxPitch: number
-    basePitch: number
-    minVel: number
-    maxVel: number
+    midiPitchMin: number
+    midiPitchMax: number
+    midiPitchBase: number
+    midiVelMin: number
+    midiVelMax: number
 
-    delayVolEnv?: number
-    attackVolEnv?: number
-    holdVolEnv?: number
-    decayVolEnv?: number
-    sustainVolEnv?: number
-    releaseVolEnv?: number
-    exclusiveClass?: number
+    volEnvDelaySec: number
+    volEnvAttackSec: number
+    volEnvHoldSec: number
+    volEnvDecaySec: number
+    volEnvSustain: number
+    volEnvReleaseSec: number
+
+    exclusiveClass: number | null
 }
 
 
