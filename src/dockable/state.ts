@@ -1,16 +1,15 @@
 import Rect from "../util/rect"
-import Immutable from "immutable"
 
 
 export type PanelId = number
-export type WindowId = number
+export type WindowId = any
 
 
 export interface State
 {
     idNext: PanelId
     rootPanel: Panel
-    floatingPanels: FloatingPanel[]
+    floatingPanels: Panel[]
 }
 
 
@@ -34,18 +33,14 @@ export enum DockMode
 export interface Panel
 {
     id: PanelId
+    floating: boolean
+    rect: Rect
+    bugfixAppearOnTop: boolean
     windowIds: WindowId[]
     curWindowIndex: number
     splitPanels: Panel[]
     splitMode: SplitMode
     splitSize: number
-}
-
-
-export interface FloatingPanel
-{
-    panel: Panel
-    rect: Rect
 }
 
 
@@ -91,6 +86,9 @@ export function makeRoot(): State
         idNext: 2,
         rootPanel: {
             id: 1,
+            floating: false,
+            bugfixAppearOnTop: false,
+            rect: new Rect(0, 0, 0, 0),
             windowIds: [],
             curWindowIndex: 0,
             splitPanels: [],
@@ -102,206 +100,87 @@ export function makeRoot(): State
 }
 
 
-export function findPanelWithContent(panel: Panel, wantedContentId: number): Panel | null
+export function makePanel(root: State): Panel
 {
-    if (panel.windowIds.some(c => c == wantedContentId))
-        return panel
-        
-    for (const subpanel of panel.splitPanels)
+    const id = root.idNext++
+    const panel: Panel = {
+        id,
+        floating: true,
+        bugfixAppearOnTop: false,
+        rect: new Rect(0, 0, 0, 0),
+        windowIds: [],
+        curWindowIndex: 0,
+        splitPanels: [],
+        splitMode: SplitMode.LeftRight,
+        splitSize: 0.5,
+    }
+    root.floatingPanels.push(panel)
+    return panel
+}
+
+
+export function detachPanel(root: State, panel: Panel)
+{
+    if (!panel.floating)
     {
-        const found = findPanelWithContent(subpanel, wantedContentId)
-        if (found)
-            return found
-    }
-
-    return null
-}
-
-
-export function clonePanel(panel: Panel): Panel
-{
-    return {
-        ...panel,
-        splitPanels: panel.splitPanels.map(p => clonePanel(p)),
+        panel.floating = true
+        root.floatingPanels.push(panel)
     }
 }
 
 
-export function findPanel(panel: Panel, wantedId: number): Panel | null
+export function addWindow(root: State, toPanel: Panel, window: WindowId)
 {
-    if (panel.id == wantedId)
-        return panel
-        
-    for (const subpanel of panel.splitPanels)
-    {
-        const found = findPanel(subpanel, wantedId)
-        if (found)
-            return found
-    }
-
-    return null
+    toPanel.windowIds.push(window)
+    toPanel.curWindowIndex = toPanel.windowIds.length - 1
 }
 
 
-export function findPanelParent(panel: Panel, wantedId: number): Panel | null
+export function removeWindow(root: State, fromPanel: Panel, window: WindowId)
 {
-    for (const subpanel of panel.splitPanels)
-    {
-        if (subpanel.id == wantedId)
-            return panel
-
-        const found = findPanelParent(subpanel, wantedId)
-        if (found)
-            return found
-    }
-
-    return null
+    fromPanel.windowIds = fromPanel.windowIds.filter(w => w !== window)
+    fromPanel.curWindowIndex = 0
 }
 
 
-export function changePanel(panel: Panel, wantedId: number, newPanel: Panel): Panel
+export function coallesceEmptyPanels(root: State)
 {
-    if (panel.id == wantedId)
-        return newPanel
+    coallesceEmptyPanelsRecursive(root, root.rootPanel)
+    for (var i = 0; i < root.floatingPanels.length; i++)
+        coallesceEmptyPanelsRecursive(root, root.floatingPanels[i])
 
-    return {
-        ...panel,
-        splitPanels: panel.splitPanels.map(p => changePanel(p, wantedId, newPanel))
-    }
+    root.floatingPanels = root.floatingPanels.filter(p =>
+        p.windowIds.length != 0 || p.splitPanels.length != 0)
 }
 
 
-export function modifyPanel(panel: Panel, wantedId: number, modifyFn: ((oldPanel: Panel) => Panel)): Panel
+export function coallesceEmptyPanelsRecursive(root: State, fromPanel: Panel)
 {
-    if (panel.id == wantedId)
-        return modifyFn(panel)
+    for (var i = 0; i < fromPanel.splitPanels.length; i++)
+        coallesceEmptyPanelsRecursive(root, fromPanel.splitPanels[i])
 
-    return {
-        ...panel,
-        splitPanels: panel.splitPanels.map(p => modifyPanel(p, wantedId, modifyFn))
-    }
+    fromPanel.splitPanels = fromPanel.splitPanels.filter(p =>
+        p.windowIds.length != 0 || p.splitPanels.length != 0)
+
+    if (fromPanel.splitPanels.length == 1)
+        Object.assign(fromPanel, fromPanel.splitPanels[0])
 }
 
 
-export function modifyPanelFromRoot(root: State, wantedId: number, modifyFn: ((oldPanel: Panel) => Panel)): State
+export function dock(root: State, panel: Panel, dockIntoPanel: Panel, mode: DockMode)
 {
-    return {
-        ...root,
-        rootPanel: modifyPanel(root.rootPanel, wantedId, modifyFn),
-        floatingPanels: root.floatingPanels.map(fp =>
-        {
-            if (fp.panel.id == wantedId)
-                return { ...fp, panel: modifyFn(fp.panel) }
-
-            return fp
-        })
-    }
-}
-
-
-export function addContent(root: State, panelId: number, contentId: number): State
-{
-    return modifyPanelFromRoot(root, panelId, (panel) =>
-    {
-        return {
-            ...panel,
-            windowIds: [...panel.windowIds, contentId]
-        }
-    })
-}
-
-
-export function addFloatingPanel(root: State, rect: Rect, contentIds: number | number[]): State
-{
-    const contentIdsArray = Array.isArray(contentIds) ? contentIds : [contentIds]
-
-    const newFloatingPanels = [
-        ...root.floatingPanels,
-        {
-            panel: {
-                id: root.idNext,
-                curWindowIndex: 0,
-                windowIds: contentIdsArray,
-                splitPanels: [],
-                splitMode: SplitMode.LeftRight,
-                splitSize: 0.5,
-            },
-            rect,
-        },
-    ]
-
-    return {
-        ...root,
-        idNext: root.idNext + 1,
-        floatingPanels: newFloatingPanels,
-    }
-}
-
-
-export function moveFloatingPanel(root: State, panelId: number, newRect: Rect): State
-{
-    return {
-        ...root,
-        floatingPanels: root.floatingPanels.map(fp =>
-        {
-            if (fp.panel.id !== panelId)
-                return fp
-
-            return {
-                ...fp,
-                rect: newRect,
-            }
-        })
-    }
-}
-
-
-export function removeFloatingPanel(root: State, panelId: number): State
-{
-    return {
-        ...root,
-        floatingPanels: root.floatingPanels.filter(fp => fp.panel.id !== panelId),
-    }
-}
-
-
-export function removeFloatingContent(root: State, contentId: number): State
-{
-    const panel = root.floatingPanels.find(fp => fp.panel.windowIds.some(c => c === contentId))
-    if (!panel)
-        return root
-    
-    return {
-        ...root,
-        floatingPanels: root.floatingPanels.filter(fp => fp !== panel),
-    }
-}
-
-
-export function addPanel(root: State, dockIntoId: number, mode: DockMode, contentIds: number | number[]): State
-{
-    const contentIdsArray = Array.isArray(contentIds) ? contentIds : [contentIds]
-    const dockIntoPanel = findPanel(root.rootPanel, dockIntoId)!
-
     if (mode == DockMode.Full ||
         (dockIntoPanel.windowIds.length == 0 && dockIntoPanel.splitPanels.length == 0))
     {
         if (dockIntoPanel.splitPanels.length > 0)
             throw "invalid full docking into subdivided panel"
 
-        
-        return modifyPanelFromRoot(
-            root,
-            dockIntoId,
-            (panel) =>
-            {
-                const newContentIds = [...panel.windowIds, ...contentIdsArray]
-                return {
-                    ...panel,
-                    windowIds: newContentIds,
-                    curWindowIndex: newContentIds.length - 1,
-                }
-            })
+        for (const window of panel.windowIds)
+            addWindow(root, dockIntoPanel, window)
+
+        detachPanel(root, panel)
+        panel.windowIds = []
+        root.floatingPanels = root.floatingPanels.filter(p => p !== panel)
     }
     else if (mode == DockMode.Right ||
         mode == DockMode.Left ||
@@ -316,73 +195,33 @@ export function addPanel(root: State, dockIntoId: number, mode: DockMode, conten
         const subdivOriginalFirst =
             (mode == DockMode.Bottom || mode == DockMode.Right)
 
-        const newSubpanels = []
+        const newSubpanels = [panel]
+
+        const newSubpanel = makePanel(root)
+        newSubpanel.windowIds = dockIntoPanel.windowIds
+        newSubpanel.splitMode = dockIntoPanel.splitMode
+        newSubpanel.splitPanels = dockIntoPanel.splitPanels
+        newSubpanel.splitSize = dockIntoPanel.splitSize
+
+        dockIntoPanel.windowIds = []
+        dockIntoPanel.splitPanels = newSubpanels
+        dockIntoPanel.splitMode = subdivMode
+        dockIntoPanel.splitSize = subdivOriginalFirst ? 0.75 : 0.25
+
         if (subdivOriginalFirst)
-            newSubpanels.push(dockIntoPanel)
+            newSubpanels.unshift(newSubpanel)
+        else
+            newSubpanels.push(newSubpanel)
             
-        newSubpanels.push(
-        {
-            id: root.idNext,
-            windowIds: contentIdsArray,
-            curWindowIndex: 0,
-            splitPanels: [],
-            splitMode: SplitMode.LeftRight,
-            splitSize: 0.5,
-        })
-
-        if (!subdivOriginalFirst)
-            newSubpanels.push(dockIntoPanel)
-
-        let newRootPanel = changePanel(
-            root.rootPanel,
-            dockIntoId,
-            {
-                id: root.idNext + 1,
-                windowIds: [],
-                curWindowIndex: 0,
-                splitPanels: newSubpanels,
-                splitMode: subdivMode,
-                splitSize: subdivOriginalFirst ? 0.75 : 0.25,
-            })
-
-        return {
-            ...root,
-            idNext: root.idNext + 2,
-            rootPanel: newRootPanel,
-        }
+        panel.floating = false
+        dockIntoPanel.floating = false
+        newSubpanel.floating = false
+        root.floatingPanels = root.floatingPanels.filter(p => p !== panel && p !== newSubpanel)
     }
-
-    throw "invalid docking"
-}
-
-
-export function removePanel(root: State, panelId: number): State
-{
-    let panelParent = findPanelParent(root.rootPanel, panelId)
-
-    if (!panelParent)
+    else
     {
-        return {
-            ...root,
-            idNext: root.idNext + 1,
-            rootPanel: {
-                id: root.idNext,
-                windowIds: [],
-                curWindowIndex: 0,
-                splitPanels: [],
-                splitMode: SplitMode.LeftRight,
-                splitSize: 0.5,
-            }
-        }
+        throw "invalid docking"
     }
-
-    root = modifyPanelFromRoot(root, panelParent.id, (panel) =>
-    {
-        const remainingPanel = panel.splitPanels.find(p => p.id != panelId)!
-        return remainingPanel
-    })
-
-    return root
 }
 
 
@@ -495,14 +334,29 @@ export function getLayout(root: State, rect: Rect): Layout
     traverseLayout(root.rootPanel, rect, layout)
 
     for (const floatingPanel of root.floatingPanels)
-        layout.panelRects.push({ ...floatingPanel, floating: true })
+    {
+        layout.panelRects.push(
+        {
+            panel: floatingPanel,
+            rect: floatingPanel.rect,
+            floating: true,
+        })
+
+        layout.anchors.push({
+            panel: floatingPanel,
+            x: floatingPanel.rect.xCenter,
+            y: floatingPanel.rect.yCenter,
+            mode: DockMode.Full,
+            previewRect: floatingPanel.rect,
+        })
+    }
 
     return layout
 }
 
 
-export function getContentRect(root: State, rect: Rect, contentId: number): Rect | undefined
+export function getContentRect(root: State, rect: Rect, windowId: WindowId): Rect | undefined
 {
     const layout = getLayout(root, rect)
-    return layout.panelRects.find(p => p.panel.windowIds.some(c => c === contentId))!.rect
+    return layout.panelRects.find(p => p.panel.windowIds.some(c => c === windowId))!.rect
 }

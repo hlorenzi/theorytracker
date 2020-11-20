@@ -3,8 +3,6 @@ import * as Dockable from "./index"
 import * as Window from "../windows"
 import { RefState, useRefState } from "../util/refState"
 import Rect from "../util/rect"
-import Rational from "../util/rational"
-import Range from "../util/range"
 
 
 export interface DockableContextProps
@@ -36,8 +34,11 @@ export function useDockableInit(): RefState<DockableContextProps>
         const idsToComponents = new Map()
         const idsToData = new Map()
 
-        let state = Dockable.makeRoot()
-        state = Dockable.addPanel(state, 1, Dockable.DockMode.Full, 1)
+        const state = Dockable.makeRoot()
+        const panel = Dockable.makePanel(state)
+        Dockable.addWindow(state, panel, 1)
+        Dockable.dock(state, panel, state.rootPanel, Dockable.DockMode.Full)
+        console.log(state)
 
         idsToComponents.set(1, Window.Timeline)
 
@@ -65,10 +66,10 @@ export function useDockableInit(): RefState<DockableContextProps>
             idsToComponents.set(id, elem)
             idsToData.set(id, data)
 
-            state = Dockable.addFloatingPanel(
-                state,
-                new Rect(rect.x2, rect.y2, 500, 300),
-                id)
+            const panel = Dockable.makePanel(state)
+            Dockable.addWindow(state, panel, id)
+            panel.rect = new Rect(rect.x2, rect.y2, 500, 300)
+            panel.bugfixAppearOnTop = true
 
             dockable.ref.current.state = state
             dockable.commit()

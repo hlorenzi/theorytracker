@@ -64,6 +64,18 @@ export default class Rect
 	{
 		return this.y + this.h
 	}
+	
+	
+	get xCenter(): number
+	{
+		return (this.x1 + this.x2) / 2
+	}
+	
+	
+	get yCenter(): number
+	{
+		return (this.y1 + this.y2) / 2
+	}
 
 
 	withX(value: number): Rect
