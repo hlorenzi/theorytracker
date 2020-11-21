@@ -79,21 +79,23 @@ export function Container()
 
     React.useEffect(() =>
     {
-        let refreshed = false
         for (const panel of dockable.ref.current.state.floatingPanels)
         {
             if (panel.justOpened)
             {
-                panel.justOpened = false
-                panel.rect.w = panel.preferredFloatingSize.w
-                panel.rect.h = panel.preferredFloatingSize.h
-                Dockable.clampFloatingPanels(dockable.ref.current.state, rectRef.current)
-                refreshed = true
+                window.requestAnimationFrame(() =>
+                {
+                    if (!panel.justOpened)
+                        return
+                    
+                    panel.justOpened = false
+                    panel.rect.w = panel.preferredFloatingSize.w
+                    panel.rect.h = panel.preferredFloatingSize.h
+                    Dockable.clampFloatingPanels(dockable.ref.current.state, rectRef.current)
+                    dockable.commit()
+                })
             }
         }
-
-        if (refreshed)
-            dockable.commit()
 
     }, [dockable.update])
 
@@ -275,8 +277,11 @@ function Panel(props: any)
                 {
                     if (panelRect.panel.windowTitles[idx] != title)
                     {
-                        panelRect.panel.windowTitles[idx] = title
-                        dockable.commit()
+                        window.requestAnimationFrame(() =>
+                        {
+                            panelRect.panel.windowTitles[idx] = title
+                            dockable.commit()
+                        })
                     }
                 }
 
@@ -286,8 +291,11 @@ function Panel(props: any)
                         (w != panelRect.panel.preferredFloatingSize.w ||
                         h != panelRect.panel.preferredFloatingSize.h))
                     {
-                        panelRect.panel.preferredFloatingSize = new Rect(0, 0, w, h)
-                        dockable.commit()
+                        window.requestAnimationFrame(() =>
+                        {
+                            panelRect.panel.preferredFloatingSize = new Rect(0, 0, w, h)
+                            dockable.commit()
+                        })
                     }
                 }
 

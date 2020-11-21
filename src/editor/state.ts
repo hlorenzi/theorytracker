@@ -287,6 +287,9 @@ export function refreshTracks(data: EditorUpdateData)
         }
     }
 
+    for (let t = 0; t < tracks.length; t++)
+        tracks[t].copyState(data)
+
     data.state.trackScrollLocked = false
 
     let fixedH = 0
@@ -363,13 +366,13 @@ export function scrollTimeIntoView(data: EditorUpdateData, time: Rational)
     if (time.compare(range.end.subtract(marginTime)) >= 0)
     {
         data.state.timeScroll =
-            data.playback.playTime.asFloat() -
+            time.asFloat() -
             (data.state.renderRect.w - data.state.trackHeaderW + marginPixels) / data.state.timeScale
     }
     else if (time.compare(range.start.add(marginTime)) <= 0)
     {
         data.state.timeScroll =
-            data.playback.playTime.asFloat() -
+            time.asFloat() -
             (data.state.trackHeaderW + marginPixels) / data.state.timeScale
     }
 }

@@ -38,6 +38,19 @@ export class EditorTrack
     }
 
 
+    copyState(data: Editor.EditorUpdateData)
+    {
+        for (const track of data.state.tracks)
+        {
+            if (track.projectTrackId == this.projectTrackId)
+            {
+                this.yScroll = track.yScroll
+                break
+            }
+        }
+    }
+
+
     *elemsAtRegion(
         data: Editor.EditorUpdateData,
         range: Range,

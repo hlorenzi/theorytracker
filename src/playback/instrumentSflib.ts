@@ -20,7 +20,6 @@ export class InstrumentSflib extends Playback.Instrument
     collectionId: string
     instrumentId: string
     sflibInstrument: Playback.SflibInstrument | null
-    sampleBuffers: AudioBuffer[]
     notes: Map<Project.ID, Note>
 
 
@@ -30,45 +29,19 @@ export class InstrumentSflib extends Playback.Instrument
         this.collectionId = collectionId
         this.instrumentId = instrumentId
         this.sflibInstrument = null
-        this.sampleBuffers = []
         this.notes = new Map<Project.ID, Note>()
 	}
 
 
 	async prepare()
 	{
-        this.sflibInstrument = await Playback.sflibGetInstrument(this.collectionId, this.instrumentId)
-        this.sampleBuffers = []
+        this.sflibInstrument = await Playback.sflibGetInstrument(
+            this.collectionId, this.instrumentId, this.synth.audioCtx)
     
         if (!this.sflibInstrument)
         {
             console.error("could not load sflib " + this.collectionId + "/" + this.instrumentId)
             return
-        }
-        
-        const sampleRate = this.sflibInstrument.zones[0].sampleRate
-        for (const sampleRaw of this.sflibInstrument.samples)
-        {
-            //console.log(sampleRaw)
-            const bytes = Uint8Array.from(atob(sampleRaw), c => c.charCodeAt(0))
-            //console.log(buffer)
-
-            const audioBuffer = this.synth.audioCtx.createBuffer(1, bytes.length / 2, sampleRate)
-            const audioBufferData = audioBuffer.getChannelData(0)
-            for (let i = 0; i < bytes.length / 2; i++)
-            {
-                const b0 = bytes[i * 2]
-                const b1 = bytes[i * 2 + 1]
-                let uint16 = (b0 << 8) | b1
-                if ((uint16 & 0x8000) != 0)
-                    uint16 = -(0x10000 - uint16)
-
-                audioBufferData[i] = (uint16 / 0x8000) * 2 - 1
-            }
-
-            //console.log(array)
-
-            this.sampleBuffers.push(audioBuffer)
         }
     }
 
@@ -100,7 +73,7 @@ export class InstrumentSflib extends Playback.Instrument
         if (!zone)
             return
 
-        const audioBuffer = this.sampleBuffers[zone.sampleIndex]
+        const audioBuffer = this.sflibInstrument.audioBuffers[zone.sampleIndex]
 
         let sourceNode = this.synth.audioCtx.createBufferSource()
         sourceNode.playbackRate.value = desiredFreq / MathUtils.midiToHertz(zone.midiPitchBase)
@@ -157,7 +130,7 @@ export class InstrumentSflib extends Playback.Instrument
             note.released = true
             
             const time = this.synth.audioCtx.currentTime
-            const releaseTime = time + note.zone.volEnvReleaseSec
+            const releaseTime = time + Math.max(note.zone.volEnvReleaseSec, 0.05)
 
             note.nodeEnvelope.gain.cancelScheduledValues(time)
             note.nodeEnvelope.gain.setValueAtTime(note.nodeEnvelope.gain.value, time)
@@ -173,25 +146,25 @@ export class InstrumentSflib extends Playback.Instrument
             return
         
         note.released = true
-
         note.releasedTimerMs = note.zone.volEnvReleaseSec * 1000
-
         note.nodeSrc.stop()
-
-        this.notes.delete(noteId)
 	}
 
 
 	stopAll()
 	{
-        for (const noteId of [...this.notes.keys()])
+        for (const [noteId,] of this.notes)
             this.stopNote(noteId)
+
+        this.notes.clear()
 	}
 
 
 	process(deltaTimeMs: number)
 	{
-        for (const [noteId, note] of [...this.notes.entries()])
+        const notesToDelete: Project.ID[] = []
+
+        for (const [noteId, note] of this.notes)
         {
             if (note.released)
             {
@@ -199,13 +172,22 @@ export class InstrumentSflib extends Playback.Instrument
             
                 if (note.zone.loopMode != "loop")
                 {
-                    const sample = this.sampleBuffers[note.zone.sampleIndex]
+                    const sample = this.sflibInstrument!.audioBuffers[note.zone.sampleIndex]
                     if (note.releasedTimerMs > sample.length / sample.sampleRate * 1000)
+                    {
                         this.stopNote(noteId)
+                        notesToDelete.push(noteId)
+                    }
                 }
                 else if (note.releasedTimerMs > note.zone.volEnvReleaseSec * 1000)
+                {
                     this.stopNote(noteId)
+                    notesToDelete.push(noteId)
+                }
             }
         }
+
+        for (const id of notesToDelete)
+            this.notes.delete(id)
 	}
 }

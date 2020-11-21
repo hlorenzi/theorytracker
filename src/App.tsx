@@ -9,6 +9,7 @@ import { useRefState } from "./util/refState"
 import PlaybackToolbar from "./PlaybackToolbar"
 import MenuFile from "./MenuFile"
 import MenuWindow from "./MenuWindow"
+import "./types"
 
 
 export default function App()

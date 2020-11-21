@@ -12,14 +12,6 @@ import { EditorUpdateData } from "./state"
 import styled from "styled-components"
 
 
-declare class ResizeObserver
-{
-    constructor(callback: (entries: any) => void)
-    observe(elem: HTMLElement): void
-    unobserve(elem: HTMLElement): void
-}
-
-
 const StyledTrackButton = styled.button`
     pointer-events: auto;
     color: #fff;
@@ -63,16 +55,16 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         }
     }
 
-    const render = () =>
+    const render = (force?: boolean) =>
     {
         if (!refCanvas.current)
             return
 
         const now = new Date().getTime()
-        if (now < lastTimelineRenderRef.current + 15)
+        if (!force && now < lastTimelineRenderRef.current + 15)
             return
 
-        console.log("Timeline render")
+        //console.log("Timeline render")
         lastTimelineRenderRef.current = now
 
         const updateData = makeUpdateData()
@@ -100,7 +92,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
         const updateData = makeUpdateData()
         Editor.resize(updateData, renderRect)
-        render()
+        render(true)
     }
 
     React.useLayoutEffect(() =>
@@ -125,7 +117,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     {
         const updateData = makeUpdateData()
         Editor.scrollPlaybackTimeIntoView(updateData)
-        render()
+        render(!playback.ref.current.playing)
         
     }, [playback.update])
 
@@ -133,7 +125,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     {
         const updateData = makeUpdateData()
         Editor.refreshTracks(updateData)
-        render()
+        render(true)
 
     }, [project.ref.current.tracks])
 
@@ -255,7 +247,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const updateData = makeUpdateData()
             Editor.rewind(updateData)
             editorState.commit()
-            render()
+            render(true)
         }
 		
 		const onRefreshProjectTracks = (ev: Event) =>
@@ -263,7 +255,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const updateData = makeUpdateData()
             Editor.refreshTracks(updateData)
             editorState.commit()
-            render()
+            render(true)
         }
 		
 		const onReset = (ev: Event) =>
@@ -273,15 +265,15 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             Editor.refreshTracks(updateData)
             Editor.rewind(updateData)
             editorState.commit()
-            render()
+            render(true)
         }
         
-        refCanvasCurrent.addEventListener("mousemove", onMouseMove)
         refCanvasCurrent.addEventListener("mousedown", onMouseDown)
-        refCanvasCurrent.addEventListener("mouseup", onMouseUp)
         refCanvasCurrent.addEventListener("wheel", onMouseWheel)
         refCanvasCurrent.addEventListener("contextmenu", preventDefault)
 
+        window.addEventListener("mousemove", onMouseMove)
+        window.addEventListener("mouseup", onMouseUp)
         window.addEventListener("keydown", onKeyDown)
         window.addEventListener("keyup", onKeyUp)
 
@@ -291,12 +283,12 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
         return () =>
         {
-            refCanvasCurrent.removeEventListener("mousemove", onMouseMove)
             refCanvasCurrent.removeEventListener("mousedown", onMouseDown)
-            refCanvasCurrent.removeEventListener("mouseup", onMouseUp)
             refCanvasCurrent.removeEventListener("wheel", onMouseWheel)
             refCanvasCurrent.removeEventListener("contextmenu", preventDefault)
 
+            window.removeEventListener("mousemove", onMouseMove)
+            window.removeEventListener("mouseup", onMouseUp)
             window.removeEventListener("keydown", onKeyDown)
             window.removeEventListener("keyup", onKeyUp)
 

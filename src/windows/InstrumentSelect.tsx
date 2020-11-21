@@ -3,7 +3,6 @@ import * as Dockable from "../dockable"
 import * as Project from "../project"
 import * as Playback from "../playback"
 import * as UI from "../ui"
-import { useRefState } from "../util/refState"
 import styled from "styled-components"
 
 
@@ -42,7 +41,7 @@ export interface InstrumentSelectProps
 export function InstrumentSelect()
 {
     const windowCtx = Dockable.useWindow()
-    windowCtx.setPreferredSize(500, 600)
+    windowCtx.setPreferredSize(800, 500)
     windowCtx.setTitle("Instrument Select")
 
     const props: InstrumentSelectProps = windowCtx.data
@@ -96,7 +95,7 @@ function InstrumentSelectSflib(props: { data: InstrumentSelectProps })
     if (!sflibMeta)
         return null
 
-    const curCollection = sflibMeta.collections.find(c => c.id == instr.collectionId)!
+    const curCollection = sflibMeta.collectionsById.get(instr.collectionId)!
 
     const onChange = (collectionId: string, instrumentId: string) =>
     {
@@ -106,10 +105,39 @@ function InstrumentSelectSflib(props: { data: InstrumentSelectProps })
         props.data.setInstrument(newInstr)
     }
 
+    const collItems = React.useMemo(() =>
+    {
+        return sflibMeta.collections.map(coll =>
+        {
+            return {
+                value: coll.id,
+                label: coll.name,
+            }
+        })
+
+    }, [])
+
+    const instrItems = React.useMemo(() =>
+    {
+        return curCollection.instruments.map(instr =>
+        {
+            return {
+                value: instr.id,
+                label:
+                    getMidiIcon(instr.midiBank, instr.midiPreset) + " " +
+                    //"[" + instr.midiBank.toString().padStart(3, "0") + ":" +
+                    //instr.midiPreset.toString().padStart(3, "0") + "] " +
+                    instr.name,
+            }
+        })
+
+    }, [curCollection])
+
     return <div style={{
         display: "grid",
-        gridTemplate: "auto 1fr / 1fr 1fr",
+        gridTemplate: "auto 1fr / 14em 1fr",
         gridGap: "0.5em 0.5em",
+        width: "100%",
         minHeight: 0,
         height: "100%",
         boxSizing: "border-box",
@@ -125,30 +153,14 @@ function InstrumentSelectSflib(props: { data: InstrumentSelectProps })
 
         <UI.ListBox
             selected={ instr.collectionId }
-            onChange={ item => onChange(item.value, sflibMeta.collections.find(coll => coll.id == item.value)!.instruments[0].id) }
-            items={ sflibMeta.collections.map(coll =>
-            {
-                return {
-                    value: coll.id,
-                    label: coll.name,
-                }
-            })}
+            onChange={ item => onChange(item.value, sflibMeta.collectionsById.get(item.value)!.instruments[0].id) }
+            items={ collItems }
         />
 
         <UI.ListBox
             selected={ instr.instrumentId }
             onChange={ item => onChange(curCollection.id, item.value) }
-            items={ curCollection.instruments.map(instr =>
-            {
-                return {
-                    value: instr.id,
-                    label:
-                        getMidiIcon(instr.midiBank, instr.midiPreset) + " " +
-                        //instr.midiBank.toString().padStart(3, "0") + "." +
-                        //instr.midiPreset.toString().padStart(3, "0") + " : " +
-                        instr.name,
-                }
-            })}
+            items={ instrItems }
         />
 
     </div>

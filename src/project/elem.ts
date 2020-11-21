@@ -148,8 +148,8 @@ export function instrumentName(instrument: Instrument): string
             if (!sflibMeta)
                 return instrument.collectionId + "/" + instrument.instrumentId
 
-            const coll = sflibMeta.collections.find(c => c.id == instrument.collectionId)!
-            const instr = coll.instruments.find(i => i.id == instrument.instrumentId)!
+            const coll = sflibMeta.collectionsById.get(instrument.collectionId)!
+            const instr = coll.instrumentsById.get(instrument.instrumentId)!
 
             return coll.name + "/" + instr.name
         }

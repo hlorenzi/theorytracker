@@ -3,7 +3,6 @@ import * as Windows from "./index"
 import * as Dockable from "../dockable"
 import * as Project from "../project"
 import * as UI from "../ui"
-import Rect from "../util/rect"
 import styled from "styled-components"
 
 
@@ -41,11 +40,20 @@ export function TrackSettings()
     const project = Project.useProject()
 
     const trackId: Project.ID = windowCtx.data.trackId
-    const elem = project.ref.current.elems.get(trackId)
-    if (!elem)
-        return null
+    
+    const getTrack = () =>
+    {
+        const elem = project.ref.current.elems.get(trackId)
+        if (!elem || elem.type != Project.ElementType.Track)
+            return null
 
-    const track = elem as Project.Track
+        return elem as Project.Track
+    }
+
+    const track = getTrack()
+    if (!track)
+        return null
+    
     windowCtx.setTitle("Track [" + track.name + "]")
 
     const onRename = (newName: string) =>
@@ -91,12 +99,8 @@ export function TrackSettings()
     {
         const getInstrument = () =>
         {
-            const elem = project.ref.current.elems.get(trackId)
-            if (!elem)
-                return null
-        
-            const track = elem as Project.Track
-            if (index >= track.instruments.length)
+            const track = getTrack()
+            if (!track || index >= track.instruments.length)
                 return null
 
             return track.instruments[index]
@@ -104,6 +108,10 @@ export function TrackSettings()
 
         const setInstrument = (newInstrument: Project.Instrument) =>
         {
+            const track = getTrack()
+            if (!track)
+                return null
+
             const newTrack: Project.Track = {
                 ...track,
                 instruments: [

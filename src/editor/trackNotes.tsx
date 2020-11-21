@@ -339,7 +339,10 @@ export class EditorTrackNotes extends EditorTrack
 		const noteOrigX1 = Editor.xAtTime(data, range.start)
 		const noteOrigX2 = Editor.xAtTime(data, range.end)
 		
-		const noteY = Math.floor(this.yForRow(data, row))
+        const noteY =
+            Math.max(-data.state.noteRowH / 2,
+            Math.min(this.renderRect.h - data.state.noteRowH / 2,
+            Math.floor(this.yForRow(data, row))))
 		
 		let noteX1 = Math.max(noteOrigX1, xStart)
 		let noteX2 = Math.min(noteOrigX2, xEnd)
@@ -376,8 +379,8 @@ export class EditorTrackNotes extends EditorTrack
         data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
         data.ctx.fillRect(parentX2, 0, visibleX2 - parentX2, this.renderRect.h)
         
-        const rowAtTop = this.rowAtY(data, this.yScroll)
-        const rowAtBottom = this.rowAtY(data, this.yScroll + this.renderRect.h)
+        const rowAtTop = this.rowAtY(data, 0)
+        const rowAtBottom = this.rowAtY(data, this.renderRect.h)
 
         const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
         const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1

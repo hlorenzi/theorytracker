@@ -43,12 +43,6 @@ export class Instrument
     }
 
 
-	stopNote(noteId: Project.ID)
-	{
-		
-	}
-
-
 	stopAll()
 	{
 
