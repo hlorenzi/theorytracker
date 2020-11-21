@@ -14,11 +14,7 @@ export default function MenuWindow()
 
     const onOpenWindow = (elem: any, data: any) =>
     {
-        dockable.ref.current.createFloating(
-            elem, data,
-            new Rect(
-                100, 100,
-                1, 1))
+        dockable.ref.current.createFloating(elem, data)
     }
 
 

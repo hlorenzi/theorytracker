@@ -41,8 +41,11 @@ export interface InstrumentSelectProps
 
 export function InstrumentSelect()
 {
-    const window = Dockable.useWindow()
-    const props: InstrumentSelectProps = window.data
+    const windowCtx = Dockable.useWindow()
+    windowCtx.setPreferredSize(500, 600)
+    windowCtx.setTitle("Instrument Select")
+
+    const props: InstrumentSelectProps = windowCtx.data
 
 
     const onChangeType = (newType: string) =>

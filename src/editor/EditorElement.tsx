@@ -48,6 +48,8 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     const popup = Popup.usePopup()
     const dockable = Dockable.useDockable()
 
+    const lastTimelineRenderRef = React.useRef(0)
+
     const makeUpdateData: () => EditorUpdateData = () =>
     {
         return {
@@ -66,7 +68,12 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         if (!refCanvas.current)
             return
 
-        console.log("render")
+        const now = new Date().getTime()
+        if (now < lastTimelineRenderRef.current + 15)
+            return
+
+        console.log("Timeline render")
+        lastTimelineRenderRef.current = now
 
         const updateData = makeUpdateData()
         updateData.ctx = refCanvas.current.getContext("2d")!
@@ -435,7 +442,6 @@ function TrackHeader(props: TrackHeaderProps)
 
 function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 {
-    console.log("TrackHeaderNoteBlocks")
     const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
     if (!track || track.type != Project.ElementType.Track)
         return null

@@ -99,11 +99,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             {
                 data.dockable.ref.current.createFloating(
                     Windows.TrackSettings,
-                    { trackId: elem.id },
-                    new Rect(
-                        data.state.renderRect.x + data.state.mouse.point.pos.x,
-                        data.state.renderRect.y + data.state.mouse.point.pos.y,
-                        1, 1))
+                    { trackId: elem.id })
             }
         }
     }

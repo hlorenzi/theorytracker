@@ -34,16 +34,19 @@ const StyledButton = styled.button`
 
 export function TrackSettings()
 {
-    const window = Dockable.useWindow()
+    const windowCtx = Dockable.useWindow()
+    windowCtx.setPreferredSize(500, 350)
+
     const dockable = Dockable.useDockable()
     const project = Project.useProject()
 
-    const trackId: Project.ID = window.data.trackId
+    const trackId: Project.ID = windowCtx.data.trackId
     const elem = project.ref.current.elems.get(trackId)
     if (!elem)
         return null
 
     const track = elem as Project.Track
+    windowCtx.setTitle("Track [" + track.name + "]")
 
     const onRename = (newName: string) =>
     {
@@ -116,10 +119,7 @@ export function TrackSettings()
 
         dockable.ref.current.createFloating(
             Windows.InstrumentSelect,
-            { getInstrument, setInstrument },
-            new Rect(
-                100, 100,
-                1, 1))
+            { getInstrument, setInstrument })
     }
 
     return <div style={{

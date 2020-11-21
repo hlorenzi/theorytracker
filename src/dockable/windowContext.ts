@@ -13,7 +13,7 @@ export interface DockableContextProps
     contentIdToComponent: (id: Dockable.WindowId) => any
     contentIdToData: (id: Dockable.WindowId) => any
 
-    createFloating: (elem: any, data: any, rect: Rect) => void
+    createFloating: (elem: any, data: any, rect?: Rect) => void
 }
 
 
@@ -27,8 +27,31 @@ export function useDockable(): RefState<DockableContextProps>
 }
 
 
+interface MousePos
+{
+    x: number
+    y: number
+}
+
+
 export function useDockableInit(): RefState<DockableContextProps>
 {
+    const mousePosRef = React.useRef<MousePos>({ x: 0, y: 0 })
+
+    React.useEffect(() =>
+    {
+        const onMouseMove = (ev: MouseEvent) =>
+        {
+            mousePosRef.current = {
+                x: ev.pageX,
+                y: ev.pageY,
+            }
+        }
+
+        window.addEventListener("mousemove", onMouseMove)
+
+    }, [])
+
     const dockable = useRefState<DockableContextProps>(() =>
     {
         const idsToComponents = new Map()
@@ -58,7 +81,7 @@ export function useDockableInit(): RefState<DockableContextProps>
             return idsToData.get(id)
         }
 
-        const createFloating = (elem: any, data: any, rect: Rect) =>
+        const createFloating = (elem: any, data: any, rect?: Rect) =>
         {
             let state = dockable.ref.current.state
 
@@ -68,7 +91,11 @@ export function useDockableInit(): RefState<DockableContextProps>
 
             const panel = Dockable.makePanel(state)
             Dockable.addWindow(state, panel, id)
-            panel.rect = new Rect(rect.x2, rect.y2, 500, 300)
+            if (rect)
+                panel.rect = new Rect(rect.x2, rect.y2, 500, 300)
+            else
+                panel.rect = new Rect(mousePosRef.current.x, mousePosRef.current.y, 500, 300)
+
             panel.bugfixAppearOnTop = true
 
             dockable.ref.current.state = state
@@ -92,8 +119,12 @@ export function useDockableInit(): RefState<DockableContextProps>
 
 export interface WindowProps
 {
+    panel: Dockable.Panel
     contentId: Dockable.WindowId
     data: any
+
+    setTitle: (title: string) => void
+    setPreferredSize: (w: number, h: number) => void
 }
 
 

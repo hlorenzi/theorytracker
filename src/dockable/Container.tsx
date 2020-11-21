@@ -26,6 +26,12 @@ const StyledCloseButton = styled.button`
     {
         border: 1px solid #fff;
     }
+
+    &:active
+    {
+        border: 1px solid #fff;
+        background-color: #000;
+    }
 `
 
 
@@ -62,14 +68,37 @@ export function Container()
 
 
     const layoutRef = React.useRef<Dockable.Layout>(null!)
+    const rectRef = React.useRef<Rect>(null!)
+    rectRef.current = rect
     layoutRef.current = React.useMemo(() =>
     {
         return DockableData.getLayout(dockable.ref.current.state, rect)
 
     }, [rect, dockable.update])
 
+
+    React.useEffect(() =>
+    {
+        let refreshed = false
+        for (const panel of dockable.ref.current.state.floatingPanels)
+        {
+            if (panel.justOpened)
+            {
+                panel.justOpened = false
+                panel.rect.w = panel.preferredFloatingSize.w
+                panel.rect.h = panel.preferredFloatingSize.h
+                Dockable.clampFloatingPanels(dockable.ref.current.state, rectRef.current)
+                refreshed = true
+            }
+        }
+
+        if (refreshed)
+            dockable.commit()
+
+    }, [dockable.update])
+
     
-    const mouseData = useMouseHandler(layoutRef)
+    const mouseData = useMouseHandler(layoutRef, rectRef)
 
     const anchorSize = 5
     const anchorColor = "#0bf"
@@ -223,7 +252,7 @@ function Panel(props: any)
                             borderTopRightRadius: "0.5em",
                             borderTopLeftRadius: "0.5em",
                     }}>
-                        { "Content " + cId }
+                        { panelRect.panel.windowTitles[idx] || "New Window" }
                         <StyledCloseButton
                             onClick={ ((ev: MouseEvent) => mouseHandler.onPanelTabClose(ev, panelRect.panel, idx)) as any }
                         >
@@ -242,9 +271,33 @@ function Panel(props: any)
                 const data = !dockable.ref.current.contentIdToData ? null :
                     dockable.ref.current.contentIdToData(cId)
 
+                const setTitle = (title: string) =>
+                {
+                    if (panelRect.panel.windowTitles[idx] != title)
+                    {
+                        panelRect.panel.windowTitles[idx] = title
+                        dockable.commit()
+                    }
+                }
+
+                const setPreferredSize = (w: number, h: number) =>
+                {
+                    if (idx == panelRect.panel.curWindowIndex &&
+                        (w != panelRect.panel.preferredFloatingSize.w ||
+                        h != panelRect.panel.preferredFloatingSize.h))
+                    {
+                        panelRect.panel.preferredFloatingSize = new Rect(0, 0, w, h)
+                        dockable.commit()
+                    }
+                }
+
                 return <WindowContext.Provider key={ cId } value={{
+                    panel: panelRect.panel,
                     contentId: cId,
                     data,
+
+                    setTitle,
+                    setPreferredSize,
                 }}>
                     <div style={{
                         display: panelRect.panel.curWindowIndex == idx ? "block" : "none",
@@ -334,7 +387,10 @@ interface MouseHandlerData
 }
 
 
-function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): MouseHandlerData
+function useMouseHandler(
+    layoutRef: React.MutableRefObject<Dockable.Layout>,
+    rectRef: React.MutableRefObject<Rect>)
+    : MouseHandlerData
 {
     const dockableRef = Dockable.useDockable()
 
@@ -415,7 +471,7 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
 
                         if (state.mouseAction == MouseAction.MoveHeader)
                         {
-                            if (state.grabbedTab === null)
+                            if (state.grabbedTab === null || state.grabbedPanel!.windowIds.length == 1)
                             {
                                 if (!state.grabbedPanel!.floating)
                                 {
@@ -430,12 +486,10 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
                                     Dockable.coallesceEmptyPanels(dockable)
                                         
                                     state.grabbedPanel!.rect = new Rect(
-                                        state.mousePos.x - 150, state.mousePos.y,
-                                        300, 200)
-
-                                    state.grabbedPanel!.rect = new Rect(
-                                        state.mousePos.x - 150, state.mousePos.y,
-                                        300, 200)
+                                        state.mousePos.x - state.grabbedPanel!.preferredFloatingSize.w / 2,
+                                        state.mousePos.y,
+                                        state.grabbedPanel!.preferredFloatingSize.w,
+                                        state.grabbedPanel!.preferredFloatingSize.h)
                                 }
                             }
                             else
@@ -447,8 +501,10 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
                                 Dockable.coallesceEmptyPanels(dockable)
 
                                 state.grabbedPanel!.rect = new Rect(
-                                    state.mousePos.x - 150, state.mousePos.y,
-                                    300, 200)
+                                    state.mousePos.x - state.grabbedPanel!.preferredFloatingSize.w / 2,
+                                    state.mousePos.y,
+                                    state.grabbedPanel!.preferredFloatingSize.w,
+                                    state.grabbedPanel!.preferredFloatingSize.h)
                             }
 
                             bringToFront(state.grabbedPanel!)
@@ -501,6 +557,8 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
                         state.nearestAnchor.panel,
                         state.nearestAnchor.mode)
                 }
+
+                Dockable.clampFloatingPanels(dockable, rectRef.current)
             }
 
             state.mouseDown = false
@@ -528,7 +586,6 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
     const onPanelHeaderMouseDown = (ev: MouseEvent, panel: Dockable.Panel) =>
     {
         ev.preventDefault()
-        ev.stopPropagation()
         const state = stateRef.ref.current
         state.grabbedPanel = panel
         state.grabbedTab = null
@@ -562,7 +619,6 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
     const onPanelResize = (ev: MouseEvent, panel: Dockable.Panel) =>
     {
         ev.preventDefault()
-        ev.stopPropagation()
         const state = stateRef.ref.current
         state.grabbedPanel = panel
         state.grabbedTab = null
@@ -578,7 +634,6 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
     const onDividerResize = (ev: MouseEvent, divider: Dockable.Divider) =>
     {
         ev.preventDefault()
-        ev.stopPropagation()
         const state = stateRef.ref.current
         state.grabbedDivider = divider
         state.mouseDown = true
@@ -591,7 +646,6 @@ function useMouseHandler(layoutRef: React.MutableRefObject<Dockable.Layout>): Mo
     const onPanelTabClose = (ev: MouseEvent, panel: Dockable.Panel, tab: number) =>
     {
         ev.preventDefault()
-        ev.stopPropagation()
         const dockable = dockableRef.ref.current.state
         const window = panel.windowIds[tab]
         Dockable.removeWindow(dockable, panel, window)

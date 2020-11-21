@@ -1,3 +1,4 @@
+import { Root } from "../project"
 import Rect from "../util/rect"
 
 
@@ -41,6 +42,11 @@ export interface Panel
     splitPanels: Panel[]
     splitMode: SplitMode
     splitSize: number
+
+    windowTitles: string[]
+    preferredFloatingSize: Rect
+
+    justOpened: boolean
 }
 
 
@@ -94,6 +100,11 @@ export function makeRoot(): State
             splitPanels: [],
             splitMode: SplitMode.LeftRight,
             splitSize: 0.5,
+
+            windowTitles: [],
+            preferredFloatingSize: new Rect(0, 0, 300, 250),
+
+            justOpened: false,
         },
         floatingPanels: [],
     }
@@ -113,6 +124,11 @@ export function makePanel(root: State): Panel
         splitPanels: [],
         splitMode: SplitMode.LeftRight,
         splitSize: 0.5,
+
+        windowTitles: [],
+        preferredFloatingSize: new Rect(0, 0, 300, 250),
+
+        justOpened: true,
     }
     root.floatingPanels.push(panel)
     return panel
@@ -132,14 +148,20 @@ export function detachPanel(root: State, panel: Panel)
 export function addWindow(root: State, toPanel: Panel, window: WindowId)
 {
     toPanel.windowIds.push(window)
+    toPanel.windowTitles.push("")
     toPanel.curWindowIndex = toPanel.windowIds.length - 1
 }
 
 
 export function removeWindow(root: State, fromPanel: Panel, window: WindowId)
 {
-    fromPanel.windowIds = fromPanel.windowIds.filter(w => w !== window)
-    fromPanel.curWindowIndex = 0
+    const windowIndex = fromPanel.windowIds.findIndex(w => w === window)
+    if (windowIndex < 0)
+        return
+    
+    fromPanel.windowIds.splice(windowIndex, 1)
+    fromPanel.windowTitles.splice(windowIndex, 1)
+    fromPanel.curWindowIndex = Math.max(0, Math.min(fromPanel.windowIds.length - 1, fromPanel.curWindowIndex))
 }
 
 
@@ -180,6 +202,7 @@ export function dock(root: State, panel: Panel, dockIntoPanel: Panel, mode: Dock
 
         detachPanel(root, panel)
         panel.windowIds = []
+        panel.windowTitles = []
         root.floatingPanels = root.floatingPanels.filter(p => p !== panel)
     }
     else if (mode == DockMode.Right ||
@@ -199,11 +222,14 @@ export function dock(root: State, panel: Panel, dockIntoPanel: Panel, mode: Dock
 
         const newSubpanel = makePanel(root)
         newSubpanel.windowIds = dockIntoPanel.windowIds
+        newSubpanel.windowTitles = dockIntoPanel.windowTitles
+        newSubpanel.curWindowIndex = dockIntoPanel.curWindowIndex
         newSubpanel.splitMode = dockIntoPanel.splitMode
         newSubpanel.splitPanels = dockIntoPanel.splitPanels
         newSubpanel.splitSize = dockIntoPanel.splitSize
 
         dockIntoPanel.windowIds = []
+        dockIntoPanel.windowTitles = []
         dockIntoPanel.splitPanels = newSubpanels
         dockIntoPanel.splitMode = subdivMode
         dockIntoPanel.splitSize = subdivOriginalFirst ? 0.75 : 0.25
@@ -221,6 +247,25 @@ export function dock(root: State, panel: Panel, dockIntoPanel: Panel, mode: Dock
     else
     {
         throw "invalid docking"
+    }
+}
+
+
+export function clampFloatingPanels(root: State, rect: Rect)
+{
+    const margin = 10
+
+    for (const panel of root.floatingPanels)
+    {
+        panel.rect.x =
+            Math.max(rect.x + margin,
+            Math.min(rect.x2 - margin - panel.rect.w,
+                panel.rect.x))
+
+        panel.rect.y =
+            Math.max(rect.y + margin,
+            Math.min(rect.y2 - margin - panel.rect.h,
+                panel.rect.y))
     }
 }
 

@@ -1,7 +1,7 @@
 import React from "react"
 import Rect from "../util/rect"
 import { Root } from "./Root"
-import { usePopupRoot } from "./popupContext"
+import { usePopup, usePopupRoot } from "./popupContext"
 
 
 interface PopupButtonProps
@@ -16,6 +16,7 @@ interface PopupButtonProps
 export function Button(props: PopupButtonProps)
 {
     const buttonRef = React.useRef<HTMLButtonElement>(null)
+    const popupCtx = usePopup()
     const popupRootCtx = usePopupRoot()
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
 
@@ -55,6 +56,8 @@ export function Button(props: PopupButtonProps)
         if (props.onClick)
         {
             props.onClick(ev)
+            popupCtx.ref.current.elem = null
+            popupCtx.commit()
         }
         else
         {

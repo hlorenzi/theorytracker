@@ -21,10 +21,23 @@ export function Root(props: PopupRootProps)
     
     const dismiss = (ev: any) =>
     {
-        ev.preventDefault()
         popupCtx.ref.current.elem = null
         popupCtx.commit()
     }
+
+    React.useEffect(() =>
+    {
+        const onClickVoid = (ev: MouseEvent) =>
+        {
+            dismiss(ev)
+        }
+
+        window.addEventListener("mousedown", onClickVoid)
+        return () =>
+        {
+            window.removeEventListener("mousedown", onClickVoid)
+        }
+    })
 
     return <PopupRootContext.Provider value={{
         curSubPopup: subOpen,
@@ -32,21 +45,8 @@ export function Root(props: PopupRootProps)
         itemIndex: 1,
     }}>
         <div
-            onContextMenu={ ev => ev.preventDefault() }
-            onClick={ props.isSub ? undefined : dismiss }
-            //onMouseDown={ props.isSub ? undefined : dismiss }
+            onMouseDown={ ev => ev.stopPropagation() }
             style={{
-                zIndex: 100000,
-                position: "fixed",
-                left: 0,
-                top: 0,
-                width: "100vw",
-                height: "100vh",
-
-                backgroundColor: "transparent",
-                pointerEvents: props.isSub ? "none" : undefined,
-        }}>
-            <div style={{
                 zIndex: 100001,
                 position: "absolute",
                 left: props.isSub ? rect.x2 : rect.x1,
@@ -64,9 +64,8 @@ export function Root(props: PopupRootProps)
                 gridTemplate: "auto / auto auto auto",
                 gridAutoFlow: "row",
                 pointerEvents: "auto",
-            }}>
-                { props.children }
-            </div>
+        }}>
+            { props.children }
         </div>
     </PopupRootContext.Provider>
 }

@@ -33,6 +33,10 @@ const StyledModeStackButton = styled.button`
 
 export function Timeline()
 {
+    const windowCtx = Dockable.useWindow()
+    windowCtx.setTitle("Timeline")
+    windowCtx.setPreferredSize(600, 450)
+
     const editorState = useRefState(() => Editor.init())
 
     const makeUpdateData: () => Editor.EditorUpdateData = () =>
