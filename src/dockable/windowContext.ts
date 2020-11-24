@@ -13,7 +13,8 @@ export interface DockableContextProps
     contentIdToComponent: (id: Dockable.WindowId) => any
     contentIdToData: (id: Dockable.WindowId) => any
 
-    createFloating: (elem: any, data: any, rect?: Rect) => void
+    createFloating: (elem: any, data: any, alignX?: number, alignY?: number, rect?: Rect) => Dockable.Panel
+    createFloatingEphemeral: (elem: any, data: any, alignX?: number, alignY?: number, rect?: Rect) => Dockable.Panel
 }
 
 
@@ -81,7 +82,7 @@ export function useDockableInit(): RefState<DockableContextProps>
             return idsToData.get(id)
         }
 
-        const createFloating = (elem: any, data: any, rect?: Rect) =>
+        const createFloating = (elem: any, data: any, alignX?: number, alignY?: number, rect?: Rect): Dockable.Panel =>
         {
             let state = dockable.ref.current.state
 
@@ -96,10 +97,22 @@ export function useDockableInit(): RefState<DockableContextProps>
             else
                 panel.rect = new Rect(mousePosRef.current.x, mousePosRef.current.y, 500, 300)
 
+            panel.justOpenedAnchorRect = rect ?? new Rect(mousePosRef.current.x, mousePosRef.current.y, 0, 0)
+            panel.justOpenedAnchorAlignX = alignX ?? 1
+            panel.justOpenedAnchorAlignY = alignY ?? 1
             panel.bugfixAppearOnTop = true
 
-            dockable.ref.current.state = state
             dockable.commit()
+            return panel
+        }
+
+        const createFloatingEphemeral = (elem: any, data: any, alignX?: number, alignY?: number, rect?: Rect): Dockable.Panel =>
+        {
+            const panel = createFloating(elem, data, alignX, alignY, rect)
+            Dockable.removeEphemerals(state)
+            panel.ephemeral = true
+            dockable.commit()
+            return panel
         }
 
         return {
@@ -110,6 +123,7 @@ export function useDockableInit(): RefState<DockableContextProps>
             contentIdToData,
 
             createFloating,
+            createFloatingEphemeral,
         }
     })
 

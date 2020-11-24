@@ -80,7 +80,10 @@ function handleContextMenu(data: Editor.EditorUpdateData)
 
     Editor.selectionToggleHover(data, data.state.hover, false)
 
-    const elems: JSX.Element[] = []
+    if (data.state.hover)
+        data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data, data.state.hover!.id)
+
+    /*const elems: JSX.Element[] = []
     const trackCtxMenu = data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data)
     if (trackCtxMenu)
     {
@@ -110,5 +113,5 @@ function handleContextMenu(data: Editor.EditorUpdateData)
         data.state.renderRect.x + data.state.mouse.point.pos.x + 2,
         data.state.renderRect.y + data.state.mouse.point.pos.y + 2,
         0, 0)
-    data.popup.commit()
+    data.popup.commit()*/
 }

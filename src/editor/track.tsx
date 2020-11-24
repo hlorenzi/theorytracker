@@ -61,12 +61,6 @@ export class EditorTrack
     }
 
 
-    contextMenu(data: Editor.EditorUpdateData): JSX.Element | null
-    {
-        return null
-    }
-
-
     hover(data: Editor.EditorUpdateData)
     {
         
@@ -80,6 +74,12 @@ export class EditorTrack
 
 
     doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
+    {
+        
+    }
+
+
+    contextMenu(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
         
     }

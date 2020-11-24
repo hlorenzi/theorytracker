@@ -168,8 +168,10 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
 		const onMouseMove = (ev: MouseEvent) =>
 		{
-            ev.preventDefault()
             const updateData = makeUpdateData()
+            if (updateData.state.mouse.down)
+                ev.preventDefault()
+                
             const pos = transformMousePos(refCanvasCurrent, ev)
             const needsRender1 = Editor.mouseMove(updateData, pos)
             const needsRender2 = Editor.mouseDrag(updateData, pos)
@@ -192,6 +194,10 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 document.activeElement.blur()
 
             ev.preventDefault()
+
+            Dockable.removeEphemerals(dockable.ref.current.state)
+            dockable.commit()
+
             const updateData = makeUpdateData()
             const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
@@ -203,8 +209,10 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         
 		const onMouseUp = (ev: MouseEvent) =>
 		{
-            ev.preventDefault()
             const updateData = makeUpdateData()
+            if (updateData.state.mouse.down)
+                ev.preventDefault()
+
             const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
             Editor.mouseUp(updateData)
@@ -214,7 +222,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 project.ref.current = updateData.project
                 project.commit()
                 
-                window.dispatchEvent(new Event("refreshProjectTracks"))
+                window.dispatchEvent(new Event("timelineRefresh"))
             }
 
             render()
@@ -224,7 +232,6 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		
 		const onMouseWheel = (ev: WheelEvent) =>
 		{
-			ev.preventDefault()
             const updateData = makeUpdateData()
 			Editor.mouseWheel(updateData, ev.deltaX, ev.deltaY)
             render()
@@ -250,7 +257,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             render(true)
         }
 		
-		const onRefreshProjectTracks = (ev: Event) =>
+		const onRefresh = (ev: Event) =>
 		{
             const updateData = makeUpdateData()
             Editor.refreshTracks(updateData)
@@ -278,7 +285,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         window.addEventListener("keyup", onKeyUp)
 
         window.addEventListener("timelineRewind", onRewind)
-        window.addEventListener("refreshProjectTracks", onRefreshProjectTracks)
+        window.addEventListener("timelineRefresh", onRefresh)
         window.addEventListener("timelineReset", onReset)
 
         return () =>
@@ -293,7 +300,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             window.removeEventListener("keyup", onKeyUp)
 
             window.removeEventListener("timelineRewind", onRewind)
-            window.removeEventListener("refreshProjectTracks", onRefreshProjectTracks)
+            window.removeEventListener("timelineRefresh", onRefresh)
             window.removeEventListener("timelineReset", onReset)
         }
 
@@ -312,7 +319,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         project.ref.current = proj
         project.commit()
         
-        window.dispatchEvent(new Event("refreshProjectTracks"))
+        window.dispatchEvent(new Event("timelineRefresh"))
     }
 
     const onTrackSettings = (ev: React.MouseEvent, trackIndex: number) =>

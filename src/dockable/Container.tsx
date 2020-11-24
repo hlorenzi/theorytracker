@@ -79,25 +79,52 @@ export function Container()
 
     React.useEffect(() =>
     {
-        for (const panel of dockable.ref.current.state.floatingPanels)
+        const onRefreshPreferredSize = () =>
         {
-            if (panel.justOpened)
+            for (const panel of dockable.ref.current.state.floatingPanels)
             {
-                window.requestAnimationFrame(() =>
+                if (!panel.justOpened)
+                    continue
+                
+                panel.justOpened = false
+                panel.rect.w = panel.preferredFloatingSize.w
+                panel.rect.h = panel.preferredFloatingSize.h
+
+                switch (panel.justOpenedAnchorAlignX)
                 {
-                    if (!panel.justOpened)
-                        return
-                    
-                    panel.justOpened = false
-                    panel.rect.w = panel.preferredFloatingSize.w
-                    panel.rect.h = panel.preferredFloatingSize.h
-                    Dockable.clampFloatingPanels(dockable.ref.current.state, rectRef.current)
-                    dockable.commit()
-                })
+                    case 0:
+                        panel.rect.x = panel.justOpenedAnchorRect.xCenter - panel.rect.w / 2
+                        break
+                    case 1:
+                        panel.rect.x = panel.justOpenedAnchorRect.x1
+                        break
+                    case -1:
+                        panel.rect.x = panel.justOpenedAnchorRect.x2 - panel.rect.w
+                        break
+                }
+                
+                switch (panel.justOpenedAnchorAlignY)
+                {
+                    case 0:
+                        panel.rect.y = panel.justOpenedAnchorRect.yCenter - panel.rect.h / 2
+                        break
+                    case 1:
+                        panel.rect.y = panel.justOpenedAnchorRect.y1
+                        break
+                    case -1:
+                        panel.rect.y = panel.justOpenedAnchorRect.y2 - panel.rect.h
+                        break
+                }
+
+                Dockable.clampFloatingPanelStrictly(dockable.ref.current.state, panel, rectRef.current)
+                dockable.commit()
             }
         }
 
-    }, [dockable.update])
+        window.addEventListener("dockableRefreshPreferredSize", onRefreshPreferredSize)
+        return () => window.removeEventListener("dockableRefreshPreferredSize", onRefreshPreferredSize)
+
+    }, [])
 
     
     const mouseData = useMouseHandler(layoutRef, rectRef)
@@ -295,6 +322,9 @@ function Panel(props: any)
                         {
                             panelRect.panel.preferredFloatingSize = new Rect(0, 0, w, h)
                             dockable.commit()
+
+                            if (panelRect.panel.justOpened)
+                                window.dispatchEvent(new Event("dockableRefreshPreferredSize"))
                         })
                     }
                 }
@@ -426,7 +456,7 @@ function useMouseHandler(
         }
     }
 
-    const bringToFront = (panel: Dockable.Panel) =>
+    const bringToFront = (ev: any, panel: Dockable.Panel) =>
     {
         if (!panel.floating)
             return
@@ -441,6 +471,11 @@ function useMouseHandler(
 
         dockable.floatingPanels = dockable.floatingPanels.filter(p => p !== panel)
         dockable.floatingPanels.push(panel)
+        
+        console.log("bringToFront", panel, ev.clickedEphemeral)
+        if (!panel.ephemeral && !ev.clickedEphemeral)
+            Dockable.removeEphemerals(dockable)
+        
         dockableRef.commit()
     }
     
@@ -493,11 +528,10 @@ function useMouseHandler(
 
                                     Dockable.coallesceEmptyPanels(dockable)
                                         
-                                    state.grabbedPanel!.rect = new Rect(
-                                        state.mousePos.x - state.grabbedPanel!.preferredFloatingSize.w / 2,
-                                        state.mousePos.y,
-                                        state.grabbedPanel!.preferredFloatingSize.w,
-                                        state.grabbedPanel!.preferredFloatingSize.h)
+                                    state.grabbedPanel!.rect = new Rect(state.mousePos.x, state.mousePos.y, 0, 0)
+                                    state.grabbedPanel!.justOpenedAnchorRect = new Rect(state.mousePos.x, state.mousePos.y, 0, 0)
+                                    state.grabbedPanel!.justOpenedAnchorAlignX = 0
+                                    state.grabbedPanel!.justOpenedAnchorAlignY = 1
                                 }
                             }
                             else
@@ -508,14 +542,13 @@ function useMouseHandler(
                                 Dockable.addWindow(dockable, state.grabbedPanel, window)
                                 Dockable.coallesceEmptyPanels(dockable)
 
-                                state.grabbedPanel!.rect = new Rect(
-                                    state.mousePos.x - state.grabbedPanel!.preferredFloatingSize.w / 2,
-                                    state.mousePos.y,
-                                    state.grabbedPanel!.preferredFloatingSize.w,
-                                    state.grabbedPanel!.preferredFloatingSize.h)
+                                state.grabbedPanel!.rect = new Rect(state.mousePos.x, state.mousePos.y, 0, 0)
+                                state.grabbedPanel!.justOpenedAnchorRect = new Rect(state.mousePos.x, state.mousePos.y, 0, 0)
+                                state.grabbedPanel!.justOpenedAnchorAlignX = 0
+                                state.grabbedPanel!.justOpenedAnchorAlignY = 1
                             }
 
-                            bringToFront(state.grabbedPanel!)
+                            bringToFront(ev, state.grabbedPanel!)
                         }
                     }
                 }
@@ -588,7 +621,12 @@ function useMouseHandler(
 
     const onPanelActivate = (ev: MouseEvent, panel: Dockable.Panel) =>
     {
-        bringToFront(panel)
+        if (panel.ephemeral)
+        {
+            (ev as any).clickedEphemeral = true
+        }
+
+        bringToFront(ev, panel)
     }
 
     const onPanelHeaderMouseDown = (ev: MouseEvent, panel: Dockable.Panel) =>
@@ -603,7 +641,7 @@ function useMouseHandler(
         state.mouseDragLocked = true
         stateRef.commit()
 
-        bringToFront(panel)
+        bringToFront(ev, panel)
     }
 
     const onPanelTabMouseDown = (ev: MouseEvent, panel: Dockable.Panel, tab: number) =>
@@ -621,7 +659,7 @@ function useMouseHandler(
         stateRef.commit()
         dockableRef.commit()
 
-        bringToFront(panel)
+        bringToFront(ev, panel)
     }
 
     const onPanelResize = (ev: MouseEvent, panel: Dockable.Panel) =>
@@ -636,7 +674,7 @@ function useMouseHandler(
         state.mouseDragLocked = true
         stateRef.commit()
 
-        bringToFront(panel)
+        bringToFront(ev, panel)
     }
 
     const onDividerResize = (ev: MouseEvent, divider: Dockable.Divider) =>

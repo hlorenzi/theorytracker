@@ -66,7 +66,7 @@ export function Timeline()
         const data = makeUpdateData()
         Editor.modeStackPop(data, index)
         editorState.commit()
-        window.dispatchEvent(new Event("refreshProjectTracks"))
+        window.dispatchEvent(new Event("timelineRefresh"))
     }
 
     const modeStack = React.useMemo(() =>

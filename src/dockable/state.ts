@@ -47,6 +47,10 @@ export interface Panel
     preferredFloatingSize: Rect
 
     justOpened: boolean
+    justOpenedAnchorRect: Rect
+    justOpenedAnchorAlignX: number
+    justOpenedAnchorAlignY: number
+    ephemeral: boolean
 }
 
 
@@ -105,6 +109,10 @@ export function makeRoot(): State
             preferredFloatingSize: new Rect(0, 0, 300, 250),
 
             justOpened: false,
+            justOpenedAnchorRect: new Rect(0, 0, 0, 0),
+            justOpenedAnchorAlignX: 0,
+            justOpenedAnchorAlignY: 1,
+            ephemeral: false,
         },
         floatingPanels: [],
     }
@@ -129,6 +137,10 @@ export function makePanel(root: State): Panel
         preferredFloatingSize: new Rect(0, 0, 300, 250),
 
         justOpened: true,
+        justOpenedAnchorRect: new Rect(0, 0, 0, 0),
+        justOpenedAnchorAlignX: 0,
+        justOpenedAnchorAlignY: 1,
+        ephemeral: false,
     }
     root.floatingPanels.push(panel)
     return panel
@@ -150,6 +162,7 @@ export function addWindow(root: State, toPanel: Panel, window: WindowId)
     toPanel.windowIds.push(window)
     toPanel.windowTitles.push("")
     toPanel.curWindowIndex = toPanel.windowIds.length - 1
+    toPanel.ephemeral = false
 }
 
 
@@ -162,6 +175,29 @@ export function removeWindow(root: State, fromPanel: Panel, window: WindowId)
     fromPanel.windowIds.splice(windowIndex, 1)
     fromPanel.windowTitles.splice(windowIndex, 1)
     fromPanel.curWindowIndex = Math.max(0, Math.min(fromPanel.windowIds.length - 1, fromPanel.curWindowIndex))
+}
+
+
+export function removeEphemerals(root: State)
+{
+    for (var i = 0; i < root.floatingPanels.length; i++)
+        removeEphemeralsRecursive(root, root.floatingPanels[i])
+
+    coallesceEmptyPanels(root)
+}
+
+
+export function removeEphemeralsRecursive(root: State, fromPanel: Panel)
+{
+    for (var i = 0; i < fromPanel.splitPanels.length; i++)
+        coallesceEmptyPanelsRecursive(root, fromPanel.splitPanels[i])
+
+    if (fromPanel.ephemeral)
+    {
+        fromPanel.windowIds = []
+        fromPanel.windowTitles = []
+        fromPanel.curWindowIndex = 0
+    }
 }
 
 
@@ -258,15 +294,31 @@ export function clampFloatingPanels(root: State, rect: Rect)
     for (const panel of root.floatingPanels)
     {
         panel.rect.x =
-            Math.max(rect.x + margin,
-            Math.min(rect.x2 - margin - panel.rect.w,
+            Math.max(rect.x + margin - panel.rect.w / 2,
+            Math.min(rect.x2 - margin - panel.rect.w / 2,
                 panel.rect.x))
 
         panel.rect.y =
             Math.max(rect.y + margin,
-            Math.min(rect.y2 - margin - panel.rect.h,
+            Math.min(rect.y2 - margin - panel.rect.h / 2,
                 panel.rect.y))
     }
+}
+
+
+export function clampFloatingPanelStrictly(root: State, panel: Panel, rect: Rect)
+{
+    const margin = 10
+
+    panel.rect.x =
+        Math.max(rect.x + margin,
+        Math.min(rect.x2 - margin - panel.rect.w,
+            panel.rect.x))
+
+    panel.rect.y =
+        Math.max(rect.y + margin,
+        Math.min(rect.y2 - margin - panel.rect.h,
+            panel.rect.y))
 }
 
 

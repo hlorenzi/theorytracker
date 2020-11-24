@@ -67,15 +67,6 @@ export class EditorTrackNoteBlocks extends EditorTrack
         for (const note of this.iterAtRange(data, range))
             yield note.id
     }
-
-
-    contextMenu(data: Editor.EditorUpdateData)
-    {
-        return <>
-            <Popup.Button label="Change duration"/>
-            <Popup.Button label="Change pitch"/>
-        </>
-    }
 	
 	
 	hover(data: Editor.EditorUpdateData)

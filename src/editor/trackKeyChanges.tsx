@@ -3,6 +3,7 @@ import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Editor from "./index"
+import * as Windows from "../windows"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
@@ -75,6 +76,19 @@ export class EditorTrackKeyChanges extends EditorTrack
                 }
             }
         }
+    }
+
+
+    contextMenu(data: Editor.EditorUpdateData, elemId: Project.ID)
+    {
+        const elem = data.project.elems.get(elemId)
+        if (!elem || elem.type != Project.ElementType.KeyChange)
+            return
+        
+        data.dockable.ref.current.createFloatingEphemeral(
+            Windows.Inspector,
+            { elemIds: [elemId] },
+            -1, 1)
     }
 
 
