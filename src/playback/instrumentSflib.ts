@@ -1,7 +1,6 @@
 import * as Playback from "./index"
 import * as Project from "../project"
-import MathUtils from "../util/mathUtils"
-import { timeStamp } from "console"
+import * as MathUtils from "../util/mathUtils"
 
 
 interface Note

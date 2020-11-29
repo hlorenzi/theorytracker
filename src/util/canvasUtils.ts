@@ -1,5 +1,5 @@
 import * as Theory from "../theory"
-import MathUtils from "./mathUtils"
+import * as MathUtils from "./mathUtils"
 
 
 const fillPatterns = new Map()

@@ -5,7 +5,7 @@ import { RefState, useRefState } from "../util/refState"
 import Rect from "../util/rect"
 import Rational from "../util/rational"
 import Range from "../util/range"
-import MathUtils from "../util/mathUtils"
+import * as MathUtils from "../util/mathUtils"
 
 
 export interface PlaybackContextProps

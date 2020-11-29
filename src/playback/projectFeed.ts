@@ -2,7 +2,7 @@ import * as Playback from "./index"
 import * as Project from "../project"
 import Rational from "../util/rational"
 import Range from "../util/range"
-import MathUtils from "../util/mathUtils"
+import * as MathUtils from "../util/mathUtils"
 
 
 export function feedNotes(
@@ -27,9 +27,19 @@ export function feedNotes(
                 track.id,
                 note.id,
                 MathUtils.midiToHertz(note.midiPitch),
-                Math.pow(track.volume * note.velocity, 1))
+                midiVolumeToLinearGain(track.volume * note.velocity))
         }
     }
+}
+
+
+function midiVolumeToLinearGain(midiVol: number): number
+{
+    if (midiVol <= 0)
+        return 0
+    
+    const minDbLevel = -15
+    return MathUtils.dbToLinearGain(minDbLevel * (1 - midiVol))
 }
 
 
