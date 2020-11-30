@@ -1,19 +1,21 @@
 import * as Project from "./index"
 import * as Theory from "../theory"
 import * as Playback from "../playback"
-import { MidiFileReader } from "../util/midi"
+import * as Midi from "../util/midi"
 import Rational from "../util/rational"
 import Range from "../util/range"
 
 
 export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 {
-    const midi = MidiFileReader.fromBytes(bytes)
+    const midi = Midi.Decoder.fromBytes(bytes)
     console.log(midi)
+
+    const tracks = splitTracksAtProgramChanges(midi.tracks)
     
     const findFirstEvent = (kind: string) =>
     {
-        for (const track of midi.tracks)
+        for (const track of tracks)
             for (const ev of track.events)
                 if (ev.kind == kind)
                     return ev
@@ -23,7 +25,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     
     const findFirstEventOnChannel = (channel: number, kind: string) =>
     {
-        for (const track of midi.tracks)
+        for (const track of tracks)
             for (const ev of track.events)
                 if (ev.kind == kind && ev.channel == channel)
                     return ev
@@ -31,7 +33,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         return null
     }
     
-    const findFirstEventOnTrack = (midiTrack: any, kind: string) =>
+    const findFirstEventOnTrack = (midiTrack: Midi.Track, kind: string) =>
     {
         for (const ev of midiTrack.events)
             if (ev.kind == kind)
@@ -42,7 +44,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     
     const findFirstControllerOnChannel = (channel: number, kind: string) =>
     {
-        for (const track of midi.tracks)
+        for (const track of tracks)
             for (const ev of track.events)
                 if (ev.kind == "controller" && ev.controllerName == kind && ev.channel == channel)
                     return ev
@@ -50,7 +52,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         return null
     }
     
-    const findFirstControllerOnTrack = (midiTrack: any, kind: string) =>
+    const findFirstControllerOnTrack = (midiTrack: Midi.Track, kind: string) =>
     {
         for (const ev of midiTrack.events)
             if (ev.kind == "controller" && ev.controllerName == kind)
@@ -71,7 +73,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     const trackMeterChanges = project.nextId
     project = Project.upsertTrack(project, Project.makeTrackMeterChanges())
 
-    for (const track of midi.tracks)
+    for (const track of tracks)
     {
         for (const ev of track.events)
         {
@@ -96,7 +98,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         }
     }
     
-    for (const track of midi.tracks)
+    for (const track of tracks)
     {
         for (const ev of track.events)
         {
@@ -112,9 +114,9 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     }
 
     const notes: MidiNote[] = []
-    for (let tr = 0; tr < midi.tracks.length; tr++)
+    for (let tr = 0; tr < tracks.length; tr++)
     {
-        const midiTrack = midi.tracks[tr]
+        const midiTrack = tracks[tr]
         for (const noteOn of midiTrack.events)
         {
             if (noteOn.kind != "noteOn" || noteOn.velocity == 0)
@@ -159,7 +161,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     
     for (const notesForTrack of notesByTracks)
     {
-        const midiTrack = midi.tracks[notesForTrack[0].midiTrackIndex]
+        const midiTrack = tracks[notesForTrack[0].midiTrackIndex]
 
         const findFirstEventOnChannelOrTrack = (ev: string) =>
         {
@@ -247,6 +249,45 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             Project.makeMeterChange(trackMeterChanges, new Rational(0), new Theory.Meter(4, 4)))
     
     return Project.withRefreshedRange(project)
+}
+
+
+function splitTracksAtProgramChanges(tracks: Midi.Track[]): Midi.Track[]
+{
+    // FIXME: Split tracks lose running information from before the split,
+    // e.g. track volume.
+    const newTracks: Midi.Track[] = []
+
+    for (const track of tracks)
+    {
+        let curNewTrack: Midi.Track =
+        {
+            length: 0,
+            events: [],
+        }
+
+        for (const event of track.events)
+        {
+            if (event.kind == "programChange")
+            {
+                if (curNewTrack.events.length > 0)
+                    newTracks.push(curNewTrack)
+
+                curNewTrack =
+                {
+                    length: 0,
+                    events: [],
+                }
+            }
+
+            curNewTrack.events.push(event)
+        }
+        
+        if (curNewTrack.events.length > 0)
+            newTracks.push(curNewTrack)
+    }
+
+    return newTracks
 }
 
 

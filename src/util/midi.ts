@@ -1,9 +1,9 @@
 import { BinaryReader } from "./binaryReader"
 
 
-export interface MidiFile
+export interface Root
 {
-    tracks: any[]
+    tracks: Track[]
     headerLength: any
     format: any
     trackNum: number
@@ -13,21 +13,28 @@ export interface MidiFile
 }
 
 
-export class MidiFileReader
+export interface Track
 {
-	static fromBytes(bytes: number[] | Buffer | Uint8Array): MidiFile
+	length: number
+	events: any[]
+}
+
+
+export class Decoder
+{
+	static fromBytes(bytes: number[] | Buffer | Uint8Array): Root
 	{
 		let midi: any = {}
 		
 		let r = new BinaryReader(bytes)
-		MidiFileReader.readHeader(r, midi)
-		MidiFileReader.readTracks(r, midi)
+		Decoder.readHeader(r, midi)
+		Decoder.readTracks(r, midi)
 		
-		return midi as MidiFile
+		return midi as Root
 	}
 	
 	
-	static readHeader(r: BinaryReader, midi: MidiFile)
+	static readHeader(r: BinaryReader, midi: Root)
 	{
 		if (r.readAsciiLength(4) != "MThd")
 			throw "invalid midi header magic"
@@ -49,24 +56,25 @@ export class MidiFileReader
 	}
 	
 	
-	static readTracks(r: BinaryReader, midi: MidiFile)
+	static readTracks(r: BinaryReader, midi: Root)
 	{
 		midi.tracks = []
 		
 		for (let i = 0; i < midi.trackNum; i++)
-            midi.tracks.push(MidiFileReader.readTrack(r, midi))
+            midi.tracks.push(Decoder.readTrack(r, midi))
 	}
 	
 	
-	static readTrack(r: BinaryReader, midi: MidiFile)
+	static readTrack(r: BinaryReader, midi: Root)
 	{
 		if (r.readAsciiLength(4) != "MTrk")
 			throw "invalid midi track magic"
 		
-		let track: any = {}
-		
-		track.length = r.readUInt32BE()
-		track.events = []
+		let track: Track =
+		{
+			length: r.readUInt32BE(),
+			events: [],
+		}
 		
 		let runningModePreviousCode = -1
 		let currentTime = 0
@@ -74,7 +82,7 @@ export class MidiFileReader
 		let eventStartPos = r.getPosition()
 		while (r.getPosition() < eventStartPos + track.length)
 		{
-			const event = MidiFileReader.readTrackEvent(r, currentTime, runningModePreviousCode)
+			const event = Decoder.readTrackEvent(r, currentTime, runningModePreviousCode)
 			runningModePreviousCode = event.code
 			currentTime = event.time
 			track.events.push(event)
