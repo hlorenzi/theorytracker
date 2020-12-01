@@ -107,7 +107,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
 			if (!elem)
                 continue
 
-            if (elem.type == Project.ElementType.Track)
+            if (elem.type == "track")
                 continue
                 
 			let changes: any = {}
@@ -148,7 +148,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             }
         
             if (mouseAction & Editor.EditorAction.DragRow &&
-                elem.type == Project.ElementType.Note)
+                elem.type == "note")
             {
                 const note = elem as Project.Note
                 const trackId = data.state.tracks[data.state.drag.origin.point.trackIndex].projectTrackId

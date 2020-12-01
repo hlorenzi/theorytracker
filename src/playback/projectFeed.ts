@@ -46,11 +46,11 @@ function midiVolumeToLinearGain(midiVol: number): number
 function *iterNotesAtRange(
     project: Project.Root,
     range: Range)
-    : Generator<[Project.Track, Project.Note], void, void>
+    : Generator<[Project.TrackNotes, Project.Note], void, void>
 {
     for (const track of project.tracks)
     {
-        if (track.trackType != Project.TrackType.Notes)
+        if (track.trackType != "notes")
             continue
 
         const trackElems = project.lists.get(track.id)
@@ -59,7 +59,7 @@ function *iterNotesAtRange(
         
         for (const noteBlock of trackElems.iterAtRange(range))
         {
-            if (noteBlock.type != Project.ElementType.NoteBlock)
+            if (noteBlock.type != "noteBlock")
                 continue
                 
             const noteList = project.lists.get(noteBlock.id)

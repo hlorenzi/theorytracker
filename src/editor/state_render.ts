@@ -41,6 +41,15 @@ export function render(data: Editor.EditorUpdateData)
     let y = -data.state.trackScroll
     for (let t = 0; t < data.state.tracks.length; t++)
     {
+        const y2 = y + data.state.tracks[t].renderRect.h
+
+        if (y >= data.state.renderRect.h ||
+            y + data.state.tracks[t].renderRect.h <= 0)
+        {
+            y = y2
+            continue
+        }
+
         data.ctx.save()
         data.ctx.translate(0, y)
 
@@ -84,7 +93,6 @@ export function render(data: Editor.EditorUpdateData)
 
         data.ctx.restore()
 
-        const y2 = y + data.state.tracks[t].renderRect.h
         
         data.ctx.strokeStyle = data.prefs.editor.trackHBorderColor
         data.ctx.beginPath()

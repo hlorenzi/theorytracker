@@ -27,7 +27,7 @@ export function Inspector()
 	if (!elem)
 		return null
 
-    if (elem.type == Project.ElementType.KeyChange)
+    if (elem.type == "keyChange")
         return <KeyChangeInspector elemIds={ [props.elemIds[0]] }/>
     else
         return null

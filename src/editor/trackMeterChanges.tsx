@@ -23,7 +23,7 @@ export class EditorTrackMeterChanges extends EditorTrack
         this.projectTrackId = projectTrackId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
-        this.acceptedElemTypes.add(Project.ElementType.MeterChange)
+        this.acceptedElemTypes.add("meterChange")
         this.pencil = null
     }
 

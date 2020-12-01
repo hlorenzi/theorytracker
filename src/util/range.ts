@@ -233,4 +233,13 @@ export default class Range
 		
 		return checkStart && checkEnd
 	}
+
+
+	toJson(): [[number, number, number]] | [[number, number, number], [number, number, number]]
+	{
+		if (this.start.compare(this.end) == 0)
+			return [this.start.toJson()]
+		else
+			return [this.start.toJson(), this.duration.toJson()]
+	}
 }

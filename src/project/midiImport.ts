@@ -212,11 +212,11 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
                     instrument = gmSflib.instruments.find(i => i.midiBank == 128)
             }
 
-            track.instruments = [{
+            track.instrument = {
                 instrumentType: "sflib",
                 collectionId: "gm",
                 instrumentId: instrument?.id ?? "piano_1",
-            }]
+            }
         }
 
         project = Project.upsertTrack(project, track)
@@ -255,7 +255,8 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 function splitTracksAtProgramChanges(tracks: Midi.Track[]): Midi.Track[]
 {
     // FIXME: Split tracks lose running information from before the split,
-    // e.g. track volume.
+    // e.g. track volume. Seems to also wrongly split note events that
+    // fall on the same tick or across the program change.
     const newTracks: Midi.Track[] = []
 
     for (const track of tracks)

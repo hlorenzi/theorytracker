@@ -289,11 +289,15 @@ export default class Rational
 		else
 			return integer.toString() + " + " + numerator.toString() + "/" + this.denominator.toString()
 	}
-	
-	
-	toJSONString(): string
+
+
+	toJson(): [number, number, number]
 	{
-		return "[" + Math.floor(this.numerator / this.denominator) + "," + mod(this.numerator, this.denominator) + "," + this.denominator + "]"
+		return [
+			this.integer,
+			this.numeratorWithoutInteger,
+			this.denominator
+		]
 	}
 	
 	

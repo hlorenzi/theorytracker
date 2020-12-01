@@ -3,8 +3,6 @@ import * as Project from "../project"
 import * as Windows from "../windows"
 import Rational from "../util/rational"
 import Rect from "../util/rect"
-import { EditorAction } from "./state"
-import { ElementType } from "../project"
 
 
 export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
@@ -95,7 +93,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         {
             withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
 
-            if (elem && elem.type == Project.ElementType.Track)
+            if (elem && elem.type == "track")
             {
                 data.dockable.ref.current.createFloating(
                     Windows.TrackSettings,

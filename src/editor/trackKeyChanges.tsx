@@ -24,7 +24,7 @@ export class EditorTrackKeyChanges extends EditorTrack
         this.projectTrackId = projectTrackId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
-        this.acceptedElemTypes.add(Project.ElementType.KeyChange)
+        this.acceptedElemTypes.add("keyChange")
         this.pencil = null
     }
 
@@ -82,7 +82,7 @@ export class EditorTrackKeyChanges extends EditorTrack
     contextMenu(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
         const elem = data.project.elems.get(elemId)
-        if (!elem || elem.type != Project.ElementType.KeyChange)
+        if (!elem || elem.type != "keyChange")
             return
         
         data.dockable.ref.current.createFloatingEphemeral(

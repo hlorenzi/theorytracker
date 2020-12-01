@@ -4,6 +4,12 @@ export function mod(x: number, m: number): number
 }
 
 
+export function quantize(x: number, step: number): number
+{
+    return Math.floor(x * step) / step
+}
+
+
 export function midiToHertz(midi: number): number
 {
     return Math.pow(2, (midi - 69) / 12) * 440

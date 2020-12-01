@@ -3,6 +3,7 @@ import * as Project from "./project"
 import * as Menubar from "./menubar"
 import * as Popup from "./popup"
 import * as Playback from "./playback"
+import { Input } from "./ui"
 
 
 export default function MenuFile()
@@ -52,10 +53,33 @@ export default function MenuFile()
         window.dispatchEvent(new Event("timelineReset"))
     }
 
-
     const onOpen = () =>
     {
         document.getElementById("inputOpenFile")!.click()
+    }
+
+    const onJsonDownload = () =>
+    {
+        const jsonStr = Project.jsonExport(project.ref.current)
+
+        const element = document.createElement("a")
+        element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
+        element.setAttribute("download", "song.tt.json")
+    
+        element.style.display = "none"
+        document.body.appendChild(element)
+        element.click()
+        document.body.removeChild(element)
+    }
+
+    const onJsonPreview = () =>
+    {
+        const jsonStr = Project.jsonExport(project.ref.current)
+
+        const newWindow = window.open()!
+        newWindow.document.write("<code style='white-space:pre'>")
+        newWindow.document.write(jsonStr)
+        newWindow.document.write("</code>")
     }
 
 
@@ -72,13 +96,34 @@ export default function MenuFile()
                     label="Open..."
                     onClick={ onOpen }
                 />
+                <Popup.Divider/>
+                <Popup.Button
+                    icon="💾"
+                    label="Save"
+                    onClick={ onOpen }
+                />
+                <Popup.Button
+                    icon="💾"
+                    label="Save As..."
+                    onClick={ onOpen }
+                />
+                <Popup.Button
+                    icon="📥"
+                    label="Download as JSON"
+                    onClick={ onJsonDownload }
+                />
+                <Popup.Button
+                    icon="📥"
+                    label="Preview as JSON"
+                    onClick={ onJsonPreview }
+                />
             </Popup.Root>
         </Menubar.Item>
 
         <input
             id="inputOpenFile"
             type="file"
-            accept=".mid,.json,.txt"
+            accept=".mid,.tt.json,.txt"
             style={{
                 display: "none",
         }}/>

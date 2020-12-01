@@ -44,7 +44,7 @@ export function TrackSettings()
     const getTrack = () =>
     {
         const elem = project.ref.current.elems.get(trackId)
-        if (!elem || elem.type != Project.ElementType.Track)
+        if (!elem || elem.type != "track")
             return null
 
         return elem as Project.Track
@@ -67,58 +67,27 @@ export function TrackSettings()
         project.commit()
     }
 
-    const onAddInstrument = () =>
-    {
-        const newTrack: Project.Track = {
-            ...track,
-            instruments: [
-                ...track.instruments,
-                Project.makeInstrument(),
-            ],
-        }
-
-        project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
-        project.commit()
-    }
-
-    const onRemoveInstrument = (index: number) =>
-    {
-        const newTrack: Project.Track = {
-            ...track,
-            instruments: [
-                ...track.instruments.slice(0, index),
-                ...track.instruments.slice(index + 1),
-            ],
-        }
-
-        project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
-        project.commit()
-    }
-
-    const onEditInstrument = (index: number) =>
+    const onEditInstrument = () =>
     {
         const getInstrument = () =>
         {
             const track = getTrack()
-            if (!track || index >= track.instruments.length)
+            if (!track || track.trackType != "notes")
                 return null
 
-            return track.instruments[index]
+            return track.instrument
         }
 
         const setInstrument = (newInstrument: Project.Instrument) =>
         {
             const track = getTrack()
-            if (!track)
+            if (!track || track.trackType != "notes")
                 return null
 
-            const newTrack: Project.Track = {
+            const newTrack: Project.TrackNotes =
+            {
                 ...track,
-                instruments: [
-                    ...track.instruments.slice(0, index),
-                    newInstrument,
-                    ...track.instruments.slice(index + 1),
-                ],
+                instrument: newInstrument,
             }
     
             project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
@@ -151,32 +120,16 @@ export function TrackSettings()
 
         <br/>
 
-        <div>
-            Instruments:
-
-            { track.instruments.map((instr, i) =>
-                <div>
-                    <StyledButton
-                        onClick={ () => onRemoveInstrument(i) }
-                    >
-                        x
-                    </StyledButton>
-                    { "  " }
-                    <StyledButton
-                        onClick={ () => onEditInstrument(i) }
-                    >
-                        { Project.instrumentName(instr) }
-                    </StyledButton>
-                </div>
-            )}
-
+        { track.trackType != "notes" ? null :
             <div>
+                Instrument:
+
                 <StyledButton
-                    onClick={ onAddInstrument }
+                    onClick={ onEditInstrument }
                 >
-                    +
+                    { Project.instrumentName(track.instrument) }
                 </StyledButton>
             </div>
-        </div>
+        }
     </div>
 }

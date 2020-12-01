@@ -14,7 +14,7 @@ export class EditorTrack
     projectTrackId: Project.ID
     name: string
     renderRect: Rect
-    acceptedElemTypes: Set<Project.ElementType>
+    acceptedElemTypes: Set<Project.Element["type"]>
 
     scrollEnabled: boolean
     yScroll: number
@@ -28,7 +28,7 @@ export class EditorTrack
         this.projectTrackId = -1
         this.name = ""
         this.renderRect = new Rect(0, 0, 0, 0)
-        this.acceptedElemTypes = new Set<Project.ElementType>()
+        this.acceptedElemTypes = new Set<Project.Element["type"]>()
 
         this.scrollEnabled = false
         this.yScroll = 0

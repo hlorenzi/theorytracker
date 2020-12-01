@@ -351,6 +351,11 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 const top = track.renderRect.y - editorState.ref.current.trackScroll
                 const width = editorState.ref.current.trackHeaderW
                 const height = track.renderRect.h
+
+                if (top >= editorState.ref.current.renderRect.h ||
+                    top + height <= 0)
+                    return null
+
                 const props = {
                     top, width, height,
                     project,
@@ -441,18 +446,15 @@ function TrackHeader(props: TrackHeaderProps)
 
 function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 {
-    const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
-    if (!track || track.type != Project.ElementType.Track)
+    const track = Project.getTrack(props.project.ref.current, props.track.projectTrackId, "notes")
+    if (!track)
         return null
 
-    const instrumentName = track.instruments.length == 0 ?
-        null :
-        Project.instrumentName(track.instruments[0])
-
+    const instrumentName = Project.instrumentName(track.instrument)
 
     const onGetVolume = () =>
     {
-        const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
+        const track = Project.getTrack(props.project.ref.current, props.track.projectTrackId, "notes")
         if (!track)
             return 0
 
@@ -461,7 +463,7 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 
     const onChangeVolume = (newValue: number) =>
     {
-        const track = Project.getElem<Project.Track>(props.project.ref.current, props.track.projectTrackId)
+        const track = Project.getTrack(props.project.ref.current, props.track.projectTrackId, "notes")
         if (!track)
             return
             

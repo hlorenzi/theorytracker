@@ -24,7 +24,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
         this.projectTrackId = projectTrackId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
-        this.acceptedElemTypes.add(Project.ElementType.NoteBlock)
+        this.acceptedElemTypes.add("noteBlock")
         this.pencil = null
     }
 
@@ -127,7 +127,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
     doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
         const elem = data.project.elems.get(elemId)
-        if (!elem || elem.type != Project.ElementType.NoteBlock)
+        if (!elem || elem.type != "noteBlock")
             return
         
         Editor.modeStackPush(data)

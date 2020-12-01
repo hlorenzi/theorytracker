@@ -30,7 +30,7 @@ export class EditorTrackNotes extends EditorTrack
         this.noteBlockId = noteBlockId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
-        this.acceptedElemTypes.add(Project.ElementType.NoteBlock)
+        this.acceptedElemTypes.add("note")
         this.pencil = null
         this.scrollEnabled = true
     }
@@ -71,7 +71,7 @@ export class EditorTrackNotes extends EditorTrack
     {
         for (const track of data.project.tracks)
         {
-            if (track.trackType != Project.TrackType.Notes)
+            if (track.trackType != "notes")
                 continue
 
             const trackElems = data.project.lists.get(track.id)
@@ -83,7 +83,7 @@ export class EditorTrackNotes extends EditorTrack
                 if (noteBlock.id == this.noteBlockId)
                     continue
                 
-                if (noteBlock.type != Project.ElementType.NoteBlock)
+                if (noteBlock.type != "noteBlock")
                     continue
                     
                 const noteList = data.project.lists.get(noteBlock.id)
@@ -232,10 +232,9 @@ export class EditorTrackNotes extends EditorTrack
     click(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
         const elem = data.project.elems.get(elemId)
-        if (elem && elem.type == Project.ElementType.Note)
+        if (elem && elem.type == "note")
         {
-            const note = elem as Project.Note
-            data.playback.playNotePreview(this.projectTrackId, note.midiPitch, note.velocity)
+            data.playback.playNotePreview(this.projectTrackId, elem.midiPitch, elem.velocity)
         }
     }
 

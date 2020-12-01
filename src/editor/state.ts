@@ -263,7 +263,7 @@ export function refreshTracks(data: EditorUpdateData)
     for (let t = 0; t < data.project.tracks.length; t++)
     {
         const track = data.project.tracks[t]
-        if (track.trackType == Project.TrackType.Notes)
+        if (track.trackType == "notes")
         {
             if (data.state.mode == Mode.NoteBlock)
             {
@@ -277,11 +277,11 @@ export function refreshTracks(data: EditorUpdateData)
             else
                 tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 60))
         }
-        else if (track.trackType == Project.TrackType.KeyChanges)
+        else if (track.trackType == "keyChanges")
         {
             tracks.push(new EditorTrackKeyChanges(track.id, track.name, 25))
         }
-        else if (track.trackType == Project.TrackType.MeterChanges)
+        else if (track.trackType == "meterChanges")
         {
             tracks.push(new EditorTrackMeterChanges(track.id, track.name, 25))
         }
@@ -593,7 +593,7 @@ export function selectionRange(data: EditorUpdateData): Range | null
         if (!elem)
             continue
 
-        if (elem.type == Project.ElementType.Track)
+        if (elem.type == "track")
             continue
 
         range = Range.merge(range, elem.range)

@@ -211,11 +211,29 @@ export function withRefreshedRange(project: Root): Root
 }
 
 
-export function getElem<T extends Project.Element>(project: Root, id: Project.ID): T | null
+export function getElem<T extends Project.Element["type"]>(
+    project: Root,
+    id: Project.ID,
+    type: T)
+    : Extract<Project.Element, { type: T }> | null
 {
     const elem = project.elems.get(id)
-    if (!elem)
+    if (!elem || elem.type != type)
         return null
 
-    return (elem as T)
+    return elem as any
+}
+
+
+export function getTrack<T extends Project.Track["trackType"]>(
+    project: Root,
+    id: Project.ID,
+    trackType: T)
+    : Extract<Project.Track, { trackType: T }> | null
+{
+    const elem = project.elems.get(id)
+    if (!elem || elem.type != "track" || elem.trackType != trackType)
+        return null
+
+    return elem as any
 }

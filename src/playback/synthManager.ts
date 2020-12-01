@@ -9,12 +9,12 @@ export class SynthManager
 	nodeGain: GainNode
 	nodeCompressor: DynamicsCompressorNode
 
-	trackInstruments: Map<Project.ID, Playback.Instrument[]>
+	trackInstruments: Map<Project.ID, Playback.Instrument>
 
 
 	constructor()
 	{
-		this.trackInstruments = new Map<Project.ID, Playback.Instrument[]>()
+		this.trackInstruments = new Map<Project.ID, Playback.Instrument>()
 		
 		this.audioCtx = new AudioContext()
 		this.nodeGain = this.audioCtx.createGain()
@@ -36,49 +36,45 @@ export class SynthManager
 	{
 		// TODO: Diff instruments and only modify what's needed
 
-		for (const [trackId, instruments] of this.trackInstruments)
+		for (const [trackId, instrument] of this.trackInstruments)
 		{
-			instruments.forEach(instr => instr.stopAll())
-			await Promise.all(instruments.map(instr => instr.destroy()))
+			instrument.stopAll()
+			await instrument.destroy()
 		}
 
 		this.trackInstruments.clear()
 
 		for (const track of project.tracks)
 		{
-			if (track.trackType != Project.TrackType.Notes)
+			if (track.trackType != "notes")
 				continue
 
-			const newInstruments: Playback.Instrument[] = []
-			for (const instrData of track.instruments)
+			let instrument = null
+			switch (track.instrument.instrumentType)
 			{
-				switch (instrData.instrumentType)
-				{
-					case "basic":
-						newInstruments.push(new Playback.InstrumentBasic(this))
-						break
-					case "sflib":
-						newInstruments.push(new Playback.InstrumentSflib(
-							this, instrData.collectionId, instrData.instrumentId))
-						break
-				}
+				case "basic":
+					instrument = new Playback.InstrumentBasic(this)
+					break
+				case "sflib":
+					instrument = new Playback.InstrumentSflib(
+						this,
+						track.instrument.collectionId,
+						track.instrument.instrumentId)
+					break
 			}
 
-			await Promise.all(newInstruments.map(instr => instr.prepare()))
-			this.trackInstruments.set(track.id, newInstruments)
+			await instrument.prepare()
+			this.trackInstruments.set(track.id, instrument)
 		}
 	}
 	
 	
 	isFinished()
 	{
-		for (const [trackId, instruments] of this.trackInstruments)
+		for (const [trackId, instrument] of this.trackInstruments)
 		{
-			for (const instrument of instruments)
-			{
-				if (!instrument.isFinished())
-					return false
-			}
+			if (!instrument.isFinished())
+				return false
 		}
 
 		return true
@@ -93,38 +89,34 @@ export class SynthManager
 
 	stopAll()
 	{
-		for (const [trackId, instruments] of this.trackInstruments)
-			for (const instrument of instruments)
-				instrument.stopAll()
+		for (const [trackId, instrument] of this.trackInstruments)
+			instrument.stopAll()
 	}
 
 
 	process(deltaTimeMs: number)
 	{
-		for (const [trackId, instruments] of this.trackInstruments)
-			for (const instrument of instruments)
-				instrument.process(deltaTimeMs)
+		for (const [trackId, instrument] of this.trackInstruments)
+			instrument.process(deltaTimeMs)
 	}
 
 
 	playNote(trackId: Project.ID, noteId: Project.ID, frequency: number, volume: number)
 	{
-		const instruments = this.trackInstruments.get(trackId)
-		if (!instruments)
+		const instrument = this.trackInstruments.get(trackId)
+		if (!instrument)
 			return
 
-		for (const instrument of instruments)
-			instrument.playNote(noteId, frequency, volume)
+		instrument.playNote(noteId, frequency, volume)
 	}
 
 
 	releaseNote(trackId: Project.ID, noteId: Project.ID)
 	{
-		const instruments = this.trackInstruments.get(trackId)
-		if (!instruments)
+		const instrument = this.trackInstruments.get(trackId)
+		if (!instrument)
 			return
 
-		for (const instrument of instruments)
-			instrument.releaseNote(noteId)
+		instrument.releaseNote(noteId)
 	}
 }

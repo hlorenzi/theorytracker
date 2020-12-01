@@ -2,44 +2,17 @@ import Range from "../util/range"
 import * as Theory from "../theory"
 import * as Playback from "../playback"
 import Rational from "../util/rational"
+import { IntersectionType } from "typescript"
 
 
 export type ID = number
 
 
-export interface Element
+export interface ElementBase
 {
-    type: ElementType
     id: ID
     parentId: ID
     range: Range
-}
-
-
-export enum ElementType
-{
-    Track,
-    Note,
-    NoteBlock,
-    KeyChange,
-    MeterChange,
-}
-
-
-export enum TrackType
-{
-    Notes,
-    KeyChanges,
-    MeterChanges,
-}
-
-
-export interface Track extends Element
-{
-    trackType: TrackType
-    name: string
-    instruments: Instrument[]
-    volume: number
 }
 
 
@@ -62,29 +35,74 @@ export type Instrument =
     InstrumentSflib
 
 
-export interface KeyChange extends Element
+export interface TrackBase extends ElementBase
 {
+    type: "track"
+    name: string
+}
+
+
+export interface TrackNotes extends TrackBase
+{
+    trackType: "notes"
+    instrument: Instrument
+    volume: number
+}
+
+
+export interface TrackKeyChanges extends TrackBase
+{
+    trackType: "keyChanges"
+}
+
+
+export interface TrackMeterChanges extends TrackBase
+{
+    trackType: "meterChanges"
+}
+
+
+export type Track = 
+    TrackNotes |
+    TrackKeyChanges |
+    TrackMeterChanges
+
+
+export interface KeyChange extends ElementBase
+{
+    type: "keyChange"
     key: Theory.Key
 }
 
 
-export interface MeterChange extends Element
+export interface MeterChange extends ElementBase
 {
+    type: "meterChange"
     meter: Theory.Meter
 }
 
 
-export interface NoteBlock extends Element
+export interface NoteBlock extends ElementBase
 {
-    
+    type: "noteBlock"
 }
 
 
-export interface Note extends Element
+export interface Note extends ElementBase
 {
+    type: "note"
     midiPitch: number
     velocity: number
 }
+
+
+export type Element =
+    Track |
+    KeyChange |
+    MeterChange |
+    NoteBlock |
+    Note
+
 
 
 export function elemModify<T>(original: T, changes: Partial<T>): T
@@ -93,17 +111,17 @@ export function elemModify<T>(original: T, changes: Partial<T>): T
 }
 
 
-export function makeTrackNotes(): Track
+export function makeTrackNotes(): TrackNotes
 {
     return {
-        type: ElementType.Track,
+        type: "track",
+        trackType: "notes",
         id: -1,
         parentId: 0,
-        trackType: TrackType.Notes,
         range: Range.dummy(),
         name: "New Track",
-        instruments: [makeInstrument()],
         volume: 1,
+        instrument: makeInstrument(),
     }
 }
 
@@ -159,32 +177,28 @@ export function instrumentName(instrument: Instrument): string
 }
 
 
-export function makeTrackKeyChanges(): Track
+export function makeTrackKeyChanges(): TrackKeyChanges
 {
     return {
-        type: ElementType.Track,
+        type: "track",
+        trackType: "keyChanges",
         id: -1,
         parentId: 0,
-        trackType: TrackType.KeyChanges,
         range: Range.dummy(),
         name: "Key Changes",
-        instruments: [],
-        volume: 1,
     }
 }
 
 
-export function makeTrackMeterChanges(): Track
+export function makeTrackMeterChanges(): TrackMeterChanges
 {
     return {
-        type: ElementType.Track,
+        type: "track",
+        trackType: "meterChanges",
         id: -1,
         parentId: 0,
-        trackType: TrackType.MeterChanges,
         range: Range.dummy(),
         name: "Meter Changes",
-        instruments: [],
-        volume: 1,
     }
 }
 
@@ -192,7 +206,7 @@ export function makeTrackMeterChanges(): Track
 export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Meter): MeterChange
 {
     return {
-        type: ElementType.MeterChange,
+        type: "meterChange",
         id: -1,
         parentId,
         range: Range.fromPoint(time),
@@ -204,7 +218,7 @@ export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Mete
 export function makeKeyChange(parentId: ID, time: Rational, key: Theory.Key): KeyChange
 {
     return {
-        type: ElementType.KeyChange,
+        type: "keyChange",
         id: -1,
         parentId,
         range: Range.fromPoint(time),
@@ -216,7 +230,7 @@ export function makeKeyChange(parentId: ID, time: Rational, key: Theory.Key): Ke
 export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
 {
     return {
-        type: ElementType.NoteBlock,
+        type: "noteBlock",
         id: -1,
         parentId,
         range,
@@ -232,7 +246,7 @@ export function makeNote(
     : Note
 {
     return {
-        type: ElementType.Note,
+        type: "note",
         id: -1,
         parentId,
         range,
