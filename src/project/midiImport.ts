@@ -9,7 +9,7 @@ import Range from "../util/range"
 export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 {
     const midi = Midi.Decoder.fromBytes(bytes)
-    console.log(midi)
+    console.log("midiImport", midi)
 
     const tracks = splitTracksAtProgramChanges(midi.tracks)
     
@@ -68,9 +68,11 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     project.baseBpm = Math.round(60 * 1000 * 1000 / msPerQuarterNote)
     
     const trackKeyChanges = project.nextId
+    project.keyChangeTrackId = trackKeyChanges
     project = Project.upsertTrack(project, Project.makeTrackKeyChanges())
     
     const trackMeterChanges = project.nextId
+    project.meterChangeTrackId = trackMeterChanges
     project = Project.upsertTrack(project, Project.makeTrackMeterChanges())
 
     for (const track of tracks)
@@ -213,7 +215,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             }
 
             track.instrument = {
-                instrumentType: "sflib",
+                type: "sflib",
                 collectionId: "gm",
                 instrumentId: instrument?.id ?? "piano_1",
             }

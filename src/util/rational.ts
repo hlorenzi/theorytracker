@@ -301,7 +301,7 @@ export default class Rational
 	}
 	
 	
-	static fromArray(array: [number, number, number]): Rational
+	static fromJson(array: [number, number, number]): Rational
 	{
 		return new Rational(array[0] * array[2] + array[1], array[2])
 	}

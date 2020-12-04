@@ -10,7 +10,7 @@ export function jsonExport(project: Project.Root): any
     let json = ``
     json += `{\n`
     json += `"version": 1,\n`
-    json += `"baseBmp": ${ project.baseBpm },\n`
+    json += `"baseBpm": ${ project.baseBpm },\n`
     json += `"tracks": [\n`
 
     let firstTrack = true

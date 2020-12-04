@@ -18,13 +18,13 @@ export interface ElementBase
 
 export interface InstrumentBasic
 {
-    instrumentType: "basic"
+    type: "basic"
 }
 
 
 export interface InstrumentSflib
 {
-    instrumentType: "sflib"
+    type: "sflib"
     collectionId: string
     instrumentId: string
 }
@@ -140,13 +140,13 @@ export function makeInstrumentOfKind(kind: string): Instrument
         default:
         {
             return {
-                instrumentType: "basic",
+                type: "basic",
             }
         }
         case "sflib":
         {
             return {
-                instrumentType: "sflib",
+                type: "sflib",
                 collectionId: "gm",
                 instrumentId: "piano_1",
             }
@@ -157,7 +157,7 @@ export function makeInstrumentOfKind(kind: string): Instrument
 
 export function instrumentName(instrument: Instrument): string
 {
-    switch (instrument.instrumentType)
+    switch (instrument.type)
     {
         case "basic": return "Basic"
         case "sflib":

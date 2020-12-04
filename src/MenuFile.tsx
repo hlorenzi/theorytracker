@@ -27,7 +27,15 @@ export default function MenuFile()
             {
                 const bytes = new Uint8Array(reader.result as any)
     
-                project.ref.current = Project.midiImport(bytes)
+                if (elem.files![0].name.endsWith(".mid"))
+                    project.ref.current = Project.midiImport(bytes)
+                else if (elem.files![0].name.endsWith(".json"))
+                {
+                    const text = new TextDecoder("utf-8").decode(bytes)
+                    const json = JSON.parse(text)
+                    project.ref.current = Project.jsonImport(json)
+                }
+
                 project.commit()
                 playback.ref.current.stopPlaying()
                 window.dispatchEvent(new Event("timelineReset"))
@@ -64,7 +72,7 @@ export default function MenuFile()
 
         const element = document.createElement("a")
         element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
-        element.setAttribute("download", "song.tt.json")
+        element.setAttribute("download", "song.json")
     
         element.style.display = "none"
         document.body.appendChild(element)
@@ -123,7 +131,7 @@ export default function MenuFile()
         <input
             id="inputOpenFile"
             type="file"
-            accept=".mid,.tt.json,.txt"
+            accept=".mid,.json,.txt"
             style={{
                 display: "none",
         }}/>

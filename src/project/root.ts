@@ -14,6 +14,8 @@ export interface Root
     tracks: Project.Track[]
     lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>
     elems: Immutable.Map<Project.ID, Project.Element>
+    keyChangeTrackId: number
+    meterChangeTrackId: number
 }
 
 
@@ -26,6 +28,8 @@ export function makeEmpty(): Root
         tracks: [],
         lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>(),
         elems: Immutable.Map<Project.ID, Project.Element>(),
+        keyChangeTrackId: -1,
+        meterChangeTrackId: -1,
     }
 }
 
@@ -35,9 +39,11 @@ export function getDefault(): Root
     let project = makeEmpty()
 
     const track1Id = project.nextId
+    project.keyChangeTrackId = track1Id
     project = upsertTrack(project, Project.makeTrackKeyChanges())
     
     const track2Id = project.nextId
+    project.meterChangeTrackId = track2Id
     project = upsertTrack(project, Project.makeTrackMeterChanges())
 
     project = upsertElement(project, Project.makeKeyChange(
@@ -186,13 +192,13 @@ export function upsertElement(project: Root, elem: Project.Element): Root
 
 export function keyChangeTrackId(project: Root): Project.ID
 {
-    return 1
+    return project.keyChangeTrackId
 }
 
 
 export function meterChangeTrackId(project: Root): Project.ID
 {
-    return 2
+    return project.meterChangeTrackId
 }
 
 

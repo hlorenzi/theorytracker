@@ -50,7 +50,7 @@ export class SynthManager
 				continue
 
 			let instrument = null
-			switch (track.instrument.instrumentType)
+			switch (track.instrument.type)
 			{
 				case "basic":
 					instrument = new Playback.InstrumentBasic(this)

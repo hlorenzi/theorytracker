@@ -70,7 +70,7 @@ export function InstrumentSelect()
     }}>
         <div>
             <select
-                value={ instr.instrumentType }
+                value={ instr.type }
                 onChange={ (ev) => onChangeType(ev.target.value) }
             >
                 <option value="basic">Basic</option>
@@ -80,7 +80,7 @@ export function InstrumentSelect()
 
         <br/>
         
-        { instr.instrumentType != "sflib" ? null :
+        { instr.type != "sflib" ? null :
             <InstrumentSelectSflib data={ props }/>
         }
 

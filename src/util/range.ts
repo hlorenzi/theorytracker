@@ -242,4 +242,13 @@ export default class Range
 		else
 			return [this.start.toJson(), this.duration.toJson()]
 	}
+
+
+	static fromJson(json: [[number, number, number]] | [[number, number, number], [number, number, number]]): Range
+	{
+		if (json.length == 1)
+			return Range.fromPoint(Rational.fromJson(json[0]))
+		else
+			return Range.fromStartDuration(Rational.fromJson(json[0]), Rational.fromJson(json[1]))
+	}
 }

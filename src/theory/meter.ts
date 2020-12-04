@@ -49,4 +49,20 @@ export default class Meter
 	{
 		return this.numerator + " / " + this.denominator
 	}
+
+
+	static parse(src: string): Meter
+	{
+		const split = src.split("/")
+		if (split.length != 2)
+			throw "invalid meter syntax"
+
+		const numerator = parseInt(split[0].trim())
+		const denominator = parseInt(split[1].trim())
+
+		if (!isFinite(numerator) || !isFinite(denominator))
+			throw "invalid meter syntax"
+
+		return new Meter(numerator, denominator)
+	}
 }
