@@ -143,7 +143,9 @@ export class Decoder
 		
 		if (isNoteOff || isNoteOn)
 		{
-			event.kind = (isNoteOn ? "noteOn" : "noteOff")
+			const isReallyNoteOff = isNoteOff || event.rawData[1] == 0
+
+			event.kind = (isReallyNoteOff ? "noteOff" : "noteOn")
 			event.channel = (event.code & 0x0f)
 			event.key = event.rawData[0]
 			event.velocity = event.rawData[1]
@@ -153,7 +155,7 @@ export class Decoder
 			const noteOctave = Math.floor(event.key / 12)
 			
 			event.description =
-				(isNoteOff ? "[8*] Note Off: " : "[9*] Note On: ") +
+				(isReallyNoteOff ? "[8*] Note Off: " : "[9*] Note On: ") +
 				noteName + noteOctave + ", Velocity: " + event.velocity
 		}
 		else if (isController)

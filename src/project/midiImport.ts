@@ -121,7 +121,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
         const midiTrack = tracks[tr]
         for (const noteOn of midiTrack.events)
         {
-            if (noteOn.kind != "noteOn" || noteOn.velocity == 0)
+            if (noteOn.kind != "noteOn")
                 continue
 
             let noteOff = null
@@ -256,38 +256,63 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 
 function splitTracksAtProgramChanges(tracks: Midi.Track[]): Midi.Track[]
 {
-    // FIXME: Split tracks lose running information from before the split,
-    // e.g. track volume. Seems to also wrongly split note events that
-    // fall on the same tick or across the program change.
+    // FIXME: Missing program changes in format 0 files?
     const newTracks: Midi.Track[] = []
 
     for (const track of tracks)
     {
-        let curNewTrack: Midi.Track =
+        const splitTracksByPreset = new Map<number, Midi.Track>()
+        const splitTracksByOrder: Midi.Track[] = []
+
+        const getOrAddSplitTrack = (midiPreset: number) =>
         {
-            length: 0,
-            events: [],
+            let splitTrack = splitTracksByPreset.get(midiPreset)
+            if (!splitTrack)
+            {
+                splitTrack = {
+                    length: 0,
+                    events: [],
+                }
+                splitTracksByPreset.set(midiPreset, splitTrack)
+                splitTracksByOrder.push(splitTrack)
+            }
+
+            return splitTrack
         }
+
+        let curMidiPreset: number = 0
 
         for (const event of track.events)
         {
             if (event.kind == "programChange")
             {
-                if (curNewTrack.events.length > 0)
-                    newTracks.push(curNewTrack)
-
-                curNewTrack =
-                {
-                    length: 0,
-                    events: [],
-                }
+                curMidiPreset = event.program as number
+                getOrAddSplitTrack(curMidiPreset).events.push(event)
             }
-
-            curNewTrack.events.push(event)
+            else if (event.kind == "noteOn")
+            {
+                getOrAddSplitTrack(curMidiPreset).events.push(event)
+            }
         }
+
+        if (splitTracksByOrder.length == 0)
+            getOrAddSplitTrack(curMidiPreset)
         
-        if (curNewTrack.events.length > 0)
-            newTracks.push(curNewTrack)
+        for (const event of track.events)
+        {
+            if (event.kind != "programChange" &&
+                event.kind != "noteOn")
+            {
+                for (const splitTrack of splitTracksByOrder)
+                    splitTrack.events.push(event)
+            }
+        }
+
+        for (const splitTrack of splitTracksByOrder)
+        {
+            splitTrack.events.sort((a, b) => a.time - b.time)
+            newTracks.push(splitTrack)
+        }
     }
 
     return newTracks

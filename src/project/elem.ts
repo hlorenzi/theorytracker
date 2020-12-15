@@ -2,7 +2,7 @@ import Range from "../util/range"
 import * as Theory from "../theory"
 import * as Playback from "../playback"
 import Rational from "../util/rational"
-import { IntersectionType } from "typescript"
+import * as Misc from "../util/misc"
 
 
 export type ID = number
@@ -168,8 +168,9 @@ export function instrumentName(instrument: Instrument): string
 
             const coll = sflibMeta.collectionsById.get(instrument.collectionId)!
             const instr = coll.instrumentsById.get(instrument.instrumentId)!
+            const emoji = Misc.getMidiPresetEmoji(instr.midiBank, instr.midiPreset)
 
-            return coll.name + "/" + instr.name
+            return emoji + " " + coll.id + "/" + instr.name
         }
 
         default: return "???"
