@@ -96,10 +96,10 @@ export function Container()
                         panel.rect.x = panel.justOpenedAnchorRect.xCenter - panel.rect.w / 2
                         break
                     case 1:
-                        panel.rect.x = panel.justOpenedAnchorRect.x1
+                        panel.rect.x = panel.justOpenedAnchorRect.x2
                         break
                     case -1:
-                        panel.rect.x = panel.justOpenedAnchorRect.x2 - panel.rect.w
+                        panel.rect.x = panel.justOpenedAnchorRect.x1 - panel.rect.w
                         break
                 }
                 
@@ -109,10 +109,10 @@ export function Container()
                         panel.rect.y = panel.justOpenedAnchorRect.yCenter - panel.rect.h / 2
                         break
                     case 1:
-                        panel.rect.y = panel.justOpenedAnchorRect.y1
+                        panel.rect.y = panel.justOpenedAnchorRect.y2
                         break
                     case -1:
-                        panel.rect.y = panel.justOpenedAnchorRect.y2 - panel.rect.h
+                        panel.rect.y = panel.justOpenedAnchorRect.y1 - panel.rect.h
                         break
                 }
 

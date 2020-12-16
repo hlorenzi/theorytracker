@@ -1,5 +1,6 @@
 import * as Playback from "./index"
 import * as Project from "../project"
+import * as MathUtils from "../util/mathUtils"
 
 
 interface Sample
@@ -173,10 +174,10 @@ export class InstrumentBasic extends Playback.Instrument
     }
 
 
-	playVoice(sample: Sample, frequency: number, volume: number): Voice
+	playVoice(sample: Sample, midiPitch: number, volume: number): Voice
 	{
 		let sourceNode = this.synth.audioCtx.createBufferSource()
-		sourceNode.playbackRate.value = frequency / sample.frequency
+		sourceNode.playbackRate.value = MathUtils.midiToHertz(midiPitch) / sample.frequency
 		sourceNode.buffer = sample.buffer
 		
 		let envelopeNode = this.synth.audioCtx.createGain()

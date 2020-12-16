@@ -97,7 +97,7 @@ export function useDockableInit(): RefState<DockableContextProps>
             else
                 panel.rect = new Rect(mousePosRef.current.x, mousePosRef.current.y, 500, 300)
 
-            panel.justOpenedAnchorRect = rect ?? new Rect(mousePosRef.current.x, mousePosRef.current.y, 0, 0)
+            panel.justOpenedAnchorRect = rect ?? new Rect(mousePosRef.current.x - 15, mousePosRef.current.y - 15, 30, 30)
             panel.justOpenedAnchorAlignX = alignX ?? 1
             panel.justOpenedAnchorAlignY = alignY ?? 1
             panel.bugfixAppearOnTop = true
@@ -151,6 +151,18 @@ const states = new Map<Dockable.WindowId, any>()
 export function useWindow(): WindowProps
 {
     return React.useContext(WindowContext)
+}
+
+
+export function useWindowState<T>(defaultValue: T | (() => T))
+{
+    const windowCtx = React.useContext(WindowContext)
+    const contentId = windowCtx.contentId
+
+    const [update, setUpdate] = React.useState(false)
+    const state = React.useState<T>(states.get(contentId) || defaultValue)
+
+    return state
 }
 
 

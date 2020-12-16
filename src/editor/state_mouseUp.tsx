@@ -2,6 +2,7 @@ import React from "react"
 import * as Editor from "./index"
 import * as Project from "../project"
 import * as Popup from "../popup"
+import * as Windows from "../windows"
 import Rect from "../util/rect"
 
 
@@ -81,7 +82,14 @@ function handleContextMenu(data: Editor.EditorUpdateData)
     Editor.selectionToggleHover(data, data.state.hover, false)
 
     if (data.state.hover)
-        data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data, data.state.hover!.id)
+    {
+        //data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data, data.state.hover!.id)
+        
+        data.dockable.ref.current.createFloatingEphemeral(
+            Windows.Inspector,
+            { elemIds: [...data.state.selection] },
+            1, 1)
+    }
 
     /*const elems: JSX.Element[] = []
     const trackCtxMenu = data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data)

@@ -26,7 +26,7 @@ export function feedNotes(
             synth.playNote(
                 track.id,
                 note.id,
-                MathUtils.midiToHertz(note.midiPitch),
+                note.midiPitch,
                 midiVolumeToLinearGain(track.volume * note.velocity))
         }
     }

@@ -31,7 +31,7 @@ export class Instrument
 	}
 
 
-	playNote(noteId: Project.ID, desiredFreq: number, desiredVolume: number)
+	playNote(noteId: Project.ID, midiPitch: number, volume: number)
 	{
 		
     }

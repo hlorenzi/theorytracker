@@ -57,7 +57,7 @@ export class InstrumentSflib extends Playback.Instrument
 	}
 
 
-	playNote(noteId: Project.ID, desiredFreq: number, desiredVolume: number)
+	playNote(noteId: Project.ID, midiPitch: number, desiredVolume: number)
 	{
         if (!this.sflibInstrument)
             return
@@ -65,17 +65,35 @@ export class InstrumentSflib extends Playback.Instrument
         if (this.notes.has(noteId))
             return
 
-        const zone = this.sflibInstrument.zones.find(z =>
-            desiredFreq >= MathUtils.midiToHertz(z.midiPitchMin) &&
-            desiredFreq <= MathUtils.midiToHertz(z.midiPitchMax))
+        let zone = this.sflibInstrument.zones.find(z =>
+            midiPitch >= z.midiPitchMin &&
+            midiPitch <= z.midiPitchMax)
+
+        if (!zone)
+        {
+            const midiPitchMin = this.sflibInstrument.zones.reduce(
+                (accum, z) => Math.min(accum, z.midiPitchMin),
+                this.sflibInstrument.zones[0].midiPitchMin)
+
+            const midiPitchMax = this.sflibInstrument.zones.reduce(
+                (accum, z) => Math.max(accum, z.midiPitchMax),
+                this.sflibInstrument.zones[0].midiPitchMax)
+
+            if (midiPitch < midiPitchMin)
+                zone = this.sflibInstrument.zones.find(z => midiPitchMin == z.midiPitchMin)
+            else
+                zone = this.sflibInstrument.zones.find(z => midiPitchMax == z.midiPitchMax)
+        }
 
         if (!zone)
             return
 
+        const freq = MathUtils.midiToHertz(midiPitch)
+
         const audioBuffer = this.sflibInstrument.audioBuffers[zone.sampleIndex]
 
         let sourceNode = this.synth.audioCtx.createBufferSource()
-        sourceNode.playbackRate.value = desiredFreq / MathUtils.midiToHertz(zone.midiPitchBase)
+        sourceNode.playbackRate.value = freq / MathUtils.midiToHertz(zone.midiPitchBase)
         sourceNode.buffer = audioBuffer
         sourceNode.loop = zone.loopMode == "loop"
         sourceNode.loopStart = zone.loopStartIndex / audioBuffer.sampleRate

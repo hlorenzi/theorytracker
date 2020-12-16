@@ -3,6 +3,7 @@ import * as Windows from "./index"
 import * as Dockable from "../dockable"
 import * as Project from "../project"
 import * as UI from "../ui"
+import { InstrumentSelect } from "./InstrumentSelect"
 import styled from "styled-components"
 
 
@@ -31,15 +32,17 @@ const StyledButton = styled.button`
 `
 
 
-export function TrackSettings()
+export interface InspectorTrackProps
 {
-    const windowCtx = Dockable.useWindow()
-    windowCtx.setPreferredSize(500, 350)
+    elemIds: Project.ID[]
+}
 
-    const dockable = Dockable.useDockable()
+
+export function InspectorTrack(props: InspectorTrackProps)
+{
     const project = Project.useProject()
 
-    const trackId: Project.ID = windowCtx.data.trackId
+    const trackId: Project.ID = props.elemIds[0]
     
     const getTrack = () =>
     {
@@ -54,8 +57,6 @@ export function TrackSettings()
     if (!track)
         return null
     
-    windowCtx.setTitle("Track [" + track.name + "]")
-
     const onRename = (newName: string) =>
     {
         const newTrack: Project.Track = {
@@ -67,36 +68,29 @@ export function TrackSettings()
         project.commit()
     }
 
-    const onEditInstrument = () =>
+    const getInstrument = () =>
     {
-        const getInstrument = () =>
-        {
-            const track = getTrack()
-            if (!track || track.trackType != "notes")
-                return null
+        const track = getTrack()
+        if (!track || track.trackType != "notes")
+            return null
 
-            return track.instrument
+        return track.instrument
+    }
+
+    const setInstrument = (newInstrument: Project.Instrument) =>
+    {
+        const track = getTrack()
+        if (!track || track.trackType != "notes")
+            return null
+
+        const newTrack: Project.TrackNotes =
+        {
+            ...track,
+            instrument: newInstrument,
         }
 
-        const setInstrument = (newInstrument: Project.Instrument) =>
-        {
-            const track = getTrack()
-            if (!track || track.trackType != "notes")
-                return null
-
-            const newTrack: Project.TrackNotes =
-            {
-                ...track,
-                instrument: newInstrument,
-            }
-    
-            project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
-            project.commit()
-        }
-
-        dockable.ref.current.createFloating(
-            Windows.InstrumentSelect,
-            { getInstrument, setInstrument })
+        project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
+        project.commit()
     }
 
     return <div style={{
@@ -106,7 +100,7 @@ export function TrackSettings()
         padding: "0.5em",
 
         display: "grid",
-        gridTemplate: "auto auto 1fr / 1fr",
+        gridTemplate: "auto 1fr / 1fr",
         justifyContent: "start",
         justifyItems: "start",
     }}>
@@ -118,18 +112,11 @@ export function TrackSettings()
             />
         </div>
 
-        <br/>
-
-        { track.trackType != "notes" ? null :
-            <div>
-                Instrument:
-
-                <StyledButton
-                    onClick={ onEditInstrument }
-                >
-                    { Project.instrumentName(track.instrument) }
-                </StyledButton>
-            </div>
+        { track.trackType != "notes" ? <div/> :
+            <InstrumentSelect
+                getInstrument={ getInstrument }
+                setInstrument={ setInstrument }
+            />
         }
     </div>
 }

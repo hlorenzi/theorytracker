@@ -79,19 +79,6 @@ export class EditorTrackKeyChanges extends EditorTrack
     }
 
 
-    contextMenu(data: Editor.EditorUpdateData, elemId: Project.ID)
-    {
-        const elem = data.project.elems.get(elemId)
-        if (!elem || elem.type != "keyChange")
-            return
-        
-        data.dockable.ref.current.createFloatingEphemeral(
-            Windows.Inspector,
-            { elemIds: [elemId] },
-            -1, 1)
-    }
-
-
     pencilClear(data: Editor.EditorUpdateData)
     {
         this.pencil = null

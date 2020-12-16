@@ -92,13 +92,6 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         if (doubleClick)
         {
             withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
-
-            if (elem && elem.type == "track")
-            {
-                data.dockable.ref.current.createFloating(
-                    Windows.TrackSettings,
-                    { trackId: elem.id })
-            }
         }
     }
     else

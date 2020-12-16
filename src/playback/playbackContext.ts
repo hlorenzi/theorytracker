@@ -245,7 +245,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             playback.ref.current.synth.stopAll()
             playback.ref.current.synth.playNote(
                 data.trackId, 0,
-                MathUtils.midiToHertz(data.midiPitch),
+                data.midiPitch,
                 data.volume)
 
             setTimeout(() =>
