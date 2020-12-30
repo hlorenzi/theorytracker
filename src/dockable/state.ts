@@ -1,4 +1,3 @@
-import { Root } from "../project"
 import Rect from "../util/rect"
 
 
@@ -11,6 +10,7 @@ export interface State
     idNext: PanelId
     rootPanel: Panel
     floatingPanels: Panel[]
+    activePanel: Panel | null
 }
 
 
@@ -115,6 +115,7 @@ export function makeRoot(): State
             ephemeral: false,
         },
         floatingPanels: [],
+        activePanel: null,
     }
 }
 
@@ -152,6 +153,7 @@ export function detachPanel(root: State, panel: Panel)
     if (!panel.floating)
     {
         panel.floating = true
+        root.activePanel = panel
         root.floatingPanels.push(panel)
     }
 }
@@ -240,6 +242,7 @@ export function dock(root: State, panel: Panel, dockIntoPanel: Panel, mode: Dock
         panel.windowIds = []
         panel.windowTitles = []
         root.floatingPanels = root.floatingPanels.filter(p => p !== panel)
+        root.activePanel = dockIntoPanel
     }
     else if (mode == DockMode.Right ||
         mode == DockMode.Left ||
@@ -278,6 +281,7 @@ export function dock(root: State, panel: Panel, dockIntoPanel: Panel, mode: Dock
         panel.floating = false
         dockIntoPanel.floating = false
         newSubpanel.floating = false
+        root.activePanel = panel
         root.floatingPanels = root.floatingPanels.filter(p => p !== panel && p !== newSubpanel)
     }
     else

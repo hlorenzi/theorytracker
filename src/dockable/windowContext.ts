@@ -102,6 +102,7 @@ export function useDockableInit(): RefState<DockableContextProps>
             panel.justOpenedAnchorAlignY = alignY ?? 1
             panel.bugfixAppearOnTop = true
 
+            dockable.ref.current.state.activePanel = panel
             dockable.commit()
             return panel
         }

@@ -214,7 +214,7 @@ export function Container()
 const DivPanel = styled.div`
     border: 1px solid ${ colorVoid };
 
-    &:hover
+    &.active
     {
         border: 1px solid #fff;
     }
@@ -244,6 +244,7 @@ function Panel(props: any)
         zIndex: panelRect.panel.floating ? 100 : 0,
     }}>
         <DivPanel
+            className={ dockable.ref.current.state.activePanel === panelRect.panel ? "active" : undefined }
             onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelActivate(ev, panelRect.panel)) as any }
             style={{
                 backgroundColor: colorPanelBkg,
@@ -458,10 +459,15 @@ function useMouseHandler(
 
     const bringToFront = (ev: any, panel: Dockable.Panel) =>
     {
-        if (!panel.floating)
-            return
-
         const dockable = dockableRef.ref.current.state
+        if (panel.windowIds.length != 0)
+            dockable.activePanel = panel
+
+        if (!panel.floating)
+        {
+            dockableRef.commit()
+            return
+        }
 
         if (dockable.floatingPanels.some(p => p.bugfixAppearOnTop))
         {
@@ -475,7 +481,7 @@ function useMouseHandler(
         console.log("bringToFront", panel, ev.clickedEphemeral)
         if (!panel.ephemeral && !ev.clickedEphemeral)
             Dockable.removeEphemerals(dockable)
-        
+     
         dockableRef.commit()
     }
     
