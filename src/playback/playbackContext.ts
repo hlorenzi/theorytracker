@@ -222,7 +222,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
                 playback.ref.current.requestAnimationFrameDate = new Date()
                 
                 playback.ref.current.setIntervalId =
-                    setInterval(() => processInterval(1000 / 60), 1000 / 60)
+                    +setInterval(() => processInterval(1000 / 60), 1000 / 60)
             }
 
             playback.commit()
