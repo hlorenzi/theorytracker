@@ -5,6 +5,7 @@ import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
 import * as Dockable from "../dockable"
+import * as MathUtils from "../util/mathUtils"
 import Rational from "../util/rational"
 import { RefState } from "../util/refState"
 import Range from "../util/range"
@@ -119,8 +120,16 @@ export interface EditorState
         notePreviewLast: number | null
     }
 
+    insertion:
+    {
+        nearMidiPitch: number
+        duration: Rational
+    }
+
     hover: EditorHover | null
     selection: Immutable.Set<Project.ID>
+
+    needsKeyFinish: boolean
 }
 
 
@@ -152,6 +161,7 @@ export interface EditorUpdateData
     ctx: CanvasRenderingContext2D
     popup: RefState<Popup.PopupContextProps>
     dockable: RefState<Dockable.DockableContextProps>
+    activeWindow: boolean
 }
 
 
@@ -232,10 +242,18 @@ export function init(): EditorState
             elemId: -1,
             notePreviewLast: null,
         },
+
+        insertion:
+        {
+            nearMidiPitch: 60,
+            duration: new Rational(1, 4),
+        },
         
         hover: null,
 
-        selection: Immutable.Set<Project.ID>()
+        selection: Immutable.Set<Project.ID>(),
+
+        needsKeyFinish: false,
     }
 }
 
@@ -250,8 +268,8 @@ export function resize(data: EditorUpdateData, rect: Rect)
 export function rewind(data: EditorUpdateData)
 {
     data.state.cursor.visible = true
-    data.state.cursor.time1 = data.state.cursor.time2 = new Rational(0)
-    data.playback.setStartTime(new Rational(0))
+    data.state.cursor.time1 = data.state.cursor.time2 = data.project.range.start
+    data.playback.setStartTime(data.project.range.start)
     scrollTimeIntoView(data, data.state.cursor.time1)
 }
 
@@ -577,6 +595,39 @@ export function meterAt(data: EditorUpdateData, trackId: Project.ID, time: Ratio
 }
 
 
+export function parentTrackFor(data: EditorUpdateData, elemId: Project.ID): Project.Track
+{
+    while (true)
+    {
+        const elem = data.project.elems.get(elemId)
+        if (!elem)
+            return null!
+            
+        if (elem.type == "track")
+            return elem
+
+        elemId = elem.parentId
+    }
+}
+
+
+export function applyParentTime(data: EditorUpdateData, parentId: Project.ID, time: Rational): Rational
+{
+    while (true)
+    {
+        const elem = data.project.elems.get(parentId)
+        if (!elem)
+            return time
+            
+        if (elem.type == "track")
+            return time
+
+        time = time.add(elem.range.start)
+        parentId = elem.parentId
+    }
+}
+
+
 export function selectionClear(data: EditorUpdateData)
 {
     data.state.selection = data.state.selection.clear()
@@ -596,7 +647,10 @@ export function selectionRange(data: EditorUpdateData): Range | null
         if (elem.type == "track")
             continue
 
-        range = Range.merge(range, elem.range)
+        const start = applyParentTime(data, elem.parentId, elem.range.start)
+        const end = applyParentTime(data, elem.parentId, elem.range.end)
+
+        range = Range.merge(range, new Range(start, end))
     }
 
     return range
@@ -646,6 +700,84 @@ export function selectionAddAtCursor(data: EditorUpdateData)
                 selectionAdd(data, id)
         }
     }
+}
+
+
+export function cursorSetTime(
+    data: EditorUpdateData,
+    time1: Rational | null,
+    time2?: Rational | null)
+{
+    data.state.cursor.time1 = time1 || data.state.cursor.time1
+    data.state.cursor.time2 = time2 || data.state.cursor.time2
+}
+
+
+export function cursorSetTrack(
+    data: EditorUpdateData,
+    trackIndex1: number | null,
+    trackIndex2?: number | null)
+{
+    data.state.cursor.trackIndex1 =
+        Math.max(0, Math.min(data.state.tracks.length - 1,
+            trackIndex1 ?? data.state.cursor.trackIndex1))
+
+    data.state.cursor.trackIndex2 = 
+        Math.max(0, Math.min(data.state.tracks.length - 1,
+            trackIndex2 ?? data.state.cursor.trackIndex2))
+}
+
+
+export function keyHandlePendingFinish(data: EditorUpdateData)
+{
+    data.state.needsKeyFinish = false
+}
+
+
+export function insertNote(data: EditorUpdateData, time: Rational, chroma: number)
+{
+    keyHandlePendingFinish(data)
+
+    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    if (!(track instanceof EditorTrackNotes))
+        return
+
+    const noteBlock = Project.getElem(data.project, track.noteBlockId, "noteBlock")
+    if (!noteBlock)
+        return
+
+    const insertOctave = Math.floor(data.state.insertion.nearMidiPitch / 12)
+    const possiblePitches = [-1, 0, 1].map(offset =>
+    {
+        const pitch = (insertOctave + offset) * 12 + (MathUtils.mod(chroma, 12))
+        const delta = Math.abs(pitch - data.state.insertion.nearMidiPitch)
+        return { pitch, delta }
+    })
+
+    possiblePitches.sort((a, b) => a.delta - b.delta)
+    const chosenPitch = possiblePitches[0].pitch
+
+    const range = new Range(time, time.add(data.state.insertion.duration))
+    const velocity = 1
+        
+    const note = Project.makeNote(
+        noteBlock.id,
+        range.subtract(noteBlock.range.start),
+        chosenPitch, velocity)
+
+    const id = data.project.nextId
+
+    data.project = Project.upsertElement(data.project, note)
+    data.project = Project.withRefreshedRange(data.project)
+
+    data.state.insertion.nearMidiPitch = chosenPitch
+
+    data.state.cursor.visible = false
+    cursorSetTime(data, range.end, range.end)
+    scrollTimeIntoView(data, range.end)
+    selectionClear(data)
+    selectionAdd(data, id)
+    data.playback.playNotePreview(noteBlock.parentId, chosenPitch, velocity)
 }
 
 

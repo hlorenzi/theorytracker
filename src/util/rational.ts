@@ -210,10 +210,10 @@ export default class Rational
 	}
 	
 	
-	static max(a: Rational | null, b: Rational | null): Rational | null
+	static max<T extends Rational | null>(a: T, b: T): T
 	{
 		if (a === null && b === null)
-			return null
+			return null!
 		
 		if (a === null)
 			return b
@@ -221,17 +221,17 @@ export default class Rational
 		if (b === null)
 			return a
 		
-		if (a.compare(b) > 0)
+		if (a.compare(b!) > 0)
 			return a
 		else
 			return b
 	}
 	
 	
-	static min(a: Rational | null, b: Rational | null): Rational | null
+	static min<T extends Rational | null>(a: T, b: T): T
 	{
 		if (a === null && b === null)
-			return null
+			return null!
 		
 		if (a === null)
 			return b
@@ -239,22 +239,22 @@ export default class Rational
 		if (b === null)
 			return a
 		
-		if (a.compare(b) < 0)
+		if (a.compare(b!) < 0)
 			return a
 		else
 			return b
 	}
 
 
-	max(other: Rational | null): Rational | null
+	max(other:  Rational | null): Rational
 	{
-		return Rational.max(this, other)
+		return Rational.max(this, other)!
 	}
 
 
-	min(other: Rational | null): Rational | null
+	min(other:  Rational | null): Rational
 	{
-		return Rational.min(this, other)
+		return Rational.min(this, other)!
 	}
 	
 	

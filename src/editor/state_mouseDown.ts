@@ -85,9 +85,13 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
 
         withTrackAtMouse(tr => tr.click(data, data.state.hover!.id))
 
-        //const range = Editor.selectionRange(data)
-        //if (range)
-        //    data.playback.setStartTime(range.start)
+        const range = Editor.selectionRange(data)
+        if (range)
+        {
+            Editor.cursorSetTime(data, range.start, range.start)
+            Editor.cursorSetTrack(data, data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
+            data.playback.setStartTime(range.start)
+        }
         
         if (doubleClick)
         {

@@ -38,6 +38,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     const playback = Playback.usePlayback()
     const prefs = Prefs.usePrefs()
     const popup = Popup.usePopup()
+    const dockableWindow = Dockable.useWindow()
     const dockable = Dockable.useDockable()
 
     const lastTimelineRenderRef = React.useRef(0)
@@ -51,6 +52,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             prefs: prefs.ref.current,
             popup,
             dockable,
+            activeWindow: dockable.ref.current.state.activePanel === dockableWindow.panel,
             ctx: null!,
         }
     }
@@ -241,6 +243,15 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		{
             const updateData = makeUpdateData()
 			Editor.keyDown(updateData, ev.key.toLowerCase())
+            
+            if (updateData.project !== project.ref.current)
+            {
+                project.ref.current = updateData.project
+                project.commit()
+            }
+
+            render()
+            editorState.commit()
         }
 		
 		const onKeyUp = (ev: KeyboardEvent) =>

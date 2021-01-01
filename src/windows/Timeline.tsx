@@ -49,6 +49,7 @@ export function Timeline()
             popup: null!,
             dockable: null!,
             ctx: null!,
+            activeWindow: false,
         }
     }
 

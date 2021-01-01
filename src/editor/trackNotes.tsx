@@ -231,10 +231,12 @@ export class EditorTrackNotes extends EditorTrack
 
     click(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
-        const elem = data.project.elems.get(elemId)
-        if (elem && elem.type == "note")
+        const note = Project.getElem(data.project, elemId, "note")
+        if (note)
         {
-            data.playback.playNotePreview(this.projectTrackId, elem.midiPitch, elem.velocity)
+            data.state.insertion.nearMidiPitch = note.midiPitch
+            data.state.insertion.duration = note.range.duration
+            data.playback.playNotePreview(this.projectTrackId, note.midiPitch, note.velocity)
         }
     }
 
