@@ -112,6 +112,15 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
                 data.state.mouse.point.trackIndex
 
+            if (doubleClick)
+            {
+                const anchor = Editor.findPreviousAnchor(
+                    data, data.state.mouse.point.time,
+                    data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
+                    
+                data.state.cursor.time1 = data.state.cursor.time2 = anchor
+            }
+
             data.playback.setStartTime(data.state.cursor.time1)
         }
     }

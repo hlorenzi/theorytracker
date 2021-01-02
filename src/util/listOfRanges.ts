@@ -231,6 +231,14 @@ export default class ListOfRanges<T extends Element>
 	}
 	
 	
+	*iterAtPoint(point: Rational): Generator<T, void, void>
+	{
+		const range = Range.fromPoint(point, true, true)
+		for (const item of this.iterAtRange(range))
+			yield item
+	}
+	
+	
 	*iterActiveAtRangePairwise(range: Range): Generator<[T | null, T | null], void, void>
 	{
 		if (this.idMap.size == 0)

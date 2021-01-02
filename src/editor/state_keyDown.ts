@@ -27,6 +27,18 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
             break
         }
 
+        case "delete":
+        {
+            handleDelete(data)
+            break
+        }
+
+		case "backspace":
+        {
+            handleBackspace(data)
+            break
+        }
+
         case "arrowright":
         case "arrowleft":
         {
@@ -58,7 +70,7 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
         case "6":
         case "7":
         {
-            const degree = (key.charCodeAt(0) - "1".charCodeAt(0))
+            const degree = key.charCodeAt(0) - "1".charCodeAt(0)
             handleNumber(data, degree)
             break
         }
@@ -125,6 +137,48 @@ function handleEnter(data: Editor.EditorUpdateData)
 
     Editor.keyHandlePendingFinish(data)
     Editor.selectionClear(data)
+}
+
+
+function handleDelete(data: Editor.EditorUpdateData)
+{
+    Editor.selectionDelete(data)
+}
+
+
+function handleBackspace(data: Editor.EditorUpdateData)
+{
+    if (!data.state.cursor.visible)
+    {
+        Editor.selectionDelete(data)
+        return
+    }
+
+    const track1 = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const track2 = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    
+    if (data.state.cursor.time1.compare(data.state.cursor.time2) == 0)
+    {
+        const time = data.state.cursor.time1.min(data.state.cursor.time2)
+        const prevAnchor = Editor.findPreviousAnchor(data, time, track1, track2)
+        const range = new Range(prevAnchor, time, false, false)
+        Editor.deleteRange(data, range, track1, track2)
+
+        data.state.cursor.visible = true
+        Editor.cursorSetTime(data, prevAnchor, prevAnchor)
+        Editor.scrollTimeIntoView(data, prevAnchor)
+    }
+    else
+    {
+        const time1 = data.state.cursor.time1.min(data.state.cursor.time2)
+        const time2 = data.state.cursor.time1.max(data.state.cursor.time2)
+        const range = new Range(time1, time2, false, false)
+        Editor.deleteRange(data, range, track1, track2)
+
+        data.state.cursor.visible = true
+        Editor.cursorSetTime(data, time1, time1)
+        Editor.scrollTimeIntoView(data, time1)
+    }
 }
 
 

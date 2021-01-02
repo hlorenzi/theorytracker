@@ -59,7 +59,7 @@ export class EditorTrackNotes extends EditorTrack
         if (!list)
             return
 
-        for (const elem of list.iterAtRange(range.displace(this.parentStart(data).negate())))
+        for (const elem of list.iterAtRange(range.subtract(this.parentStart(data))))
             yield elem as Project.Note
     }
 
@@ -90,7 +90,7 @@ export class EditorTrackNotes extends EditorTrack
                 if (!noteList)
                     continue
 
-                for (const elem of noteList.iterAtRange(range.displace(noteBlock.range.start.negate())))
+                for (const elem of noteList.iterAtRange(range.subtract(noteBlock.range.start)))
                 {
                     const newElem =
                     {
@@ -98,7 +98,7 @@ export class EditorTrackNotes extends EditorTrack
                         range: elem.range
                             .displace(noteBlock.range.start)
                             .intersect(noteBlock.range)
-                            .displace(noteBlock.range.start.negate()),
+                            .subtract(noteBlock.range.start),
                     }
 
                     if (newElem.range.duration.isZero())
@@ -299,6 +299,32 @@ export class EditorTrackNotes extends EditorTrack
             const id = data.project.nextId
             data.project = Project.upsertElement(data.project, elem)
             Editor.selectionAdd(data, id)
+		}
+	}
+    
+    
+    findPreviousAnchor(data: Editor.EditorUpdateData, time: Rational): Rational
+    {
+        const list = data.project.lists.get(this.noteBlockId)
+        if (!list)
+            return this.parentStart(data)
+
+        return list.findPreviousAnchor(time) || this.parentStart(data)
+    }
+	
+	
+	deleteRange(data: Editor.EditorUpdateData, range: Range)
+	{
+		for (const note of this.iterNotesAtRange(data, range))
+		{
+            const removeNote = Project.elemModify(note, { parentId: -1 })
+            data.project = Project.upsertElement(data.project, removeNote)
+            
+			for (const slice of note.range.iterSlices(range))
+			{
+				const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.velocity)
+                data.project = Project.upsertElement(data.project, newNote)
+			}
 		}
 	}
 

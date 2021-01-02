@@ -703,6 +703,41 @@ export function selectionAddAtCursor(data: EditorUpdateData)
 }
 
 
+export function selectionDelete(data: EditorUpdateData)
+{
+    const range = selectionRange(data) || new Range(data.state.cursor.time1, data.state.cursor.time1)
+
+    for (const id of data.state.selection)
+    {
+        const elem = data.project.elems.get(id)
+        if (!elem)
+            continue
+
+        if (elem.type == "track")
+            continue
+
+        const removeElem = Project.elemModify(elem, { parentId: -1 })
+        data.project = Project.upsertElement(data.project, removeElem)
+    }
+    
+    for (const id of data.state.selection)
+    {
+        const track = data.project.elems.get(id)
+        if (!track)
+            continue
+
+        if (track.type != "track")
+            continue
+
+        data.project = Project.upsertTrack(data.project, track, true)
+    }
+
+    data.state.cursor.visible = true
+    cursorSetTime(data, range.start, range.start)
+    scrollTimeIntoView(data, range.start)
+}
+
+
 export function cursorSetTime(
     data: EditorUpdateData,
     time1: Rational | null,
@@ -725,6 +760,45 @@ export function cursorSetTrack(
     data.state.cursor.trackIndex2 = 
         Math.max(0, Math.min(data.state.tracks.length - 1,
             trackIndex2 ?? data.state.cursor.trackIndex2))
+}
+
+
+export function findPreviousAnchor(
+    data: EditorUpdateData,
+    time: Rational,
+    trackIndex1: number,
+    trackIndex2: number)
+    : Rational
+{
+    let prevAnchor: Rational | null = null
+    
+    const trackMin = Math.min(trackIndex1, trackIndex2)
+    const trackMax = Math.max(trackIndex1, trackIndex2)
+    
+    for (let tr = Math.max(0, trackMin); tr <= Math.min(data.state.tracks.length - 1, trackMax); tr++)
+    {
+        const anchor = data.state.tracks[tr].findPreviousAnchor(data, time)
+        prevAnchor = Rational.max(prevAnchor, anchor)
+    }
+
+    if (!prevAnchor)
+        return data.project.range.start
+    
+    return prevAnchor
+}
+
+
+export function deleteRange(
+    data: EditorUpdateData,
+    range: Range,
+    trackIndex1: number,
+    trackIndex2: number)
+{
+    const trackMin = Math.min(trackIndex1, trackIndex2)
+    const trackMax = Math.max(trackIndex1, trackIndex2)
+    
+    for (let tr = Math.max(0, trackMin); tr <= Math.min(data.state.tracks.length - 1, trackMax); tr++)
+        data.state.tracks[tr].deleteRange(data, range)
 }
 
 

@@ -119,6 +119,41 @@ export class EditorTrack
 	{
         return 0
 	}
+    
+    
+    findPreviousAnchor(data: Editor.EditorUpdateData, time: Rational): Rational
+    {
+        const list = data.project.lists.get(this.projectTrackId)
+        if (!list)
+            return data.project.range.start
+
+        return list.findPreviousDeletionAnchor(time) || data.project.range.start
+    }
+	
+	
+	deleteRange(data: Editor.EditorUpdateData, range: Range)
+	{
+        const list = data.project.lists.get(this.projectTrackId)
+        if (!list)
+            return
+
+        if (range.duration.isZero())
+        {
+            for (const elem of list.iterAtPoint(range.start))
+            {
+                const removeElem = Project.elemModify(elem, { parentId: -1 })
+                data.project = Project.upsertElement(data.project, removeElem)
+            }
+        }
+        else
+        {
+            for (const elem of list.iterAtRange(range))
+            {
+                const removeElem = Project.elemModify(elem, { parentId: -1 })
+                data.project = Project.upsertElement(data.project, removeElem)
+            }
+        }
+	}
 
 
     render(data: Editor.EditorUpdateData)
