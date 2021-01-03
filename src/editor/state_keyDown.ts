@@ -8,7 +8,7 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
 {
     data.state.keysDown.add(key)
 
-    console.log("keyDown", key, data.activeWindow)
+    //console.log("keyDown", key, data.activeWindow)
 
     if (!data.activeWindow)
         return
@@ -117,6 +117,12 @@ function handleEscape(data: Editor.EditorUpdateData)
 
 function handleEnter(data: Editor.EditorUpdateData)
 {
+    if (data.state.cursor.visible && data.state.selection.size != 0)
+    {
+        data.state.cursor.visible = false
+        return
+    }
+
     data.state.cursor.visible = true
 
     const range = Editor.selectionRange(data)
@@ -184,26 +190,27 @@ function handleBackspace(data: Editor.EditorUpdateData)
 
 function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
 {
-    const keyCtrl = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
-    const keyShift = data.state.keysDown.has(data.prefs.editor.keySelectRect)
+    const keyFast = data.state.keysDown.has(data.prefs.editor.keyDisplaceFast)
+    const keyCursor2 = data.state.keysDown.has(data.prefs.editor.keyDisplaceCursor2)
+    const keyStretch = data.state.keysDown.has(data.prefs.editor.keyDisplaceStretch)
 
 
     if (data.playback.playing)
     {
         const timeDelta = data.state.timeSnap.multiplyByFloat(
-            (keyCtrl ? 64 : 16) * (isLeft ? -1 : 1))
+            (keyFast ? 64 : 16) * (isLeft ? -1 : 1))
 
         data.playback.setStartTime(data.playback.playTime.add(timeDelta))
         data.playback.startPlaying()
     }
-    else if (data.state.cursor.visible && (data.state.selection.size == 0 || keyShift))
+    else if (data.state.cursor.visible && (data.state.selection.size == 0 || keyCursor2))
     {
         const timeDelta = data.state.timeSnap.multiplyByFloat(
-            (keyCtrl ? 16 : 1) * (isLeft ? -1 : 1))
+            (keyFast ? 16 : 1) * (isLeft ? -1 : 1))
 
         Editor.keyHandlePendingFinish(data)
 
-        if (keyShift)
+        if (keyCursor2)
         {
             const newTime = data.state.cursor.time2.add(timeDelta)
             Editor.cursorSetTime(data, null, newTime)
@@ -227,28 +234,48 @@ function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
     else
     {
         const timeDelta = data.state.timeSnap.multiplyByFloat(
-            (keyCtrl ? 16 : 1) * (isLeft ? -1 : 1))
-
+            (keyFast ? 16 : 1) * (isLeft ? -1 : 1))
+        
+        const selectionRange = Editor.selectionRange(data)
+        
         let playedPreview = false
-
         modifySelectedElems(data, (elem) =>
         {
             if (elem.type == "track")
                 return elem
+
+            let newRange = elem.range
                 
+            if (keyStretch && selectionRange)
+            {
+                const absRange = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
+                newRange = Editor.getRelativeRange(data, elem.parentId, absRange.stretch(
+                    timeDelta,
+                    selectionRange.start,
+                    selectionRange.end))
+            }
+            else
+            {
+                newRange = elem.range.displace(timeDelta)
+            }
+
+            if (!elem.range.duration.isZero() && newRange.duration.isZero())
+                return elem
+
             if (!playedPreview && elem.type == "note")
             {
+                playedPreview = true
                 data.state.insertion.nearMidiPitch = elem.midiPitch
-                data.state.insertion.duration = elem.range.duration
+                data.state.insertion.duration = newRange.duration
             }
 
             return Project.elemModify(elem, {
-                range: elem.range.displace(timeDelta)
+                range: newRange
             })
         })
 
         const range = Editor.selectionRange(data) || new Range(new Rational(0), new Rational(0))
-        const newTime = (isLeft ? range.start : range.end)
+        const newTime = (isLeft && !keyStretch ? range.start : range.end)
         data.state.cursor.visible = false
         Editor.cursorSetTime(data, newTime, newTime)
         Editor.scrollTimeIntoView(data, newTime)
@@ -260,17 +287,18 @@ function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
 
 function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic: boolean)
 {
-    const keyCtrl = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
-    const keyShift = data.state.keysDown.has(data.prefs.editor.keySelectRect)
+    const keyFast = data.state.keysDown.has(data.prefs.editor.keyDisplaceFast)
+    const keyCursor2 = data.state.keysDown.has(data.prefs.editor.keyDisplaceCursor2)
+    const keyChromatic = data.state.keysDown.has(data.prefs.editor.keyDisplaceChromatically)
 
     
-    if (!isChromatic && data.state.cursor.visible && (data.state.selection.size == 0 || keyShift))
+    if (!isChromatic && data.state.cursor.visible && (data.state.selection.size == 0 || keyCursor2))
     {
         const trackDelta = (isUp ? -1 : 1)
 
         Editor.keyHandlePendingFinish(data)
         
-        if (keyShift)
+        if (keyCursor2)
         {
             const newTrack = data.state.cursor.trackIndex2 + trackDelta
             Editor.cursorSetTrack(data, null, newTrack)
@@ -288,11 +316,10 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
     }
     else
     {
-        const pitchDelta = (keyCtrl ? 12 : (keyShift || isChromatic ? 1 : 0)) * (isUp ? 1 : -1)
-        const degreeDelta = (keyCtrl || isChromatic ? 0 : 1) * (isUp ? 1 : -1)
+        const pitchDelta = (keyFast ? 12 : (keyChromatic || isChromatic ? 1 : 0)) * (isUp ? 1 : -1)
+        const degreeDelta = (keyFast || isChromatic ? 0 : 1) * (isUp ? 1 : -1)
 
         let playedPreview = false
-
         modifySelectedElems(data, (elem) =>
         {
             if (elem.type != "note")
@@ -310,7 +337,7 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
             {
                 playedPreview = true
                 data.playback.playNotePreview(track.id, newPitch, elem.velocity)
-                data.state.insertion.nearMidiPitch = elem.midiPitch
+                data.state.insertion.nearMidiPitch = newPitch
                 data.state.insertion.duration = elem.range.duration
             }
 

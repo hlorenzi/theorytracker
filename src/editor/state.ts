@@ -611,7 +611,7 @@ export function parentTrackFor(data: EditorUpdateData, elemId: Project.ID): Proj
 }
 
 
-export function applyParentTime(data: EditorUpdateData, parentId: Project.ID, time: Rational): Rational
+export function getAbsoluteTime(data: EditorUpdateData, parentId: Project.ID, time: Rational): Rational
 {
     while (true)
     {
@@ -623,6 +623,40 @@ export function applyParentTime(data: EditorUpdateData, parentId: Project.ID, ti
             return time
 
         time = time.add(elem.range.start)
+        parentId = elem.parentId
+    }
+}
+
+
+export function getAbsoluteRange(data: EditorUpdateData, parentId: Project.ID, range: Range): Range
+{
+    while (true)
+    {
+        const elem = data.project.elems.get(parentId)
+        if (!elem)
+            return range
+            
+        if (elem.type == "track")
+            return range
+
+        range = range.displace(elem.range.start)
+        parentId = elem.parentId
+    }
+}
+
+
+export function getRelativeRange(data: EditorUpdateData, parentId: Project.ID, range: Range): Range
+{
+    while (true)
+    {
+        const elem = data.project.elems.get(parentId)
+        if (!elem)
+            return range
+            
+        if (elem.type == "track")
+            return range
+
+        range = range.subtract(elem.range.start)
         parentId = elem.parentId
     }
 }
@@ -647,8 +681,8 @@ export function selectionRange(data: EditorUpdateData): Range | null
         if (elem.type == "track")
             continue
 
-        const start = applyParentTime(data, elem.parentId, elem.range.start)
-        const end = applyParentTime(data, elem.parentId, elem.range.end)
+        const start = getAbsoluteTime(data, elem.parentId, elem.range.start)
+        const end = getAbsoluteTime(data, elem.parentId, elem.range.end)
 
         range = Range.merge(range, new Range(start, end))
     }
@@ -801,10 +835,22 @@ export function deleteRange(
         data.state.tracks[tr].deleteRange(data, range)
 }
 
+	
+export function selectionRemoveConflictingBehind(data: EditorUpdateData)
+{
+    for (let tr = 0; tr < data.state.tracks.length; tr++)
+        data.state.tracks[tr].selectionRemoveConflictingBehind(data)
+}
+
 
 export function keyHandlePendingFinish(data: EditorUpdateData)
 {
+    if (!data.state.needsKeyFinish)
+        return
+
     data.state.needsKeyFinish = false
+
+    selectionRemoveConflictingBehind(data)
 }
 
 
@@ -816,7 +862,7 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
     if (!(track instanceof EditorTrackNotes))
         return
 
-    const noteBlock = Project.getElem(data.project, track.noteBlockId, "noteBlock")
+    const noteBlock = Project.getElem(data.project, track.parentId, "noteBlock")
     if (!noteBlock)
         return
 
@@ -852,6 +898,7 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
     selectionClear(data)
     selectionAdd(data, id)
     data.playback.playNotePreview(noteBlock.parentId, chosenPitch, velocity)
+    selectionRemoveConflictingBehind(data)
 }
 
 

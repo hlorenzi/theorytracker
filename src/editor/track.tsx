@@ -12,6 +12,7 @@ export const MARKER_WIDTH = 12
 export class EditorTrack
 {
     projectTrackId: Project.ID
+    parentId: Project.ID
     name: string
     renderRect: Rect
     acceptedElemTypes: Set<Project.Element["type"]>
@@ -26,6 +27,7 @@ export class EditorTrack
     constructor()
     {
         this.projectTrackId = -1
+        this.parentId = -1
         this.name = ""
         this.renderRect = new Rect(0, 0, 0, 0)
         this.acceptedElemTypes = new Set<Project.Element["type"]>()
@@ -153,6 +155,47 @@ export class EditorTrack
                 data.project = Project.upsertElement(data.project, removeElem)
             }
         }
+	}
+
+
+	selectionRemoveConflictingBehind(data: Editor.EditorUpdateData)
+	{
+        const list = data.project.lists.get(this.projectTrackId)
+        if (!list)
+            return
+
+		for (const id of data.state.selection)
+		{
+			const selectedElem = data.project.elems.get(id)
+			if (!selectedElem)
+				continue
+
+            if (selectedElem.parentId !== this.projectTrackId)
+                continue
+
+            if (selectedElem.range.duration.isZero())
+            {
+                for (const elem of list.iterAtPoint(selectedElem.range.start))
+                {
+                    if (data.state.selection.has(elem.id))
+                        continue
+    
+                    const removeElem = Project.elemModify(elem, { parentId: -1 })
+                    data.project = Project.upsertElement(data.project, removeElem)
+                }
+            }
+            else
+            {
+                for (const elem of list.iterAtRange(selectedElem.range))
+                {
+                    if (data.state.selection.has(elem.id))
+                        continue
+    
+                    const removeElem = Project.elemModify(elem, { parentId: -1 })
+                    data.project = Project.upsertElement(data.project, removeElem)
+                }
+            }
+		}
 	}
 
 

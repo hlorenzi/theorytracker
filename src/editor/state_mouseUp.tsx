@@ -27,6 +27,8 @@ export function mouseUp(data: Editor.EditorUpdateData)
         handleContextMenu(data)
     }
 
+    Editor.selectionRemoveConflictingBehind(data)
+
     data.project = Project.withRefreshedRange(data.project)
 }
 

@@ -13,8 +13,6 @@ import { EditorTrack } from "./track"
 
 export class EditorTrackNotes extends EditorTrack
 {
-    noteBlockId: Project.ID
-
     pencil: null |
     {
         time1: Rational
@@ -27,7 +25,7 @@ export class EditorTrackNotes extends EditorTrack
     {
         super()
         this.projectTrackId = projectTrackId
-        this.noteBlockId = noteBlockId
+        this.parentId = noteBlockId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
         this.acceptedElemTypes.add("note")
@@ -38,14 +36,14 @@ export class EditorTrackNotes extends EditorTrack
 
     parentStart(data: Editor.EditorUpdateData)
     {
-        const noteBlock = data.project.elems.get(this.noteBlockId)
+        const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
     parentRange(data: Editor.EditorUpdateData)
     {
-        const noteBlock = data.project.elems.get(this.noteBlockId)
+        const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
     }
 
@@ -55,7 +53,7 @@ export class EditorTrackNotes extends EditorTrack
         range: Range)
         : Generator<Project.Note, void, void>
     {
-        const list = data.project.lists.get(this.noteBlockId)
+        const list = data.project.lists.get(this.parentId)
         if (!list)
             return
 
@@ -80,7 +78,7 @@ export class EditorTrackNotes extends EditorTrack
             
             for (const noteBlock of trackElems.iterAtRange(range))
             {
-                if (noteBlock.id == this.noteBlockId)
+                if (noteBlock.id == this.parentId)
                     continue
                 
                 if (noteBlock.type != "noteBlock")
@@ -291,7 +289,7 @@ export class EditorTrackNotes extends EditorTrack
 		if (this.pencil)
 		{
             const elem = Project.makeNote(
-                this.noteBlockId,
+                this.parentId,
                 new Range(this.pencil.time1, this.pencil.time2).sorted(),
                 this.pencil.midiPitch,
                 0.5)
@@ -305,7 +303,7 @@ export class EditorTrackNotes extends EditorTrack
     
     findPreviousAnchor(data: Editor.EditorUpdateData, time: Rational): Rational
     {
-        const list = data.project.lists.get(this.noteBlockId)
+        const list = data.project.lists.get(this.parentId)
         if (!list)
             return this.parentStart(data)
 
@@ -324,6 +322,48 @@ export class EditorTrackNotes extends EditorTrack
 			{
 				const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.velocity)
                 data.project = Project.upsertElement(data.project, newNote)
+			}
+		}
+	}
+
+
+	selectionRemoveConflictingBehind(data: Editor.EditorUpdateData)
+	{
+        const list = data.project.lists.get(this.parentId)
+        if (!list)
+            return
+
+		for (const id of data.state.selection)
+		{
+			const selectedNote = data.project.elems.get(id)
+			if (!selectedNote)
+				continue
+
+            if (selectedNote.parentId !== this.parentId)
+                continue
+
+            if (selectedNote.type != "note")
+                continue
+
+			for (const note of list.iterAtRange(selectedNote.range))
+			{
+				if (data.state.selection.has(note.id))
+					continue
+
+                if (note.type != "note")
+                    continue
+    
+				if (note.midiPitch !== selectedNote.midiPitch)
+					continue
+
+                const removeNote = Project.elemModify(note, { parentId: -1 })
+                data.project = Project.upsertElement(data.project, removeNote)
+				
+				for (const slice of note.range.iterSlices(selectedNote.range))
+				{
+					const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.velocity)
+                    data.project = Project.upsertElement(data.project, newNote)
+				}
 			}
 		}
 	}

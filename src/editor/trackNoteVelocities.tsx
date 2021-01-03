@@ -13,8 +13,6 @@ import { EditorTrack } from "./track"
 
 export class EditorTrackNoteVelocities extends EditorTrack
 {
-    noteBlockId: Project.ID
-
     pencil: null |
     {
         time1: Rational
@@ -27,7 +25,7 @@ export class EditorTrackNoteVelocities extends EditorTrack
     {
         super()
         this.projectTrackId = projectTrackId
-        this.noteBlockId = noteBlockId
+        this.parentId = noteBlockId
         this.name = "Note Velocities"
         this.renderRect = new Rect(0, 0, 0, h)
         this.pencil = null
@@ -37,14 +35,14 @@ export class EditorTrackNoteVelocities extends EditorTrack
 
     parentStart(data: Editor.EditorUpdateData)
     {
-        const noteBlock = data.project.elems.get(this.noteBlockId)
+        const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
     parentRange(data: Editor.EditorUpdateData)
     {
-        const noteBlock = data.project.elems.get(this.noteBlockId)
+        const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
     }
 
@@ -54,7 +52,7 @@ export class EditorTrackNoteVelocities extends EditorTrack
         range: Range)
         : Generator<Project.Note, void, void>
     {
-        const list = data.project.lists.get(this.noteBlockId)
+        const list = data.project.lists.get(this.parentId)
         if (!list)
             return
 

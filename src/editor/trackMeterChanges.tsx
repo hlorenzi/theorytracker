@@ -20,7 +20,7 @@ export class EditorTrackMeterChanges extends EditorTrack
     constructor(projectTrackId: Project.ID, name: string, h: number)
     {
         super()
-        this.projectTrackId = projectTrackId
+        this.projectTrackId = this.parentId = projectTrackId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
         this.acceptedElemTypes.add("meterChange")

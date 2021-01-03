@@ -33,7 +33,7 @@ export function Inspector()
 		{
 			const elem = project.ref.current.elems.get(elemId)
 			if (!elem)
-				return null
+				continue
 
 			const typeCount = types.get(elem.type)
 			if (typeCount === undefined)

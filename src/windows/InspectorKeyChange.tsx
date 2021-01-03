@@ -16,8 +16,10 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
     const project = Project.useProject()
     const prefs = Prefs.usePrefs()
 
-	const elem = project.ref.current.elems.get(props.elemIds[0])
-	const keyCh = elem as Project.KeyChange
+	const keyCh = Project.getElem(project.ref.current, props.elemIds[0], "keyChange")
+	if (!keyCh)
+		return null
+		
 	const key = keyCh.key
 
 
@@ -107,7 +109,7 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 			textAlign: "center",
 		}}>
 			[Key Change]<br/>
-			{ (elem as Project.KeyChange).key.str }
+			{ keyCh.key.str }
 		</div>
 
 		<div style={{

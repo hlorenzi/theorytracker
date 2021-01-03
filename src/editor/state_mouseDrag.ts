@@ -118,7 +118,8 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             if (mouseAction & Editor.EditorAction.StretchTimeStart &&
                 data.state.drag.origin.range)
             {
-                changes.range = elem.range.stretch(
+                changes.range = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
+                changes.range = changes.range.stretch(
                     data.state.drag.timeDelta,
                     data.state.drag.origin.range.end,
                     data.state.drag.origin.range.start)
@@ -129,12 +130,14 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                         changes.range.end)
                     
                 changes.range = changes.range.sorted()
+                changes.range = Editor.getRelativeRange(data, elem.parentId, changes.range)
             }
 
             if (mouseAction & Editor.EditorAction.StretchTimeEnd &&
                 data.state.drag.origin.range)
             {
-                changes.range = elem.range.stretch(
+                changes.range = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
+                changes.range = changes.range.stretch(
                     data.state.drag.timeDelta,
                     data.state.drag.origin.range.start,
                     data.state.drag.origin.range.end)
@@ -145,6 +148,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                         changes.range.end.snap(data.state.timeSnap))
 
                 changes.range = changes.range.sorted()
+                changes.range = Editor.getRelativeRange(data, elem.parentId, changes.range)
             }
         
             if (mouseAction & Editor.EditorAction.DragRow &&

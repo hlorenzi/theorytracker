@@ -9,7 +9,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
 {
     if (data.state.mouse.down)
         return
-
+            
     const prevDownDate = data.state.mouse.downDate
 
     data.state.mouse.down = true
@@ -77,7 +77,8 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     }
     else if (data.state.hover)
     {
-        const elem = data.project.elems.get(data.state.hover.id)
+        Editor.keyHandlePendingFinish(data)
+
         data.state.drag.elemId = data.state.hover.id
 
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
@@ -100,6 +101,8 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     }
     else
     {
+        Editor.keyHandlePendingFinish(data)
+
         if (!selectMultiple)
             Editor.selectionClear(data)
 

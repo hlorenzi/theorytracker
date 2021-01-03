@@ -29,6 +29,10 @@ export interface Prefs
         keyPencil: string
         keySelectMultiple: string
         keySelectRect: string
+        keyDisplaceCursor2: string
+        keyDisplaceFast: string
+        keyDisplaceChromatically: string
+        keyDisplaceStretch: string
 
         mouseDoubleClickThresholdMs: number
 
@@ -73,6 +77,10 @@ export function getDefault(): Prefs
             keyPencil: "a",
             keySelectMultiple: "control",
             keySelectRect: "shift",
+            keyDisplaceCursor2: "shift",
+            keyDisplaceFast: "control",
+            keyDisplaceChromatically: "shift",
+            keyDisplaceStretch: "shift",
 
             mouseDoubleClickThresholdMs: 300,
         
