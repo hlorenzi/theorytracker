@@ -20,11 +20,19 @@ interface DropdownMenuProps
 export function DropdownMenu(props: DropdownMenuProps)
 {
     //const selectedIndex = props.items.findIndex(i => i.value == props.selected)
+    const hasDefinite = props.selected !== null
 
 
     return <select
         value={ props.selected }
-        onChange={ ev => props.onChange(props.items[ev.target.selectedIndex], ev.target.selectedIndex) }
+        onChange={ ev =>
+        {
+            if (!hasDefinite && ev.target.selectedIndex == 0)
+                return
+
+            const index = ev.target.selectedIndex - (hasDefinite ? 0 : 1)
+            props.onChange(props.items[index], index)
+        }}
         style={{
             display: "grid",
             gridTemplate: "auto / auto",
@@ -43,6 +51,14 @@ export function DropdownMenu(props: DropdownMenuProps)
 
             ...props.style,
     }}>
+
+        { hasDefinite ? null :
+            <option
+                value={ "" }
+            >
+                ---
+            </option>
+        }
 
         { props.items.map((item, i) =>
             <option

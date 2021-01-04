@@ -1,4 +1,5 @@
 import React from "react"
+import * as Dockable from "../dockable"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as UI from "../ui"
@@ -14,6 +15,9 @@ export interface InspectorMultitypeProps
 
 export function InspectorMultitype(props: InspectorMultitypeProps)
 {
+    const windowCtx = Dockable.useWindow()
+	windowCtx.setTitle("Multiple Elements")
+	
     const project = Project.useProject()
 	const prefs = Prefs.usePrefs()
 	

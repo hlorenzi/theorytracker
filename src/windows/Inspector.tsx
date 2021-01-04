@@ -16,7 +16,6 @@ interface InspectorProps
 export function Inspector()
 {
     const windowCtx = Dockable.useWindow()
-	windowCtx.setTitle("Inspector")
 	
 	const props: InspectorProps = windowCtx.data
 	const [elemIds, setElemIds] = Dockable.useWindowState(props.elemIds)

@@ -40,6 +40,7 @@ export interface InspectorTrackProps
 
 export function InspectorTrack(props: InspectorTrackProps)
 {
+    const windowCtx = Dockable.useWindow()
     const project = Project.useProject()
 
     const trackId: Project.ID = props.elemIds[0]
@@ -92,6 +93,10 @@ export function InspectorTrack(props: InspectorTrackProps)
         project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
         project.commit()
     }
+
+
+	windowCtx.setTitle("Track")
+
 
     return <div style={{
         width: "100%",

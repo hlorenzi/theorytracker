@@ -1,4 +1,5 @@
 import React from "react"
+import * as Dockable from "../dockable"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Theory from "../theory"
@@ -13,32 +14,50 @@ export interface InspectorKeyChangeProps
 
 export function InspectorKeyChange(props: InspectorKeyChangeProps)
 {
+    const windowCtx = Dockable.useWindow()
     const project = Project.useProject()
     const prefs = Prefs.usePrefs()
 
-	const keyCh = Project.getElem(project.ref.current, props.elemIds[0], "keyChange")
-	if (!keyCh)
-		return null
-		
-	const key = keyCh.key
-
-
-	const chromaticOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(chroma =>
+	const keyChs: Project.KeyChange[] = []
+	for (const elemId of props.elemIds)
 	{
-		chroma = Theory.Utils.mod(chroma + key.tonic.chroma, 12)
-		return {
-			label: key.nameForChroma(chroma).str,
-			value: chroma,
-			bkgColor: Theory.Utils.degreeToColor(key.degreeForChroma(chroma)),
-			width: "2em",
-		}
-	})
+		const keyCh = Project.getElem(project.ref.current, elemId, "keyChange")
+		if (!keyCh)
+			continue
+
+		keyChs.push(keyCh)
+	}
+
+	if (keyChs.length == 0)
+		return null
 
 
-	const chromaticSelected = [0, 1, 2, 3, 4, 5, 6].map(degree => key.chromaForDegree(degree))
+	let sameTonicLetter: number | null = keyChs[0].key.tonic.letter
+	let sameTonicAccidental: number | null = keyChs[0].key.tonic.accidental
+	let sameScale: Theory.Scale | null = keyChs[0].key.scale
+	for (const keyCh of keyChs)
+	{
+		if (keyCh.key.tonic.letter !== sameTonicLetter)
+			sameTonicLetter = null
+
+		if (keyCh.key.tonic.accidental !== sameTonicAccidental)
+			sameTonicAccidental = null
+
+		if (sameScale && keyCh.key.scale.id !== sameScale.id)
+			sameScale = null
+	}
+	
+	const sameKey =
+		sameTonicLetter === null ||
+		sameTonicAccidental === null ||
+		sameScale === null ?
+			null :
+			Theory.Key.fromTonicAndScale(
+				new Theory.PitchName(sameTonicLetter, sameTonicAccidental),
+				sameScale)
 
 
-	const tonicLetterOptions = [0, 4, 1, 5, 2, 6, 3].map(letter =>
+	const tonicLetterOptions = /*[0, 4, 1, 5, 2, 6, 3]*/[0, 1, 2, 3, 4, 5, 6].map(letter =>
 	{
 		return {
 			label: Theory.Utils.letterToStr(letter),
@@ -65,56 +84,83 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 	})
 
 
-	const onChangeTonicLetter = (item: any) =>
+	const chromaticOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(chroma =>
 	{
-		const tonic = new Theory.PitchName(item.value, key.tonic.accidental)
-		const newKey = new Theory.Key(tonic, key.scale)
-		changeKey(newKey)
-	}
+		const key = sameKey ?? Theory.Key.parse("C Major")
+
+		return {
+			label: key.nameForChroma(chroma).str,
+			value: chroma,
+			bkgColor: Theory.Utils.degreeToColor(key.degreeForChroma(chroma)),
+			width: "2em",
+		}
+	})
 
 
-	const onChangeTonicAccidental = (item: any) =>
+	const chromaticSelected = !sameKey ? [] : [0, 1, 2, 3, 4, 5, 6].map(degree =>
 	{
-		const tonic = new Theory.PitchName(key.tonic.letter, item.value)
-		const newKey = new Theory.Key(tonic, key.scale)
-		changeKey(newKey)
-	}
+		const key = sameKey ?? Theory.Key.parse("C Major")
+		return key.chromaForDegree(degree)
+	})
 
 
-	const onChangeScale = (item: any) =>
+	const changeKey = (func: (keyCh: Project.KeyChange) => Project.KeyChange) =>
 	{
-		const scale = Theory.Scale.fromId(item.value)
-		const newKey = new Theory.Key(key.tonic, scale)
-		changeKey(newKey)
-	}
+		for (const keyCh of keyChs)
+		{
+			const newKeyCh = func(keyCh)
+			console.log(keyCh, newKeyCh)
+			project.ref.current = Project.upsertElement(project.ref.current, newKeyCh)
+		}
 
-
-	const changeKey = (newKey: Theory.Key) =>
-	{
-		const newKeyCh = Project.elemModify(keyCh, { key: newKey })
-        project.ref.current = Project.upsertElement(project.ref.current, newKeyCh)
         project.commit()
         window.dispatchEvent(new Event("timelineRefresh"))
 	}
 
 
+	const onChangeTonicLetter = (item: any) =>
+	{
+		changeKey((keyCh) =>
+		{
+			const tonic = new Theory.PitchName(item.value, keyCh.key.tonic.accidental)
+			const newKey = new Theory.Key(tonic, keyCh.key.scale)
+			return Project.elemModify(keyCh, { key: newKey })
+		})
+	}
+
+
+	const onChangeTonicAccidental = (item: any) =>
+	{
+		changeKey((keyCh) =>
+		{
+			const tonic = new Theory.PitchName(keyCh.key.tonic.letter, item.value)
+			const newKey = new Theory.Key(tonic, keyCh.key.scale)
+			return Project.elemModify(keyCh, { key: newKey })
+		})
+	}
+
+
+	const onChangeScale = (item: any) =>
+	{
+		changeKey((keyCh) =>
+		{
+			const scale = Theory.Scale.fromId(item.value)
+			const newKey = new Theory.Key(keyCh.key.tonic, scale)
+			return Project.elemModify(keyCh, { key: newKey })
+		})
+	}
+
+
+	windowCtx.setTitle(keyChs.length == 1 ? `Key Change` : `${ keyChs.length } Key Changes`)
+
+
 	return <div style={{
-		padding: "0.5em",
+		padding: "1em",
 	}}>
 
 		<div style={{
-			marginBottom: "0.5em",
-			fontSize: "1.125em",
-			color: prefs.ref.current.editor.keyChangeColor,
-			textAlign: "center",
-		}}>
-			[Key Change]<br/>
-			{ keyCh.key.str }
-		</div>
-
-		<div style={{
 			display: "grid",
-			gridTemplate: "auto auto auto 1em auto / auto auto",
+			gridTemplate: "auto auto auto 1em auto / auto",
 			gridRowGap: "0.25em",
 			gridColumnGap: "0.25em",
 			justifyItems: "start",
@@ -124,46 +170,43 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 			maxWidth: "max-content",
 		}}>
 			<div style={{
-				justifySelf: "right",
 			}}>
 				Tonic
 			</div>
 
 			<UI.ButtonList
 				items={ tonicLetterOptions }
-				selected={ key.tonic.letter }
+				selected={ sameTonicLetter }
 				onChange={ onChangeTonicLetter }
 			/>
 
 			<div style={{
-				justifySelf: "right",
 			}}>
 				Accidental
 			</div>
 
 			<UI.ButtonList
 				items={ tonicAccidentalOptions }
-				selected={ key.tonic.accidental }
+				selected={ sameTonicAccidental }
 				onChange={ onChangeTonicAccidental }
 			/>
 
 			<div style={{
-				justifySelf: "right",
 			}}>
 				Scale
 			</div>
 
 			<UI.DropdownMenu
 				items={ scaleOptions }
-				selected={ key.scale.id }
+				selected={ sameScale && sameScale.id }
 				onChange={ onChangeScale }
 			/>
 
-			<div/>
-			<div/>
+			<div style={{
+				marginBottom: "1em",
+			}}/>
 
 			<div style={{
-				justifySelf: "right",
 			}}>
 				Pitches
 			</div>
