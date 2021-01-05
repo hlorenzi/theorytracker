@@ -1,5 +1,14 @@
 export interface Prefs
 {
+    ui:
+    {
+        windowAnchorColor: string
+        windowOverlayColor: string
+        windowVoidColor: string
+        windowPanelColor: string
+        windowActiveBorderColor: string
+    }
+
     editor:
     {
         bkgColor: string
@@ -48,6 +57,15 @@ export interface Prefs
 export function getDefault(): Prefs
 {
     return {
+        ui:
+        {
+            windowAnchorColor: "#0bf",
+            windowOverlayColor: "#fff4",
+            windowVoidColor: "#202225",
+            windowPanelColor: "#2f3136",
+            windowActiveBorderColor: "#fff",
+        },
+
         editor:
         {
             bkgColor: "#202225",//"#29242e",

@@ -43,85 +43,130 @@ export function InspectorTrack(props: InspectorTrackProps)
     const windowCtx = Dockable.useWindow()
     const project = Project.useProject()
 
-    const trackId: Project.ID = props.elemIds[0]
-    
-    const getTrack = () =>
-    {
-        const elem = project.ref.current.elems.get(trackId)
-        if (!elem || elem.type != "track")
-            return null
 
-        return elem as Project.Track
+	const tracks: Project.Track[] = []
+	for (const elemId of props.elemIds)
+	{
+		const track = Project.getElem(project.ref.current, elemId, "track")
+		if (!track)
+			continue
+
+		tracks.push(track)
+	}
+
+	if (tracks.length == 0)
+		return null
+        
+        
+    windowCtx.setTitle(tracks.length == 1 ? `Track` : `${ tracks.length } Tracks`)
+
+
+    let definiteName: string | null = tracks[0].name
+    let definiteShowInstrument: boolean = tracks[0].trackType == "notes"
+    let definiteInstrument: Project.Instrument | null = tracks[0].trackType == "notes" ? tracks[0].instrument : null
+    for (const track of tracks)
+    {
+        if (track.name !== definiteName)
+            definiteName = null
+
+        if (track.trackType !== "notes")
+            definiteShowInstrument = false
+
+        if (track.trackType === "notes" && definiteInstrument)
+        {
+            if (track.instrument.type !== definiteInstrument.type)
+                definiteInstrument = null
+            else switch (track.instrument.type)
+            {
+                case "sflib":
+                {
+                    const definiteSflib = definiteInstrument as Project.InstrumentSflib
+                    if (track.instrument.collectionId !== definiteSflib.collectionId ||
+                        track.instrument.instrumentId !== definiteSflib.instrumentId)
+                        definiteInstrument = null
+                } 
+            }
+        }
     }
 
-    const track = getTrack()
-    if (!track)
-        return null
+
+	const modifyTracks = (func: (keyCh: Project.Track) => Project.Track) =>
+	{
+		for (const track of tracks)
+		{
+			const newTrack = func(track)
+			console.log("InspectorTrack.modifyTracks", track, newTrack)
+			project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
+		}
+
+        project.commit()
+        window.dispatchEvent(new Event("timelineRefresh"))
+	}
+
     
     const onRename = (newName: string) =>
     {
-        const newTrack: Project.Track = {
-            ...track,
-            name: newName,
-        }
-
-        project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
-        project.commit()
+        modifyTracks((track) =>
+        {
+            return Project.elemModify(track, { name: newName })
+        })
     }
+    
 
     const getInstrument = () =>
     {
-        const track = getTrack()
-        if (!track || track.trackType != "notes")
-            return null
-
-        return track.instrument
+        return definiteInstrument
     }
+
 
     const setInstrument = (newInstrument: Project.Instrument) =>
     {
-        const track = getTrack()
-        if (!track || track.trackType != "notes")
-            return null
-
-        const newTrack: Project.TrackNotes =
+        modifyTracks((track) =>
         {
-            ...track,
-            instrument: newInstrument,
-        }
+            if (track.trackType !== "notes")
+                return track
 
-        project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
-        project.commit()
+            track.instrument = { ...newInstrument }
+            return track
+        })
     }
-
-
-	windowCtx.setTitle("Track")
 
 
     return <div style={{
         width: "100%",
         height: "100%",
         boxSizing: "border-box",
-        padding: "0.5em",
+        padding: "1em",
 
         display: "grid",
-        gridTemplate: "auto 1fr / 1fr",
+        gridTemplate: "auto auto auto 1fr / 1fr",
+        gridGap: "0.5em 0.5em",
         justifyContent: "start",
         justifyItems: "start",
+        alignItems: "start",
     }}>
         <div>
-            Name:
+            Name
+        </div>
+
+        <div>
             <UI.Input
-                value={ track.name }
+                value={ definiteName }
                 onChange={ onRename }
             />
         </div>
 
-        { track.trackType != "notes" ? <div/> :
-            <InstrumentSelect
-                getInstrument={ getInstrument }
-                setInstrument={ setInstrument }
-            />
+        { !definiteShowInstrument ? null :
+            <>
+                <div>
+                    Instrument
+                </div>
+            
+                <InstrumentSelect
+                    getInstrument={ getInstrument }
+                    setInstrument={ setInstrument }
+                />
+            </>
         }
     </div>
 }

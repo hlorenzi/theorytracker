@@ -177,7 +177,7 @@ export function init(): EditorState
         trackHeaderW: 200,
         
         tracks: [],
-        trackScroll: 0,
+        trackScroll: -20,
         trackScrollLocked: true,
 
         timeScroll: -2.5,
@@ -761,6 +761,10 @@ export function selectionDelete(data: EditorUpdateData)
             continue
 
         if (track.type != "track")
+            continue
+
+        if (track.id === data.project.keyChangeTrackId ||
+            track.id === data.project.meterChangeTrackId)
             continue
 
         data.project = Project.upsertTrack(data.project, track, true)

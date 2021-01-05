@@ -5,7 +5,7 @@ import * as Project from "../project"
 
 export function Test()
 {
-    const count = Dockable.useWindowRef(0)
+    const count = Dockable.useWindowRefState(() => 0)
 
     const increment = () =>
     {

@@ -168,7 +168,15 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
     const meterChangeTrackId = Project.meterChangeTrackId(data.project)
     const meterChangeList = data.project.lists.get(meterChangeTrackId)!
 
-    for (let [meterCh1Raw, meterCh2Raw] of meterChangeList.iterActiveAtRangePairwise(visibleRange))
+    const iter =
+        meterChangeList.size > 0 ?
+        meterChangeList.iterActiveAtRangePairwise(visibleRange) :
+        [
+            [null, Project.makeMeterChange(-1, new Rational(0), new Theory.Meter(4, 4))],
+            [Project.makeMeterChange(-1, new Rational(0), new Theory.Meter(4, 4)), null]
+        ]
+
+    for (const [meterCh1Raw, meterCh2Raw] of iter)
     {
         let timeMin = (meterCh1Raw ? meterCh1Raw.range.start : null)
         let timeMax = (meterCh2Raw ? meterCh2Raw.range.start : visibleRange.end)

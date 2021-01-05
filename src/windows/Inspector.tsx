@@ -18,7 +18,7 @@ export function Inspector()
     const windowCtx = Dockable.useWindow()
 	
 	const props: InspectorProps = windowCtx.data
-	const [elemIds, setElemIds] = Dockable.useWindowState(props.elemIds)
+	const [elemIds, setElemIds] = Dockable.useWindowState(() => props.elemIds)
 
     const dockable = Dockable.useDockable()
 	const project = Project.useProject()

@@ -18,6 +18,7 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
     const project = Project.useProject()
     const prefs = Prefs.usePrefs()
 
+
 	const keyChs: Project.KeyChange[] = []
 	for (const elemId of props.elemIds)
 	{
@@ -30,6 +31,9 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 
 	if (keyChs.length == 0)
 		return null
+
+
+	windowCtx.setTitle(keyChs.length == 1 ? `Key Change` : `${ keyChs.length } Key Changes`)
 
 
 	let sameTonicLetter: number | null = keyChs[0].key.tonic.letter
@@ -104,12 +108,12 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 	})
 
 
-	const changeKey = (func: (keyCh: Project.KeyChange) => Project.KeyChange) =>
+	const modifyKeyChs = (func: (keyCh: Project.KeyChange) => Project.KeyChange) =>
 	{
 		for (const keyCh of keyChs)
 		{
 			const newKeyCh = func(keyCh)
-			console.log(keyCh, newKeyCh)
+			console.log("InspectorKeyChange.modifyKeyChs", keyCh, newKeyCh)
 			project.ref.current = Project.upsertElement(project.ref.current, newKeyCh)
 		}
 
@@ -120,7 +124,7 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 
 	const onChangeTonicLetter = (item: any) =>
 	{
-		changeKey((keyCh) =>
+		modifyKeyChs((keyCh) =>
 		{
 			const tonic = new Theory.PitchName(item.value, keyCh.key.tonic.accidental)
 			const newKey = new Theory.Key(tonic, keyCh.key.scale)
@@ -131,7 +135,7 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 
 	const onChangeTonicAccidental = (item: any) =>
 	{
-		changeKey((keyCh) =>
+		modifyKeyChs((keyCh) =>
 		{
 			const tonic = new Theory.PitchName(keyCh.key.tonic.letter, item.value)
 			const newKey = new Theory.Key(tonic, keyCh.key.scale)
@@ -142,16 +146,13 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 
 	const onChangeScale = (item: any) =>
 	{
-		changeKey((keyCh) =>
+		modifyKeyChs((keyCh) =>
 		{
 			const scale = Theory.Scale.fromId(item.value)
 			const newKey = new Theory.Key(keyCh.key.tonic, scale)
 			return Project.elemModify(keyCh, { key: newKey })
 		})
 	}
-
-
-	windowCtx.setTitle(keyChs.length == 1 ? `Key Change` : `${ keyChs.length } Key Changes`)
 
 
 	return <div style={{

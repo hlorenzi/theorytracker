@@ -1,13 +1,20 @@
 import React from "react"
 import * as Dockable from "../dockable"
 import * as Editor from "../editor"
+import * as Prefs from "../prefs"
 import { useRefState } from "../util/refState"
 import styled from "styled-components"
 
 
-const StyledModeStackDiv = styled.div`
+interface PrefsProps
+{
+    readonly prefs: Prefs.Prefs
+}
+
+
+const StyledModeStackDiv = styled.div<PrefsProps>`
     width: 100%;
-    background-color: #000;
+    background-color: ${ props => props.prefs.ui.windowPanelColor};
     border-bottom: 1px solid #888;
 `
 
@@ -33,11 +40,13 @@ const StyledModeStackButton = styled.button`
 
 export function Timeline()
 {
+    const prefs = Prefs.usePrefs()
+
     const windowCtx = Dockable.useWindow()
     windowCtx.setTitle("Timeline")
     windowCtx.setPreferredSize(600, 450)
 
-    const editorState = useRefState(() => Editor.init())
+    const editorState = Dockable.useWindowRefState(() => Editor.init())
 
     const makeUpdateData: () => Editor.EditorUpdateData = () =>
     {
@@ -106,7 +115,9 @@ export function Timeline()
         justifyContent: "start",
         justifyItems: "start",
     }}>
-        <StyledModeStackDiv>
+        <StyledModeStackDiv
+            prefs={ prefs.ref.current }
+        >
             { modeStack }
         </StyledModeStackDiv>
         <Editor.EditorElement

@@ -25,28 +25,29 @@ export function Button(props: PopupButtonProps)
 
     React.useEffect(() =>
     {
-        if (!buttonRef.current)
+        const buttonCurrent = buttonRef.current
+        if (!buttonCurrent)
             return
 
-        const rect = buttonRef.current.getBoundingClientRect()
+        const rect = buttonCurrent.getBoundingClientRect()
         setRect(new Rect(rect.x, rect.y - 1, rect.width, rect.height))
 
         const onEnter = () =>
         {
-            popupRootCtx.openSubPopup(buttonRef.current)
+            popupRootCtx.openSubPopup(buttonCurrent)
         }
 
         const onLeave = () =>
         {
         }
 
-        buttonRef.current!.addEventListener("mouseenter", onEnter)
-        buttonRef.current!.addEventListener("mouseleave", onLeave)
+        buttonCurrent.addEventListener("mouseenter", onEnter)
+        buttonCurrent.addEventListener("mouseleave", onLeave)
 
         return () =>
         {
-            buttonRef.current!.removeEventListener("mouseenter", onEnter)
-            buttonRef.current!.removeEventListener("mouseleave", onLeave)
+            buttonCurrent.removeEventListener("mouseenter", onEnter)
+            buttonCurrent.removeEventListener("mouseleave", onLeave)
         }
 
     }, [])

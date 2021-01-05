@@ -2,13 +2,10 @@ import React from "react"
 import * as Dockable from "./index"
 import * as DockableData from "./state"
 import { WindowContext } from "./windowContext"
+import * as Prefs from "../prefs"
 import Rect from "../util/rect"
 import styled from "styled-components"
 import { useRefState } from "../util/refState"
-
-
-const colorVoid = "#202225"
-const colorPanelBkg = "#2f3136"
 
 
 const StyledCloseButton = styled.button`
@@ -38,6 +35,7 @@ const StyledCloseButton = styled.button`
 export function Container()
 {
     const dockable = Dockable.useDockable()
+    const prefs = Prefs.usePrefs()
 
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
     const rootRef = React.useRef<HTMLDivElement>(null)
@@ -130,14 +128,14 @@ export function Container()
     const mouseData = useMouseHandler(layoutRef, rectRef)
 
     const anchorSize = 5
-    const anchorColor = "#0bf"
+    const anchorColor = prefs.ref.current.ui.windowAnchorColor
 
     return <div
         ref={ rootRef }
         style={{
             width: "100%",
             height: "100%",
-            backgroundColor: colorVoid,
+            backgroundColor: prefs.ref.current.ui.windowVoidColor,
     }}>
 
         { layoutRef.current.panelRects.map(panelRect =>
@@ -175,7 +173,7 @@ export function Container()
                 width: (mouseData.draggingAnchor.previewRect.x2 - mouseData.draggingAnchor.previewRect.x1 - 1) + "px",
                 height: (mouseData.draggingAnchor.previewRect.y2 - mouseData.draggingAnchor.previewRect.y1 - 1) + "px",
 
-                backgroundColor: "#fff4",
+                backgroundColor: prefs.ref.current.ui.windowOverlayColor,
                 zIndex: 1000,
             }}/>
         }
@@ -211,12 +209,18 @@ export function Container()
 }
 
 
-const DivPanel = styled.div`
-    border: 1px solid ${ colorVoid };
+interface PrefsProps
+{
+    readonly prefs: Prefs.Prefs
+}
+
+
+const DivPanel = styled.div<PrefsProps>`
+    border: 1px solid ${ props => props.prefs.ui.windowVoidColor };
 
     &.active
     {
-        border: 1px solid #fff;
+        border: 1px solid ${ props => props.prefs.ui.windowActiveBorderColor };
     }
 `
 
@@ -224,6 +228,7 @@ const DivPanel = styled.div`
 function Panel(props: any)
 {
     const dockable = Dockable.useDockable()
+    const prefs = Prefs.usePrefs()
     const panelRect: DockableData.PanelRect = props.panelRect
     const mouseHandler: MouseHandlerData = props.mouseHandler
 
@@ -237,7 +242,7 @@ function Panel(props: any)
         height: (panelRect.rect.h) + "px",
         boxSizing: "border-box",
 
-        backgroundColor: colorVoid,
+        backgroundColor: prefs.ref.current.ui.windowVoidColor,
         borderRadius: "0.5em",
         padding: "0.25em",
 
@@ -246,8 +251,9 @@ function Panel(props: any)
         <DivPanel
             className={ dockable.ref.current.state.activePanel === panelRect.panel ? "active" : undefined }
             onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelActivate(ev, panelRect.panel)) as any }
+            prefs={ prefs.ref.current }
             style={{
-                backgroundColor: colorPanelBkg,
+                backgroundColor: prefs.ref.current.ui.windowPanelColor,
                 borderRadius: "0.5em",
                 boxSizing: "border-box",
                 width: "100%",
@@ -260,11 +266,10 @@ function Panel(props: any)
             <div
                 onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelHeaderMouseDown(ev, panelRect.panel)) as any }
                 style={{
-                    backgroundColor: colorVoid,
+                    backgroundColor: prefs.ref.current.ui.windowVoidColor,
                     textAlign: "left",
                     gridRow: 1,
                     gridColumn: 1,
-
             }}>
 
                 { panelRect.panel.windowIds.map((cId, idx) =>
@@ -274,7 +279,9 @@ function Panel(props: any)
                         onContextMenu={ ev => ev.preventDefault() }
                         style={{
                             display: "inline-block",
-                            backgroundColor: panelRect.panel.curWindowIndex == idx ? colorPanelBkg : colorVoid,
+                            backgroundColor: panelRect.panel.curWindowIndex == idx ?
+                                prefs.ref.current.ui.windowPanelColor :
+                                prefs.ref.current.ui.windowVoidColor,
                             color: "#fff",
                             padding: "0.25em 0.5em",
                             marginRight: "0.25em",

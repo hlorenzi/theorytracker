@@ -5,6 +5,7 @@ import "../types"
 
 interface StyledListBoxItemProps
 {
+    readonly active: boolean
     readonly selected: boolean
 }
 
@@ -16,13 +17,14 @@ const StyledListBoxItem = styled.button<StyledListBoxItemProps>`
     text-align: left;
     font-family: inherit;
     color: #fff;
-    background-color: ${ props => props.selected ? "#08f" : "#000" };
+    background-color: ${ props => props.selected ? "#08f" : props => props.active ? "#840" : "#000" };
 `
 
 
 export interface ListBoxProps
 {
     selected: any
+    active?: any
 
     items:
     {
@@ -49,7 +51,8 @@ export function ListBox(props: ListBoxProps)
             <StyledListBoxItem
                 key={ i }
                 onClick={ () => props.onChange(item, i) }
-                selected={ props.selected == item.value }
+                active={ props.active === item.value }
+                selected={ props.selected === item.value }
             >
 
                 { item.label }
@@ -57,7 +60,7 @@ export function ListBox(props: ListBoxProps)
             </StyledListBoxItem>
         )
 
-    }, [props.items, props.selected])
+    }, [props.items, props.active, props.selected])
 
 
     React.useLayoutEffect(() =>

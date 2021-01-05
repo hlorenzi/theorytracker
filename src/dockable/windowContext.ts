@@ -146,6 +146,7 @@ export interface WindowProps
 export const WindowContext = React.createContext<WindowProps>(null!)
 
 
+// TODO: Clean up old states from closed windows
 const states = new Map<Dockable.WindowId, any>()
 
 
@@ -155,38 +156,38 @@ export function useWindow(): WindowProps
 }
 
 
-export function useWindowState<T>(defaultValue: T | (() => T))
+export function useWindowState<T>(defaultValue: () => T): [T, (newState: T) => void]
 {
     const windowCtx = React.useContext(WindowContext)
     const contentId = windowCtx.contentId
 
-    const [update, setUpdate] = React.useState(false)
-    const state = React.useState<T>(states.get(contentId) || defaultValue)
+    const [state, setState] = React.useState<T>(() => states.get(contentId) || defaultValue())
 
-    return state
+    const newSetState = (newState: T) =>
+    {
+        states.set(contentId, newState)
+        setState(newState)
+    }
+
+    return [state, newSetState]
 }
 
 
-export function useWindowRef<T>(defaultValue: T)
+export function useWindowRefState<T>(defaultValue: () => T): RefState<T>
 {
     const windowCtx = React.useContext(WindowContext)
     const contentId = windowCtx.contentId
 
-    const [update, setUpdate] = React.useState(false)
-    const stateRef = React.useRef<T>(null!)
-    if (stateRef.current === null)
-    {
-        stateRef.current = states.get(contentId) || defaultValue
-    }
+    const stateRef = useRefState<T>(() => states.get(contentId) || defaultValue())
 
     const commit = () =>
     {
-        states.set(contentId, stateRef.current)
-        setUpdate(!update)
+        states.set(contentId, stateRef.ref.current)
+        stateRef.commit()
     }
 
     return {
-        ref: stateRef,
+        ...stateRef,
         commit,
     }
 }

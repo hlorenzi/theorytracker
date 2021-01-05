@@ -41,7 +41,7 @@ export function DropdownMenu(props: DropdownMenuProps)
             backgroundColor: "#000",
             color: "#fff",
             border: "1px solid #888",
-            padding: "0.25em 0.75em",
+            padding: "0.25em 0.25em",
             fontFamily: "inherit",
 
             minWidth: 0,

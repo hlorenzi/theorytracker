@@ -1,4 +1,5 @@
 import React from "react"
+import * as Dockable from "../dockable"
 import * as Project from "../project"
 import * as Playback from "../playback"
 import * as UI from "../ui"
@@ -20,8 +21,7 @@ export function InstrumentSelect(props: InstrumentSelectProps)
     }
 
     const instr = props.getInstrument()
-    if (!instr)
-        return null
+    const instrType = instr ? instr.type : "sflib"
 
     return <div style={{
         width: "100%",
@@ -29,26 +29,25 @@ export function InstrumentSelect(props: InstrumentSelectProps)
         minWidth: "0",
         minHeight: "0",
         boxSizing: "border-box",
-        padding: "0.5em",
 
         display: "grid",
-        gridTemplate: "auto auto 1fr / 1fr",
+        gridTemplate: "auto 1fr / 1fr",
+        gridGap: "0.5em 0.5em",
         justifyContent: "start",
         justifyItems: "start",
     }}>
         <div>
-            <select
-                value={ instr.type }
-                onChange={ (ev) => onChangeType(ev.target.value) }
-            >
-                <option value="basic">Basic</option>
-                <option value="sflib">Soundfont Library</option>
-            </select>
+            <UI.DropdownMenu
+                items={[
+                    { value: "basic", label: "Basic" },
+                    { value: "sflib", label: "Soundfont Library" },
+                ]}
+                selected={ instrType }
+                onChange={ (item) => onChangeType(item.value) }
+            />
         </div>
 
-        <br/>
-        
-        { instr.type != "sflib" ? null :
+        { instrType != "sflib" ? null :
             <InstrumentSelectSflib data={ props }/>
         }
 
@@ -58,18 +57,23 @@ export function InstrumentSelect(props: InstrumentSelectProps)
 
 function InstrumentSelectSflib(props: { data: InstrumentSelectProps })
 {
-    const instr = props.data.getInstrument() as Project.InstrumentSflib
+    const instr = props.data.getInstrument() as (Project.InstrumentSflib | null)
     const sflibMeta = Playback.getSflibMeta()
     if (!sflibMeta)
         return null
 
-    const curCollection = sflibMeta.collectionsById.get(instr.collectionId)!
+    const [selCollection, setSelCollection] = Dockable.useWindowState(() => instr ? instr.collectionId : "gm")
+    const curCollection = sflibMeta.collectionsById.get(selCollection)!
 
     const onChange = (collectionId: string, instrumentId: string) =>
     {
-        let newInstr = { ...props.data.getInstrument() as Project.InstrumentSflib }
-        newInstr.collectionId = collectionId
-        newInstr.instrumentId = instrumentId
+        let newInstr: Project.InstrumentSflib =
+        {
+            type: "sflib",
+            collectionId,
+            instrumentId,
+        }
+
         props.data.setInstrument(newInstr)
     }
 
@@ -116,17 +120,18 @@ function InstrumentSelectSflib(props: { data: InstrumentSelectProps })
         </div>
 
         <div>
-            Instrument
+            Preset
         </div>
 
         <UI.ListBox
-            selected={ instr.collectionId }
-            onChange={ item => onChange(item.value, sflibMeta.collectionsById.get(item.value)!.instruments[0].id) }
+            active={ instr ? instr.collectionId : null }
+            selected={ selCollection }
+            onChange={ item => setSelCollection(item.value) }
             items={ collItems }
         />
 
         <UI.ListBox
-            selected={ instr.instrumentId }
+            selected={ instr && instr.collectionId == selCollection ? instr.instrumentId : null }
             onChange={ item => onChange(curCollection.id, item.value) }
             items={ instrItems }
         />
