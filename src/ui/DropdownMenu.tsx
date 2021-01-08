@@ -34,20 +34,13 @@ export function DropdownMenu(props: DropdownMenuProps)
             props.onChange(props.items[index], index)
         }}
         style={{
-            display: "grid",
-            gridTemplate: "auto / auto",
-            gridAutoFlow: "row",
+            display: "inline-block",
 
             backgroundColor: "#000",
             color: "#fff",
             border: "1px solid #888",
             padding: "0.25em 0.25em",
             fontFamily: "inherit",
-
-            minWidth: 0,
-            minHeight: 0,
-            maxWidth: "max-content",
-            maxHeight: "max-content",
 
             ...props.style,
     }}>

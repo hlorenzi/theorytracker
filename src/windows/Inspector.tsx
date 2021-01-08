@@ -5,6 +5,7 @@ import * as UI from "../ui"
 import { InspectorMultitype } from "./InspectorMultitype"
 import { InspectorTrack } from "./InspectorTrack"
 import { InspectorKeyChange } from "./InspectorKeyChange"
+import { InspectorMeterChange } from "./InspectorMeterChange"
 
 
 interface InspectorProps
@@ -63,6 +64,11 @@ export function Inspector()
 			{
     			windowCtx.setPreferredSize(500, 350)
 				return <InspectorKeyChange elemIds={ elemIds }/>
+			}
+			case "meterChange":
+			{
+    			windowCtx.setPreferredSize(500, 350)
+				return <InspectorMeterChange elemIds={ elemIds }/>
 			}
 			default:
 				return null

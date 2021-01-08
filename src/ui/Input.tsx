@@ -17,6 +17,7 @@ export interface InputProps
     value: string | null,
     onChange?: (newValue: string) => void
     style?: React.HTMLAttributes<HTMLInputElement>
+    width?: string
 }
 
 
@@ -29,5 +30,6 @@ export function Input(props: InputProps)
         onChange={ ev => props.onChange?.(ev.target.value) }
         style={{
             ...props.style,
+            width: props.width,
     }}/>
 }
