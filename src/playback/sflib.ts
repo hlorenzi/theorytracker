@@ -1,3 +1,6 @@
+import * as AsyncUtils from "../util/async"
+
+
 export const sflibUrl = "/library/"
 
 
@@ -125,6 +128,9 @@ export function getSflibMeta()
 const sflibCache = new WeakMap<SflibInstrumentMeta, SflibInstrument>()
 
 
+const sflibGetInstrumentLock = new AsyncUtils.Mutex()
+
+
 export async function sflibGetInstrument(
     collectionId: string,
     instrumentId: string,
@@ -142,14 +148,21 @@ export async function sflibGetInstrument(
     if (!instrMeta)
         return null
 
+    await sflibGetInstrumentLock.acquire()
+    
     const cached = sflibCache.get(instrMeta)
     if (cached)
+    {
+        await sflibGetInstrumentLock.release()
         return cached
-    
+    }
+
     const instrFilename = instrMeta.filename
 
     const data = await fetch(sflibUrl + collectionId + "/" + instrFilename)
     const instr: SflibInstrument = await data.json()
+
+    let yieldCount = 0
 
     instr.audioBuffers = []
     const sampleRate = instr.zones[0].sampleRate
@@ -167,6 +180,13 @@ export async function sflibGetInstrument(
                 uint16 = -(0x10000 - uint16)
 
             audioBufferData[i] = (uint16 / 0x8000) * 2 - 1
+
+            yieldCount++
+            if (yieldCount >= 100000)
+            {
+                yieldCount = 0
+                await AsyncUtils.waitFrame()
+            }
         }
 
         instr.audioBuffers.push(audioBuffer)
@@ -175,5 +195,7 @@ export async function sflibGetInstrument(
     console.log("loaded sflib instrument", instr)
 
     sflibCache.set(instrMeta, instr)
+
+    await sflibGetInstrumentLock.release()
     return instr
 }

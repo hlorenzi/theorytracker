@@ -11,7 +11,7 @@ import * as MathUtils from "../util/mathUtils"
 export interface PlaybackContextProps
 {
     synth: Playback.SynthManager
-    synthLoaded: boolean
+    synthLoading: boolean
 
     playing: boolean
     firstPlayingFrame: boolean
@@ -52,7 +52,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
     {
         return {
             synth: new Playback.SynthManager(),
-            synthLoaded: false,
+            synthLoading: false,
 
             playing: false,
             firstPlayingFrame: false,
@@ -101,10 +101,10 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
     React.useEffect(() =>
     {
-        playback.ref.current.synthLoaded = false
+        playback.ref.current.synthLoading = true
 
         playback.ref.current.synth.prepare(projectRef.ref.current)
-            .then(() => playback.ref.current.synthLoaded = true)
+            .then(() => playback.ref.current.synthLoading = false)
 
     }, [Playback.getSflibMeta(), playback.ref.current.playing, projectRef.ref.current.tracks])
 
@@ -159,7 +159,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             playback.ref.current.requestAnimationFrameDate = new Date()
 
             const deltaTimeMs =
-                !playback.ref.current.synthLoaded ? 0 :
+                playback.ref.current.synthLoading ? 0 :
                 (prevTimestamp < 0 ? 0 : timestamp - prevTimestamp)
 
             if (deltaTimeMs > 0 && deltaTimeMs < 250)

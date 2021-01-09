@@ -5,6 +5,7 @@ import * as Playback from "./playback"
 import * as Prefs from "./prefs"
 import * as Popup from "./popup"
 import * as Menubar from "./menubar"
+import * as UI from "./ui"
 import { useRefState } from "./util/refState"
 import PlaybackToolbar from "./PlaybackToolbar"
 import MenuFile from "./MenuFile"
@@ -38,6 +39,10 @@ export default function App()
                     <MenuWindow/>
                     <PlaybackToolbar/>
                 </Menubar.Root>
+
+                { !playbackCtx.ref.current.synthLoading ? null :
+                    <UI.LoadingBar/>
+                }
 
                 <Dockable.Container/>
 
