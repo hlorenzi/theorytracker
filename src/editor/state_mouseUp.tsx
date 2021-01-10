@@ -30,6 +30,9 @@ export function mouseUp(data: Editor.EditorUpdateData)
     Editor.selectionRemoveConflictingBehind(data)
 
     data.project = Project.withRefreshedRange(data.project)
+    data.projectCtx.ref.current.project = data.project
+    data.projectCtx.ref.current.splitUndoPoint()
+    data.projectCtx.ref.current.addUndoPoint("mouseUp")
 }
 
 

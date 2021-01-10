@@ -28,16 +28,17 @@ export default function MenuFile()
                 const bytes = new Uint8Array(reader.result as any)
     
                 if (elem.files![0].name.endsWith(".mid"))
-                    project.ref.current = Project.midiImport(bytes)
+                    project.ref.current.project = Project.midiImport(bytes)
                 else if (elem.files![0].name.endsWith(".json"))
                 {
                     const text = new TextDecoder("utf-8").decode(bytes)
                     const json = JSON.parse(text)
-                    project.ref.current = Project.jsonImport(json)
+                    project.ref.current.project = Project.jsonImport(json)
                 }
 
-                project.commit()
                 playback.ref.current.stopPlaying()
+                project.ref.current.clearUndoStack()
+                project.commit()
                 window.dispatchEvent(new Event("timelineReset"))
             }
         }
@@ -55,10 +56,8 @@ export default function MenuFile()
 
     const onNew = () =>
     {
-        project.ref.current = Project.getDefault()
-        project.commit()
+        project.ref.current.setNew()
         playback.ref.current.stopPlaying()
-        window.dispatchEvent(new Event("timelineReset"))
     }
 
     const onOpen = () =>
@@ -68,7 +67,7 @@ export default function MenuFile()
 
     const onJsonDownload = () =>
     {
-        const jsonStr = Project.jsonExport(project.ref.current)
+        const jsonStr = Project.jsonExport(project.ref.current.project)
 
         const element = document.createElement("a")
         element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
@@ -82,7 +81,7 @@ export default function MenuFile()
 
     const onJsonPreview = () =>
     {
-        const jsonStr = Project.jsonExport(project.ref.current)
+        const jsonStr = Project.jsonExport(project.ref.current.project)
 
         const newWindow = window.open()!
         newWindow.document.write("<code style='white-space:pre'>")

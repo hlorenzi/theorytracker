@@ -47,7 +47,8 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     {
         return {
             state: editorState.ref.current,
-            project: project.ref.current,
+            project: project.ref.current.project,
+            projectCtx: project,
             playback: playback.ref.current,
             prefs: prefs.ref.current,
             popup,
@@ -129,7 +130,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         Editor.refreshTracks(updateData)
         render(true)
 
-    }, [project.ref.current.tracks])
+    }, [project.ref.current.project.tracks])
 
     React.useEffect(() =>
     {
@@ -178,9 +179,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const needsRender1 = Editor.mouseMove(updateData, pos)
             const needsRender2 = Editor.mouseDrag(updateData, pos)
 
-            if (updateData.project !== project.ref.current)
+            if (updateData.project !== project.ref.current.project)
             {
-                project.ref.current = updateData.project
+                project.ref.current.project = updateData.project
                 project.commit()
             }
 
@@ -219,9 +220,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             Editor.mouseMove(updateData, pos)
             Editor.mouseUp(updateData)
 
-            if (updateData.project !== project.ref.current)
+            if (updateData.project !== project.ref.current.project)
             {
-                project.ref.current = updateData.project
+                project.ref.current.project = updateData.project
                 project.commit()
                 
                 window.dispatchEvent(new Event("timelineRefresh"))
@@ -244,9 +245,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const updateData = makeUpdateData()
 			Editor.keyDown(updateData, ev.key.toLowerCase())
             
-            if (updateData.project !== project.ref.current)
+            if (updateData.project !== project.ref.current.project)
             {
-                project.ref.current = updateData.project
+                project.ref.current.project = updateData.project
                 project.commit()
             }
 
@@ -280,8 +281,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		{
             const updateData = makeUpdateData()
             Editor.modeStackPop(updateData, 0)
-            Editor.refreshTracks(updateData)
+            Editor.reset(updateData)
             Editor.rewind(updateData)
+            Editor.refreshTracks(updateData)
             editorState.commit()
             render(true)
         }
@@ -325,9 +327,11 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
     const onAddTrack = () =>
     {
-        let proj = project.ref.current
+        let proj = project.ref.current.project
         proj = Project.upsertTrack(proj, Project.makeTrackNotes())
-        project.ref.current = proj
+        project.ref.current.project = proj
+        project.ref.current.splitUndoPoint()
+        project.ref.current.addUndoPoint("addTrack")
         project.commit()
         
         window.dispatchEvent(new Event("timelineRefresh"))
@@ -405,7 +409,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             </div>
 		</div>
         , [
-            project.ref.current.tracks,
+            project.ref.current.project.tracks,
             editorState.ref.current.tracks,
             editorState.ref.current.trackScroll,
         ])
@@ -418,7 +422,7 @@ interface TrackHeaderProps
     width: number
     height: number
 
-    project: RefState<Project.Root>
+    project: RefState<Project.ProjectContextProps>
     track: Editor.EditorTrack
     onTrackSettings: (ev: React.MouseEvent) => void
 }
@@ -457,7 +461,7 @@ function TrackHeader(props: TrackHeaderProps)
 
 function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 {
-    const track = Project.getTrack(props.project.ref.current, props.track.projectTrackId, "notes")
+    const track = Project.getTrack(props.project.ref.current.project, props.track.projectTrackId, "notes")
     if (!track)
         return null
 
@@ -465,7 +469,7 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 
     const onGetVolume = () =>
     {
-        const track = Project.getTrack(props.project.ref.current, props.track.projectTrackId, "notes")
+        const track = Project.getTrack(props.project.ref.current.project, props.track.projectTrackId, "notes")
         if (!track)
             return 0
 
@@ -474,16 +478,14 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
 
     const onChangeVolume = (newValue: number) =>
     {
-        const track = Project.getTrack(props.project.ref.current, props.track.projectTrackId, "notes")
+        const track = Project.getTrack(props.project.ref.current.project, props.track.projectTrackId, "notes")
         if (!track)
             return
             
-        const newTrack: Project.Track = {
-            ...track,
-            volume: Math.max(0, Math.min(1, newValue)),
-        }
+        const newTrack = Project.elemModify(track, { volume: Math.max(0, Math.min(1, newValue)) })
 
-        props.project.ref.current = Project.upsertTrack(props.project.ref.current, newTrack)
+        props.project.ref.current.project = Project.upsertTrack(props.project.ref.current.project, newTrack)
+        props.project.ref.current.addUndoPoint("trackVolume")
         //props.project.commit()
     }
 

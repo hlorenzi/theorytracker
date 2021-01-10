@@ -53,6 +53,7 @@ export function Timeline()
         return {
             state: editorState.ref.current,
             project: null!,
+            projectCtx: null!,
             playback: null!,
             prefs: null!,
             popup: null!,

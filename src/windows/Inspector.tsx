@@ -31,7 +31,7 @@ export function Inspector()
 
 		for (const elemId of elemIds)
 		{
-			const elem = project.ref.current.elems.get(elemId)
+			const elem = project.ref.current.project.elems.get(elemId)
 			if (!elem)
 				continue
 

@@ -47,7 +47,7 @@ export function InspectorTrack(props: InspectorTrackProps)
 	const tracks: Project.Track[] = []
 	for (const elemId of props.elemIds)
 	{
-		const track = Project.getElem(project.ref.current, elemId, "track")
+		const track = Project.getElem(project.ref.current.project, elemId, "track")
 		if (!track)
 			continue
 
@@ -96,7 +96,7 @@ export function InspectorTrack(props: InspectorTrackProps)
 		{
 			const newTrack = func(track)
 			console.log("InspectorTrack.modifyTracks", track, newTrack)
-			project.ref.current = Project.upsertTrack(project.ref.current, newTrack)
+			project.ref.current.project = Project.upsertTrack(project.ref.current.project, newTrack)
 		}
 
         project.commit()
@@ -126,8 +126,7 @@ export function InspectorTrack(props: InspectorTrackProps)
             if (track.trackType !== "notes")
                 return track
 
-            track.instrument = { ...newInstrument }
-            return track
+            return Project.elemModify(track, { instrument: newInstrument })
         })
     }
 

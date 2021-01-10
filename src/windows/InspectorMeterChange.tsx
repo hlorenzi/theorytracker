@@ -22,7 +22,7 @@ export function InspectorMeterChange(props: InspectorMeterChangeProps)
 	const meterChs: Project.MeterChange[] = []
 	for (const elemId of props.elemIds)
 	{
-		const meterCh = Project.getElem(project.ref.current, elemId, "meterChange")
+		const meterCh = Project.getElem(project.ref.current.project, elemId, "meterChange")
 		if (!meterCh)
 			continue
 
@@ -63,7 +63,7 @@ export function InspectorMeterChange(props: InspectorMeterChangeProps)
 		{
 			const newMeterCh = func(meterCh)
 			console.log("InspectorKeyChange.modifyMeterChs", meterCh, newMeterCh)
-			project.ref.current = Project.upsertElement(project.ref.current, newMeterCh)
+			project.ref.current.project = Project.upsertElement(project.ref.current.project, newMeterCh)
 		}
 
         project.commit()

@@ -18,24 +18,31 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
         case "escape":
         {
             handleEscape(data)
+            data.projectCtx.ref.current.splitUndoPoint()
             break
         }
 
         case "enter":
         {
             handleEnter(data)
+            data.projectCtx.ref.current.splitUndoPoint()
             break
         }
 
         case "delete":
         {
             handleDelete(data)
+            data.projectCtx.ref.current.project = data.project
+            data.projectCtx.ref.current.splitUndoPoint()
+            data.projectCtx.ref.current.addUndoPoint("keyDown_delete")
             break
         }
 
 		case "backspace":
         {
             handleBackspace(data)
+            data.projectCtx.ref.current.project = data.project
+            data.projectCtx.ref.current.addUndoPoint("keyDown_backspace")
             break
         }
 
@@ -43,6 +50,8 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
         case "arrowleft":
         {
             handleLeftRight(data, key === "arrowleft")
+            data.projectCtx.ref.current.project = data.project
+            data.projectCtx.ref.current.addUndoPoint("keyDown_move")
             break
         }
 
@@ -50,6 +59,8 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
         case "arrowdown":
         {
             handleUpDown(data, key === "arrowup", false)
+            data.projectCtx.ref.current.project = data.project
+            data.projectCtx.ref.current.addUndoPoint("keyDown_move")
             break
         }
 
@@ -59,6 +70,8 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
         case "<":
         {
             handleUpDown(data, key === "." || key === ">", true)
+            data.projectCtx.ref.current.project = data.project
+            data.projectCtx.ref.current.addUndoPoint("keyDown_move")
             break
         }
 
@@ -72,6 +85,10 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
         {
             const degree = key.charCodeAt(0) - "1".charCodeAt(0)
             handleNumber(data, degree)
+
+            data.projectCtx.ref.current.project = data.project
+            data.projectCtx.ref.current.splitUndoPoint()
+            data.projectCtx.ref.current.addUndoPoint("keyDown_insert")
             break
         }
     }
@@ -97,7 +114,7 @@ function modifySelectedElems(
         newProject = Project.upsertElement(newProject, newElem)
     }
 
-    data.project = newProject
+    data.project = Project.withRefreshedRange(newProject)
 }
 
 

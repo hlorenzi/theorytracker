@@ -46,10 +46,10 @@ export default function PlaybackToolbar()
 
         <input
             type="number"
-            value={ project.ref.current.baseBpm }
+            value={ project.ref.current.project.baseBpm }
             onChange={ ev =>
             {
-                project.ref.current.baseBpm = parseInt(ev.target.value)
+                project.ref.current.project.baseBpm = parseInt(ev.target.value)
                 project.commit()
             }}
             style={{

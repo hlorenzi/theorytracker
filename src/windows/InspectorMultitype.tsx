@@ -27,7 +27,7 @@ export function InspectorMultitype(props: InspectorMultitypeProps)
 
 		for (const elemId of props.elemIds)
 		{
-			const elem = project.ref.current.elems.get(elemId)
+			const elem = project.ref.current.project.elems.get(elemId)
 			if (!elem)
 				continue
 

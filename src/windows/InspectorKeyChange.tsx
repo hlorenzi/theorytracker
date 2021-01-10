@@ -22,7 +22,7 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 	const keyChs: Project.KeyChange[] = []
 	for (const elemId of props.elemIds)
 	{
-		const keyCh = Project.getElem(project.ref.current, elemId, "keyChange")
+		const keyCh = Project.getElem(project.ref.current.project, elemId, "keyChange")
 		if (!keyCh)
 			continue
 
@@ -114,7 +114,7 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 		{
 			const newKeyCh = func(keyCh)
 			console.log("InspectorKeyChange.modifyKeyChs", keyCh, newKeyCh)
-			project.ref.current = Project.upsertElement(project.ref.current, newKeyCh)
+			project.ref.current.project = Project.upsertElement(project.ref.current.project, newKeyCh)
 		}
 
         project.commit()

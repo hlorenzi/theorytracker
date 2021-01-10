@@ -213,6 +213,10 @@ export function withRefreshedRange(project: Root): Root
             range = range.merge(list.getTotalRange())
     }
 
+    if (range.start.compare(project.range.start) == 0 &&
+        range.end.compare(project.range.end) == 0)
+        return project
+
     return { ...project, range }
 }
 

@@ -158,7 +158,8 @@ export interface EditorUpdateData
     state: EditorState
     prefs: Prefs.Prefs
     project: Project.Root
-    playback: Playback.PlaybackContextProps,
+    projectCtx: RefState<Project.ProjectContextProps>
+    playback: Playback.PlaybackContextProps
     ctx: CanvasRenderingContext2D
     popup: RefState<Popup.PopupContextProps>
     dockable: RefState<Dockable.DockableContextProps>
@@ -264,6 +265,18 @@ export function resize(data: EditorUpdateData, rect: Rect)
 {
     data.state.renderRect = rect
     refreshTracks(data)
+}
+
+
+export function reset(data: EditorUpdateData)
+{
+    data.state.trackScroll = -20
+    data.state.trackScrollLocked = true
+
+    data.state.timeScroll = -2.5
+    data.state.timeScale = 100
+    data.state.timeSnap = new Rational(1, 8)
+    data.state.timeSnapBase = new Rational(1, 16)
 }
 
 

@@ -21,6 +21,6 @@ export function Test()
         <button onClick={ increment }>Increment</button>
         <br/>
         <br/>
-        Project elem count: { project.ref.current.elems.size }
+        Project elem count: { project.ref.current.project.elems.size }
     </div>
 }

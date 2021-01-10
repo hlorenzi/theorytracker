@@ -46,7 +46,7 @@ export function usePlayback(): RefState<PlaybackContextProps>
 }
 
 
-export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<PlaybackContextProps>
+export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps>): RefState<PlaybackContextProps>
 {
     const playback = useRefState<PlaybackContextProps>(() =>
     {
@@ -103,10 +103,10 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
     {
         playback.ref.current.synthLoading = true
 
-        playback.ref.current.synth.prepare(projectRef.ref.current)
+        playback.ref.current.synth.prepare(projectRef.ref.current.project)
             .then(() => playback.ref.current.synthLoading = false)
 
-    }, [Playback.getSflibMeta(), playback.ref.current.playing, projectRef.ref.current.tracks])
+    }, [Playback.getSflibMeta(), playback.ref.current.playing, projectRef.ref.current.project.tracks])
 
     React.useEffect(() =>
     {
@@ -118,7 +118,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
             playback.ref.current.playTimeFloatPrev = playback.ref.current.playTimeFloat
             playback.ref.current.playTimePrev = playback.ref.current.playTime
 
-            const measuresPerSecond = (projectRef.ref.current.baseBpm / 4 / 60)
+            const measuresPerSecond = (projectRef.ref.current.project.baseBpm / 4 / 60)
             
             playback.ref.current.synth.process(deltaTimeMs)
             playback.ref.current.playTimeFloat += deltaTimeMs / 1000 * measuresPerSecond
@@ -126,7 +126,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
             Playback.feedNotes(
                 playback.ref.current.synth,
-                projectRef.ref.current,
+                projectRef.ref.current.project,
                 playback.ref.current.firstPlayingFrame,
                 playback.ref.current.startTime,
                 new Range(
@@ -144,7 +144,7 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
 
             playback.ref.current.firstPlayingFrame = false
 
-            if (playback.ref.current.playTime.compare(projectRef.ref.current.range.end) > 0 &&
+            if (playback.ref.current.playTime.compare(projectRef.ref.current.project.range.end) > 0 &&
                 playback.ref.current.synth.isFinished())
             {
                 playback.ref.current.stopPlaying()
@@ -258,19 +258,6 @@ export function usePlaybackInit(projectRef: RefState<Project.Root>): RefState<Pl
         window.addEventListener("playbackStartPlaying", () => setPlaying(true))
         window.addEventListener("playbackStopPlaying", () => setPlaying(false))
         window.addEventListener("playbackTogglePlaying", () => setPlaying(!playback.ref.current.playing))
-
-        window.addEventListener("keydown", (ev: KeyboardEvent) =>
-        {
-            if (document.activeElement && document.activeElement.tagName == "INPUT")
-                return
-
-            if (ev.key.toLowerCase() == " ")
-            {
-                ev.preventDefault()
-                ev.stopPropagation()
-                setPlaying(!playback.ref.current.playing)
-            }
-        })
 
     }, [])
 

@@ -16,10 +16,44 @@ import "./types"
 export default function App()
 {
     const dockableCtx = Dockable.useDockableInit()
-    const projectCtx = useRefState(() => Project.getDefault())
+    const projectCtx = Project.useProjectInit()
     const playbackCtx = Playback.usePlaybackInit(projectCtx)
     const prefsCtx = useRefState(() => Prefs.getDefault())
     const popupCtx = useRefState(() => Popup.getDefaultCtx())
+
+
+    React.useEffect(() =>
+    {
+        window.addEventListener("keydown", (ev: KeyboardEvent) =>
+        {
+            if (document.activeElement && document.activeElement.tagName == "INPUT")
+                return
+
+            const key = ev.key.toLowerCase()
+
+            if (key == " ")
+            {
+                playbackCtx.ref.current.togglePlaying()
+            }
+            else if ((key == "y" && ev.ctrlKey) || (key == "z" && ev.ctrlKey && ev.shiftKey))
+            {
+                projectCtx.ref.current.redo()
+            }
+            else if (key == "z" && ev.ctrlKey)
+            {
+                projectCtx.ref.current.undo()
+            }
+            else
+            {
+                return
+            }
+
+            ev.preventDefault()
+            ev.stopPropagation()
+        })
+
+    }, [])
+
 
     return <>
         <Dockable.DockableContext.Provider value={ dockableCtx }>
