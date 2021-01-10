@@ -130,6 +130,7 @@ export interface EditorState
     selection: Immutable.Set<Project.ID>
 
     needsKeyFinish: boolean
+    rangeSelectOriginTrackIndex: number
 }
 
 
@@ -254,6 +255,7 @@ export function init(): EditorState
         selection: Immutable.Set<Project.ID>(),
 
         needsKeyFinish: false,
+        rangeSelectOriginTrackIndex: -1,
     }
 }
 
@@ -293,7 +295,7 @@ export function refreshTracks(data: EditorUpdateData)
                 }
             }
             else
-                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 60))
+                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 50))
         }
         else if (track.trackType == "keyChanges")
         {

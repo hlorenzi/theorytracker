@@ -17,6 +17,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     data.state.mouse.action = Editor.EditorAction.None
 
     const selectMultiple = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
+    const selectRange = data.state.keysDown.has(data.prefs.editor.keySelectRange)
     const forcePan = data.state.keysDown.has(data.prefs.editor.keyPan)
     const doubleClick =
         data.state.mouse.downDate.getTime() - prevDownDate.getTime() <
@@ -79,7 +80,22 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
     {
         Editor.keyHandlePendingFinish(data)
 
+        const elem = data.project.elems.get(data.state.hover.id)
         data.state.drag.elemId = data.state.hover.id
+
+        if (elem && elem.type == "track")
+        {
+            if (!selectRange)
+                data.state.rangeSelectOriginTrackIndex = data.state.mouse.point.trackIndex
+            else if (data.state.rangeSelectOriginTrackIndex >= 0)
+            {
+                selectTrackRange(data,
+                    data.state.rangeSelectOriginTrackIndex,
+                    data.state.mouse.point.trackIndex)
+            }
+        }
+        else
+            data.state.rangeSelectOriginTrackIndex = -1
 
         Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
         data.state.cursor.visible = false
@@ -127,4 +143,19 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             data.playback.setStartTime(data.state.cursor.time1)
         }
     }
+}
+
+
+function selectTrackRange(
+    data: Editor.EditorUpdateData,
+    trackIndex1: number,
+    trackIndex2: number)
+{
+    const trackIndexMin = Math.min(trackIndex1, trackIndex2)
+    const trackIndexMax = Math.max(trackIndex1, trackIndex2)
+
+    Editor.selectionClear(data)
+
+    for (var i = trackIndexMin; i <= trackIndexMax; i++)
+        Editor.selectionAdd(data, data.state.tracks[i].projectTrackId)
 }

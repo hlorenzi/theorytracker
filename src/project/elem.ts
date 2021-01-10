@@ -119,7 +119,7 @@ export function makeTrackNotes(): TrackNotes
         id: -1,
         parentId: 0,
         range: Range.dummy(),
-        name: "New Track",
+        name: "",
         volume: 1,
         instrument: makeInstrument(),
     }
@@ -175,6 +175,44 @@ export function instrumentName(instrument: Instrument): string
 
         default: return "???"
     }
+}
+
+
+export function instrumentEmoji(instrument: Instrument): string
+{
+    switch (instrument.type)
+    {
+        case "basic": return Misc.getMidiPresetEmoji(0, 0)
+        case "sflib":
+        {
+            const sflibMeta = Playback.getSflibMeta()
+            if (!sflibMeta)
+                return Misc.getMidiPresetEmoji(0, 0)
+
+            const coll = sflibMeta.collectionsById.get(instrument.collectionId)!
+            const instr = coll.instrumentsById.get(instrument.instrumentId)!
+            return Misc.getMidiPresetEmoji(instr.midiBank, instr.midiPreset)
+        }
+
+        default: return Misc.getMidiPresetEmoji(0, 0)
+    }
+}
+
+
+export function trackDisplayName(track: Track): string
+{
+    if (track.trackType == "notes")
+    {
+        if (track.name)
+            return instrumentEmoji(track.instrument) + " " + track.name
+    
+        return instrumentName(track.instrument)
+    }
+
+    if (track.name)
+        return track.name
+
+    return "New Track"
 }
 
 

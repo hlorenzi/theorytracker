@@ -37,6 +37,7 @@ export interface Prefs
         keyPan: string
         keyPencil: string
         keySelectMultiple: string
+        keySelectRange: string
         keySelectRect: string
         keyDisplaceCursor2: string
         keyDisplaceFast: string
@@ -94,6 +95,7 @@ export function getDefault(): Prefs
             keyPan: " ",
             keyPencil: "a",
             keySelectMultiple: "control",
+            keySelectRange: "shift",
             keySelectRect: "shift",
             keyDisplaceCursor2: "shift",
             keyDisplaceFast: "control",

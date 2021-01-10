@@ -461,7 +461,7 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
     if (!track)
         return null
 
-    const instrumentName = Project.instrumentName(track.instrument)
+    const displayName = Project.trackDisplayName(track)
 
     const onGetVolume = () =>
     {
@@ -518,20 +518,8 @@ function TrackHeaderNoteBlocks(props: TrackHeaderProps)
                 overflow: "hidden",
                 whiteSpace: "nowrap",
             }}>
-                { props.track.name }
+                { displayName }
             </div>
-
-            { !instrumentName ? null :
-                <div style={{
-                    width: (props.width - 40) + "px",
-                    fontSize: "0.8em",
-                    textOverflow: "ellipsis",
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                }}>
-                    { instrumentName }
-                </div>
-            }
         </div>
         <div/>
         <StyledTrackButton
