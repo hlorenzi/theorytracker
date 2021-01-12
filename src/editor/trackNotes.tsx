@@ -205,9 +205,7 @@ export class EditorTrackNotes extends EditorTrack
                     id: note.id,
                     range: note.range,
                     action:
-                        Editor.EditorAction.DragTime |
-                        Editor.EditorAction.DragRow |
-                        Editor.EditorAction.DragTrack,
+                        Editor.EditorAction.DragTimeAndRow,
                 }
             }
             else if (rectStretch.contains(pos))

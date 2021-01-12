@@ -90,7 +90,7 @@ export function InspectorTrack(props: InspectorTrackProps)
     }
 
 
-	const modifyTracks = (func: (keyCh: Project.Track) => Project.Track) =>
+	const modifyTracks = (func: (tr: Project.Track) => Project.Track) =>
 	{
 		for (const track of tracks)
 		{

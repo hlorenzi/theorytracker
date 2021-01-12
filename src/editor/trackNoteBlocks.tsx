@@ -104,7 +104,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
                 {
                     id: noteBlock.id,
                     range: noteBlock.range,
-                    action: Editor.EditorAction.DragTime | Editor.EditorAction.DragTrack,
+                    action: Editor.EditorAction.DragTime,
                 }
             }
             else if (rectStretch.contains(pos))

@@ -16,21 +16,33 @@ import { EditorTrackMeterChanges } from "./trackMeterChanges"
 import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
 import { EditorTrackNotes } from "./trackNotes"
 import { EditorTrackNoteVelocities } from "./trackNoteVelocities"
+import { Track } from "../project"
 
 
 export enum EditorAction
 {
-    None = 0x00,
-    Pan = 0x01,
-    SelectCursor = 0x02,
-    SelectRect = 0x04,
-    Pencil = 0x08,
-    DragTime = 0x10,
-    DragRow = 0x20,
-    DragTrack = 0x40,
-    DragTrackHeader = 0x80,
-    StretchTimeStart = 0x100,
-    StretchTimeEnd = 0x200,
+    None,
+    Pan,
+    SelectCursor,
+    SelectRect,
+    Pencil,
+    DragTime,
+    DragRow,
+    DragTimeAndRow,
+    DragTrackHeader,
+    DragTrackControl,
+    StretchTimeStart,
+    StretchTimeEnd,
+}
+
+
+export enum TrackControl
+{
+    None,
+    Volume,
+    Pan,
+    Mute,
+    Solo,
 }
 
 
@@ -59,6 +71,9 @@ export interface EditorState
     renderRect: Rect
 
     trackHeaderW: number
+    trackControlX: number
+    trackControlY: number
+    trackControlSize: number
 
     tracks: EditorTrack[]
     trackScroll: number
@@ -127,6 +142,7 @@ export interface EditorState
     }
 
     hover: EditorHover | null
+    hoverControl: TrackControl
     selection: Immutable.Set<Project.ID>
 
     needsKeyFinish: boolean
@@ -177,9 +193,12 @@ export function init(): EditorState
         renderRect: new Rect(0, 0, 0, 0),
 
         trackHeaderW: 200,
+        trackControlX: 10,
+        trackControlY: 25,
+        trackControlSize: 20,
         
         tracks: [],
-        trackScroll: -20,
+        trackScroll: -40,
         trackScrollLocked: true,
 
         timeScroll: -2.5,
@@ -252,6 +271,7 @@ export function init(): EditorState
         },
         
         hover: null,
+        hoverControl: TrackControl.None,
 
         selection: Immutable.Set<Project.ID>(),
 
@@ -270,7 +290,7 @@ export function resize(data: EditorUpdateData, rect: Rect)
 
 export function reset(data: EditorUpdateData)
 {
-    data.state.trackScroll = -20
+    data.state.trackScroll = -40
     data.state.trackScrollLocked = true
 
     data.state.timeScroll = -2.5
@@ -518,6 +538,41 @@ export function trackInsertionAtY(data: EditorUpdateData, y: number): number
     }
 
     return data.state.tracks.length
+}
+
+
+export function trackControlAtPoint(
+    data: EditorUpdateData,
+    trackIndex: number,
+    pos: { x: number, y: number })
+    : TrackControl
+{
+    const projTrack = Project.getElem(data.project, data.state.tracks[trackIndex].projectTrackId, "track")
+    if (!projTrack)
+        return TrackControl.None
+
+    if (pos.y < data.state.trackControlY)
+        return TrackControl.None
+
+    const xSlot = Math.floor((pos.x - data.state.trackControlX) / data.state.trackControlSize)
+    if (xSlot < 0)
+        return TrackControl.None
+
+    switch (projTrack.trackType)
+    {
+        case "notes":
+        {
+            switch (xSlot)
+            {
+                case 0: return TrackControl.Volume
+                //case 1: return TrackControl.Pan
+                case 7: return TrackControl.Mute
+                case 8: return TrackControl.Solo
+            }
+        }
+    }
+
+    return TrackControl.None
 }
 
 

@@ -39,6 +39,8 @@ export interface TrackBase extends ElementBase
 {
     type: "track"
     name: string
+    mute: boolean
+    solo: boolean
 }
 
 
@@ -121,6 +123,8 @@ export function makeTrackNotes(): TrackNotes
         range: Range.dummy(),
         name: "",
         volume: 1,
+        mute: false,
+        solo: false,
         instrument: makeInstrument(),
     }
 }
@@ -225,6 +229,8 @@ export function makeTrackKeyChanges(): TrackKeyChanges
         parentId: 0,
         range: Range.dummy(),
         name: "Key Changes",
+        mute: false,
+        solo: false,
     }
 }
 
@@ -238,6 +244,8 @@ export function makeTrackMeterChanges(): TrackMeterChanges
         parentId: 0,
         range: Range.dummy(),
         name: "Meter Changes",
+        mute: false,
+        solo: false,
     }
 }
 

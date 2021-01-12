@@ -12,6 +12,8 @@ export function feedNotes(
     startTime: Rational,
     range: Range)
 {
+    const anySolo = project.tracks.some(tr => tr.solo)
+
     for (const [track, note] of iterNotesAtRange(project, range))
     {
         if (range.overlapsPoint(note.range.end))
@@ -27,7 +29,9 @@ export function feedNotes(
                 track.id,
                 note.id,
                 note.midiPitch,
-                midiVolumeToLinearGain(track.volume * note.velocity))
+                track.mute ? 0 :
+                    anySolo && !track.solo ? 0 :
+                    midiVolumeToLinearGain(track.volume * note.velocity))
         }
     }
 }

@@ -30,6 +30,11 @@ export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 range: new Range(new Rational(0), new Rational(0)),
             }
         }
+
+        data.state.hoverControl = Editor.trackControlAtPoint(
+            data,
+            data.state.mouse.point.trackIndex,
+            data.state.mouse.point.trackPos)
     }
     else if (data.state.keysDown.has(data.prefs.editor.keyPencil))
     {

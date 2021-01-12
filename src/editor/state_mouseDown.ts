@@ -83,10 +83,19 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         const elem = data.project.elems.get(data.state.hover.id)
         data.state.drag.elemId = data.state.hover.id
 
+        Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
+        data.state.cursor.visible = false
+
         if (elem && elem.type == "track")
         {
             if (!selectRange)
+            {
                 data.state.rangeSelectOriginTrackIndex = data.state.mouse.point.trackIndex
+                if (data.state.hoverControl != Editor.TrackControl.None)
+                {
+                    data.state.mouse.action = Editor.EditorAction.DragTrackControl
+                }
+            }
             else if (data.state.rangeSelectOriginTrackIndex >= 0)
             {
                 selectTrackRange(data,
@@ -95,24 +104,23 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             }
         }
         else
+        {
             data.state.rangeSelectOriginTrackIndex = -1
 
-        Editor.selectionToggleHover(data, data.state.hover, selectMultiple)
-        data.state.cursor.visible = false
+            withTrackAtMouse(tr => tr.click(data, data.state.hover!.id))
 
-        withTrackAtMouse(tr => tr.click(data, data.state.hover!.id))
-
-        const range = Editor.selectionRange(data)
-        if (range)
-        {
-            Editor.cursorSetTime(data, range.start, range.start)
-            Editor.cursorSetTrack(data, data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
-            data.playback.setStartTime(range.start)
-        }
-        
-        if (doubleClick)
-        {
-            withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
+            const range = Editor.selectionRange(data)
+            if (range)
+            {
+                Editor.cursorSetTime(data, range.start, range.start)
+                Editor.cursorSetTrack(data, data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
+                data.playback.setStartTime(range.start)
+            }
+            
+            if (doubleClick)
+            {
+                withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
+            }
         }
     }
     else

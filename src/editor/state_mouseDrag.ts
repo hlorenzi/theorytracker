@@ -84,21 +84,31 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
         withTrackAtDragOrigin(tr => tr.pencilDrag(data))
         return true
     }
+    else if (data.state.mouse.action == Editor.EditorAction.DragTrackControl)
+    {
+        handleDragTrackControl(data)
+        return true
+    }
     else
     {
-        let blockedActions = Editor.EditorAction.None
+        let mouseAction = data.state.mouse.action
         
 		if (data.state.drag.xLocked)
-            blockedActions |=
-                Editor.EditorAction.DragTime |
-                Editor.EditorAction.StretchTimeEnd |
-                Editor.EditorAction.StretchTimeStart
+        {
+            if (mouseAction == Editor.EditorAction.DragTime ||
+                mouseAction == Editor.EditorAction.StretchTimeStart ||
+                mouseAction == Editor.EditorAction.StretchTimeEnd)
+                mouseAction = Editor.EditorAction.None
+            else if (mouseAction == Editor.EditorAction.DragTimeAndRow)
+                mouseAction = Editor.EditorAction.DragRow
+        }
 
 		if (data.state.drag.yLocked)
-            blockedActions |= Editor.EditorAction.DragRow
+        {
+            if (mouseAction == Editor.EditorAction.DragRow)
+                mouseAction = Editor.EditorAction.None
+        }
 
-        const mouseAction = data.state.mouse.action & ~blockedActions
-        
         let newProject = data.state.drag.origin.project
 
 		for (const id of data.state.selection)
@@ -112,10 +122,11 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 
 			let changes: any = {}
 
-            if (mouseAction & Editor.EditorAction.DragTime)
+            if (mouseAction == Editor.EditorAction.DragTime ||
+                mouseAction == Editor.EditorAction.DragTimeAndRow)
                 changes.range = elem.range.displace(data.state.drag.timeDelta)
             
-            if (mouseAction & Editor.EditorAction.StretchTimeStart &&
+            if (mouseAction == Editor.EditorAction.StretchTimeStart &&
                 data.state.drag.origin.range)
             {
                 changes.range = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
@@ -133,7 +144,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 changes.range = Editor.getRelativeRange(data, elem.parentId, changes.range)
             }
 
-            if (mouseAction & Editor.EditorAction.StretchTimeEnd &&
+            if (mouseAction == Editor.EditorAction.StretchTimeEnd &&
                 data.state.drag.origin.range)
             {
                 changes.range = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
@@ -151,7 +162,8 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 changes.range = Editor.getRelativeRange(data, elem.parentId, changes.range)
             }
         
-            if (mouseAction & Editor.EditorAction.DragRow &&
+            if ((mouseAction == Editor.EditorAction.DragRow ||
+                mouseAction == Editor.EditorAction.DragTimeAndRow) &&
                 elem.type == "note")
             {
                 const note = elem as Project.Note
@@ -172,7 +184,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 }
             }
 
-            if (mouseAction & Editor.EditorAction.DragTrack &&
+            if (mouseAction == Editor.EditorAction.DragTime &&
                 data.state.drag.trackDelta != 0)
             {
                 const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
@@ -193,4 +205,110 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     }
 
     return false
+}
+
+
+function handleDragTrackControl(data: Editor.EditorUpdateData)
+{
+    const origTrack = Project.getElem(data.state.drag.origin.project, data.state.drag.elemId, "track")
+    if (!origTrack)
+        return
+
+
+	const modifySelectedTracks = (func: (tr: Project.Track) => Project.Track) =>
+	{
+        let project = data.project
+
+        for (const elemId of data.state.selection)
+        {
+            const track = Project.getElem(data.state.drag.origin.project, elemId, "track")
+            if (!track)
+                continue
+
+			const newTrack = func(track)
+			project = Project.upsertTrack(project, newTrack)
+		}
+
+        data.project = project
+	}
+
+
+	const modifyTrackAtMouse = (func: (tr: Project.Track) => Project.Track) =>
+	{
+        if (!data.state.hover)
+            return
+        
+        let project = data.project
+
+        const trackIndex = data.state.mouse.point.trackIndex
+        if (trackIndex < 0 || trackIndex >= data.state.tracks.length)
+            return
+        
+        const track = data.state.tracks[trackIndex]
+        const projTrack = Project.getElem(data.state.drag.origin.project, track.projectTrackId, "track")
+        if (!projTrack)
+            return
+
+        const newTrack = func(projTrack)
+        project = Project.upsertTrack(project, newTrack)
+
+        data.project = project
+	}
+
+
+	const modifyTrackAtMouseOrSelected = (func: (tr: Project.Track) => Project.Track) =>
+	{
+        let numSelected = 0
+        for (const elemId of data.state.selection)
+        {
+            const track = Project.getElem(data.state.drag.origin.project, elemId, "track")
+            if (track)
+                numSelected++
+        }
+
+        if (numSelected <= 1)
+            modifyTrackAtMouse(func)
+        else
+            modifySelectedTracks(func)
+    }
+
+
+    switch (data.state.hoverControl)
+    {
+        case Editor.TrackControl.Volume:
+        {
+            const volumeDelta = -data.state.drag.posDelta.y / 50
+            modifySelectedTracks((track) =>
+            {
+                if (track.trackType != "notes")
+                    return track
+                
+                const volume = Math.max(0, Math.min(1, track.volume + volumeDelta))
+                return Project.elemModify(track, { volume })
+            })
+            break
+        }
+
+        case Editor.TrackControl.Mute:
+        {
+            const mute = (origTrack.trackType == "notes" ? !origTrack.mute : false)
+
+            modifyTrackAtMouseOrSelected((track) =>
+            {
+                return Project.elemModify(track, { mute })
+            })
+            break
+        }
+
+        case Editor.TrackControl.Solo:
+        {
+            const solo = (origTrack.trackType == "notes" ? !origTrack.solo : false)
+
+            modifyTrackAtMouseOrSelected((track) =>
+            {
+                return Project.elemModify(track, { solo })
+            })
+            break
+        }
+    }
 }

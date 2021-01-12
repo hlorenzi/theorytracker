@@ -154,16 +154,24 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             let cursor = "text"
             const mouseAction =
                 state.mouse.down ? state.mouse.action :
+                state.hoverControl != Editor.TrackControl.None ? Editor.EditorAction.DragTrackControl :
                 state.hover ? state.hover.action :
                 Editor.EditorAction.None
             
-            if (state.tracks.some((tr: any) => !!tr.pencil) || mouseAction & Editor.EditorAction.Pencil)
+            if (state.tracks.some((tr: any) => !!tr.pencil) ||
+                mouseAction == Editor.EditorAction.Pencil)
                 cursor = "crosshair"
-            else if (mouseAction & (Editor.EditorAction.DragTime | Editor.EditorAction.DragTrackHeader))
+            else if (mouseAction == Editor.EditorAction.DragTrackControl)
+                cursor = "crosshair"
+            else if (mouseAction == Editor.EditorAction.DragTime ||
+                mouseAction == Editor.EditorAction.DragTimeAndRow ||
+                mouseAction == Editor.EditorAction.DragRow ||
+                mouseAction == Editor.EditorAction.DragTrackHeader)
                 cursor = (state.mouse.down ? "grabbing" : "grab")
-            else if (mouseAction & Editor.EditorAction.Pan)
+            else if (mouseAction == Editor.EditorAction.Pan)
                 cursor = "move"
-            else if (mouseAction & (Editor.EditorAction.StretchTimeStart | Editor.EditorAction.StretchTimeEnd))
+            else if (mouseAction == Editor.EditorAction.StretchTimeStart ||
+                mouseAction == Editor.EditorAction.StretchTimeEnd)
                 cursor = "col-resize"
 
             refCanvasCurrent.style.cursor = cursor
@@ -205,6 +213,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
             Editor.mouseDown(updateData, ev.button != 0)
+            Editor.mouseDrag(updateData, pos)
             render()
             setCursor(updateData.state)
             editorState.commit()
@@ -218,6 +227,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
             const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
+            Editor.mouseDrag(updateData, pos)
             Editor.mouseUp(updateData)
 
             if (updateData.project !== project.ref.current.project)
@@ -361,30 +371,6 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 height: "100%",
 			}}/>
 
-			{ editorState.ref.current.tracks.map((track, i) =>
-			{
-                const top = track.renderRect.y - editorState.ref.current.trackScroll
-                const width = editorState.ref.current.trackHeaderW
-                const height = track.renderRect.h
-
-                if (top >= editorState.ref.current.renderRect.h ||
-                    top + height <= 0)
-                    return null
-
-                const props = {
-                    top, width, height,
-                    project,
-                    track,
-                    onTrackSettings: (ev: React.MouseEvent) => onTrackSettings(ev, i)
-                }
-
-                if (track instanceof Editor.EditorTrackNoteBlocks ||
-                    track instanceof Editor.EditorTrackNotes)
-                    return <TrackHeaderNoteBlocks key={ i } { ...props }/>
-                else
-                    return <TrackHeader key={ i } { ...props }/>
-            })}
-
             <div style={{
                 position: "absolute",
                 left: 0,
@@ -413,129 +399,4 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             editorState.ref.current.tracks,
             editorState.ref.current.trackScroll,
         ])
-}
-
-
-interface TrackHeaderProps
-{
-    top: number
-    width: number
-    height: number
-
-    project: RefState<Project.ProjectContextProps>
-    track: Editor.EditorTrack
-    onTrackSettings: (ev: React.MouseEvent) => void
-}
-
-
-function TrackHeader(props: TrackHeaderProps)
-{
-    return <div style={{
-        position: "absolute",
-        left: 0,
-        top: props.top,
-        width: props.width,
-        height: props.height,
-        
-        boxSizing: "border-box",
-        padding: "0.1em 0.5em",
-        userSelect: "none",
-        pointerEvents: "none",
-        overflow: "hidden",
-
-        display: "grid",
-        gridTemplate: "1fr / 1fr auto",
-        alignItems: "center",
-    }}>
-        <div>
-            { props.track.name }
-        </div>
-        <StyledTrackButton
-            onClick={ props.onTrackSettings }
-        >
-            ...{/*🔧*/}
-        </StyledTrackButton>
-    </div>
-}
-
-
-function TrackHeaderNoteBlocks(props: TrackHeaderProps)
-{
-    const track = Project.getTrack(props.project.ref.current.project, props.track.projectTrackId, "notes")
-    if (!track)
-        return null
-
-    const displayName = Project.trackDisplayName(track)
-
-    const onGetVolume = () =>
-    {
-        const track = Project.getTrack(props.project.ref.current.project, props.track.projectTrackId, "notes")
-        if (!track)
-            return 0
-
-        return track.volume
-    }
-
-    const onChangeVolume = (newValue: number) =>
-    {
-        const track = Project.getTrack(props.project.ref.current.project, props.track.projectTrackId, "notes")
-        if (!track)
-            return
-            
-        const newTrack = Project.elemModify(track, { volume: Math.max(0, Math.min(1, newValue)) })
-
-        props.project.ref.current.project = Project.upsertTrack(props.project.ref.current.project, newTrack)
-        props.project.ref.current.addUndoPoint("trackVolume")
-        //props.project.commit()
-    }
-
-        
-    return <div style={{
-        position: "absolute",
-        left: 0,
-        top: props.top,
-        width: props.width,
-        height: props.height,
-        
-        boxSizing: "border-box",
-        padding: "0.1em 0.5em",
-        userSelect: "none",
-        pointerEvents: "none",
-        overflow: "hidden",
-
-        display: "grid",
-        gridTemplate: `1fr auto auto 1fr / auto 1fr auto`,
-        alignItems: "center",
-        justifyItems: "start",
-    }}>
-        <div/>
-        <div/>
-        <div/>
-        
-        <div >
-            <div style={{
-                width: (props.width - 40) + "px",
-                fontSize: "0.8em",
-                textOverflow: "ellipsis",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-            }}>
-                { displayName }
-            </div>
-        </div>
-        <div/>
-        <StyledTrackButton
-            onClick={ props.onTrackSettings }
-        >
-            ...{/*🔧*/}
-        </StyledTrackButton>
-
-        <div>
-            <UI.Dial
-                label="Vol"
-                getValue={ onGetVolume }
-                onChange={ onChangeVolume }
-            />
-        </div>
-    </div>
 }

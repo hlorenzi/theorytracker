@@ -76,6 +76,10 @@ export function render(data: Editor.EditorUpdateData)
             data.state.tracks[t].renderRect.h - 2)
         data.ctx.fill()
         data.ctx.stroke()
+
+        renderTrackHeader(
+            data,
+            t)
         
         data.ctx.beginPath()
         data.ctx.rect(
@@ -382,4 +386,91 @@ function renderPlaybackBeam(data: Editor.EditorUpdateData, time: Rational)
     data.ctx.lineTo(x, 0)
     data.ctx.lineTo(x, data.state.renderRect.h)
     data.ctx.stroke()
+}
+
+
+function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
+{
+    const track = data.state.tracks[trackIndex]
+    const projTrack = Project.getElem(data.project, track.projectTrackId, "track")
+    if (!projTrack)
+        return
+
+
+    if ((track instanceof Editor.EditorTrackNoteBlocks ||
+        track instanceof Editor.EditorTrackNotes) &&
+        projTrack.trackType == "notes")
+    {
+        data.ctx.fillStyle = "#fff"
+        data.ctx.textAlign = "left"
+        data.ctx.textBaseline = "top"
+        data.ctx.font = "10px system-ui"
+    
+        const displayName = Project.trackDisplayName(projTrack)
+        data.ctx.fillText(displayName, 10, 8, data.state.trackHeaderW - 20)
+
+        renderControlDial(data, 0, "Vol", projTrack.volume)
+        renderControlIcon(data, 7, "🔊", !projTrack.mute)
+        renderControlIcon(data, 8, "🎚️", projTrack.solo)
+    }
+    else
+    {
+        data.ctx.fillStyle = "#fff"
+        data.ctx.textAlign = "left"
+        data.ctx.textBaseline = "top"
+        data.ctx.font = "14px system-ui"
+    
+        data.ctx.fillText(track.name, 10, 8, data.state.trackHeaderW - 20)
+    }    
+}
+
+
+function renderControlDial(
+    data: Editor.EditorUpdateData,
+    xSlot: number,
+    label: string,
+    value: number)
+{
+    const x = data.state.trackControlX + data.state.trackControlSize * xSlot
+    const y = data.state.trackControlY
+    const size = data.state.trackControlSize
+
+    const factor = value
+
+    data.ctx.fillStyle = "#888"
+    data.ctx.fillRect(
+        x, y,
+        5, size)
+    
+    data.ctx.fillStyle = "#0f0"
+    data.ctx.fillRect(
+        x, y + size - factor * size,
+        5, factor * size)
+
+    data.ctx.fillStyle = "#fff"
+    data.ctx.textAlign = "center"
+    data.ctx.textBaseline = "middle"
+    data.ctx.font = (size * 0.4) + "px system-ui"
+
+    data.ctx.fillText(label, x + 5 + (size - 5) / 2, y + (size / 4))
+    data.ctx.fillText(Math.floor(value * 100).toString(), x + 5 + (size - 5) / 2, y + (size / 4 * 3))
+}
+
+
+function renderControlIcon(
+    data: Editor.EditorUpdateData,
+    xSlot: number,
+    icon: string,
+    enabled: boolean)
+{
+    const x = data.state.trackControlX + data.state.trackControlSize * xSlot
+    const y = data.state.trackControlY
+    const size = data.state.trackControlSize
+
+    data.ctx.fillStyle = enabled ? "#fff" : "#fff4"
+    data.ctx.textAlign = "center"
+    data.ctx.textBaseline = "middle"
+    data.ctx.font = (size * 0.8) + "px system-ui"
+
+    data.ctx.fillText(icon, x + size / 2, y + size / 2)
 }
