@@ -33,6 +33,7 @@ export enum EditorAction
     DragTrackControl,
     StretchTimeStart,
     StretchTimeEnd,
+    DragClone,
 }
 
 

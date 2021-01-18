@@ -89,6 +89,16 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
         handleDragTrackControl(data)
         return true
     }
+    else if (data.state.mouse.action == Editor.EditorAction.DragClone)
+    {
+        if (!data.state.drag.xLocked || !data.state.drag.yLocked)
+        {
+            handleDragClone(data)
+            return true
+        }
+
+        return false
+    }
     else
     {
         let mouseAction = data.state.mouse.action
@@ -105,7 +115,9 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
 
 		if (data.state.drag.yLocked)
         {
-            if (mouseAction == Editor.EditorAction.DragRow)
+            if (mouseAction == Editor.EditorAction.DragTimeAndRow)
+                mouseAction = Editor.EditorAction.DragTime
+            else if (mouseAction == Editor.EditorAction.DragRow)
                 mouseAction = Editor.EditorAction.None
         }
 
@@ -184,7 +196,9 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 }
             }
 
-            if (mouseAction == Editor.EditorAction.DragTime &&
+            if ((mouseAction == Editor.EditorAction.DragTime ||
+                mouseAction == Editor.EditorAction.DragTimeAndRow ||
+                mouseAction == Editor.EditorAction.DragRow) &&
                 data.state.drag.trackDelta != 0)
             {
                 const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
@@ -203,8 +217,6 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
         data.project = newProject
         return true
     }
-
-    return false
 }
 
 
@@ -311,4 +323,39 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
             break
         }
     }
+}
+
+
+function handleDragClone(data: Editor.EditorUpdateData)
+{
+    const origProject = data.project
+
+    let newProject = data.project
+    const newIds = []
+
+    for (const elemId of data.state.selection)
+    {
+        const elem = origProject.elems.get(elemId)
+        if (!elem || elem.type == "track")
+            continue
+
+        const newId = newProject.nextId
+        newIds.push(newId)
+
+        newProject = Project.cloneElem(origProject, elem, newProject)
+
+        if (elemId == data.state.drag.elemId)
+            data.state.drag.elemId = newId
+    }
+
+    console.log(origProject, newProject)
+
+    Editor.selectionClear(data)
+    for (const id of newIds)
+        Editor.selectionAdd(data, id)
+
+    data.state.mouse.action = Editor.EditorAction.DragTimeAndRow
+
+    data.project = newProject
+    data.state.drag.origin.project = newProject
 }

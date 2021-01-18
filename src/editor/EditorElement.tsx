@@ -163,6 +163,8 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 cursor = "crosshair"
             else if (mouseAction == Editor.EditorAction.DragTrackControl)
                 cursor = "crosshair"
+            else if (mouseAction == Editor.EditorAction.DragClone)
+                cursor = "crosshair"
             else if (mouseAction == Editor.EditorAction.DragTime ||
                 mouseAction == Editor.EditorAction.DragTimeAndRow ||
                 mouseAction == Editor.EditorAction.DragRow ||

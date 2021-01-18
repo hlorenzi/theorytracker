@@ -18,6 +18,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
 
     const selectMultiple = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
     const selectRange = data.state.keysDown.has(data.prefs.editor.keySelectRange)
+    const selectClone = data.state.keysDown.has(data.prefs.editor.keySelectClone)
     const forcePan = data.state.keysDown.has(data.prefs.editor.keyPan)
     const doubleClick =
         data.state.mouse.downDate.getTime() - prevDownDate.getTime() <
@@ -120,6 +121,11 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
             if (doubleClick)
             {
                 withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
+            }
+
+            if (selectClone)
+            {
+                data.state.mouse.action = Editor.EditorAction.DragClone
             }
         }
     }

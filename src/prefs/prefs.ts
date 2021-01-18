@@ -39,6 +39,7 @@ export interface Prefs
         keySelectMultiple: string
         keySelectRange: string
         keySelectRect: string
+        keySelectClone: string
         keyDisplaceCursor2: string
         keyDisplaceFast: string
         keyDisplaceChromatically: string
@@ -97,6 +98,7 @@ export function getDefault(): Prefs
             keySelectMultiple: "control",
             keySelectRange: "shift",
             keySelectRect: "shift",
+            keySelectClone: "alt",
             keyDisplaceCursor2: "shift",
             keyDisplaceFast: "control",
             keyDisplaceChromatically: "shift",

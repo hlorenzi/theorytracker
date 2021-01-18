@@ -247,3 +247,31 @@ export function getTrack<T extends Project.Track["trackType"]>(
 
     return elem as any
 }
+
+
+export function cloneElem(
+    fromProject: Root,
+    elem: Project.Element,
+    toProject: Root)
+    : Root
+{
+    const newElem = { ...elem }
+    newElem.id = -1
+
+    const newId = toProject.nextId
+    toProject = Project.upsertElement(toProject, newElem)
+
+    const innerList = fromProject.lists.get(elem.id)
+    if (innerList)
+    {
+        for (const innerElem of innerList.iterAll())
+        {
+            const newInnerElem = { ...innerElem }
+            newInnerElem.parentId = newId
+            
+            toProject = cloneElem(fromProject, newInnerElem, toProject)
+        }
+    }
+
+    return toProject
+}
