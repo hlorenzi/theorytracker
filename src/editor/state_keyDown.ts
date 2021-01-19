@@ -91,6 +91,39 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
             data.projectCtx.ref.current.addUndoPoint("keyDown_insert")
             break
         }
+
+        case "c":
+        {
+            if (data.state.keysDown.has("control"))
+                Editor.selectionCopy(data)
+
+            break
+        }
+
+        case "x":
+        {
+            if (data.state.keysDown.has("control"))
+            {
+                Editor.selectionCopy(data)
+                Editor.selectionDelete(data)
+                data.projectCtx.ref.current.splitUndoPoint()
+                data.projectCtx.ref.current.addUndoPoint("cut")
+            }
+
+            break
+        }
+
+        case "v":
+        {
+            if (data.state.keysDown.has("control"))
+            {
+                Editor.paste(data)
+                data.projectCtx.ref.current.splitUndoPoint()
+                data.projectCtx.ref.current.addUndoPoint("copy")
+            }
+                
+            break
+        }
     }
 }
 
@@ -148,7 +181,7 @@ function handleEnter(data: Editor.EditorUpdateData)
         let trackId = data.state.tracks[0].projectTrackId
         for (const id of data.state.selection)
         {
-            trackId = Editor.parentTrackFor(data, id).id
+            trackId = Project.parentTrackFor(data.project, id).id
         }
 
         const trackIndex = data.state.tracks.findIndex(tr => tr.projectTrackId === trackId)
@@ -202,6 +235,8 @@ function handleBackspace(data: Editor.EditorUpdateData)
         Editor.cursorSetTime(data, time1, time1)
         Editor.scrollTimeIntoView(data, time1)
     }
+    
+    data.project = Project.withRefreshedRange(data.project)
 }
 
 
@@ -265,8 +300,8 @@ function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
                 
             if (keyStretch && selectionRange)
             {
-                const absRange = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
-                newRange = Editor.getRelativeRange(data, elem.parentId, absRange.stretch(
+                const absRange = Project.getAbsoluteRange(data.project, elem.parentId, elem.range)
+                newRange = Project.getRelativeRange(data.project, elem.parentId, absRange.stretch(
                     timeDelta,
                     selectionRange.start,
                     selectionRange.end))
@@ -342,7 +377,7 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
             if (elem.type != "note")
                 return elem
                 
-            const track = Editor.parentTrackFor(data, elem.parentId)
+            const track = Project.parentTrackFor(data.project, elem.parentId)
             const key = Editor.keyAt(data, track.id, elem.range.start)
             const degree = key.octavedDegreeForMidi(elem.midiPitch)
             const newDegree = degree + degreeDelta

@@ -327,6 +327,8 @@ export class EditorTrackNotes extends EditorTrack
 
 	selectionRemoveConflictingBehind(data: Editor.EditorUpdateData)
 	{
+        data.project = data.projectCtx.ref.current.project
+
         const list = data.project.lists.get(this.parentId)
         if (!list)
             return
@@ -364,6 +366,8 @@ export class EditorTrackNotes extends EditorTrack
 				}
 			}
 		}
+
+        data.projectCtx.ref.current.project = data.project
 	}
 
 

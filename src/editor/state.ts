@@ -666,73 +666,6 @@ export function meterAt(data: EditorUpdateData, trackId: Project.ID, time: Ratio
 }
 
 
-export function parentTrackFor(data: EditorUpdateData, elemId: Project.ID): Project.Track
-{
-    while (true)
-    {
-        const elem = data.project.elems.get(elemId)
-        if (!elem)
-            return null!
-            
-        if (elem.type == "track")
-            return elem
-
-        elemId = elem.parentId
-    }
-}
-
-
-export function getAbsoluteTime(data: EditorUpdateData, parentId: Project.ID, time: Rational): Rational
-{
-    while (true)
-    {
-        const elem = data.project.elems.get(parentId)
-        if (!elem)
-            return time
-            
-        if (elem.type == "track")
-            return time
-
-        time = time.add(elem.range.start)
-        parentId = elem.parentId
-    }
-}
-
-
-export function getAbsoluteRange(data: EditorUpdateData, parentId: Project.ID, range: Range): Range
-{
-    while (true)
-    {
-        const elem = data.project.elems.get(parentId)
-        if (!elem)
-            return range
-            
-        if (elem.type == "track")
-            return range
-
-        range = range.displace(elem.range.start)
-        parentId = elem.parentId
-    }
-}
-
-
-export function getRelativeRange(data: EditorUpdateData, parentId: Project.ID, range: Range): Range
-{
-    while (true)
-    {
-        const elem = data.project.elems.get(parentId)
-        if (!elem)
-            return range
-            
-        if (elem.type == "track")
-            return range
-
-        range = range.subtract(elem.range.start)
-        parentId = elem.parentId
-    }
-}
-
-
 export function selectionClear(data: EditorUpdateData)
 {
     data.state.selection = data.state.selection.clear()
@@ -752,10 +685,8 @@ export function selectionRange(data: EditorUpdateData): Range | null
         if (elem.type == "track")
             continue
 
-        const start = getAbsoluteTime(data, elem.parentId, elem.range.start)
-        const end = getAbsoluteTime(data, elem.parentId, elem.range.end)
-
-        range = Range.merge(range, new Range(start, end))
+        const absRange = Project.getAbsoluteRange(data.project, elem.parentId, elem.range)
+        range = Range.merge(range, absRange)
     }
 
     return range
@@ -841,9 +772,141 @@ export function selectionDelete(data: EditorUpdateData)
         data.project = Project.upsertTrack(data.project, track, true)
     }
 
+    data.project = Project.withRefreshedRange(data.project)
     data.state.cursor.visible = true
     cursorSetTime(data, range.start, range.start)
     scrollTimeIntoView(data, range.start)
+}
+
+
+export function selectionCopy(data: EditorUpdateData)
+{
+    const copiedData: Project.CopiedData =
+    {
+        project: data.project,
+        elemsByTrack: [],
+    }
+
+    for (let tr = 0; tr < data.state.tracks.length; tr++)
+        copiedData.elemsByTrack.push([])
+
+    for (const elemId of data.state.selection)
+    {
+        const elem = data.project.elems.get(elemId)
+        if (!elem || elem.type == "track")
+            continue
+        
+        const trackIndex = data.state.tracks.findIndex(tr => tr.parentId == elem.parentId)
+        if (trackIndex < 0)
+            continue
+
+        copiedData.elemsByTrack[trackIndex].push(elem)
+    }
+
+    while (copiedData.elemsByTrack.length > 0 && copiedData.elemsByTrack[0].length == 0)
+        copiedData.elemsByTrack.shift()
+
+    let copiedRange: Range | null = null
+    for (let ctr = 0; ctr < copiedData.elemsByTrack.length; ctr++)
+    {
+        const copiedTrack = copiedData.elemsByTrack[ctr]
+
+        for (const elem of copiedTrack)
+        {
+            copiedRange =
+                Project.getAbsoluteRange(copiedData.project, elem.parentId, elem.range)
+                .merge(copiedRange)
+        }
+    }
+
+    if (!copiedRange)
+        return
+        
+    cursorSetTime(data, copiedRange.end, copiedRange.end)
+    data.projectCtx.ref.current.copiedData = copiedData
+
+    //console.log("copy", copiedData)
+}
+
+
+export function paste(data: EditorUpdateData)
+{
+    const copiedData = data.projectCtx.ref.current.copiedData
+    if (!copiedData)
+        return
+
+    const pasteToTime = data.state.cursor.time1.min(data.state.cursor.time2)
+    const pasteToTrackIndex = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+
+    let copiedRange: Range | null = null
+    for (let ctr = 0; ctr < copiedData.elemsByTrack.length; ctr++)
+    {
+        const copiedTrack = copiedData.elemsByTrack[ctr]
+
+        for (const elem of copiedTrack)
+        {
+            copiedRange =
+                Project.getAbsoluteRange(copiedData.project, elem.parentId, elem.range)
+                .merge(copiedRange)
+        }
+    }
+
+    if (!copiedRange)
+        return
+        
+    //console.log("paste", copiedData, copiedRange)
+    
+    selectionClear(data)
+
+    let newProject = data.project
+    let maxAffectedTrackIndex = pasteToTrackIndex
+
+    for (let ctr = 0; ctr < copiedData.elemsByTrack.length; ctr++)
+    {
+        const copiedTrack = copiedData.elemsByTrack[ctr]
+
+        for (const elem of copiedTrack)
+        {
+            const pasteTrackIndex = data.state.tracks
+                .slice(pasteToTrackIndex + ctr)
+                .findIndex(tr => tr.acceptedElemTypes.has(elem.type))
+
+            if (pasteTrackIndex < 0)
+                continue
+
+            const copyToTrack = data.state.tracks[pasteToTrackIndex + ctr + pasteTrackIndex]
+            maxAffectedTrackIndex = Math.max(maxAffectedTrackIndex, pasteToTrackIndex + ctr + pasteTrackIndex)
+
+            const absRange = Project.getAbsoluteRange(copiedData.project, elem.parentId, elem.range)
+            const newAbsRange = absRange.subtract(copiedRange.start).displace(pasteToTime)
+            const newRelRange = Project.getRelativeRange(newProject, copyToTrack.parentId, newAbsRange)
+
+            const newElemId = newProject.nextId
+            newProject = Project.cloneElem(copiedData.project, elem, newProject)
+
+            const newElem =
+            {
+                ...elem,
+                id: newElemId,
+                parentId: copyToTrack.parentId,
+                range: newRelRange,
+            }
+
+            //console.log("paste elem", elem, newElem)
+
+            newProject = Project.upsertElement(newProject, newElem)
+            selectionAdd(data, newElemId)
+        }
+    }
+
+    const newCursorTime = pasteToTime.add(copiedRange.duration)
+    cursorSetTime(data, newCursorTime, newCursorTime)
+    cursorSetTrack(data, pasteToTrackIndex, maxAffectedTrackIndex)
+    scrollTimeIntoView(data, newCursorTime)
+    
+    data.project = Project.withRefreshedRange(newProject)
+    data.projectCtx.ref.current.project = data.project
+    selectionRemoveConflictingBehind(data)
 }
 
 

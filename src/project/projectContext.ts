@@ -1,5 +1,5 @@
 import React from "react"
-import * as Project from "./root"
+import * as Project from "./index"
 import { RefState, useRefState } from "../util/refState"
 
 
@@ -9,6 +9,8 @@ export interface ProjectContextProps
 
     undoStack: UndoPoint[]
     undoIndex: number
+
+    copiedData: CopiedData | null
 
     setNew: () => void
 
@@ -24,6 +26,13 @@ export interface UndoPoint
 {
     tag: string
     project: Project.Root
+}
+
+
+export interface CopiedData
+{
+    project: Project.Root
+    elemsByTrack: Project.Element[][]
 }
 
 
@@ -73,7 +82,7 @@ export function useProjectInit(): RefState<ProjectContextProps>
 
             refState.ref.current.undoIndex = refState.ref.current.undoStack.length - 1
 
-            console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
+            //console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
         }
 
 
@@ -93,7 +102,7 @@ export function useProjectInit(): RefState<ProjectContextProps>
                 refState.ref.current.undoStack[refState.ref.current.undoIndex].project
                 
             window.dispatchEvent(new Event("timelineRefresh"))
-            console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
+            //console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
         }
         
 
@@ -107,7 +116,7 @@ export function useProjectInit(): RefState<ProjectContextProps>
                 refState.ref.current.undoStack[refState.ref.current.undoIndex].project
                 
             window.dispatchEvent(new Event("timelineRefresh"))
-            console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
+            //console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
         }
 
 
@@ -121,6 +130,8 @@ export function useProjectInit(): RefState<ProjectContextProps>
                 project: initialProject,
             }],
             undoIndex: 0,
+
+            copiedData: null,
 
             setNew,
 

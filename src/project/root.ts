@@ -275,3 +275,70 @@ export function cloneElem(
 
     return toProject
 }
+
+
+export function parentTrackFor(project: Root, elemId: Project.ID): Project.Track
+{
+    while (true)
+    {
+        const elem = project.elems.get(elemId)
+        if (!elem)
+            return null!
+            
+        if (elem.type == "track")
+            return elem
+
+        elemId = elem.parentId
+    }
+}
+
+
+export function getAbsoluteTime(project: Root, parentId: Project.ID, time: Rational): Rational
+{
+    while (true)
+    {
+        const elem = project.elems.get(parentId)
+        if (!elem)
+            return time
+            
+        if (elem.type == "track")
+            return time
+
+        time = time.add(elem.range.start)
+        parentId = elem.parentId
+    }
+}
+
+
+export function getAbsoluteRange(project: Root, parentId: Project.ID, range: Range): Range
+{
+    while (true)
+    {
+        const elem = project.elems.get(parentId)
+        if (!elem)
+            return range
+            
+        if (elem.type == "track")
+            return range
+
+        range = range.displace(elem.range.start)
+        parentId = elem.parentId
+    }
+}
+
+
+export function getRelativeRange(project: Root, parentId: Project.ID, range: Range): Range
+{
+    while (true)
+    {
+        const elem = project.elems.get(parentId)
+        if (!elem)
+            return range
+            
+        if (elem.type == "track")
+            return range
+
+        range = range.subtract(elem.range.start)
+        parentId = elem.parentId
+    }
+}

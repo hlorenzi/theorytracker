@@ -100,7 +100,7 @@ export class EditorTrackNoteVelocities extends EditorTrack
                 newProject = Project.upsertElement(newProject, newNote)
                 
                 data.playback.playNotePreview(
-                    Editor.parentTrackFor(data, newNote.parentId).id,
+                    Project.parentTrackFor(data.project, newNote.parentId).id,
                     newNote.midiPitch,
                     newNote.velocity)
             }

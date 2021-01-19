@@ -121,11 +121,12 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                 mouseAction = Editor.EditorAction.None
         }
 
+        const origProject = data.state.drag.origin.project
         let newProject = data.state.drag.origin.project
 
 		for (const id of data.state.selection)
 		{
-			const elem = data.state.drag.origin.project.elems.get(id)
+			const elem = origProject.elems.get(id)
 			if (!elem)
                 continue
 
@@ -141,7 +142,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             if (mouseAction == Editor.EditorAction.StretchTimeStart &&
                 data.state.drag.origin.range)
             {
-                changes.range = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
+                changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
                 changes.range = changes.range.stretch(
                     data.state.drag.timeDelta,
                     data.state.drag.origin.range.end,
@@ -153,13 +154,13 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                         changes.range.end)
                     
                 changes.range = changes.range.sorted()
-                changes.range = Editor.getRelativeRange(data, elem.parentId, changes.range)
+                changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)
             }
 
             if (mouseAction == Editor.EditorAction.StretchTimeEnd &&
                 data.state.drag.origin.range)
             {
-                changes.range = Editor.getAbsoluteRange(data, elem.parentId, elem.range)
+                changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
                 changes.range = changes.range.stretch(
                     data.state.drag.timeDelta,
                     data.state.drag.origin.range.start,
@@ -171,7 +172,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                         changes.range.end.snap(data.state.timeSnap))
 
                 changes.range = changes.range.sorted()
-                changes.range = Editor.getRelativeRange(data, elem.parentId, changes.range)
+                changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)
             }
         
             if ((mouseAction == Editor.EditorAction.DragRow ||
@@ -347,8 +348,6 @@ function handleDragClone(data: Editor.EditorUpdateData)
         if (elemId == data.state.drag.elemId)
             data.state.drag.elemId = newId
     }
-
-    console.log(origProject, newProject)
 
     Editor.selectionClear(data)
     for (const id of newIds)
