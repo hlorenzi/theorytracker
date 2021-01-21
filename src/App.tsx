@@ -75,7 +75,7 @@ export default function App()
                 </Menubar.Root>
 
                 { !playbackCtx.ref.current.synthLoading ? null :
-                    <UI.LoadingBar/>
+                    <UI.LoadingBar floating/>
                 }
 
                 <Dockable.Container/>

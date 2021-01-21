@@ -1,22 +1,29 @@
 import * as Playback from "./index"
 import * as Project from "../project"
-import { Instrument } from "../project"
 
 
 export class SynthManager
 {
-    audioCtx: AudioContext
+    audioCtx: BaseAudioContext
 	nodeGain: GainNode
 	nodeCompressor: DynamicsCompressorNode
 
 	trackInstruments: Map<Project.ID, Playback.Instrument>
 
 
-	constructor()
+	constructor(toBuffer?: boolean, bufferLen?: number, bufferSampleRate?: number)
 	{
 		this.trackInstruments = new Map<Project.ID, Playback.Instrument>()
 		
-		this.audioCtx = new AudioContext()
+		if (toBuffer)
+		{
+			this.audioCtx = new OfflineAudioContext(2, bufferLen!, bufferSampleRate!)
+		}
+		else
+		{
+			this.audioCtx = new AudioContext()
+		}
+
 		this.nodeGain = this.audioCtx.createGain()
 		this.nodeGain.gain.value = 0.1
 
@@ -67,6 +74,13 @@ export class SynthManager
 			this.trackInstruments.set(track.id, instrument)
 		}
 	}
+
+
+	async destroy()
+	{
+		if (this.audioCtx instanceof AudioContext)
+			await this.audioCtx.close()
+	}
 	
 	
 	isFinished()
@@ -101,22 +115,12 @@ export class SynthManager
 	}
 
 
-	playNote(trackId: Project.ID, noteId: Project.ID, frequency: number, volume: number)
+	playNote(request: Playback.NoteRequest)
 	{
-		const instrument = this.trackInstruments.get(trackId)
+		const instrument = this.trackInstruments.get(request.trackId)
 		if (!instrument)
 			return
 
-		instrument.playNote(noteId, frequency, volume)
-	}
-
-
-	releaseNote(trackId: Project.ID, noteId: Project.ID)
-	{
-		const instrument = this.trackInstruments.get(trackId)
-		if (!instrument)
-			return
-
-		instrument.releaseNote(noteId)
+		instrument.playNote(request)
 	}
 }

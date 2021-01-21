@@ -4,6 +4,12 @@ export async function waitFrame()
 }
 
 
+export async function waitSeconds(seconds: number)
+{
+    return new Promise((resolve, _) => setTimeout(resolve, seconds * 1000))
+}
+
+
 export class Mutex
 {
     locked: boolean

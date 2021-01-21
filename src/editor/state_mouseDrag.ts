@@ -248,9 +248,6 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
 
 	const modifyTrackAtMouse = (func: (tr: Project.Track) => Project.Track) =>
 	{
-        if (!data.state.hover)
-            return
-        
         let project = data.project
 
         const trackIndex = data.state.mouse.point.trackIndex

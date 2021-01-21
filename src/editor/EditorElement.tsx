@@ -216,6 +216,13 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             Editor.mouseMove(updateData, pos)
             Editor.mouseDown(updateData, ev.button != 0)
             Editor.mouseDrag(updateData, pos)
+
+            if (updateData.project !== project.ref.current.project)
+            {
+                project.ref.current.project = updateData.project
+                project.commit()
+            }
+
             render()
             setCursor(updateData.state)
             editorState.commit()

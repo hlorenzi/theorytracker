@@ -9,29 +9,48 @@ export function feedNotes(
     synth: Playback.SynthManager,
     project: Project.Root,
     isStart: boolean,
-    startTime: Rational,
-    range: Range)
+    audioOffsetMs: number,
+    playbackStart: Rational,
+    feedRange: Range)
 {
     const anySolo = project.tracks.some(tr => tr.solo)
 
-    for (const [track, note] of iterNotesAtRange(project, range))
+    const playbackStartMs = Project.getMillisecondsAt(project, playbackStart)
+    const feedRangeStartMs = Project.getMillisecondsAt(project, feedRange.start)
+
+    for (const [track, note] of iterNotesAtRange(project, feedRange))
     {
-        if (range.overlapsPoint(note.range.end))
+        if (anySolo && !track.solo)
+            continue
+
+        if (track.mute && !track.solo)
+            continue
+
+        if (feedRange.overlapsPoint(note.range.start) ||
+            (isStart && feedRange.overlapsPoint(playbackStart)))
         {
-            synth.releaseNote(
-                track.id,
-                note.id)
-        }
-        else if (range.overlapsPoint(note.range.start) ||
-            (isStart && range.overlapsPoint(startTime)))
-        {
-            synth.playNote(
-                track.id,
-                note.id,
-                note.midiPitch,
-                track.mute ? 0 :
-                    anySolo && !track.solo ? 0 :
-                    midiVolumeToLinearGain(track.volume * note.velocity))
+            const startMs =
+                Project.getMillisecondsAt(project, note.range.start.max(playbackStart)) +
+                audioOffsetMs - feedRangeStartMs
+            
+            const endMs =
+                Project.getMillisecondsAt(project, note.range.end) +
+                audioOffsetMs - feedRangeStartMs
+
+            const request: Playback.NoteRequest =
+            {
+                trackId: track.id,
+                noteId: note.id,
+
+                startMs,
+                durationMs: endMs - startMs,
+
+                midiPitchSeq: [{ timeMs: startMs, value: note.midiPitch }],
+                volumeSeq: [{ timeMs: startMs, value: midiVolumeToLinearGain(track.volume * note.velocity) }],
+                velocitySeq: [{ timeMs: startMs, value: 1 }],
+            }
+
+            synth.playNote(request)
         }
     }
 }

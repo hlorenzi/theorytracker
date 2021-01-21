@@ -101,9 +101,9 @@ export class InstrumentBasic extends Playback.Instrument
 	}
 
 
-	playNote(noteId: Project.ID, desiredFreq: number, desiredVolume: number)
+	playNote(request: Playback.NoteRequest)
 	{
-        if (this.notes.has(noteId))
+        /*if (this.notes.has(request.noteId))
             return
 
 		// Find the primary sample whose frequency is nearest to the desired frequency.
@@ -170,7 +170,7 @@ export class InstrumentBasic extends Playback.Instrument
             voices,
         }
         
-        this.notes.set(noteId, note)
+        this.notes.set(noteId, note)*/
     }
 
 

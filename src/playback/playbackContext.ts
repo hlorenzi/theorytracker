@@ -6,6 +6,9 @@ import Rect from "../util/rect"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import * as MathUtils from "../util/mathUtils"
+import { SynthManager } from "./synthManager"
+import { Utils } from "../theory"
+import * as AynscUtils from "../util/async"
 
 
 export interface PlaybackContextProps
@@ -33,6 +36,8 @@ export interface PlaybackContextProps
     togglePlaying: () => void
 
     playNotePreview: (trackId: Project.ID, midiPitch: number, volume: number) => void
+
+    renderToBuffer: (range: Range, onProgress: (p: number) => void) => Promise<AudioBuffer>
 }
 
 
@@ -51,7 +56,7 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
     const playback = useRefState<PlaybackContextProps>(() =>
     {
         return {
-            synth: new Playback.SynthManager(),
+            synth: new Playback.SynthManager(false),
             synthLoading: false,
 
             playing: false,
@@ -95,7 +100,9 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
                 window.dispatchEvent(new CustomEvent("playbackPlayNotePreview", {
                     detail: { trackId, midiPitch, volume },
                 }))
-            }
+            },
+
+            renderToBuffer: null!,
         }
     })
 
@@ -128,12 +135,13 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
                 playback.ref.current.synth,
                 projectRef.ref.current.project,
                 playback.ref.current.firstPlayingFrame,
+                0.05 + playback.ref.current.synth.audioCtx.currentTime * 1000,
                 playback.ref.current.startTime,
                 new Range(
                     playback.ref.current.playTimePrev,
                     playback.ref.current.playTime,
                     true,
-                    true))
+                    false))
 
             playback.ref.current.refreshTimeMs += deltaTimeMs
             if (canRedrawScreen)// && playback.ref.current.refreshTimeMs >= 1000 / 30)
@@ -242,17 +250,20 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
             if (playback.ref.current.playing)
                 return
 
-            playback.ref.current.synth.stopAll()
-            playback.ref.current.synth.playNote(
-                data.trackId, 0,
-                data.midiPitch,
-                data.volume)
+            const time = 0.05 + 1000 * playback.ref.current.synth.audioCtx.currentTime
 
-            setTimeout(() =>
-            {
-                playback.ref.current.synth.releaseNote(data.trackId, 0)
+            //playback.ref.current.synth.stopAll()
+            playback.ref.current.synth.playNote({
+                trackId: data.trackId,
+                noteId: -1,
+                
+                startMs: time,
+                durationMs: 100,
 
-            }, 100)
+                midiPitchSeq: [{ timeMs: time, value: data.midiPitch }],
+                volumeSeq: [{ timeMs: time, value: data.volume }],
+                velocitySeq: [{ timeMs: time, value: 1 }],
+            })
         })
 
         window.addEventListener("playbackStartPlaying", () => setPlaying(true))
@@ -261,5 +272,61 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
 
     }, [])
 
+    playback.ref.current.renderToBuffer = (range: Range, onProgress: (p: number) => void) =>
+        renderToBuffer(playback, projectRef, range, onProgress)
+
     return playback
+}
+
+
+async function renderToBuffer(
+    playback: RefState<Playback.PlaybackContextProps>,
+    projectCtx: RefState<Project.ProjectContextProps>,
+    range: Range,
+    onProgress: (p: number) => void)
+    : Promise<AudioBuffer>
+{
+    const project = projectCtx.ref.current.project
+    const startMs = Project.getMillisecondsAt(project, range.start)
+    const endMs = 1000 + Project.getMillisecondsAt(project, range.end)
+    const durationMs = endMs - startMs
+
+    const sampleRate = 44100
+    const sampleCount = sampleRate * Math.ceil(durationMs / 1000)
+
+    console.log(
+        "renderToBuffer",
+        "range", range,
+        "durationMs", durationMs,
+        "sampleCount", sampleCount)
+
+    const offlineSynth = new SynthManager(true, sampleCount, sampleRate)
+    await offlineSynth.prepare(project)
+
+    Playback.feedNotes(
+        offlineSynth,
+        project,
+        true,
+        0,
+        range.start,
+        range)
+
+    const offlineCtx = offlineSynth.audioCtx as OfflineAudioContext
+
+    let audioBuffer: AudioBuffer | null = null
+    offlineCtx.startRendering().then(b => audioBuffer = b)
+
+    while (!audioBuffer)
+    {
+        const progress = offlineCtx.currentTime / (durationMs / 1000)
+        onProgress(progress)
+        await AynscUtils.waitSeconds(0.2)
+    }
+
+    await offlineSynth.destroy()
+
+    onProgress(1)
+    await AynscUtils.waitSeconds(0.2)
+
+    return audioBuffer
 }

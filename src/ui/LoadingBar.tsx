@@ -46,19 +46,63 @@ const DivLoadingBar = styled.div<LoadingBarStyleProps>`
 `
 
 
-export function LoadingBar()
+export interface LoadingBarProps
 {
-    return <div style={{
-        position: "absolute",
-        width: "100%",
-        height: "8px",
-        zIndex: 1,
-    }}>
-        <DivLoadingBar
-            thickness={ 8 }
-            size={ 20 }
-            color1="#444"
-            color2="#888"
-        />
-    </div>
+    floating?: boolean
+    progress?: number
+}
+
+
+export function LoadingBar(props: LoadingBarProps)
+{
+    const clipProgress = 100 * (props.progress === undefined ? 1 : props.progress)
+    const clipPath =
+        "polygon(0% -10%, "
+        + clipProgress + "% -10%, "
+        + clipProgress + "% 100%, " +
+        "0% 100%)"
+
+    if (props.floating)
+    {
+        return <div style={{
+            position: "absolute",
+            width: "100%",
+            height: "8px",
+            zIndex: 1,
+            overflow: "hidden",
+            clipPath,
+        }}>
+            <DivLoadingBar
+                thickness={ 8 }
+                size={ 20 }
+                color1="#444"
+                color2="#888"
+            />
+        </div>
+    }
+    else
+    {
+        return <div style={{
+            width: "100%",
+            height: "8px",
+            zIndex: 1,
+            overflow: "hidden",
+            backgroundColor: "#000",
+            border: "1px solid #888",
+        }}>
+            <div style={{
+                width: "100%",
+                height: "8px",
+                overflow: "hidden",
+                clipPath,
+            }}>
+                <DivLoadingBar
+                    thickness={ 8 }
+                    size={ 20 }
+                    color1="#444"
+                    color2="#888"
+                />
+            </div>
+        </div>
+    }
 }

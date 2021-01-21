@@ -342,3 +342,10 @@ export function getRelativeRange(project: Root, parentId: Project.ID, range: Ran
         parentId = elem.parentId
     }
 }
+
+
+export function getMillisecondsAt(project: Root, time: Rational): number
+{
+    const measuresPerSecond = (project.baseBpm / 4 / 60)
+    return time.subtract(project.range.start).asFloat() / measuresPerSecond * 1000
+}

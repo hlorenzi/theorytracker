@@ -1,13 +1,16 @@
 import React from "react"
+import * as Dockable from "./dockable"
 import * as Project from "./project"
 import * as Menubar from "./menubar"
 import * as Popup from "./popup"
 import * as Playback from "./playback"
+import * as Windows from "./windows"
 import { Input } from "./ui"
 
 
 export default function MenuFile()
 {
+    const dockable = Dockable.useDockable()
     const project = Project.useProject()
     const playback = Playback.usePlayback()
 
@@ -89,6 +92,11 @@ export default function MenuFile()
         newWindow.document.write("</code>")
     }
 
+    const onRender = () =>
+    {
+        dockable.ref.current.createFloating(Windows.Render, null)
+    }
+
 
     return <>
         <Menubar.Item label="File">
@@ -123,6 +131,12 @@ export default function MenuFile()
                     icon="📥"
                     label="Preview as JSON"
                     onClick={ onJsonPreview }
+                />
+                <Popup.Divider/>
+                <Popup.Button
+                    icon="💿"
+                    label="Render..."
+                    onClick={ onRender }
                 />
             </Popup.Root>
         </Menubar.Item>

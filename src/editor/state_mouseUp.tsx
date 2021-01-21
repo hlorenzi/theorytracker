@@ -73,6 +73,7 @@ function handleTrackDragRelease(data: Editor.EditorUpdateData)
         project = Project.upsertTrack(project, track, false, beforeProjectTrackIndex)
 
     data.project = project
+    data.projectCtx.ref.current.project = project
 }
 
 

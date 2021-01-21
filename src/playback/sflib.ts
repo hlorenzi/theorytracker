@@ -134,7 +134,7 @@ const sflibGetInstrumentLock = new AsyncUtils.Mutex()
 export async function sflibGetInstrument(
     collectionId: string,
     instrumentId: string,
-    audioCtx: AudioContext)
+    audioCtx: BaseAudioContext)
     : Promise<SflibInstrument | null>
 {
     if (!sflibMeta)
@@ -173,13 +173,13 @@ export async function sflibGetInstrument(
         const audioBufferData = audioBuffer.getChannelData(0)
         for (let i = 0; i < bytes.length / 2; i++)
         {
-            const b0 = bytes[i * 2]
-            const b1 = bytes[i * 2 + 1]
-            let uint16 = (b0 << 8) | b1
+            const b0 = bytes[i * 2] & 0xff
+            const b1 = bytes[i * 2 + 1] & 0xff
+            let uint16 = ((b0 << 8) | b1) & 0xffff
             if ((uint16 & 0x8000) != 0)
                 uint16 = -(0x10000 - uint16)
 
-            audioBufferData[i] = (uint16 / 0x8000) * 2 - 1
+            audioBufferData[i] = (uint16 / 0x8000) * 2
 
             yieldCount++
             if (yieldCount >= 100000)

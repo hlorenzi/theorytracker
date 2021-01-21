@@ -410,7 +410,7 @@ function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
         data.ctx.fillText(displayName, 10, 8, data.state.trackHeaderW - 20)
 
         renderControlDial(data, 0, "Vol", projTrack.volume)
-        renderControlIcon(data, 7, "🔊", !projTrack.mute)
+        renderControlIcon(data, 7, "🔇", projTrack.mute)
         renderControlIcon(data, 8, "🎚️", projTrack.solo)
     }
     else

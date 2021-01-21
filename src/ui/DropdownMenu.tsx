@@ -11,7 +11,7 @@ interface DropdownMenuProps
         value: any
     }[]
 
-    onChange: (item: any, index: number) => void
+    onChange?: (item: any, index: number) => void
 
     style?: any
 }
@@ -31,7 +31,7 @@ export function DropdownMenu(props: DropdownMenuProps)
                 return
 
             const index = ev.target.selectedIndex - (hasDefinite ? 0 : 1)
-            props.onChange(props.items[index], index)
+            props.onChange?.(props.items[index], index)
         }}
         style={{
             display: "inline-block",

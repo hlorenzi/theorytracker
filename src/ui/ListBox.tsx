@@ -32,7 +32,7 @@ export interface ListBoxProps
         value: any
     }[]
 
-    onChange: (item: any, index: number) => void
+    onChange?: (item: any, index: number) => void
 
     style?: any
 }
@@ -50,7 +50,7 @@ export function ListBox(props: ListBoxProps)
         return props.items.map((item, i) =>
             <StyledListBoxItem
                 key={ i }
-                onClick={ () => props.onChange(item, i) }
+                onClick={ () => props.onChange?.(item, i) }
                 active={ props.active === item.value }
                 selected={ props.selected === item.value }
             >

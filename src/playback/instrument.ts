@@ -2,6 +2,27 @@ import * as Playback from "./index"
 import * as Project from "../project"
 
 
+export interface NoteRequest
+{
+	trackId: Project.ID
+	noteId: Project.ID
+	
+	startMs: number
+	durationMs: number
+
+	midiPitchSeq: TimeVariableProperty[]
+	volumeSeq: TimeVariableProperty[]
+	velocitySeq: TimeVariableProperty[]
+}
+
+
+export interface TimeVariableProperty
+{
+	timeMs: number
+	value: number
+}
+
+
 export class Instrument
 {
 	synth: Playback.SynthManager
@@ -31,14 +52,8 @@ export class Instrument
 	}
 
 
-	playNote(noteId: Project.ID, midiPitch: number, volume: number)
+	playNote(request: Playback.NoteRequest)
 	{
-		
-    }
-    
-
-    releaseNote(noteId: Project.ID)
-    {
 		
     }
 
