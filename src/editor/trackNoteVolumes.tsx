@@ -11,8 +11,11 @@ import * as CanvasUtils from "../util/canvasUtils"
 import { EditorTrack } from "./track"
 
 
-export class EditorTrackNoteVelocities extends EditorTrack
+export class EditorTrackNoteVolumes extends EditorTrack
 {
+    minValue: number
+    maxValue: number
+
     pencil: null |
     {
         time1: Rational
@@ -26,10 +29,12 @@ export class EditorTrackNoteVelocities extends EditorTrack
         super()
         this.projectTrackId = projectTrackId
         this.parentId = noteBlockId
-        this.name = "Note Velocity"
+        this.name = "Note Volume"
         this.renderRect = new Rect(0, 0, 0, h)
         this.pencil = null
         this.noCursor = true
+        this.minValue = Project.MinVolumeDb
+        this.maxValue = Project.MaxVolumeDb
     }
 
 
@@ -63,13 +68,15 @@ export class EditorTrackNoteVelocities extends EditorTrack
 
     valueAtY(data: Editor.EditorUpdateData, y: number)
     {
-        return Math.max(0, Math.min(1, 1 - (y / this.renderRect.h)))
+        const f = Math.max(0, Math.min(1, 1 - (y / this.renderRect.h)))
+        return this.minValue + f * (this.maxValue - this.minValue)
     }
 
 
     yAtValue(data: Editor.EditorUpdateData, value: number)
     {
-        return (1 - value) * this.renderRect.h
+        const f = (value - this.minValue) / (this.maxValue - this.minValue)
+        return (1 - f) * this.renderRect.h
     }
 
 
@@ -94,8 +101,8 @@ export class EditorTrackNoteVelocities extends EditorTrack
             const markerX = Editor.xAtTime(data, note.range.start.add(parentStart))
             if (markerX >= xMin && markerX <= xMax)
             {
-                const velocity = this.valueAtY(data, data.state.mouse.point.originTrackPos.y)
-                const newNote = Project.elemModify(note, { velocity })
+                const volumeDb = this.valueAtY(data, data.state.mouse.point.originTrackPos.y)
+                const newNote = Project.elemModify(note, { volumeDb })
             
                 newProject = Project.upsertElement(newProject, newNote)
                 
@@ -136,7 +143,7 @@ export class EditorTrackNoteVelocities extends EditorTrack
                     continue
 
                 this.renderMarkerStick(
-                    data, parentStart, note.range, note.velocity, active)
+                    data, parentStart, note.range, note.volumeDb, active)
             }
         }
     }

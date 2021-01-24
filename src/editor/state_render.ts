@@ -409,7 +409,10 @@ function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
         const displayName = Project.trackDisplayName(projTrack)
         data.ctx.fillText(displayName, 10, 8, data.state.trackHeaderW - 20)
 
-        renderControlDial(data, 0, "Vol", projTrack.volume)
+        renderControlDial(data, 0,
+            (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + " dB",
+            projTrack.volumeDb, Project.MinVolumeDb, Project.MaxVolumeDb)
+
         renderControlIcon(data, 7, "🔇", projTrack.mute)
         renderControlIcon(data, 8, "🎚️", projTrack.solo)
     }
@@ -428,14 +431,16 @@ function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
 function renderControlDial(
     data: Editor.EditorUpdateData,
     xSlot: number,
-    label: string,
-    value: number)
+    labelFn: (value: number) => string,
+    value: number,
+    minValue: number,
+    maxValue: number)
 {
     const x = data.state.trackControlX + data.state.trackControlSize * xSlot
     const y = data.state.trackControlY
     const size = data.state.trackControlSize
 
-    const factor = value
+    const factor = (value - minValue) / (maxValue - minValue)
 
     data.ctx.fillStyle = "#888"
     data.ctx.fillRect(
@@ -448,12 +453,16 @@ function renderControlDial(
         5, factor * size)
 
     data.ctx.fillStyle = "#fff"
-    data.ctx.textAlign = "center"
+    data.ctx.textAlign = "left"
     data.ctx.textBaseline = "middle"
-    data.ctx.font = (size * 0.4) + "px system-ui"
+    data.ctx.font = (size * 0.5) + "px system-ui"
 
-    data.ctx.fillText(label, x + 5 + (size - 5) / 2, y + (size / 4))
-    data.ctx.fillText(Math.floor(value * 100).toString(), x + 5 + (size - 5) / 2, y + (size / 4 * 3))
+    //data.ctx.fillText(label, x + 5 + (size - 5) / 2, y + (size / 4))
+    data.ctx.fillText(
+        labelFn(value),
+        x + 10,
+        y + (size / 2),
+        size * 3 - 10)
 }
 
 

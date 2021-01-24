@@ -4,6 +4,7 @@ import * as Playback from "../playback"
 import * as Midi from "../util/midi"
 import Rational from "../util/rational"
 import Range from "../util/range"
+import * as MathUtils from "../util/mathUtils"
 
 
 export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
@@ -149,7 +150,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             notes.push({
                 range: new Range(onTick, offTick),
                 midiPitch: noteOn.key,
-                velocity: noteOn.velocity / 127,
+                velocity: MathUtils.midiVolumeToDb(noteOn.velocity / 127),
                 channel: noteOn.channel,
                 midiTrackIndex: tr,
             })
@@ -190,7 +191,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 
         const trackVolume = findFirstControllerOnChannelOrTrack("channelVolumeCoarse")
         if (trackVolume)
-            track.volume = trackVolume.controllerValue / 127
+            track.volumeDb = MathUtils.midiVolumeToDb(trackVolume.controllerValue / 127)
         
         const isDrumkit = notesForTrack.some((n: any) => n.channel == 9)
 
@@ -236,6 +237,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
                         blockId,
                         note.range.subtract(split.range.start),
                         note.midiPitch,
+                        note.velocity,
                         note.velocity))
         }
     }

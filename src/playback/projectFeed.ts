@@ -46,23 +46,13 @@ export function feedNotes(
                 durationMs: endMs - startMs,
 
                 midiPitchSeq: [{ timeMs: startMs, value: note.midiPitch }],
-                volumeSeq: [{ timeMs: startMs, value: midiVolumeToLinearGain(track.volume * note.velocity) }],
-                velocitySeq: [{ timeMs: startMs, value: 1 }],
+                volumeSeq: [{ timeMs: startMs, value: track.volumeDb + note.volumeDb }],
+                velocitySeq: [{ timeMs: startMs, value: note.velocity }],
             }
 
             synth.playNote(request)
         }
     }
-}
-
-
-function midiVolumeToLinearGain(midiVol: number): number
-{
-    if (midiVol <= 0)
-        return 0
-    
-    const minDbLevel = -15
-    return MathUtils.dbToLinearGain(minDbLevel * (1 - midiVol))
 }
 
 

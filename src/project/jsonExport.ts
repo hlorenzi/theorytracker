@@ -26,10 +26,12 @@ export function jsonExport(project: Project.Root): any
         json += `\t"name": ${ JSON.stringify(track.name) },\n`
         json += `\t"type": ${ JSON.stringify(track.type) },\n`
         json += `\t"trackType": ${ JSON.stringify(track.trackType) },\n`
+        json += `\t"mute": ${ JSON.stringify(track.mute) },\n`
+        json += `\t"solo": ${ JSON.stringify(track.solo) },\n`
 
         if (track.trackType == "notes")
         {
-            json += `\t"volume": ${ JSON.stringify(track.volume) },\n`
+            json += `\t"volumeDb": ${ JSON.stringify(track.volumeDb) },\n`
             json += `\t"instrument": ${ JSON.stringify(track.instrument) },\n`
         }
 
@@ -75,6 +77,7 @@ function exportElem(
         {
             json += `, ${ JSON.stringify([
                 elem.midiPitch,
+                MathUtils.quantize(elem.volumeDb, 1000),
                 MathUtils.quantize(elem.velocity, 1000),
             ]) }`
             break

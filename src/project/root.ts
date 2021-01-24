@@ -65,6 +65,7 @@ export function getDefault(): Root
             noteBlockId,
             Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
             60 + i,
+            0,
             1))
 
     console.log(project)

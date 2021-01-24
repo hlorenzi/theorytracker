@@ -15,6 +15,7 @@ import { EditorTrackKeyChanges } from "./trackKeyChanges"
 import { EditorTrackMeterChanges } from "./trackMeterChanges"
 import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
 import { EditorTrackNotes } from "./trackNotes"
+import { EditorTrackNoteVolumes } from "./trackNoteVolumes"
 import { EditorTrackNoteVelocities } from "./trackNoteVelocities"
 import { Track } from "../project"
 
@@ -325,7 +326,7 @@ export function refreshTracks(data: EditorUpdateData)
                 if (noteBlock && track.id == noteBlock.parentId)
                 {
                     tracks.push(new EditorTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
-                    tracks.push(new EditorTrackNoteVelocities(track.id, data.state.modeNoteBlockId, 80))
+                    tracks.push(new EditorTrackNoteVolumes(track.id, data.state.modeNoteBlockId, 80))
                 }
             }
             else
@@ -552,7 +553,7 @@ export function trackControlAtPoint(
     if (!projTrack)
         return TrackControl.None
 
-    if (pos.y < data.state.trackControlY)
+    if (pos.y < data.state.trackControlY || pos.y > data.state.trackControlY + data.state.trackControlSize)
         return TrackControl.None
 
     const xSlot = Math.floor((pos.x - data.state.trackControlX) / data.state.trackControlSize)
@@ -565,7 +566,8 @@ export function trackControlAtPoint(
         {
             switch (xSlot)
             {
-                case 0: return TrackControl.Volume
+                case 0:
+                case 1: return TrackControl.Volume
                 //case 1: return TrackControl.Pan
                 case 7: return TrackControl.Mute
                 case 8: return TrackControl.Solo
@@ -1016,12 +1018,13 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
     const chosenPitch = possiblePitches[0].pitch
 
     const range = new Range(time, time.add(data.state.insertion.duration))
+    const volumeDb = 0
     const velocity = 1
         
     const note = Project.makeNote(
         noteBlock.id,
         range.subtract(noteBlock.range.start),
-        chosenPitch, velocity)
+        chosenPitch, volumeDb, velocity)
 
     const id = data.project.nextId
 
@@ -1035,7 +1038,7 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
     scrollTimeIntoView(data, range.end)
     selectionClear(data)
     selectionAdd(data, id)
-    data.playback.playNotePreview(noteBlock.parentId, chosenPitch, velocity)
+    data.playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
     selectionRemoveConflictingBehind(data)
 }
 

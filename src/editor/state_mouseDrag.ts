@@ -192,7 +192,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
                         (!data.state.drag.notePreviewLast && newPitch != note.midiPitch))
                     {
                         data.state.drag.notePreviewLast = newPitch
-                        data.playback.playNotePreview(trackId, newPitch, note.velocity)
+                        data.playback.playNotePreview(trackId, newPitch, note.volumeDb, note.velocity)
                     }
                 }
             }
@@ -287,14 +287,17 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
     {
         case Editor.TrackControl.Volume:
         {
-            const volumeDelta = -data.state.drag.posDelta.y / 50
+            const volumeDbDelta = -data.state.drag.posDelta.y / 10
             modifySelectedTracks((track) =>
             {
                 if (track.trackType != "notes")
                     return track
                 
-                const volume = Math.max(0, Math.min(1, track.volume + volumeDelta))
-                return Project.elemModify(track, { volume })
+                const volumeDb = Math.max(Project.MinVolumeDb,
+                    Math.min(Project.MaxVolumeDb,
+                    track.volumeDb + volumeDbDelta))
+
+                return Project.elemModify(track, { volumeDb })
             })
             break
         }

@@ -232,7 +232,7 @@ export class EditorTrackNotes extends EditorTrack
         {
             data.state.insertion.nearMidiPitch = note.midiPitch
             data.state.insertion.duration = note.range.duration
-            data.playback.playNotePreview(this.projectTrackId, note.midiPitch, note.velocity)
+            data.playback.playNotePreview(this.projectTrackId, note.midiPitch, note.volumeDb, note.velocity)
         }
     }
 
@@ -263,7 +263,7 @@ export class EditorTrackNotes extends EditorTrack
     {
 		if (this.pencil)
 		{
-            data.playback.playNotePreview(this.projectTrackId, this.pencil.midiPitch, 0.5)
+            data.playback.playNotePreview(this.projectTrackId, this.pencil.midiPitch, Project.DefaultVolumeDb, 1)
         }
     }
 
@@ -290,7 +290,8 @@ export class EditorTrackNotes extends EditorTrack
                 this.parentId,
                 new Range(this.pencil.time1, this.pencil.time2).sorted(),
                 this.pencil.midiPitch,
-                0.5)
+                Project.DefaultVolumeDb,
+                1)
 
             const id = data.project.nextId
             data.project = Project.upsertElement(data.project, elem)
@@ -318,7 +319,7 @@ export class EditorTrackNotes extends EditorTrack
             
 			for (const slice of note.range.iterSlices(range))
 			{
-				const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.velocity)
+				const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.volumeDb, note.velocity)
                 data.project = Project.upsertElement(data.project, newNote)
 			}
 		}
@@ -361,7 +362,7 @@ export class EditorTrackNotes extends EditorTrack
 				
 				for (const slice of note.range.iterSlices(selectedNote.range))
 				{
-					const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.velocity)
+					const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.volumeDb, note.velocity)
                     data.project = Project.upsertElement(data.project, newNote)
 				}
 			}

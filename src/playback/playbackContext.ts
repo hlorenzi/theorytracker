@@ -35,7 +35,7 @@ export interface PlaybackContextProps
     stopPlaying: () => void
     togglePlaying: () => void
 
-    playNotePreview: (trackId: Project.ID, midiPitch: number, volume: number) => void
+    playNotePreview: (trackId: Project.ID, midiPitch: number, volumeDb: number, velocity: number) => void
 
     renderToBuffer: (range: Range, onProgress: (p: number) => void) => Promise<AudioBuffer>
 }
@@ -95,10 +95,10 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
                 window.dispatchEvent(new CustomEvent("playbackTogglePlaying"))
             },
 
-            playNotePreview: (trackId: Project.ID, midiPitch: number, volume: number) =>
+            playNotePreview: (trackId: Project.ID, midiPitch: number, volumeDb: number, velocity: number) =>
             {
                 window.dispatchEvent(new CustomEvent("playbackPlayNotePreview", {
-                    detail: { trackId, midiPitch, volume },
+                    detail: { trackId, midiPitch, volumeDb, velocity },
                 }))
             },
 
@@ -261,8 +261,8 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
                 durationMs: 100,
 
                 midiPitchSeq: [{ timeMs: time, value: data.midiPitch }],
-                volumeSeq: [{ timeMs: time, value: data.volume }],
-                velocitySeq: [{ timeMs: time, value: 1 }],
+                volumeSeq: [{ timeMs: time, value: data.volumeDb }],
+                velocitySeq: [{ timeMs: time, value: data.velocity }],
             })
         })
 
@@ -288,6 +288,8 @@ async function renderToBuffer(
 {
     const project = projectCtx.ref.current.project
     const startMs = Project.getMillisecondsAt(project, range.start)
+
+    // FIXME: Compute correct release time for last notes in the song
     const endMs = 1000 + Project.getMillisecondsAt(project, range.end)
     const durationMs = endMs - startMs
 

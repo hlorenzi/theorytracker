@@ -179,7 +179,7 @@ export class InstrumentSflib extends Playback.Instrument
             "end", (endTime - time).toFixed(3))*/
 
         const volumeNode = this.synth.audioCtx.createGain()
-        volumeNode.gain.value = request.volumeSeq[0].value
+        volumeNode.gain.value = MathUtils.dbToLinearGain(request.volumeSeq[0].value)
         
 
         sourceNode.connect(envelopeNode)

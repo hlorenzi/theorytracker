@@ -20,7 +20,7 @@ export function jsonImport(json: any): Project.Root
             case "notes":
                 track = Project.makeTrackNotes()
                 track.instrument = jsonTrack.instrument
-                track.volume = jsonTrack.volume
+                track.volumeDb = jsonTrack.volumeDb
                 break
             case "keyChanges":
                 track = Project.makeTrackKeyChanges()
@@ -31,6 +31,8 @@ export function jsonImport(json: any): Project.Root
         }
 
         track.name = jsonTrack.name
+        track.mute = jsonTrack.mute
+        track.solo = jsonTrack.solo
 
         const trackId = project.nextId
         project = Project.upsertTrack(project, track)
@@ -49,7 +51,7 @@ export function jsonImport(json: any): Project.Root
     }
 
     console.log("project", project)
-    return project
+    return Project.withRefreshedRange(project)
 }
 
 
@@ -70,7 +72,8 @@ function importElem(
                 parentId,
                 range,
                 jsonElem[3][0],
-                jsonElem[3][1])
+                jsonElem[3][1],
+                jsonElem[3][2])
             break
         }
 

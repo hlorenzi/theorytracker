@@ -112,7 +112,7 @@ export default function MenuFile()
                     onClick={ onOpen }
                 />
                 <Popup.Divider/>
-                <Popup.Button
+                {/*<Popup.Button
                     icon="💾"
                     label="Save"
                     onClick={ onOpen }
@@ -121,7 +121,7 @@ export default function MenuFile()
                     icon="💾"
                     label="Save As..."
                     onClick={ onOpen }
-                />
+                />*/}
                 <Popup.Button
                     icon="📥"
                     label="Download as JSON"

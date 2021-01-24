@@ -7,6 +7,10 @@ import * as Misc from "../util/misc"
 
 export type ID = number
 
+export const MinVolumeDb = -30
+export const DefaultVolumeDb = 0
+export const MaxVolumeDb = 0
+
 
 export interface ElementBase
 {
@@ -48,7 +52,7 @@ export interface TrackNotes extends TrackBase
 {
     trackType: "notes"
     instrument: Instrument
-    volume: number
+    volumeDb: number
 }
 
 
@@ -94,6 +98,7 @@ export interface Note extends ElementBase
 {
     type: "note"
     midiPitch: number
+    volumeDb: number
     velocity: number
 }
 
@@ -122,7 +127,7 @@ export function makeTrackNotes(): TrackNotes
         parentId: 0,
         range: Range.dummy(),
         name: "",
-        volume: 1,
+        volumeDb: DefaultVolumeDb,
         mute: false,
         solo: false,
         instrument: makeInstrument(),
@@ -289,6 +294,7 @@ export function makeNote(
     parentId: ID,
     range: Range,
     midiPitch: number,
+    volumeDb: number,
     velocity: number)
     : Note
 {
@@ -298,6 +304,7 @@ export function makeNote(
         parentId,
         range,
         midiPitch,
+        volumeDb,
         velocity,
     }
 }

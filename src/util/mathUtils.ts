@@ -26,3 +26,22 @@ export function linearGainToDb(linearGain: number): number
 {
     return 20 * Math.log10(linearGain)
 }
+
+
+export function midiVolumeToDb(midiVol: number): number
+{
+    if (midiVol <= 0)
+        return 0
+    
+    const minDbLevel = -15
+    return minDbLevel * (1 - midiVol)
+}
+
+
+export function midiVolumeToLinearGain(midiVol: number): number
+{
+    if (midiVol <= 0)
+        return 0
+    
+    return dbToLinearGain(midiVolumeToDb(midiVol))
+}

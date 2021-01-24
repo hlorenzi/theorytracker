@@ -388,7 +388,7 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
             if (!playedPreview)
             {
                 playedPreview = true
-                data.playback.playNotePreview(track.id, newPitch, elem.velocity)
+                data.playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
                 data.state.insertion.nearMidiPitch = newPitch
                 data.state.insertion.duration = elem.range.duration
             }
