@@ -6,6 +6,7 @@ import { InspectorMultitype } from "./InspectorMultitype"
 import { InspectorTrack } from "./InspectorTrack"
 import { InspectorKeyChange } from "./InspectorKeyChange"
 import { InspectorMeterChange } from "./InspectorMeterChange"
+import { InspectorChord } from "./InspectorChord"
 
 
 interface InspectorProps
@@ -69,6 +70,11 @@ export function Inspector()
 			{
     			windowCtx.setPreferredSize(500, 350)
 				return <InspectorMeterChange elemIds={ elemIds }/>
+			}
+			case "chord":
+			{
+    			windowCtx.setPreferredSize(500, 350)
+				return <InspectorChord elemIds={ elemIds }/>
 			}
 			default:
 				return null

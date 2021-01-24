@@ -56,6 +56,14 @@ export interface TrackNotes extends TrackBase
 }
 
 
+export interface TrackChords extends TrackBase
+{
+    trackType: "chords"
+    instrument: Instrument
+    volumeDb: number
+}
+
+
 export interface TrackKeyChanges extends TrackBase
 {
     trackType: "keyChanges"
@@ -70,6 +78,7 @@ export interface TrackMeterChanges extends TrackBase
 
 export type Track = 
     TrackNotes |
+    TrackChords |
     TrackKeyChanges |
     TrackMeterChanges
 
@@ -103,12 +112,20 @@ export interface Note extends ElementBase
 }
 
 
+export interface Chord extends ElementBase
+{
+    type: "chord"
+    chord: Theory.Chord
+}
+
+
 export type Element =
     Track |
     KeyChange |
     MeterChange |
     NoteBlock |
-    Note
+    Note |
+    Chord
 
 
 
@@ -127,6 +144,23 @@ export function makeTrackNotes(): TrackNotes
         parentId: 0,
         range: Range.dummy(),
         name: "",
+        volumeDb: DefaultVolumeDb,
+        mute: false,
+        solo: false,
+        instrument: makeInstrument(),
+    }
+}
+
+
+export function makeTrackChords(): TrackChords
+{
+    return {
+        type: "track",
+        trackType: "chords",
+        id: -1,
+        parentId: 0,
+        range: Range.dummy(),
+        name: "Chords",
         volumeDb: DefaultVolumeDb,
         mute: false,
         solo: false,
@@ -210,7 +244,7 @@ export function instrumentEmoji(instrument: Instrument): string
 
 export function trackDisplayName(track: Track): string
 {
-    if (track.trackType == "notes")
+    if (track.trackType == "notes" || track.trackType == "chords")
     {
         if (track.name)
             return instrumentEmoji(track.instrument) + " " + track.name
@@ -222,6 +256,21 @@ export function trackDisplayName(track: Track): string
         return track.name
 
     return "New Track"
+}
+
+
+export function trackHasInstrument(track: Track): boolean
+{
+    return track.trackType == "notes" || track.trackType == "chords"
+}
+
+
+export function trackGetInstrument(track: Track): Instrument | null
+{
+    if (track.trackType == "notes" || track.trackType == "chords")
+        return track.instrument
+    else
+        return null
 }
 
 
@@ -306,5 +355,21 @@ export function makeNote(
         midiPitch,
         volumeDb,
         velocity,
+    }
+}
+
+
+export function makeChord(
+    parentId: ID,
+    range: Range,
+    chord: Theory.Chord)
+    : Chord
+{
+    return {
+        type: "chord",
+        id: -1,
+        parentId,
+        range,
+        chord,
     }
 }

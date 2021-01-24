@@ -112,10 +112,11 @@ export class EditorTrackKeyChanges extends EditorTrack
             const elem = Project.makeKeyChange(
                 this.projectTrackId,
                 this.pencil.time,
-                Editor.defaultKey())
+                Project.defaultKey())
 
-            const id = data.project.nextId
-            data.project = Project.upsertElement(data.project, elem)
+            let project = data.projectCtx.ref.current.project
+            const id = project.nextId
+            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
             Editor.selectionAdd(data, id)
 		}
 	}
@@ -124,7 +125,7 @@ export class EditorTrackKeyChanges extends EditorTrack
     render(data: Editor.EditorUpdateData)
     {
         const visibleRange = Editor.visibleTimeRange(data)
-        const activeKeyAtStart = Editor.keyAt(data, this.projectTrackId, visibleRange.start)
+        const activeKeyAtStart = Project.keyAt(data.project, this.projectTrackId, visibleRange.start)
 
         let suppressStickyLabel = false
         for (let layer = 0; layer < 2; layer++)

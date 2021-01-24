@@ -1,5 +1,6 @@
 export * from "./Button"
 export * from "./ButtonList"
+export * from "./ChordButton"
 export * from "./Input"
 export * from "./ListBox"
 export * from "./Dial"

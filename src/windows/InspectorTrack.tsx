@@ -62,27 +62,29 @@ export function InspectorTrack(props: InspectorTrackProps)
 
 
     let definiteName: string | null = tracks[0].name
-    let definiteShowInstrument: boolean = tracks[0].trackType == "notes"
-    let definiteInstrument: Project.Instrument | null = tracks[0].trackType == "notes" ? tracks[0].instrument : null
+    let definiteShowInstrument: boolean = Project.trackHasInstrument(tracks[0])
+    let definiteInstrument: Project.Instrument | null = Project.trackGetInstrument(tracks[0])
     for (const track of tracks)
     {
         if (track.name !== definiteName)
             definiteName = null
 
-        if (track.trackType !== "notes")
+        if (!Project.trackHasInstrument(track))
             definiteShowInstrument = false
 
-        if (track.trackType === "notes" && definiteInstrument)
+        if (Project.trackHasInstrument(track) && definiteInstrument)
         {
-            if (track.instrument.type !== definiteInstrument.type)
+            const instrument = Project.trackGetInstrument(track)!
+
+            if (instrument.type !== definiteInstrument.type)
                 definiteInstrument = null
-            else switch (track.instrument.type)
+            else switch (instrument.type)
             {
                 case "sflib":
                 {
                     const definiteSflib = definiteInstrument as Project.InstrumentSflib
-                    if (track.instrument.collectionId !== definiteSflib.collectionId ||
-                        track.instrument.instrumentId !== definiteSflib.instrumentId)
+                    if (instrument.collectionId !== definiteSflib.collectionId ||
+                        instrument.instrumentId !== definiteSflib.instrumentId)
                         definiteInstrument = null
                 } 
             }
@@ -123,7 +125,7 @@ export function InspectorTrack(props: InspectorTrackProps)
     {
         modifyTracks((track) =>
         {
-            if (track.trackType !== "notes")
+            if (!Project.trackHasInstrument(track))
                 return track
 
             return Project.elemModify(track, { instrument: newInstrument })

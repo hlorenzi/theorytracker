@@ -16,6 +16,7 @@ export interface Root
     elems: Immutable.Map<Project.ID, Project.Element>
     keyChangeTrackId: number
     meterChangeTrackId: number
+    chordTrackId: number
 }
 
 
@@ -30,6 +31,7 @@ export function makeEmpty(): Root
         elems: Immutable.Map<Project.ID, Project.Element>(),
         keyChangeTrackId: -1,
         meterChangeTrackId: -1,
+        chordTrackId: -1,
     }
 }
 
@@ -53,11 +55,20 @@ export function getDefault(): Root
         track2Id, new Rational(0), new Theory.Meter(4, 4)))
 
     const track3Id = project.nextId
+    project.chordTrackId = track3Id
+    project = upsertTrack(project, Project.makeTrackChords())
+    
+    project = upsertElement(project, Project.makeChord(
+        track3Id,
+        Range.fromStartDuration(new Rational(0), new Rational(1)),
+        new Theory.Chord(0, 0, 0, 0, [])))
+
+    const track4Id = project.nextId
     project = upsertTrack(project, Project.makeTrackNotes())
 
     const noteBlockId = project.nextId
     project = upsertElement(project, Project.makeNoteBlock(
-        track3Id,
+        track4Id,
         Range.fromStartDuration(new Rational(0), new Rational(4))))
 
     for (let i = 0; i < 16; i++)
@@ -68,7 +79,6 @@ export function getDefault(): Root
             0,
             1))
 
-    console.log(project)
     return project
 }
 
@@ -200,6 +210,54 @@ export function keyChangeTrackId(project: Root): Project.ID
 export function meterChangeTrackId(project: Root): Project.ID
 {
     return project.meterChangeTrackId
+}
+
+
+export function keyAt(project: Root, trackId: Project.ID, time: Rational): Theory.Key
+{
+    const keyChangeTrackId = Project.keyChangeTrackId(project)
+    const keyChangeTrackTimedElems = project.lists.get(keyChangeTrackId)
+    if (!keyChangeTrackTimedElems)
+        return defaultKey()
+        
+    const keyCh = keyChangeTrackTimedElems.findActiveAt(time)
+    if (keyCh)
+        return (keyCh as Project.KeyChange).key
+
+    const firstKeyCh = keyChangeTrackTimedElems.findFirst()
+    if (firstKeyCh)
+        return (firstKeyCh as Project.KeyChange).key
+        
+    return defaultKey()
+}
+
+
+export function meterChangeAt(project: Root, trackId: Project.ID, time: Rational): Project.MeterChange | null
+{
+    const meterChangeTrackId = Project.meterChangeTrackId(project)
+    const meterChangeTrackTimedElems = project.lists.get(meterChangeTrackId)
+    if (!meterChangeTrackTimedElems)
+        return null
+        
+    const meterCh = meterChangeTrackTimedElems.findActiveAt(time)
+    if (meterCh)
+        return (meterCh as Project.MeterChange)
+
+    const firstMeterCh = meterChangeTrackTimedElems.findFirst()
+    if (firstMeterCh)
+        return (firstMeterCh as Project.MeterChange)
+        
+    return null
+}
+
+
+export function meterAt(project: Root, trackId: Project.ID, time: Rational): Theory.Meter
+{
+    const meterCh = meterChangeAt(project, trackId, time)
+    if (meterCh)
+        return meterCh.meter
+        
+    return defaultMeter()
 }
 
 
@@ -349,4 +407,16 @@ export function getMillisecondsAt(project: Root, time: Rational): number
 {
     const measuresPerSecond = (project.baseBpm / 4 / 60)
     return time.subtract(project.range.start).asFloat() / measuresPerSecond * 1000
+}
+
+
+export function defaultKey(): Theory.Key
+{
+    return Theory.Key.parse("C Major")
+}
+
+
+export function defaultMeter(): Theory.Meter
+{
+    return new Theory.Meter(4, 4)
 }

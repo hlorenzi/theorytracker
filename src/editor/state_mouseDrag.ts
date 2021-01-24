@@ -181,7 +181,7 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
             {
                 const note = elem as Project.Note
                 const trackId = data.state.tracks[data.state.drag.origin.point.trackIndex].projectTrackId
-                const key = Editor.keyAt(data, trackId, note.range.start)
+                const key = Project.keyAt(data.project, trackId, note.range.start)
                 const degree = key.octavedDegreeForMidi(note.midiPitch)
                 const newPitch = key.midiForDegree(Math.floor(degree + data.state.drag.rowDelta))
                 changes.midiPitch = newPitch
@@ -290,7 +290,7 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
             const volumeDbDelta = -data.state.drag.posDelta.y / 10
             modifySelectedTracks((track) =>
             {
-                if (track.trackType != "notes")
+                if (track.trackType != "notes" && track.trackType != "chords")
                     return track
                 
                 const volumeDb = Math.max(Project.MinVolumeDb,
@@ -304,7 +304,8 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
 
         case Editor.TrackControl.Mute:
         {
-            const mute = (origTrack.trackType == "notes" ? !origTrack.mute : false)
+            const mute = origTrack.trackType == "notes" || origTrack.trackType == "chords" ?
+                !origTrack.mute : false
 
             modifyTrackAtMouseOrSelected((track) =>
             {
@@ -315,7 +316,8 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
 
         case Editor.TrackControl.Solo:
         {
-            const solo = (origTrack.trackType == "notes" ? !origTrack.solo : false)
+            const solo = origTrack.trackType == "notes" || origTrack.trackType == "chords" ?
+                !origTrack.solo : false
 
             modifyTrackAtMouseOrSelected((track) =>
             {

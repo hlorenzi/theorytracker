@@ -1,3 +1,4 @@
+import * as MathUtils from "../util/mathUtils"
 import Key from "./key"
 import Utils from "./utils"
 
@@ -102,8 +103,13 @@ export default class Chord
 		const degree = key.degreeForMidi(this.rootMidi)
 		const chordKind = chordKinds[this.kind] || { symbol: [false, "", "?"] }
         
-        const roman = Math.floor(degree)
-        const accidental = Math.floor(degree) != degree ? 1 : 0
+        let roman = Math.floor(degree)
+        let accidental = 0
+		if (Math.floor(degree) != degree)
+		{
+			roman = MathUtils.mod(roman + 1, 7)
+			accidental = -1
+		}
 
 		let baseStr = Utils.accidentalToStr(this.rootAccidental + accidental, true) + Utils.degreeToRomanStr(roman)
 		if (chordKind.symbol[0])

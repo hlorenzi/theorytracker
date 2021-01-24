@@ -22,6 +22,11 @@ export function jsonImport(json: any): Project.Root
                 track.instrument = jsonTrack.instrument
                 track.volumeDb = jsonTrack.volumeDb
                 break
+            case "chords":
+                track = Project.makeTrackChords()
+                track.instrument = jsonTrack.instrument
+                track.volumeDb = jsonTrack.volumeDb
+                break
             case "keyChanges":
                 track = Project.makeTrackKeyChanges()
                 break
@@ -41,6 +46,8 @@ export function jsonImport(json: any): Project.Root
             project.keyChangeTrackId = trackId
         else if (track.trackType == "meterChanges")
             project.meterChangeTrackId = trackId
+        else if (track.trackType == "chords")
+            project.chordTrackId = trackId
 
         for (const jsonElem of jsonTrack.elems)
         {

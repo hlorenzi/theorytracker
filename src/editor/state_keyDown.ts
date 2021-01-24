@@ -378,7 +378,7 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
                 return elem
                 
             const track = Project.parentTrackFor(data.project, elem.parentId)
-            const key = Editor.keyAt(data, track.id, elem.range.start)
+            const key = Project.keyAt(data.project, track.id, elem.range.start)
             const degree = key.octavedDegreeForMidi(elem.midiPitch)
             const newDegree = degree + degreeDelta
             const newPitch = pitchDelta != 0 ?
@@ -408,7 +408,7 @@ function handleNumber(data: Editor.EditorUpdateData, degree: number)
 {
     const time = data.state.cursor.time1.min(data.state.cursor.time2)
     const trackId = data.state.tracks[data.state.cursor.trackIndex1].projectTrackId
-    const key = Editor.keyAt(data, trackId, time)
+    const key = Project.keyAt(data.project, trackId, time)
     
     /*if (state.tracks[state.cursor.track1].kind === "chords")
     {

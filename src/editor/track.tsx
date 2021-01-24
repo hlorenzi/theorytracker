@@ -63,9 +63,92 @@ export class EditorTrack
     }
 
 
+    *iterKeyChangePairsAtRange(
+        data: Editor.EditorUpdateData,
+        range: Range)
+        : Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
+    {
+        const keyChangeTrackId = Project.keyChangeTrackId(data.project)
+        const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
+        if (!keyChangeTrackTimedElems)
+            return
+
+        const firstKeyCh = keyChangeTrackTimedElems.findFirst() as (Project.KeyChange | null)
+        const defaultKey = firstKeyCh?.key ?? Project.defaultKey()
+    
+        for (const pair of keyChangeTrackTimedElems.iterActiveAtRangePairwise(range))
+        {
+            const keyCh1 = pair[0] ?? Project.makeKeyChange(-1, range.start, defaultKey)
+            const keyCh2 = pair[1] ?? Project.makeKeyChange(-1, range.end,   defaultKey)
+            
+            const keyCh1X = Editor.xAtTime(data, keyCh1.range.start)
+            const keyCh2X = Editor.xAtTime(data, keyCh2.range.start)
+            
+            yield [keyCh1 as Project.KeyChange, keyCh2 as Project.KeyChange, keyCh1X, keyCh2X]
+        }
+    }
+
+
     hover(data: Editor.EditorUpdateData)
     {
         
+    }
+
+
+    hoverBlockElements(
+        data: Editor.EditorUpdateData,
+        elemsIter: (range: Range) => Generator<Project.Element, void, void>)
+    {
+        const pos = data.state.mouse.point.trackPos
+
+        const margin = 10
+        const checkRange = Editor.timeRangeAtX(data, pos.x - margin, pos.x + margin)
+
+        let hoverDrag = null
+        let hoverStretch = null
+        
+        for (const elem of elemsIter(checkRange))
+        {
+            const margin = 8
+
+            const x1 = Editor.xAtTime(data, elem.range.start)
+            const x2 = Editor.xAtTime(data, elem.range.end)
+
+            const rectDrag = new Rect(
+                x1,
+                0,
+                x2 - x1,
+                this.renderRect.h)
+
+            const rectStretch = new Rect(
+                x1 - margin,
+                0,
+                x2 - x1 + margin * 2,
+                this.renderRect.h)
+
+            if (rectDrag.contains(pos))
+            {
+                hoverDrag =
+                {
+                    id: elem.id,
+                    range: elem.range,
+                    action: Editor.EditorAction.DragTime,
+                }
+            }
+            else if (rectStretch.contains(pos))
+            {
+                hoverStretch =
+                {
+                    id: elem.id,
+                    range: elem.range,
+                    action: pos.x < (x1 + x2) / 2 ?
+                        Editor.EditorAction.StretchTimeStart :
+                        Editor.EditorAction.StretchTimeEnd
+                }
+            }
+        }
+
+        data.state.hover = hoverDrag ?? hoverStretch
     }
 
 

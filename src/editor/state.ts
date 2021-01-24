@@ -14,6 +14,7 @@ import { EditorTrack } from "./track"
 import { EditorTrackKeyChanges } from "./trackKeyChanges"
 import { EditorTrackMeterChanges } from "./trackMeterChanges"
 import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
+import { EditorTrackChords } from "./trackChords"
 import { EditorTrackNotes } from "./trackNotes"
 import { EditorTrackNoteVolumes } from "./trackNoteVolumes"
 import { EditorTrackNoteVelocities } from "./trackNoteVelocities"
@@ -332,6 +333,10 @@ export function refreshTracks(data: EditorUpdateData)
             else
                 tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 50))
         }
+        else if (track.trackType == "chords")
+        {
+            tracks.push(new EditorTrackChords(track.id, track.name, 50))
+        }
         else if (track.trackType == "keyChanges")
         {
             tracks.push(new EditorTrackKeyChanges(track.id, track.name, 25))
@@ -563,6 +568,7 @@ export function trackControlAtPoint(
     switch (projTrack.trackType)
     {
         case "notes":
+        case "chords":
         {
             switch (xSlot)
             {
@@ -629,44 +635,6 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
     }
 }
     
-
-export function keyAt(data: EditorUpdateData, trackId: Project.ID, time: Rational): Theory.Key
-{
-    const keyChangeTrackId = Project.keyChangeTrackId(data.project)
-    const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
-    if (!keyChangeTrackTimedElems)
-        return defaultKey()
-        
-    const keyCh = keyChangeTrackTimedElems.findActiveAt(time)
-    if (keyCh)
-        return (keyCh as Project.KeyChange).key
-
-    const firstKeyCh = keyChangeTrackTimedElems.findFirst()
-    if (firstKeyCh)
-        return (firstKeyCh as Project.KeyChange).key
-        
-    return defaultKey()
-}
-
-
-export function meterAt(data: EditorUpdateData, trackId: Project.ID, time: Rational): Theory.Meter
-{
-    const meterChangeTrackId = Project.meterChangeTrackId(data.project)
-    const meterChangeTrackTimedElems = data.project.lists.get(meterChangeTrackId)
-    if (!meterChangeTrackTimedElems)
-        return defaultMeter()
-        
-    const meterCh = meterChangeTrackTimedElems.findActiveAt(time)
-    if (meterCh)
-        return (meterCh as Project.MeterChange).meter
-
-    const firstMeterCh = meterChangeTrackTimedElems.findFirst()
-    if (firstMeterCh)
-        return (firstMeterCh as Project.MeterChange).meter
-        
-    return defaultMeter()
-}
-
 
 export function selectionClear(data: EditorUpdateData)
 {
@@ -768,7 +736,8 @@ export function selectionDelete(data: EditorUpdateData)
             continue
 
         if (track.id === data.project.keyChangeTrackId ||
-            track.id === data.project.meterChangeTrackId)
+            track.id === data.project.meterChangeTrackId ||
+            track.id === data.project.chordTrackId)
             continue
 
         data.project = Project.upsertTrack(data.project, track, true)
@@ -1048,16 +1017,4 @@ export function visibleTimeRange(data: EditorUpdateData): Range
     return new Range(
         timeAtX(data, data.state.trackHeaderW).subtract(data.state.timeSnap),
         timeAtX(data, data.state.renderRect.w).add(data.state.timeSnap))
-}
-
-
-export function defaultKey(): Theory.Key
-{
-    return Theory.Key.parse("C Major")
-}
-
-
-export function defaultMeter(): Theory.Meter
-{
-    return new Theory.Meter(4, 4)
 }

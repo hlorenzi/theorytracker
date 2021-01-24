@@ -2,14 +2,16 @@ import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
+import * as Theory from "../theory"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import * as Editor from "./index"
+import * as CanvasUtils from "../util/canvasUtils"
 import { EditorTrack } from "./track"
 
 
-export class EditorTrackNoteBlocks extends EditorTrack
+export class EditorTrackChords extends EditorTrack
 {
     pencil: null |
     {
@@ -24,37 +26,38 @@ export class EditorTrackNoteBlocks extends EditorTrack
         this.projectTrackId = this.parentId = projectTrackId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
-        this.acceptedElemTypes.add("noteBlock")
+        this.acceptedElemTypes.add("chord")
         this.pencil = null
     }
 
 
-    *iterNoteBlocksAtRange(
+    *iterChordsAtRange(
         data: Editor.EditorUpdateData,
         range: Range)
-        : Generator<Project.NoteBlock, void, void>
+        : Generator<Project.Chord, void, void>
     {
         const trackElems = data.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
         for (const elem of trackElems.iterAtRange(range))
-            yield elem as Project.NoteBlock
+            yield elem as Project.Chord
     }
 
 
-    *iterNotesAtNoteBlock(
+    *iterChordsAndKeyChangesAtRange(
         data: Editor.EditorUpdateData,
-        noteBlock: Project.NoteBlock,
         range: Range)
-        : Generator<Project.Note, void, void>
+        : Generator<[Project.Chord, Project.KeyChange, number, number], void, void>
     {
-        const list = data.project.lists.get(noteBlock.id)
-        if (!list)
-            return
-
-        for (const elem of list.iterAtRange(range))
-            yield elem as Project.Note
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        {
+            const time1 = keyCh1.range.start.max(range.start)!
+            const time2 = keyCh2.range.start.min(range.end)!
+            
+            for (const chord of this.iterChordsAtRange(data, new Range(time1, time2)))
+                yield [chord, keyCh1, keyCh1X, keyCh2X]
+        }
     }
 
 
@@ -64,27 +67,25 @@ export class EditorTrackNoteBlocks extends EditorTrack
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const note of this.iterNoteBlocksAtRange(data, range))
-            yield note.id
+        for (const elem of this.iterChordsAtRange(data, range))
+            yield elem.id
     }
 	
 	
 	hover(data: Editor.EditorUpdateData)
 	{
-        this.hoverBlockElements(data, (range) => this.iterNoteBlocksAtRange(data, range))
+        this.hoverBlockElements(data, (range) => this.iterChordsAtRange(data, range))
     }
 
 
-    doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
+    click(data: Editor.EditorUpdateData, elemId: Project.ID)
     {
-        const elem = data.project.elems.get(elemId)
-        if (!elem || elem.type != "noteBlock")
-            return
-        
-        Editor.modeStackPush(data)
-        data.state.mode = Editor.Mode.NoteBlock
-        data.state.modeNoteBlockId = elemId
-        Editor.refreshTracks(data)
+        const chord = Project.getElem(data.project, elemId, "chord")
+        if (chord)
+        {
+            data.state.insertion.duration = chord.range.duration
+            data.playback.playChordPreview(this.projectTrackId, chord.chord, 0, 1)
+        }
     }
 
 
@@ -124,9 +125,12 @@ export class EditorTrackNoteBlocks extends EditorTrack
 	{
 		if (this.pencil)
 		{
-            const elem = Project.makeNoteBlock(
+            const key = Project.keyAt(data.project, this.projectTrackId, this.pencil.time1)
+
+            const elem = Project.makeChord(
                 this.projectTrackId,
-                new Range(this.pencil.time1, this.pencil.time2).sorted())
+                new Range(this.pencil.time1, this.pencil.time2).sorted(),
+                new Theory.Chord(key.tonic.chroma, 0, 0, 0, []))
 
             let project = data.projectCtx.ref.current.project
             const id = project.nextId
@@ -142,18 +146,20 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
         for (let layer = 0; layer < 2; layer++)
         {
-            for (const noteBlock of this.iterNoteBlocksAtRange(data, visibleRange))
+            for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(data, visibleRange))
             {
-                const selected = data.state.selection.contains(noteBlock.id)
-                if ((layer == 0) == selected)
+                const selected = data.state.selection.contains(chord.id)
+                if (!data.playback.playing && (layer == 0) == selected)
                     continue
+
+                const key = keyCh.key
+                const hovering = !!data.state.hover && data.state.hover.id == chord.id
+                const playing = data.playback.playing && chord.range.overlapsPoint(data.playback.playTime)
                 
-                const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
-                const playing = data.playback.playing && noteBlock.range.overlapsPoint(data.playback.playTime)
-                
-                this.renderNoteBlock(
-                    data, noteBlock.range,
-                    this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.displace(noteBlock.range.start.negate())),
+                this.renderChord(
+                    data, chord.range,
+                    xMin, xMax,
+                    chord.chord, key,
                     hovering, selected, playing)
             }
         }
@@ -163,24 +169,35 @@ export class EditorTrackNoteBlocks extends EditorTrack
             data.ctx.save()
             data.ctx.globalAlpha = 0.4
 
+            const key = Project.keyAt(data.project, this.projectTrackId, this.pencil.time1)
+
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-            this.renderNoteBlock(data, range, null, false, false, false)
+            this.renderChord(
+                data, range, -Infinity, Infinity,
+                new Theory.Chord(key.tonic.chroma, 0, 0, 0, []),
+                key,
+                false, false, false)
             
             data.ctx.restore()
         }
     }
 
 
-    renderNoteBlock(
+    renderChord(
         data: Editor.EditorUpdateData,
         range: Range,
-        notes: Generator<Project.Note, void, void> | null,
+        xMin: number,
+        xMax: number,
+        chord: Theory.Chord,
+        key: Theory.Key,
         hovering: boolean,
         selected: boolean,
         playing: boolean)
     {
-        const x1 = Math.floor(Editor.xAtTime(data, range.start)) + 0.5
-        const x2 = Math.floor(Editor.xAtTime(data, range.end)) + 0.5 - 1
+        const x1 = Math.floor(Math.max(xMin, Math.min(xMax,
+            Editor.xAtTime(data, range.start)))) + 0.5
+        const x2 = Math.floor(Math.max(xMin, Math.min(xMax,
+            Editor.xAtTime(data, range.end)))) + 0.5 - 1
 
         const y1 = 1.5
         const y2 = this.renderRect.h - 0.5
@@ -188,29 +205,11 @@ export class EditorTrackNoteBlocks extends EditorTrack
 		data.ctx.fillStyle = (selected || playing) ? "#222" : "#000"
         data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
 
-        if (notes)
-        {
-            data.ctx.fillStyle = "#fff"
-            for (const note of notes)
-            {
-                const noteH = 2
-                const noteSpacing = 1
-
-                const noteRange = note.range.displace(range.start)
-                const noteY = this.renderRect.h / 2 + (60 - note.midiPitch) * noteSpacing
-                const noteY1 = noteY - noteH / 2
-                const noteY2 = noteY + noteH / 2
-
-                const noteX1 = Math.max(x1, Math.min(x2,
-                    Editor.xAtTime(data, noteRange.start) + 0.5))
-
-                const noteX2 = Math.max(x1, Math.min(x2,
-                    Editor.xAtTime(data, noteRange.end) + 0.5))
-        
-                data.ctx.fillRect(noteX1, noteY1, noteX2 - noteX1, noteY2 - noteY1)
-            }
-        }
-		
+        CanvasUtils.renderChord(
+            data.ctx,
+            x1, y1, x2, y2,
+            chord, key)
+            
         data.ctx.strokeStyle = (selected || playing) ? "#fff" : hovering ? "#888" : "#444"
         data.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)
     }

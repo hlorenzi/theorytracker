@@ -7,8 +7,13 @@ interface DropdownMenuProps
 
     items:
     {
-        label: any
-        value: any
+        label: string
+        value?: any
+        subitems?:
+        {
+            label: string
+            value: any
+        }[]
     }[]
 
     onChange?: (item: any, index: number) => void
@@ -30,8 +35,32 @@ export function DropdownMenu(props: DropdownMenuProps)
             if (!hasDefinite && ev.target.selectedIndex == 0)
                 return
 
-            const index = ev.target.selectedIndex - (hasDefinite ? 0 : 1)
-            props.onChange?.(props.items[index], index)
+            const selectedIndex = ev.target.selectedIndex - (hasDefinite ? 0 : 1)
+
+            let itemIndex = 0
+            for (const item of props.items)
+            {
+                if (item.subitems)
+                {
+                    for (const subitem of item.subitems)
+                    {
+                        if (itemIndex == selectedIndex)
+                        {
+                            props.onChange?.(subitem, selectedIndex)
+                        }
+                        itemIndex++
+                    }
+                }
+                else
+                {
+                    if (itemIndex == selectedIndex)
+                    {
+                        props.onChange?.(item, selectedIndex)
+                    }
+                    itemIndex++
+                }
+            }
+
         }}
         style={{
             display: "inline-block",
@@ -54,14 +83,26 @@ export function DropdownMenu(props: DropdownMenuProps)
         }
 
         { props.items.map((item, i) =>
-            <option
-                key={ i }
-                value={ item.value }
-            >
+            item.subitems ?
+                <optgroup key={ i } label={ item.label }>
+                    { item.subitems.map((item2, j) =>
+                        <option
+                            key={ j }
+                            value={ item2.value }
+                        >
 
-                { item.label }
+                            { item2.label }
 
-            </option>
+                        </option>
+                    )}
+                </optgroup>
+            :
+                <option
+                    key={ i }
+                    value={ item.value }
+                >
+                    { item.label }
+                </option>
         )}
 
     </select>

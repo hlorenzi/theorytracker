@@ -109,32 +109,6 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
-    *iterKeyChangePairsAtRange(
-        data: Editor.EditorUpdateData,
-        range: Range)
-        : Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
-    {
-        const keyChangeTrackId = Project.keyChangeTrackId(data.project)
-        const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
-        if (!keyChangeTrackTimedElems)
-            return
-
-        const firstKeyCh = keyChangeTrackTimedElems.findFirst() as (Project.KeyChange | null)
-        const defaultKey = firstKeyCh?.key ?? Editor.defaultKey()
-    
-        for (const pair of keyChangeTrackTimedElems.iterActiveAtRangePairwise(range))
-        {
-            const keyCh1 = pair[0] ?? Project.makeKeyChange(-1, range.start, defaultKey)
-            const keyCh2 = pair[1] ?? Project.makeKeyChange(-1, range.end,   defaultKey)
-            
-            const keyCh1X = Editor.xAtTime(data, keyCh1.range.start)
-            const keyCh2X = Editor.xAtTime(data, keyCh2.range.start)
-            
-            yield [keyCh1 as Project.KeyChange, keyCh2 as Project.KeyChange, keyCh1X, keyCh2X]
-        }
-    }
-
-
     *iterNotesAndKeyChangesAtRange(
         data: Editor.EditorUpdateData,
         range: Range)
@@ -246,7 +220,7 @@ export class EditorTrackNotes extends EditorTrack
     pencilHover(data: Editor.EditorUpdateData)
     {
         const time = data.state.mouse.point.time
-        const key = Editor.keyAt(data, this.projectTrackId, time)
+        const key = Project.keyAt(data.project, this.projectTrackId, time)
         const row = this.rowAtY(data, data.state.mouse.point.trackPos.y)
         const midiPitch = this.pitchForRow(data, row, key)
 
@@ -293,8 +267,9 @@ export class EditorTrackNotes extends EditorTrack
                 Project.DefaultVolumeDb,
                 1)
 
-            const id = data.project.nextId
-            data.project = Project.upsertElement(data.project, elem)
+            let project = data.projectCtx.ref.current.project
+            const id = project.nextId
+            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
             Editor.selectionAdd(data, id)
 		}
 	}
@@ -536,7 +511,7 @@ export class EditorTrackNotes extends EditorTrack
             data.ctx.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-			const key = Editor.keyAt(data, this.projectTrackId, this.pencil.time1.add(this.parentStart(data)))
+			const key = Project.keyAt(data.project, this.projectTrackId, this.pencil.time1.add(this.parentStart(data)))
 			const row = this.rowForPitch(data, this.pencil.midiPitch, key)
 			const mode = key.scale.metadata!.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(

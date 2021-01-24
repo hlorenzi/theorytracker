@@ -3,6 +3,9 @@ import * as Project from "../project"
 import * as MathUtils from "../util/mathUtils"
 
 
+const notesToDelete = new Set<Note>()
+
+
 interface Note
 {
     request: Playback.NoteRequest
@@ -20,7 +23,7 @@ export class InstrumentSflib extends Playback.Instrument
     collectionId: string
     instrumentId: string
     sflibInstrument: Playback.SflibInstrument | null
-    notes: Map<Project.ID, Note>
+    notes: Note[]
 
 
 	constructor(synth: Playback.SynthManager, collectionId: string, instrumentId: string)
@@ -29,7 +32,7 @@ export class InstrumentSflib extends Playback.Instrument
         this.collectionId = collectionId
         this.instrumentId = instrumentId
         this.sflibInstrument = null
-        this.notes = new Map<Project.ID, Note>()
+        this.notes = []
 	}
 
 
@@ -54,7 +57,7 @@ export class InstrumentSflib extends Playback.Instrument
 
 	isFinished()
 	{
-		return !this.sflibInstrument || this.notes.size == 0
+		return !this.sflibInstrument || this.notes.length == 0
 	}
 
 
@@ -199,54 +202,51 @@ export class InstrumentSflib extends Playback.Instrument
             nodeVolume: volumeNode,
         }
 
-        this.notes.set(request.noteId, note)
+        this.notes.push(note)
     }
 
 
-	stopNote(noteId: Project.ID)
+	stopNote(note: Note)
 	{
-        const note = this.notes.get(noteId)
-        if (!note)
-            return
-            
         note.nodeSrc.stop()
+        note.nodeSrc.disconnect()
 	}
 
 
 	stopAll()
 	{
-        for (const [noteId,] of this.notes)
-            this.stopNote(noteId)
+        for (const note of this.notes)
+            this.stopNote(note)
 
-        this.notes.clear()
+        this.notes = []
 	}
 
 
 	process(deltaTimeMs: number)
 	{
-        const notesToDelete: Project.ID[] = []
-
-        for (const [noteId, note] of this.notes)
+        notesToDelete.clear()
+        
+        for (const note of this.notes)
         {
             note.timePassedMs += deltaTimeMs
         
             if (note.timePassedMs > note.endTimeMs)
             {
-                this.stopNote(noteId)
-                notesToDelete.push(noteId)
+                this.stopNote(note)
+                notesToDelete.add(note)
             }
             else if (note.zone.loopMode != "loop")
             {
                 const sample = this.sflibInstrument!.audioBuffers[note.zone.sampleIndex]
                 if (note.timePassedMs > sample.length / sample.sampleRate * 1000)
                 {
-                    this.stopNote(noteId)
-                    notesToDelete.push(noteId)
+                    this.stopNote(note)
+                    notesToDelete.add(note)
                 }
             }
         }
 
-        for (const id of notesToDelete)
-            this.notes.delete(id)
+        this.notes = this.notes.filter(n => !notesToDelete.has(n))
+        notesToDelete.clear()
 	}
 }

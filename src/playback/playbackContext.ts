@@ -1,6 +1,7 @@
 import React from "react"
 import * as Playback from "./index"
 import * as Project from "../project"
+import * as Theory from "../theory"
 import { RefState, useRefState } from "../util/refState"
 import Rect from "../util/rect"
 import Rational from "../util/rational"
@@ -36,6 +37,7 @@ export interface PlaybackContextProps
     togglePlaying: () => void
 
     playNotePreview: (trackId: Project.ID, midiPitch: number, volumeDb: number, velocity: number) => void
+    playChordPreview: (trackId: Project.ID, chord: Theory.Chord, volumeDb: number, velocity: number) => void
 
     renderToBuffer: (range: Range, onProgress: (p: number) => void) => Promise<AudioBuffer>
 }
@@ -99,6 +101,13 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
             {
                 window.dispatchEvent(new CustomEvent("playbackPlayNotePreview", {
                     detail: { trackId, midiPitch, volumeDb, velocity },
+                }))
+            },
+
+            playChordPreview: (trackId: Project.ID, chord: Theory.Chord, volumeDb: number, velocity: number) =>
+            {
+                window.dispatchEvent(new CustomEvent("playbackPlayChordPreview", {
+                    detail: { trackId, chord, volumeDb, velocity },
                 }))
             },
 
@@ -264,6 +273,32 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
                 volumeSeq: [{ timeMs: time, value: data.volumeDb }],
                 velocitySeq: [{ timeMs: time, value: data.velocity }],
             })
+        })
+
+        window.addEventListener("playbackPlayChordPreview", (ev: Event) =>
+        {
+            const data = (ev as CustomEvent).detail
+
+            if (playback.ref.current.playing)
+                return
+
+            const time = 0.05 + 1000 * playback.ref.current.synth.audioCtx.currentTime
+            const chord = data.chord as Theory.Chord
+
+            for (const midiPitch of chord.strummingPitches)
+            {
+                playback.ref.current.synth.playNote({
+                    trackId: data.trackId,
+                    noteId: -1,
+                    
+                    startMs: time,
+                    durationMs: 250,
+
+                    midiPitchSeq: [{ timeMs: time, value: midiPitch }],
+                    volumeSeq: [{ timeMs: time, value: data.volumeDb }],
+                    velocitySeq: [{ timeMs: time, value: data.velocity }],
+                })
+            }
         })
 
         window.addEventListener("playbackStartPlaying", () => setPlaying(true))

@@ -140,8 +140,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
         {
             data.state.mouse.action = Editor.EditorAction.SelectCursor
             data.state.cursor.visible = true
-            data.state.cursor.time1 = data.state.cursor.time2 =
-                data.state.mouse.point.time
+            Editor.cursorSetTime(data, data.state.mouse.point.time, data.state.mouse.point.time)
             data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
                 data.state.mouse.point.trackIndex
 
@@ -151,7 +150,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
                     data, data.state.mouse.point.time,
                     data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
                     
-                data.state.cursor.time1 = data.state.cursor.time2 = anchor
+                Editor.cursorSetTime(data, anchor, anchor)
             }
 
             data.playback.setStartTime(data.state.cursor.time1)

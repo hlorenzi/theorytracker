@@ -53,7 +53,7 @@ export class SynthManager
 
 		for (const track of project.tracks)
 		{
-			if (track.trackType != "notes")
+			if (track.trackType != "notes" && track.trackType != "chords")
 				continue
 
 			let instrument = null

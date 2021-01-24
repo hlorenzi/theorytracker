@@ -29,7 +29,7 @@ export function jsonExport(project: Project.Root): any
         json += `\t"mute": ${ JSON.stringify(track.mute) },\n`
         json += `\t"solo": ${ JSON.stringify(track.solo) },\n`
 
-        if (track.trackType == "notes")
+        if (track.trackType == "notes" || track.trackType == "chords")
         {
             json += `\t"volumeDb": ${ JSON.stringify(track.volumeDb) },\n`
             json += `\t"instrument": ${ JSON.stringify(track.instrument) },\n`

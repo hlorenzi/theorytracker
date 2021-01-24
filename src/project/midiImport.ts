@@ -76,6 +76,10 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     project.meterChangeTrackId = trackMeterChanges
     project = Project.upsertTrack(project, Project.makeTrackMeterChanges())
 
+    const trackChords = project.nextId
+    project.chordTrackId = trackChords
+    project = Project.upsertTrack(project, Project.makeTrackChords())
+
     for (const track of tracks)
     {
         for (const ev of track.events)

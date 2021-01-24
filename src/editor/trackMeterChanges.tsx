@@ -111,10 +111,11 @@ export class EditorTrackMeterChanges extends EditorTrack
             const elem = Project.makeMeterChange(
                 this.projectTrackId,
                 this.pencil.time,
-                Editor.defaultMeter())
+                Project.defaultMeter())
 
-            const id = data.project.nextId
-            data.project = Project.upsertElement(data.project, elem)
+            let project = data.projectCtx.ref.current.project
+            const id = project.nextId
+            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
             Editor.selectionAdd(data, id)
 		}
 	}
@@ -123,7 +124,7 @@ export class EditorTrackMeterChanges extends EditorTrack
     render(data: Editor.EditorUpdateData)
     {
         const visibleRange = Editor.visibleTimeRange(data)
-        const activeMeterAtStart = Editor.meterAt(data, this.projectTrackId, visibleRange.start)
+        const activeMeterAtStart = Project.meterAt(data.project, this.projectTrackId, visibleRange.start)
 
         let suppressStickyLabel = false
         for (let layer = 0; layer < 2; layer++)

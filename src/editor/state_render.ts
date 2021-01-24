@@ -398,8 +398,10 @@ function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
 
 
     if ((track instanceof Editor.EditorTrackNoteBlocks ||
-        track instanceof Editor.EditorTrackNotes) &&
-        projTrack.trackType == "notes")
+        track instanceof Editor.EditorTrackNotes ||
+        track instanceof Editor.EditorTrackChords) &&
+        (projTrack.trackType == "notes" ||
+        projTrack.trackType == "chords"))
     {
         data.ctx.fillStyle = "#fff"
         data.ctx.textAlign = "left"

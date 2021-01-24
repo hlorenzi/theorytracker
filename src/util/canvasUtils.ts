@@ -51,17 +51,21 @@ export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number
 }
 
 
-/*static drawChord(ctx, x1, y1, x2, y2, chord, key)
+export function renderChord(
+	ctx: CanvasRenderingContext2D,
+	x1: number, y1: number, x2: number, y2: number,
+	chord: Theory.Chord,
+	key: Theory.Key)
 {
 	const w = x2 - x1
 	const h = y2 - y1
-	const decorH = 6
+	const decorH = 5.5
 	
 	ctx.fillStyle = "#ddd"
 	ctx.fillRect(x1, y1, w, h)
 	
-	const mode = key.scale.metadata.mode
-	ctx.fillStyle = fillStyleForDegree(ctx, key.degreeForMidi(chord.rootMidi + chord.rootAccidental) + mode)
+	const mode = !key.scale.metadata ? 0 : key.scale.metadata.mode
+	ctx.fillStyle = fillStyleForDegree(ctx, key.degreeForMidi(chord.rootMidi + chord.rootAccidental) + mode, false)
 	
 	ctx.fillRect(x1, y1, w, decorH)
 	ctx.fillRect(x1, y2 - decorH, w, decorH)
@@ -92,11 +96,11 @@ export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number
 		ctx.font = "20px Verdana"
 		ctx.fillText(nameBase, x1 + w / 2 + nameScale * (-nameTotalW / 2), y1 + h / 2 - 4, nameScale * nameBaseW)
 		ctx.font = "15px Verdana"
-		ctx.fillText(nameSup, x1 + w / 2 + nameScale * (-nameTotalW / 2 + nameBaseW), y1 + h / 2 - 4 - 8, nameScale * nameSupW)
-		ctx.fillText(nameSub, x1 + w / 2 + nameScale * (-nameTotalW / 2 + nameBaseW + nameSupW), y1 + h / 2 - 4 + 8, nameScale * nameSubW)
+		ctx.fillText(nameSup, x1 + w / 2 + nameScale * (-nameTotalW / 2 + nameBaseW), y1 + h / 2 - 4 - 4, nameScale * nameSupW)
+		ctx.fillText(nameSub, x1 + w / 2 + nameScale * (-nameTotalW / 2 + nameBaseW + nameSupW), y1 + h / 2 - 4 + 12, nameScale * nameSubW)
 		
-		ctx.font = "12px Verdana"
+		ctx.font = "10px Verdana"
 		ctx.textAlign = "center"
-		ctx.fillText(nameRootPitch.strUnicode, x1 + w / 2, y1 + h / 2 + 16, w - 6)
+		ctx.fillText(nameRootPitch.strUnicode, x1 + w / 2, y1 + h / 2 + 12, w - 6)
 	}
-}*/
+}
