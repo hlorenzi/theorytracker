@@ -20,6 +20,7 @@ export interface PlaybackContextProps
     playing: boolean
     firstPlayingFrame: boolean
     startTime: Rational
+    nextStartTime: Rational
     playTimeFloat: number
     playTimeFloatPrev: number
     playTime: Rational
@@ -64,6 +65,7 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
             playing: false,
             firstPlayingFrame: false,
             startTime: new Rational(0),
+            nextStartTime: new Rational(0),
             playTimeFloat: 0,
             playTimeFloatPrev: 0,
             playTime: new Rational(0),
@@ -223,11 +225,11 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
 
             playback.ref.current.playing = playing
             playback.ref.current.firstPlayingFrame = true
-
-            playback.ref.current.playTime = playback.ref.current.playTimePrev =
-                playback.ref.current.startTime
-            playback.ref.current.playTimeFloat = playback.ref.current.playTimeFloatPrev =
-                playback.ref.current.startTime.asFloat()
+            playback.ref.current.startTime = playback.ref.current.nextStartTime
+            playback.ref.current.playTime = playback.ref.current.nextStartTime
+            playback.ref.current.playTimePrev = playback.ref.current.nextStartTime
+            playback.ref.current.playTimeFloat = playback.ref.current.nextStartTime.asFloat()
+            playback.ref.current.playTimeFloatPrev = playback.ref.current.nextStartTime.asFloat()
             playback.ref.current.refreshTimeMs = 0
 
             if (playing)
@@ -248,7 +250,7 @@ export function usePlaybackInit(projectRef: RefState<Project.ProjectContextProps
         window.addEventListener("playbackSetStartTime", (ev: Event) =>
         {
             const data = (ev as CustomEvent).detail
-            playback.ref.current.startTime = data.startTime
+            playback.ref.current.nextStartTime = data.startTime
             playback.commit()
         })
 

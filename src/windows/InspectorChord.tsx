@@ -99,7 +99,6 @@ export function InspectorChord(props: InspectorChordProps)
     {
         for (let degree = 0; degree < 7; degree++)
         {
-            const accidental = 0
             const root = sameKey.midiForDegree(degree)
                 
             let pitches = [0]
@@ -119,7 +118,7 @@ export function InspectorChord(props: InspectorChordProps)
                 pitches.push(sameKey.midiForDegree(degree + 12) - root)
             
             const kind = Theory.Chord.kindFromPitches(pitches)
-            const chord = new Theory.Chord(root, accidental, kind, 0, [])
+            const chord = new Theory.Chord(root, kind, 0, [])
             chordButtons.push({ chord })
         }
     }
@@ -127,11 +126,10 @@ export function InspectorChord(props: InspectorChordProps)
     {
         for (let rootNote = 0; rootNote < 12; rootNote++)
         {
-            const accidental = 0
             const root = sameKey.tonic.chroma + rootNote
                 
             const kind = Theory.Chord.kindFromId(baseChordType)
-            const chord = new Theory.Chord(root, accidental, kind, 0, [])
+            const chord = new Theory.Chord(root, kind, 0, [])
 
             chordButtons.push({ chord })
         }

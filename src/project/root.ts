@@ -36,6 +36,35 @@ export function makeEmpty(): Root
 }
 
 
+export function makeNew(): Root
+{
+    let project = makeEmpty()
+
+    const track1Id = project.nextId
+    project.keyChangeTrackId = track1Id
+    project = upsertTrack(project, Project.makeTrackKeyChanges())
+    
+    const track2Id = project.nextId
+    project.meterChangeTrackId = track2Id
+    project = upsertTrack(project, Project.makeTrackMeterChanges())
+
+    project = upsertElement(project, Project.makeKeyChange(
+        track1Id, new Rational(0), Theory.Key.parse("C Major")))
+
+    project = upsertElement(project, Project.makeMeterChange(
+        track2Id, new Rational(0), new Theory.Meter(4, 4)))
+
+    const track3Id = project.nextId
+    project.chordTrackId = track3Id
+    project = upsertTrack(project, Project.makeTrackChords())
+    
+    const track4Id = project.nextId
+    project = upsertTrack(project, Project.makeTrackNotes())
+
+    return project
+}
+
+
 export function getDefault(): Root
 {
     let project = makeEmpty()
@@ -61,7 +90,7 @@ export function getDefault(): Root
     project = upsertElement(project, Project.makeChord(
         track3Id,
         Range.fromStartDuration(new Rational(0), new Rational(1)),
-        new Theory.Chord(0, 0, 0, 0, [])))
+        new Theory.Chord(0, 0, 0, [])))
 
     const track4Id = project.nextId
     project = upsertTrack(project, Project.makeTrackNotes())

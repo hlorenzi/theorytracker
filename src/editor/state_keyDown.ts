@@ -2,6 +2,7 @@ import Range from "../util/range"
 import Rational from "../util/rational"
 import * as Editor from "./index"
 import * as Project from "../project"
+import * as Theory from "../theory"
 	
 	
 export function keyDown(data: Editor.EditorUpdateData, key: string)
@@ -314,11 +315,19 @@ function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
             if (!elem.range.duration.isZero() && newRange.duration.isZero())
                 return elem
 
-            if (!playedPreview && elem.type == "note")
+            if (!playedPreview)
             {
-                playedPreview = true
-                data.state.insertion.nearMidiPitch = elem.midiPitch
-                data.state.insertion.duration = newRange.duration
+                if (elem.type == "note")
+                {
+                    playedPreview = true
+                    data.state.insertion.nearMidiPitch = elem.midiPitch
+                    data.state.insertion.duration = newRange.duration
+                }
+                else if (elem.type == "chord")
+                {
+                    playedPreview = true
+                    data.state.insertion.duration = newRange.duration
+                }
             }
 
             return Project.elemModify(elem, {
@@ -374,28 +383,53 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
         let playedPreview = false
         modifySelectedElems(data, (elem) =>
         {
-            if (elem.type != "note")
-                return elem
-                
-            const track = Project.parentTrackFor(data.project, elem.parentId)
-            const key = Project.keyAt(data.project, track.id, elem.range.start)
-            const degree = key.octavedDegreeForMidi(elem.midiPitch)
-            const newDegree = degree + degreeDelta
-            const newPitch = pitchDelta != 0 ?
-                elem.midiPitch + pitchDelta :
-                key.midiForDegree(degreeDelta >= 0 ? Math.floor(newDegree) : Math.ceil(newDegree))
-
-            if (!playedPreview)
+            if (elem.type == "note")
             {
-                playedPreview = true
-                data.playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
-                data.state.insertion.nearMidiPitch = newPitch
-                data.state.insertion.duration = elem.range.duration
-            }
+                const track = Project.parentTrackFor(data.project, elem.parentId)
+                const key = Project.keyAt(data.project, track.id, elem.range.start)
+                const degree = key.octavedDegreeForMidi(elem.midiPitch)
+                const newDegree = degree + degreeDelta
+                const newPitch = pitchDelta != 0 ?
+                    elem.midiPitch + pitchDelta :
+                    key.midiForDegree(degreeDelta >= 0 ? Math.floor(newDegree) : Math.ceil(newDegree))
 
-            return Project.elemModify(elem, {
-                midiPitch: newPitch
-            })
+                if (!playedPreview)
+                {
+                    playedPreview = true
+                    data.playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
+                    data.state.insertion.nearMidiPitch = newPitch
+                    data.state.insertion.duration = elem.range.duration
+                }
+
+                return Project.elemModify(elem, { midiPitch: newPitch })
+            }
+            else if (elem.type == "chord")
+            {
+                const track = Project.parentTrackFor(data.project, elem.parentId)
+                const key = Project.keyAt(data.project, track.id, elem.range.start)
+                const degree = key.octavedDegreeForMidi(elem.chord.rootChroma)
+                const newDegree = degree + degreeDelta
+                const newRoot = pitchDelta != 0 ?
+                    elem.chord.rootChroma + pitchDelta :
+                    key.midiForDegree(degreeDelta >= 0 ? Math.floor(newDegree) : Math.ceil(newDegree))
+
+                const newChord = new Theory.Chord(
+                    newRoot,
+                    elem.chord.kind, elem.chord.inversion, elem.chord.modifiers)
+
+                if (!playedPreview)
+                {
+                    playedPreview = true
+                    data.playback.playChordPreview(track.id, newChord, 0, 1)
+                    data.state.insertion.duration = elem.range.duration
+                }
+
+                return Project.elemModify(elem, { chord: newChord })
+            }
+            else
+            {
+                return elem
+            }
         })
 
         data.state.cursor.visible = false
@@ -407,10 +441,11 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
 function handleNumber(data: Editor.EditorUpdateData, degree: number)
 {
     const time = data.state.cursor.time1.min(data.state.cursor.time2)
-    const trackId = data.state.tracks[data.state.cursor.trackIndex1].projectTrackId
+    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    const trackId = track.projectTrackId
     const key = Project.keyAt(data.project, trackId, time)
     
-    /*if (state.tracks[state.cursor.track1].kind === "chords")
+    if (track instanceof Editor.EditorTrackChords)
     {
         const root = key.midiForDegree(degree)
         
@@ -419,10 +454,10 @@ function handleNumber(data: Editor.EditorUpdateData, degree: number)
         pitches.push(key.midiForDegree(degree + 4) - root)
         
         const kind = Theory.Chord.kindFromPitches(pitches)
-        const chord = new Theory.Chord(root, 0, kind, 0, [])
-        state = Editor.reduce_insertChord(state, { time, chord })
+        const chord = new Theory.Chord(root, kind, 0, [])
+        Editor.insertChord(data, time, chord)
     }
-    else*/
+    else
     {
         const chroma = key.chromaForDegree(degree)
         Editor.insertNote(data, time, chroma)

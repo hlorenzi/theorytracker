@@ -995,10 +995,11 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
         range.subtract(noteBlock.range.start),
         chosenPitch, volumeDb, velocity)
 
-    const id = data.project.nextId
-
-    data.project = Project.upsertElement(data.project, note)
-    data.project = Project.withRefreshedRange(data.project)
+    let project = data.projectCtx.ref.current.project
+    const id = project.nextId
+    project = Project.upsertElement(project, note)
+    project = Project.withRefreshedRange(project)
+    data.projectCtx.ref.current.project = project
 
     data.state.insertion.nearMidiPitch = chosenPitch
 
@@ -1008,6 +1009,39 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
     selectionClear(data)
     selectionAdd(data, id)
     data.playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
+    selectionRemoveConflictingBehind(data)
+}
+
+
+export function insertChord(data: EditorUpdateData, time: Rational, chord: Theory.Chord)
+{
+    keyHandlePendingFinish(data)
+
+    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    if (!(track instanceof EditorTrackChords))
+        return
+
+    const range = new Range(time, time.add(data.state.insertion.duration))
+    const volumeDb = 0
+    const velocity = 1
+        
+    const projChord = Project.makeChord(
+        track.projectTrackId,
+        range,
+        chord)
+
+    let project = data.projectCtx.ref.current.project
+    const id = project.nextId
+    project = Project.upsertElement(project, projChord)
+    project = Project.withRefreshedRange(project)
+    data.projectCtx.ref.current.project = project
+
+    data.state.cursor.visible = false
+    cursorSetTime(data, range.end, range.end)
+    scrollTimeIntoView(data, range.end)
+    selectionClear(data)
+    selectionAdd(data, id)
+    data.playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
     selectionRemoveConflictingBehind(data)
 }
 

@@ -84,6 +84,19 @@ function importElem(
             break
         }
 
+        case "chord":
+        {
+            elem = Project.makeChord(
+                parentId,
+                range,
+                new Theory.Chord(
+                    jsonElem[3][0],
+                    Theory.Chord.kindFromId(jsonElem[3][1]),
+                    jsonElem[3][2],
+                    []))
+            break
+        }
+
         case "keyChange":
         {
             elem = Project.makeKeyChange(

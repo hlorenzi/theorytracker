@@ -55,17 +55,15 @@ export default class Chord
 	static kinds: ChordMetadata[] = chordKinds
 
 
-	rootMidi: number
-	rootAccidental: number
+	rootChroma: number
 	kind: number
 	inversion: number
 	modifiers: any
 
 	
-	constructor(rootMidi: number, rootAccidental: number, kind: number, inversion: number = 0, modifiers: any[] = [])
+	constructor(rootChroma: number, kind: number, inversion: number = 0, modifiers: any[] = [])
 	{
-        this.rootMidi = rootMidi
-        this.rootAccidental = rootAccidental
+        this.rootChroma = rootChroma
         this.kind = kind
         this.inversion = inversion
         this.modifiers = modifiers
@@ -74,7 +72,7 @@ export default class Chord
 	
 	withChanges(obj: any): Chord
 	{
-		return Object.assign(new Chord(this.rootMidi, this.rootAccidental, this.kind, this.inversion, this.modifiers), obj)
+		return Object.assign(new Chord(this.rootChroma, this.kind, this.inversion, this.modifiers), obj)
 	}
 
 
@@ -100,7 +98,7 @@ export default class Chord
 	
 	romanBase(key: Key): string
 	{
-		const degree = key.degreeForMidi(this.rootMidi)
+		const degree = key.degreeForMidi(this.rootChroma)
 		const chordKind = chordKinds[this.kind] || { symbol: [false, "", "?"] }
         
         let roman = Math.floor(degree)
@@ -111,7 +109,7 @@ export default class Chord
 			accidental = -1
 		}
 
-		let baseStr = Utils.accidentalToStr(this.rootAccidental + accidental, true) + Utils.degreeToRomanStr(roman)
+		let baseStr = Utils.accidentalToStr(accidental, true) + Utils.degreeToRomanStr(roman)
 		if (chordKind.symbol[0])
 			baseStr = baseStr.toLowerCase()
 		
@@ -174,7 +172,7 @@ export default class Chord
 		if (!chordData)
 			return []
 		
-		const rootMidi = Utils.mod(this.rootMidi + this.rootAccidental, 12)
+		const rootMidi = Utils.mod(this.rootChroma, 12)
 		
 		let pitches = []
 		for (let i = 0; i < chordData.pitches.length; i++)
@@ -197,7 +195,7 @@ export default class Chord
 	
 	get strummingPitches(): number[]
 	{
-		const rootMidi = Utils.mod(this.rootMidi + this.rootAccidental, 12)
+		const rootMidi = Utils.mod(this.rootChroma, 12)
 		let pitches = this.pitches
 		if (pitches.length == 0)
 			return []

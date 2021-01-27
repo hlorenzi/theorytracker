@@ -130,7 +130,7 @@ export class EditorTrackChords extends EditorTrack
             const elem = Project.makeChord(
                 this.projectTrackId,
                 new Range(this.pencil.time1, this.pencil.time2).sorted(),
-                new Theory.Chord(key.tonic.chroma, 0, 0, 0, []))
+                new Theory.Chord(key.tonic.chroma, 0, 0, []))
 
             let project = data.projectCtx.ref.current.project
             const id = project.nextId
@@ -174,7 +174,7 @@ export class EditorTrackChords extends EditorTrack
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
             this.renderChord(
                 data, range, -Infinity, Infinity,
-                new Theory.Chord(key.tonic.chroma, 0, 0, 0, []),
+                new Theory.Chord(key.tonic.chroma, 0, 0, []),
                 key,
                 false, false, false)
             

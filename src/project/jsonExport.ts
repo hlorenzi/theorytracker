@@ -5,7 +5,7 @@ import Range from "../util/range"
 import * as MathUtils from "../util/mathUtils"
 
 
-export function jsonExport(project: Project.Root): any
+export function jsonExport(project: Project.Root): string
 {
     let json = ``
     json += `{\n`
@@ -79,6 +79,16 @@ function exportElem(
                 elem.midiPitch,
                 MathUtils.quantize(elem.volumeDb, 1000),
                 MathUtils.quantize(elem.velocity, 1000),
+            ]) }`
+            break
+        }
+
+        case "chord":
+        {
+            json += `, ${ JSON.stringify([
+                elem.chord.rootChroma,
+                Theory.Chord.kinds[elem.chord.kind].id,
+                elem.chord.inversion,
             ]) }`
             break
         }

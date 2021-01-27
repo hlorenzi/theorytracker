@@ -187,7 +187,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 
             const pos = transformMousePos(refCanvasCurrent, ev)
             const needsRender1 = Editor.mouseMove(updateData, pos)
-            const needsRender2 = Editor.mouseDrag(updateData, pos)
+            const needsRender2 = Editor.mouseDrag(updateData, pos, false)
 
             if (updateData.project !== project.ref.current.project)
             {
@@ -215,7 +215,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
             const pos = transformMousePos(refCanvasCurrent, ev)
             Editor.mouseMove(updateData, pos)
             Editor.mouseDown(updateData, ev.button != 0)
-            Editor.mouseDrag(updateData, pos)
+            Editor.mouseDrag(updateData, pos, true)
 
             if (updateData.project !== project.ref.current.project)
             {
@@ -235,8 +235,6 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 ev.preventDefault()
 
             const pos = transformMousePos(refCanvasCurrent, ev)
-            Editor.mouseMove(updateData, pos)
-            Editor.mouseDrag(updateData, pos)
             Editor.mouseUp(updateData)
 
             if (updateData.project !== project.ref.current.project)

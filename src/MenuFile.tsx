@@ -28,21 +28,24 @@ export default function MenuFile()
             reader.readAsArrayBuffer(elem.files![0])
             reader.onload = () =>
             {
+                playback.ref.current.stopPlaying()
+
                 const bytes = new Uint8Array(reader.result as any)
     
                 if (elem.files![0].name.endsWith(".mid"))
-                    project.ref.current.project = Project.midiImport(bytes)
+                {
+                    project.ref.current.open(Project.midiImport(bytes))
+                }
                 else if (elem.files![0].name.endsWith(".json"))
                 {
                     const text = new TextDecoder("utf-8").decode(bytes)
                     const json = JSON.parse(text)
-                    project.ref.current.project = Project.jsonImport(json)
+                    project.ref.current.open(Project.jsonImport(json))
                 }
-
-                playback.ref.current.stopPlaying()
-                project.ref.current.clearUndoStack()
-                project.commit()
-                window.dispatchEvent(new Event("timelineReset"))
+                else
+                {
+                    window.alert("Unrecognized file format!")
+                }
             }
         }
     
@@ -57,14 +60,44 @@ export default function MenuFile()
     }, [])
 
 
+    React.useEffect(() =>
+    {
+        window.addEventListener("beforeunload", (ev) =>
+        {
+            if (project.ref.current.isUnsaved())
+            {
+                ev.preventDefault()
+                ev.returnValue = ""
+                return ""
+            }
+        })
+
+    }, [])
+
+
+    const confirmDiscard = () =>
+    {
+        if (!project.ref.current.isUnsaved())
+            return true
+
+        return window.confirm("Discard current song?")
+    }
+
+
     const onNew = () =>
     {
+        if (!confirmDiscard())
+            return
+
         project.ref.current.setNew()
         playback.ref.current.stopPlaying()
     }
 
     const onOpen = () =>
     {
+        if (!confirmDiscard())
+            return
+
         document.getElementById("inputOpenFile")!.click()
     }
 

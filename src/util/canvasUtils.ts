@@ -65,7 +65,7 @@ export function renderChord(
 	ctx.fillRect(x1, y1, w, h)
 	
 	const mode = !key.scale.metadata ? 0 : key.scale.metadata.mode
-	ctx.fillStyle = fillStyleForDegree(ctx, key.degreeForMidi(chord.rootMidi + chord.rootAccidental) + mode, false)
+	ctx.fillStyle = fillStyleForDegree(ctx, key.degreeForMidi(chord.rootChroma) + mode, false)
 	
 	ctx.fillRect(x1, y1, w, decorH)
 	ctx.fillRect(x1, y2 - decorH, w, decorH)
@@ -76,7 +76,7 @@ export function renderChord(
 	const nameBase = chord.romanBase(key)
 	const nameSup = chord.romanSup(key)
 	const nameSub = chord.romanSub(key)
-	const nameRootPitch = key.nameForMidi(chord.rootMidi).altered(chord.rootAccidental)
+	const nameRootPitch = key.nameForMidi(chord.rootChroma)
 	
 	ctx.fillStyle = "#000"
 	ctx.textAlign = "left"

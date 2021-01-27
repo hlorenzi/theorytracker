@@ -3,7 +3,10 @@ import * as Project from "../project"
 import Range from "../util/range"
 
 
-export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: number }): boolean
+export function mouseDrag(
+    data: Editor.EditorUpdateData,
+    pos: { x: number, y: number },
+    isClick: boolean): boolean
 {
     if (!data.state.mouse.down)
         return false
@@ -43,6 +46,11 @@ export function mouseDrag(data: Editor.EditorUpdateData, pos: { x: number, y: nu
     function withTrackAtDragOrigin<T>(fn: (track: Editor.EditorTrack) => T)
     {
         return fn(data.state.tracks[data.state.drag.origin.point.trackIndex])
+    }
+
+    if (isClick && data.state.mouse.action != Editor.EditorAction.DragTrackControl)
+    {
+        return false
     }
 
     if (data.state.mouse.action == Editor.EditorAction.Pan)

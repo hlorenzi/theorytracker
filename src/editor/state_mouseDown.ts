@@ -151,6 +151,7 @@ export function mouseDown(data: Editor.EditorUpdateData, rightButton: boolean)
                     data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
                     
                 Editor.cursorSetTime(data, anchor, anchor)
+                Editor.scrollTimeIntoView(data, anchor)
             }
 
             data.playback.setStartTime(data.state.cursor.time1)

@@ -6,6 +6,7 @@ import { RefState, useRefState } from "../util/refState"
 export interface ProjectContextProps
 {
     project: Project.Root
+    savedProject: Project.Root
 
     undoStack: UndoPoint[]
     undoIndex: number
@@ -13,6 +14,8 @@ export interface ProjectContextProps
     copiedData: CopiedData | null
 
     setNew: () => void
+    open: (openedProject: Project.Root) => void
+    isUnsaved: () => boolean
 
     clearUndoStack: () => void
     addUndoPoint: (tag: string) => void
@@ -45,10 +48,29 @@ export function useProjectInit(): RefState<ProjectContextProps>
     {
         const setNew = () =>
         {
-            refState.ref.current.project = Project.getDefault()
-            refState.commit()
+            refState.ref.current.project = Project.makeNew()
+            refState.ref.current.savedProject = refState.ref.current.project
+
             refState.ref.current.clearUndoStack()
+            refState.commit()
             window.dispatchEvent(new Event("timelineReset"))
+        }
+
+
+        const open = (openedProject: Project.Root) =>
+        {
+            refState.ref.current.project = openedProject
+            refState.ref.current.savedProject = openedProject
+
+            refState.ref.current.clearUndoStack()
+            refState.commit()
+            window.dispatchEvent(new Event("timelineReset"))
+        }
+
+
+        const isUnsaved: () => boolean = () =>
+        {
+            return refState.ref.current.project !== refState.ref.current.savedProject
         }
 
 
@@ -81,6 +103,7 @@ export function useProjectInit(): RefState<ProjectContextProps>
             })
 
             refState.ref.current.undoIndex = refState.ref.current.undoStack.length - 1
+            saveToLocalStorageWithCooldown(refState.ref.current.project)
 
             //console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
         }
@@ -101,6 +124,7 @@ export function useProjectInit(): RefState<ProjectContextProps>
             refState.ref.current.project =
                 refState.ref.current.undoStack[refState.ref.current.undoIndex].project
                 
+            saveToLocalStorageWithCooldown(refState.ref.current.project)
             window.dispatchEvent(new Event("timelineRefresh"))
             //console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
         }
@@ -115,15 +139,17 @@ export function useProjectInit(): RefState<ProjectContextProps>
             refState.ref.current.project =
                 refState.ref.current.undoStack[refState.ref.current.undoIndex].project
                 
+            saveToLocalStorageWithCooldown(refState.ref.current.project)
             window.dispatchEvent(new Event("timelineRefresh"))
             //console.log(refState.ref.current.undoIndex, refState.ref.current.undoStack)
         }
 
 
-        const initialProject = Project.getDefault()
+        const initialProject = loadFromLocalStorage() ?? Project.getDefault()
 
         return {
             project: initialProject,
+            savedProject: initialProject,
 
             undoStack: [{
                 tag: "new",
@@ -134,6 +160,8 @@ export function useProjectInit(): RefState<ProjectContextProps>
             copiedData: null,
 
             setNew,
+            open,
+            isUnsaved,
 
             clearUndoStack,
             addUndoPoint,
@@ -151,4 +179,33 @@ export function useProject()
 {
     const projectCtx = React.useContext(ProjectContext)
     return projectCtx
+}
+
+
+let saveToLocalStorageWithCooldownLastDate = new Date()
+export function saveToLocalStorageWithCooldown(project: Project.Root)
+{
+    const newDate = new Date()
+    if (newDate.getTime() - saveToLocalStorageWithCooldownLastDate.getTime() < 10000)
+        return
+
+    saveToLocalStorageWithCooldownLastDate = newDate
+    saveToLocalStorage(project)
+}
+
+
+export function saveToLocalStorage(project: Project.Root)
+{
+    const jsonStr = Project.jsonExport(project)
+    window.localStorage.setItem("autosave", jsonStr)
+}
+
+
+export function loadFromLocalStorage(): Project.Root | null
+{
+    const jsonStr = window.localStorage.getItem("autosave")
+    if (jsonStr)
+        return Project.jsonImport(JSON.parse(jsonStr))
+    else
+        return null
 }
