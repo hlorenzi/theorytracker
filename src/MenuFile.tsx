@@ -30,13 +30,14 @@ export default function MenuFile()
             {
                 playback.ref.current.stopPlaying()
 
+                const filename = elem.files![0].name
                 const bytes = new Uint8Array(reader.result as any)
     
-                if (elem.files![0].name.endsWith(".mid"))
+                if (filename.endsWith(".mid"))
                 {
                     project.ref.current.open(Project.midiImport(bytes))
                 }
-                else if (elem.files![0].name.endsWith(".json"))
+                else if (filename.endsWith(".json") || filename.endsWith(".ttproj"))
                 {
                     const text = new TextDecoder("utf-8").decode(bytes)
                     const json = JSON.parse(text)
@@ -107,7 +108,7 @@ export default function MenuFile()
 
         const element = document.createElement("a")
         element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
-        element.setAttribute("download", "song.json")
+        element.setAttribute("download", "song.ttproj")
     
         element.style.display = "none"
         document.body.appendChild(element)
@@ -157,7 +158,7 @@ export default function MenuFile()
                 />*/}
                 <Popup.Button
                     icon="📥"
-                    label="Download as JSON"
+                    label="Download project (JSON)"
                     onClick={ onJsonDownload }
                 />
                 <Popup.Button
@@ -177,7 +178,7 @@ export default function MenuFile()
         <input
             id="inputOpenFile"
             type="file"
-            accept=".mid,.json,.txt"
+            accept=".mid,.ttproj,.json,.txt"
             style={{
                 display: "none",
         }}/>

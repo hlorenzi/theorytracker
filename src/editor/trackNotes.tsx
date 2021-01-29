@@ -141,6 +141,36 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
+    *iterChordsAtRange(
+        data: Editor.EditorUpdateData,
+        range: Range)
+        : Generator<Project.Chord, void, void>
+    {
+        const trackElems = data.project.lists.get(data.project.chordTrackId)
+        if (!trackElems)
+            return
+
+        for (const elem of trackElems.iterAtRange(range))
+            yield elem as Project.Chord
+    }
+
+
+    *iterChordsAndKeyChangesAtRange(
+        data: Editor.EditorUpdateData,
+        range: Range)
+        : Generator<[Project.Chord, Project.KeyChange, number, number], void, void>
+    {
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        {
+            const time1 = keyCh1.range.start.max(range.start)!
+            const time2 = keyCh2.range.start.min(range.end)!
+            
+            for (const chord of this.iterChordsAtRange(data, new Range(time1, time2)))
+                yield [chord, keyCh1, keyCh1X, keyCh2X]
+        }
+    }
+
+
     *elemsAtRegion(
         data: Editor.EditorUpdateData,
         range: Range,
@@ -167,7 +197,7 @@ export class EditorTrackNotes extends EditorTrack
             const margin = 8
 
             const row = this.rowForPitch(data, note.midiPitch, keyCh.key)
-            const rect = this.rectForNote(data, note.range, this.parentStart(data), row, xMin, xMax)
+            const rect = this.rectForNote(data, note.range, this.parentStart(data), row, xMin, xMax, true)
 
             const rectDrag = rect
             const rectStretch = rect.expandW(margin)
@@ -377,17 +407,22 @@ export class EditorTrackNotes extends EditorTrack
         data: Editor.EditorUpdateData,
         range: Range,
         parentStart: Rational,
-        row: number, xStart: number, xEnd: number)
+        row: number, xStart: number, xEnd: number,
+        clampY: boolean)
 	{
         range = range.displace(parentStart)
 
 		const noteOrigX1 = Editor.xAtTime(data, range.start)
 		const noteOrigX2 = Editor.xAtTime(data, range.end)
 		
-        const noteY =
-            Math.max(-data.state.noteRowH / 2,
-            Math.min(this.renderRect.h - data.state.noteRowH / 2,
-            Math.floor(this.yForRow(data, row))))
+        let noteY = Math.floor(this.yForRow(data, row))
+        if (clampY)
+        {
+            noteY =
+                Math.max(-data.state.noteRowH / 2 + 0.5,
+                Math.min(this.renderRect.h - data.state.noteRowH / 2 - 0.5,
+                noteY))
+        }
 		
 		let noteX1 = Math.max(noteOrigX1, xStart)
 		let noteX2 = Math.min(noteOrigX2, xEnd)
@@ -430,6 +465,24 @@ export class EditorTrackNotes extends EditorTrack
         const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
         const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
 
+		for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(data, visibleRange))
+		{
+            for (const midiPitch of chord.chord.pitches)
+            {
+                const key = keyCh.key
+                const row = this.rowForPitch(data, midiPitch + 60, key)
+                const mode = key.scale.metadata!.mode
+                const fillStyle = CanvasUtils.fillStyleForDegree(
+                    data.ctx, key.degreeForMidi(midiPitch) + mode, true)
+
+                for (let i = octaveAtBottom; i <= octaveAtTop; i++)
+                {
+                    this.renderChordNote(
+                        data, chord.range, parentStart, row + i * 7, xMin, xMax, fillStyle)
+                }
+            }
+        }
+        
 		for (const [keyCh1, keyCh2, xMin, xMax] of this.iterKeyChangePairsAtRange(data, visibleRange))
 		{
 			const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(keyCh1.key.tonic.chroma)
@@ -534,7 +587,7 @@ export class EditorTrackNotes extends EditorTrack
         external?: boolean,
         hovering?: boolean, selected?: boolean, playing?: boolean)
 	{
-		const rect = this.rectForNote(data, range, parentStart, row, xMin, xMax)
+		const rect = this.rectForNote(data, range, parentStart, row, xMin, xMax, true)
 		
         data.ctx.fillStyle = fillStyle
 		
@@ -554,5 +607,25 @@ export class EditorTrackNotes extends EditorTrack
 			data.ctx.strokeStyle = external ? "#888" : "#fff"
 			data.ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1)
 		}
+	}
+	
+	
+	renderChordNote(
+        data: Editor.EditorUpdateData,
+        range: Range,
+        parentStart: Rational,
+        row: number,
+        xMin: number, xMax: number,
+        fillStyle: any)
+	{
+		const rect = this.rectForNote(data, range, parentStart, row, xMin, xMax, false)
+		
+        data.ctx.globalAlpha = 0.1
+        data.ctx.fillStyle = fillStyle
+		
+		data.ctx.beginPath()
+        data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+
+        data.ctx.globalAlpha = 1
 	}
 }
