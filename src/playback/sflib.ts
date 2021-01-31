@@ -1,7 +1,8 @@
 import * as AsyncUtils from "../util/async"
 
 
-export const sflibUrl = "/library/"
+export const sflibUrl = "https://sflib.hlorenzi.com/"
+export const sflibLocalUrl = "/library/"
 
 
 export interface SflibMeta
@@ -71,9 +72,38 @@ export interface SflibInstrumentZone
 }
 
 
+async function fetchSflibFile(filename: string): Promise<Response | null>
+{
+    let res = null
+
+    try
+    {
+        res = await fetch(sflibLocalUrl + filename)
+    }
+    catch {}
+
+    if (res?.ok)
+        return res
+
+    try
+    {
+        res = await fetch(sflibUrl + filename)
+    }
+    catch {}
+
+    if (res?.ok)
+        return res
+
+    return null
+}
+
+
 async function loadSflibMeta(): Promise<SflibMeta>
 {
-    const data = await fetch(sflibUrl + "library.json")
+    const data = await fetchSflibFile("library.json")
+    if (!data)
+        throw "could not load sflib metadata"
+
     const meta: SflibMeta = await data.json()
 
     meta.collectionsById = new Map<string, SflibCollectionMeta>()
@@ -159,7 +189,10 @@ export async function sflibGetInstrument(
 
     const instrFilename = instrMeta.filename
 
-    const data = await fetch(sflibUrl + collectionId + "/" + instrFilename)
+    const data = await fetchSflibFile(collectionId + "/" + instrFilename)
+    if (!data)
+        return null
+
     const instr: SflibInstrument = await data.json()
 
     let yieldCount = 0
