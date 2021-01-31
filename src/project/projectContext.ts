@@ -63,8 +63,8 @@ export function useProjectInit(): RefState<ProjectContextProps>
             refState.ref.current.savedProject = openedProject
 
             refState.ref.current.clearUndoStack()
-            refState.commit()
             window.dispatchEvent(new Event("timelineReset"))
+            refState.commit()
         }
 
 

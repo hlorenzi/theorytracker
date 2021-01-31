@@ -152,6 +152,9 @@ export class EditorTrackChords extends EditorTrack
                 if (!data.playback.playing && (layer == 0) == selected)
                     continue
 
+                if (chord.type != "chord")
+                    continue
+
                 const key = keyCh.key
                 const hovering = !!data.state.hover && data.state.hover.id == chord.id
                 const playing = data.playback.playing && chord.range.overlapsPoint(data.playback.playTime)

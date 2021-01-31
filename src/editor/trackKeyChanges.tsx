@@ -136,6 +136,9 @@ export class EditorTrackKeyChanges extends EditorTrack
                 if ((layer == 0) == selected)
                     continue
             
+                if (keyCh.type != "keyChange")
+                    continue
+
                 const hovering = !!data.state.hover && data.state.hover.id == keyCh.id
                 this.renderMarker(
                     data, keyCh.range.start,

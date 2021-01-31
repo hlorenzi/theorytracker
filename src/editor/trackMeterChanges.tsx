@@ -134,6 +134,9 @@ export class EditorTrackMeterChanges extends EditorTrack
                 const selected = data.state.selection.contains(meterCh.id)
                 if ((layer == 0) == selected)
                     continue
+
+                if (meterCh.type != "meterChange")
+                    continue
             
                 const hovering = !!data.state.hover && data.state.hover.id == meterCh.id
                 this.renderMarker(
