@@ -72,6 +72,16 @@ export default function App()
                     <MenuFile/>
                     <MenuWindow/>
                     <PlaybackToolbar/>
+                    <a
+                        href="https://github.com/hlorenzi/theorytracker#how-to-use"
+                        style={{
+                            color: "#fff",
+                            alignSelf: "center",
+                            marginLeft: "1em",
+                            fontSize: "1.25em",
+                    }}>
+                        How to use the app
+                    </a>
                 </Menubar.Root>
 
                 { !playbackCtx.ref.current.synthLoading ? null :

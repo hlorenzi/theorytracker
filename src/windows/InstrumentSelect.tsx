@@ -39,7 +39,7 @@ export function InstrumentSelect(props: InstrumentSelectProps)
         <div>
             <UI.DropdownMenu
                 items={[
-                    { value: "basic", label: "Basic" },
+                    //{ value: "basic", label: "Basic" },
                     { value: "sflib", label: "Soundfont Library" },
                 ]}
                 selected={ instrType }
