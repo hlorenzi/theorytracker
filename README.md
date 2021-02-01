@@ -2,6 +2,11 @@
 
 [🎼 Try it right now on your browser!](https://hlorenzi.github.io/theorytracker/)
 
+[![Join the Discord server!][badge-discord-img]][badge-discord-url]
+
+[badge-discord-img]: https://img.shields.io/discord/394999035540275222?label=Join%20the%20Discord%20server!&logo=discord
+[badge-discord-url]: https://discord.com/invite/pXeDXGD
+
 This is a multi-track piano-roll-style song editor app with an emphasis on music theory,
 where notes and chords are color-coded according to the key, and some editing tools
 work diatonically.
