@@ -15,14 +15,12 @@ export interface InspectorMeterChangeProps
 export function InspectorMeterChange(props: InspectorMeterChangeProps)
 {
     const windowCtx = Dockable.useWindow()
-    const project = Project.useProject()
-    const prefs = Prefs.usePrefs()
 
 
 	const meterChs: Project.MeterChange[] = []
 	for (const elemId of props.elemIds)
 	{
-		const meterCh = Project.getElem(project.ref.current.project, elemId, "meterChange")
+		const meterCh = Project.getElem(Project.global.project, elemId, "meterChange")
 		if (!meterCh)
 			continue
 
@@ -63,10 +61,10 @@ export function InspectorMeterChange(props: InspectorMeterChangeProps)
 		{
 			const newMeterCh = func(meterCh)
 			console.log("InspectorKeyChange.modifyMeterChs", meterCh, newMeterCh)
-			project.ref.current.project = Project.upsertElement(project.ref.current.project, newMeterCh)
+			Project.global.project = Project.upsertElement(Project.global.project, newMeterCh)
 		}
 
-        project.commit()
+        Project.notifyObservers()
         window.dispatchEvent(new Event("timelineRefresh"))
 	}
 

@@ -5,8 +5,17 @@ import * as Project from "./project"
 
 export default function PlaybackToolbar()
 {
-    const playback = Playback.usePlayback()
-    const project = Project.useProject()
+    const onChangeBpm = (ev: React.ChangeEvent<HTMLInputElement>) =>
+    {
+        Project.global.project =
+        {
+            ...Project.global.project,
+            baseBpm: parseInt(ev.target.value)
+        }
+        
+        Project.addUndoPoint("setBpm")
+        Project.notifyObservers()
+    }
 
 
     return <div style={{
@@ -17,17 +26,17 @@ export default function PlaybackToolbar()
         justifyItems: "start",
     }}>
         <button
-            onClick={ () => playback.ref.current.togglePlaying() }
+            onClick={ () => Playback.togglePlaying() }
             style={{
                 width: "5em",
         }}>
-            { playback.ref.current.playing ? "■ Stop" : "▶ Play" }
+            { Playback.global.playing ? "■ Stop" : "▶ Play" }
         </button>
 
         <button
             onClick={ () =>
             {
-                playback.ref.current.stopPlaying()
+                Playback.setPlaying(false)
                 window.dispatchEvent(new Event("timelineRewind"))
             }}
             style={{
@@ -46,12 +55,8 @@ export default function PlaybackToolbar()
 
         <input
             type="number"
-            value={ project.ref.current.project.baseBpm }
-            onChange={ ev =>
-            {
-                project.ref.current.project.baseBpm = parseInt(ev.target.value)
-                project.commit()
-            }}
+            value={ Project.global.project.baseBpm }
+            onChange={ onChangeBpm }
             style={{
                 width: "4em",
                 backgroundColor: "transparent",

@@ -41,13 +41,12 @@ export interface InspectorTrackProps
 export function InspectorTrack(props: InspectorTrackProps)
 {
     const windowCtx = Dockable.useWindow()
-    const project = Project.useProject()
 
 
 	const tracks: Project.Track[] = []
 	for (const elemId of props.elemIds)
 	{
-		const track = Project.getElem(project.ref.current.project, elemId, "track")
+		const track = Project.getElem(Project.global.project, elemId, "track")
 		if (!track)
 			continue
 
@@ -98,10 +97,10 @@ export function InspectorTrack(props: InspectorTrackProps)
 		{
 			const newTrack = func(track)
 			console.log("InspectorTrack.modifyTracks", track, newTrack)
-			project.ref.current.project = Project.upsertTrack(project.ref.current.project, newTrack)
+			Project.global.project = Project.upsertTrack(Project.global.project, newTrack)
 		}
 
-        project.commit()
+        Project.notifyObservers()
         window.dispatchEvent(new Event("timelineRefresh"))
 	}
 

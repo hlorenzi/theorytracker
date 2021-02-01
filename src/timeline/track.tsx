@@ -68,8 +68,8 @@ export class TimelineTrack
         range: Range)
         : Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
     {
-        const keyChangeTrackId = Project.keyChangeTrackId(data.project)
-        const keyChangeTrackTimedElems = data.project.lists.get(keyChangeTrackId)
+        const keyChangeTrackId = Project.keyChangeTrackId(Project.global.project)
+        const keyChangeTrackTimedElems = Project.global.project.lists.get(keyChangeTrackId)
         if (!keyChangeTrackTimedElems)
             return
 
@@ -208,17 +208,17 @@ export class TimelineTrack
     
     findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
     {
-        const list = data.project.lists.get(this.projectTrackId)
+        const list = Project.global.project.lists.get(this.projectTrackId)
         if (!list)
-            return data.project.range.start
+            return Project.global.project.range.start
 
-        return list.findPreviousDeletionAnchor(time) || data.project.range.start
+        return list.findPreviousDeletionAnchor(time) || Project.global.project.range.start
     }
 	
 	
 	deleteRange(data: Timeline.WorkData, range: Range)
 	{
-        const list = data.project.lists.get(this.projectTrackId)
+        const list = Project.global.project.lists.get(this.projectTrackId)
         if (!list)
             return
 
@@ -227,7 +227,7 @@ export class TimelineTrack
             for (const elem of list.iterAtPoint(range.start))
             {
                 const removeElem = Project.elemModify(elem, { parentId: -1 })
-                data.project = Project.upsertElement(data.project, removeElem)
+                Project.global.project = Project.upsertElement(Project.global.project, removeElem)
             }
         }
         else
@@ -235,7 +235,7 @@ export class TimelineTrack
             for (const elem of list.iterAtRange(range))
             {
                 const removeElem = Project.elemModify(elem, { parentId: -1 })
-                data.project = Project.upsertElement(data.project, removeElem)
+                Project.global.project = Project.upsertElement(Project.global.project, removeElem)
             }
         }
 	}
@@ -243,15 +243,15 @@ export class TimelineTrack
 
 	selectionRemoveConflictingBehind(data: Timeline.WorkData)
 	{
-        data.project = data.projectCtx.ref.current.project
+        Project.global.project = Project.global.project
 
-        const list = data.project.lists.get(this.projectTrackId)
+        const list = Project.global.project.lists.get(this.projectTrackId)
         if (!list)
             return
 
 		for (const id of data.state.selection)
 		{
-			const selectedElem = data.project.elems.get(id)
+			const selectedElem = Project.global.project.elems.get(id)
 			if (!selectedElem)
 				continue
 
@@ -266,7 +266,7 @@ export class TimelineTrack
                         continue
     
                     const removeElem = Project.elemModify(elem, { parentId: -1 })
-                    data.project = Project.upsertElement(data.project, removeElem)
+                    Project.global.project = Project.upsertElement(Project.global.project, removeElem)
                 }
             }
             else
@@ -277,12 +277,12 @@ export class TimelineTrack
                         continue
     
                     const removeElem = Project.elemModify(elem, { parentId: -1 })
-                    data.project = Project.upsertElement(data.project, removeElem)
+                    Project.global.project = Project.upsertElement(Project.global.project, removeElem)
                 }
             }
 		}
 
-        data.projectCtx.ref.current.project = data.project
+        Project.global.project = Project.global.project
 	}
 
 

@@ -35,7 +35,6 @@ const StyledCloseButton = styled.button`
 export function Container()
 {
     const dockable = Dockable.useDockable()
-    const prefs = Prefs.usePrefs()
 
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
     const rootRef = React.useRef<HTMLDivElement>(null)
@@ -128,14 +127,14 @@ export function Container()
     const mouseData = useMouseHandler(layoutRef, rectRef)
 
     const anchorSize = 5
-    const anchorColor = prefs.ref.current.ui.windowAnchorColor
+    const anchorColor = Prefs.global.ui.windowAnchorColor
 
     return <div
         ref={ rootRef }
         style={{
             width: "100%",
             height: "100%",
-            backgroundColor: prefs.ref.current.ui.windowVoidColor,
+            backgroundColor: Prefs.global.ui.windowVoidColor,
     }}>
 
         { layoutRef.current.panelRects.map(panelRect =>
@@ -173,7 +172,7 @@ export function Container()
                 width: (mouseData.draggingAnchor.previewRect.x2 - mouseData.draggingAnchor.previewRect.x1 - 1) + "px",
                 height: (mouseData.draggingAnchor.previewRect.y2 - mouseData.draggingAnchor.previewRect.y1 - 1) + "px",
 
-                backgroundColor: prefs.ref.current.ui.windowOverlayColor,
+                backgroundColor: Prefs.global.ui.windowOverlayColor,
                 zIndex: 1000,
             }}/>
         }
@@ -228,7 +227,6 @@ const DivPanel = styled.div<PrefsProps>`
 function Panel(props: any)
 {
     const dockable = Dockable.useDockable()
-    const prefs = Prefs.usePrefs()
     const panelRect: DockableData.PanelRect = props.panelRect
     const mouseHandler: MouseHandlerData = props.mouseHandler
 
@@ -242,7 +240,7 @@ function Panel(props: any)
         height: (panelRect.rect.h) + "px",
         boxSizing: "border-box",
 
-        backgroundColor: prefs.ref.current.ui.windowVoidColor,
+        backgroundColor: Prefs.global.ui.windowVoidColor,
         borderRadius: "0.5em",
         padding: "0.25em",
 
@@ -251,9 +249,9 @@ function Panel(props: any)
         <DivPanel
             className={ dockable.ref.current.state.activePanel === panelRect.panel ? "active" : undefined }
             onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelActivate(ev, panelRect.panel)) as any }
-            prefs={ prefs.ref.current }
+            prefs={ Prefs.global }
             style={{
-                backgroundColor: prefs.ref.current.ui.windowPanelColor,
+                backgroundColor: Prefs.global.ui.windowPanelColor,
                 borderRadius: "0.5em",
                 boxSizing: "border-box",
                 width: "100%",
@@ -266,7 +264,7 @@ function Panel(props: any)
             <div
                 onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelHeaderMouseDown(ev, panelRect.panel)) as any }
                 style={{
-                    backgroundColor: prefs.ref.current.ui.windowVoidColor,
+                    backgroundColor: Prefs.global.ui.windowVoidColor,
                     textAlign: "left",
                     gridRow: 1,
                     gridColumn: 1,
@@ -280,8 +278,8 @@ function Panel(props: any)
                         style={{
                             display: "inline-block",
                             backgroundColor: panelRect.panel.curWindowIndex == idx ?
-                                prefs.ref.current.ui.windowPanelColor :
-                                prefs.ref.current.ui.windowVoidColor,
+                                Prefs.global.ui.windowPanelColor :
+                                Prefs.global.ui.windowVoidColor,
                             color: "#fff",
                             padding: "0.25em 0.5em",
                             marginRight: "0.25em",

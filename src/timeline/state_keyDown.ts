@@ -1,9 +1,11 @@
-import Range from "../util/range"
-import Rational from "../util/rational"
 import * as Editor from "./index"
 import * as Project from "../project"
+import * as Prefs from "../prefs"
 import * as Theory from "../theory"
-	
+import * as Playback from "../playback"
+import Range from "../util/range"
+import Rational from "../util/rational"
+
 	
 export function keyDown(data: Editor.WorkData, key: string)
 {
@@ -19,31 +21,31 @@ export function keyDown(data: Editor.WorkData, key: string)
         case "escape":
         {
             handleEscape(data)
-            data.projectCtx.ref.current.splitUndoPoint()
+            Project.splitUndoPoint()
             break
         }
 
         case "enter":
         {
             handleEnter(data)
-            data.projectCtx.ref.current.splitUndoPoint()
+            Project.splitUndoPoint()
             break
         }
 
         case "delete":
         {
             handleDelete(data)
-            data.projectCtx.ref.current.project = data.project
-            data.projectCtx.ref.current.splitUndoPoint()
-            data.projectCtx.ref.current.addUndoPoint("keyDown_delete")
+            Project.global.project = Project.global.project
+            Project.splitUndoPoint()
+            Project.addUndoPoint("keyDown_delete")
             break
         }
 
 		case "backspace":
         {
             handleBackspace(data)
-            data.projectCtx.ref.current.project = data.project
-            data.projectCtx.ref.current.addUndoPoint("keyDown_backspace")
+            Project.global.project = Project.global.project
+            Project.addUndoPoint("keyDown_backspace")
             break
         }
 
@@ -51,8 +53,8 @@ export function keyDown(data: Editor.WorkData, key: string)
         case "arrowleft":
         {
             handleLeftRight(data, key === "arrowleft")
-            data.projectCtx.ref.current.project = data.project
-            data.projectCtx.ref.current.addUndoPoint("keyDown_move")
+            Project.global.project = Project.global.project
+            Project.addUndoPoint("keyDown_move")
             break
         }
 
@@ -60,8 +62,8 @@ export function keyDown(data: Editor.WorkData, key: string)
         case "arrowdown":
         {
             handleUpDown(data, key === "arrowup", false)
-            data.projectCtx.ref.current.project = data.project
-            data.projectCtx.ref.current.addUndoPoint("keyDown_move")
+            Project.global.project = Project.global.project
+            Project.addUndoPoint("keyDown_move")
             break
         }
 
@@ -71,8 +73,8 @@ export function keyDown(data: Editor.WorkData, key: string)
         case "<":
         {
             handleUpDown(data, key === "." || key === ">", true)
-            data.projectCtx.ref.current.project = data.project
-            data.projectCtx.ref.current.addUndoPoint("keyDown_move")
+            Project.global.project = Project.global.project
+            Project.addUndoPoint("keyDown_move")
             break
         }
 
@@ -87,9 +89,9 @@ export function keyDown(data: Editor.WorkData, key: string)
             const degree = key.charCodeAt(0) - "1".charCodeAt(0)
             handleNumber(data, degree)
 
-            data.projectCtx.ref.current.project = data.project
-            data.projectCtx.ref.current.splitUndoPoint()
-            data.projectCtx.ref.current.addUndoPoint("keyDown_insert")
+            Project.global.project = Project.global.project
+            Project.splitUndoPoint()
+            Project.addUndoPoint("keyDown_insert")
             break
         }
 
@@ -107,8 +109,8 @@ export function keyDown(data: Editor.WorkData, key: string)
             {
                 Editor.selectionCopy(data)
                 Editor.selectionDelete(data)
-                data.projectCtx.ref.current.splitUndoPoint()
-                data.projectCtx.ref.current.addUndoPoint("cut")
+                Project.splitUndoPoint()
+                Project.addUndoPoint("cut")
             }
 
             break
@@ -119,8 +121,8 @@ export function keyDown(data: Editor.WorkData, key: string)
             if (data.state.keysDown.has("control"))
             {
                 Editor.paste(data)
-                data.projectCtx.ref.current.splitUndoPoint()
-                data.projectCtx.ref.current.addUndoPoint("copy")
+                Project.splitUndoPoint()
+                Project.addUndoPoint("copy")
             }
                 
             break
@@ -133,11 +135,11 @@ function modifySelectedElems(
     data: Editor.WorkData,
     func: (elem: Project.Element) => Project.Element)
 {
-    let newProject = data.project
+    let newProject = Project.global.project
 
     for (const id of data.state.selection)
     {
-        const elem = data.project.elems.get(id)
+        const elem = Project.global.project.elems.get(id)
         if (!elem)
             continue
 
@@ -148,16 +150,16 @@ function modifySelectedElems(
         newProject = Project.upsertElement(newProject, newElem)
     }
 
-    data.project = Project.withRefreshedRange(newProject)
+    Project.global.project = Project.withRefreshedRange(newProject)
 }
 
 
 function handleEscape(data: Editor.WorkData)
 {
-    if (data.playback.playing)
+    if (Playback.global.playing)
     {
-        data.playback.setStartTime(data.project.range.start)
-        data.playback.startPlaying()
+        Playback.setStartTime(Project.global.project.range.start)
+        Playback.setPlaying(true)
     }
     else
     {
@@ -182,7 +184,7 @@ function handleEnter(data: Editor.WorkData)
         let trackId = data.state.tracks[0].projectTrackId
         for (const id of data.state.selection)
         {
-            trackId = Project.parentTrackFor(data.project, id).id
+            trackId = Project.parentTrackFor(Project.global.project, id).id
         }
 
         const trackIndex = data.state.tracks.findIndex(tr => tr.projectTrackId === trackId)
@@ -237,24 +239,24 @@ function handleBackspace(data: Editor.WorkData)
         Editor.scrollTimeIntoView(data, time1)
     }
     
-    data.project = Project.withRefreshedRange(data.project)
+    Project.global.project = Project.withRefreshedRange(Project.global.project)
 }
 
 
 function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
 {
-    const keyFast = data.state.keysDown.has(data.prefs.editor.keyDisplaceFast)
-    const keyCursor2 = data.state.keysDown.has(data.prefs.editor.keyDisplaceCursor2)
-    const keyStretch = data.state.keysDown.has(data.prefs.editor.keyDisplaceStretch)
+    const keyFast = data.state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
+    const keyCursor2 = data.state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
+    const keyStretch = data.state.keysDown.has(Prefs.global.editor.keyDisplaceStretch)
 
 
-    if (data.playback.playing)
+    if (Playback.global.playing)
     {
         const timeDelta = data.state.timeSnap.multiplyByFloat(
             (keyFast ? 64 : 16) * (isLeft ? -1 : 1))
 
-        data.playback.setStartTime(data.playback.playTime.add(timeDelta))
-        data.playback.startPlaying()
+        Playback.setStartTime(Playback.global.playTime.add(timeDelta))
+        Playback.setPlaying(true)
     }
     else if (data.state.cursor.visible && (data.state.selection.size == 0 || keyCursor2))
     {
@@ -270,7 +272,7 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
             Editor.selectionClear(data)
             Editor.selectionAddAtCursor(data)
             Editor.scrollTimeIntoView(data, newTime)
-            data.playback.setStartTime(newTime)
+            Playback.setStartTime(newTime)
         }
         else
         {
@@ -281,7 +283,7 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
 
             Editor.cursorSetTime(data, newTime, newTime)
             Editor.scrollTimeIntoView(data, newTime)
-            data.playback.setStartTime(newTime)
+            Playback.setStartTime(newTime)
         }
     }
     else
@@ -301,8 +303,8 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
                 
             if (keyStretch && selectionRange)
             {
-                const absRange = Project.getAbsoluteRange(data.project, elem.parentId, elem.range)
-                newRange = Project.getRelativeRange(data.project, elem.parentId, absRange.stretch(
+                const absRange = Project.getAbsoluteRange(Project.global.project, elem.parentId, elem.range)
+                newRange = Project.getRelativeRange(Project.global.project, elem.parentId, absRange.stretch(
                     timeDelta,
                     selectionRange.start,
                     selectionRange.end))
@@ -348,9 +350,9 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
 
 function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean)
 {
-    const keyFast = data.state.keysDown.has(data.prefs.editor.keyDisplaceFast)
-    const keyCursor2 = data.state.keysDown.has(data.prefs.editor.keyDisplaceCursor2)
-    const keyChromatic = data.state.keysDown.has(data.prefs.editor.keyDisplaceChromatically)
+    const keyFast = data.state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
+    const keyCursor2 = data.state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
+    const keyChromatic = data.state.keysDown.has(Prefs.global.editor.keyDisplaceChromatically)
 
     
     if (!isChromatic && data.state.cursor.visible && (data.state.selection.size == 0 || keyCursor2))
@@ -385,8 +387,8 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
         {
             if (elem.type == "note")
             {
-                const track = Project.parentTrackFor(data.project, elem.parentId)
-                const key = Project.keyAt(data.project, track.id, elem.range.start)
+                const track = Project.parentTrackFor(Project.global.project, elem.parentId)
+                const key = Project.keyAt(Project.global.project, track.id, elem.range.start)
                 const degree = key.octavedDegreeForMidi(elem.midiPitch)
                 const newDegree = degree + degreeDelta
                 const newPitch = pitchDelta != 0 ?
@@ -396,7 +398,7 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
                 if (!playedPreview)
                 {
                     playedPreview = true
-                    data.playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
+                    Playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
                     data.state.insertion.nearMidiPitch = newPitch
                     data.state.insertion.duration = elem.range.duration
                 }
@@ -405,8 +407,8 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
             }
             else if (elem.type == "chord")
             {
-                const track = Project.parentTrackFor(data.project, elem.parentId)
-                const key = Project.keyAt(data.project, track.id, elem.range.start)
+                const track = Project.parentTrackFor(Project.global.project, elem.parentId)
+                const key = Project.keyAt(Project.global.project, track.id, elem.range.start)
                 const degree = key.octavedDegreeForMidi(elem.chord.rootChroma)
                 const newDegree = degree + degreeDelta
                 const newRoot = pitchDelta != 0 ?
@@ -420,7 +422,7 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
                 if (!playedPreview)
                 {
                     playedPreview = true
-                    data.playback.playChordPreview(track.id, newChord, 0, 1)
+                    Playback.playChordPreview(track.id, newChord, 0, 1)
                     data.state.insertion.duration = elem.range.duration
                 }
 
@@ -443,7 +445,7 @@ function handleNumber(data: Editor.WorkData, degree: number)
     const time = data.state.cursor.time1.min(data.state.cursor.time2)
     const track = data.state.tracks[data.state.cursor.trackIndex1]
     const trackId = track.projectTrackId
-    const key = Project.keyAt(data.project, trackId, time)
+    const key = Project.keyAt(Project.global.project, trackId, time)
     
     if (track instanceof Editor.TimelineTrackChords)
     {

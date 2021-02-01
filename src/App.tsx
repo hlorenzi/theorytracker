@@ -7,18 +7,30 @@ import * as Popup from "./popup"
 import * as Menubar from "./menubar"
 import * as UI from "./ui"
 import { useRefState } from "./util/refState"
+import * as GlobalObservable from "./util/globalObservable"
 import PlaybackToolbar from "./PlaybackToolbar"
 import MenuFile from "./MenuFile"
 import MenuWindow from "./MenuWindow"
 import "./types"
 
 
+let initializedGlobals = false
+
+
 export default function App()
 {
+    if (!initializedGlobals)
+    {
+        initializedGlobals = true
+        Prefs.initGlobal()
+        Project.initGlobal()
+        Playback.initGlobal()
+    }
+
+    Project.useGlobal()
+    Playback.useGlobal()
+
     const dockableCtx = Dockable.useDockableInit()
-    const projectCtx = Project.useProjectInit()
-    const playbackCtx = Playback.usePlaybackInit(projectCtx)
-    const prefsCtx = useRefState(() => Prefs.getDefault())
     const popupCtx = useRefState(() => Popup.getDefaultCtx())
 
 
@@ -33,15 +45,15 @@ export default function App()
 
             if (key == " ")
             {
-                playbackCtx.ref.current.togglePlaying()
+                Playback.togglePlaying()
             }
             else if ((key == "y" && ev.ctrlKey) || (key == "z" && ev.ctrlKey && ev.shiftKey))
             {
-                projectCtx.ref.current.redo()
+                Project.redo()
             }
             else if (key == "z" && ev.ctrlKey)
             {
-                projectCtx.ref.current.undo()
+                Project.undo()
             }
             else
             {
@@ -57,9 +69,6 @@ export default function App()
 
     return <>
         <Dockable.DockableContext.Provider value={ dockableCtx }>
-        <Project.ProjectContext.Provider value={ projectCtx }>
-        <Playback.PlaybackContext.Provider value={ playbackCtx }>
-        <Prefs.PrefsContext.Provider value={ prefsCtx }>
         <Popup.PopupContext.Provider value={ popupCtx }>
             <div style={{
                 display: "grid",
@@ -84,7 +93,7 @@ export default function App()
                     </a>
                 </Menubar.Root>
 
-                { !playbackCtx.ref.current.synthLoading ? null :
+                { !Playback.global.synthLoading ? null :
                     <UI.LoadingBar floating/>
                 }
 
@@ -96,9 +105,6 @@ export default function App()
                 <popupCtx.ref.current.elem/>
             }
         </Popup.PopupContext.Provider>
-        </Prefs.PrefsContext.Provider>
-        </Playback.PlaybackContext.Provider>
-        </Project.ProjectContext.Provider>
         </Dockable.DockableContext.Provider>
     </>
 }

@@ -23,7 +23,6 @@ export function Inspector()
 	const [elemIds, setElemIds] = Dockable.useWindowState(() => props.elemIds)
 
     const dockable = Dockable.useDockable()
-	const project = Project.useProject()
 	
 
 	const elemTypes = React.useMemo(() =>
@@ -32,7 +31,7 @@ export function Inspector()
 
 		for (const elemId of elemIds)
 		{
-			const elem = project.ref.current.project.elems.get(elemId)
+			const elem = Project.global.project.elems.get(elemId)
 			if (!elem)
 				continue
 

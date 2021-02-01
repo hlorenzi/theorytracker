@@ -13,14 +13,12 @@ export function Test()
         count.commit()
     }
 
-    const project = Project.useProject()
-
     return <div style={{ padding: "0.5em"}}>
         Count: { count.ref.current }
         <br/>
         <button onClick={ increment }>Increment</button>
         <br/>
         <br/>
-        Project elem count: { project.ref.current.project.elems.size }
+        Project elem count: { Project.global.project.elems.size }
     </div>
 }

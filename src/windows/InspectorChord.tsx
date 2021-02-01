@@ -16,9 +16,6 @@ export interface InspectorChordProps
 export function InspectorChord(props: InspectorChordProps)
 {
     const windowCtx = Dockable.useWindow()
-    const project = Project.useProject()
-    const playback = Playback.usePlayback()
-    const prefs = Prefs.usePrefs()
 
     const [baseChordType, setBaseChordType] = Dockable.useWindowState(() => 5)
 
@@ -26,7 +23,7 @@ export function InspectorChord(props: InspectorChordProps)
 	const chords: Project.Chord[] = []
 	for (const elemId of props.elemIds)
 	{
-		const chord = Project.getElem(project.ref.current.project, elemId, "chord")
+		const chord = Project.getElem(Project.global.project, elemId, "chord")
 		if (!chord)
 			continue
 
@@ -41,13 +38,13 @@ export function InspectorChord(props: InspectorChordProps)
 
 
 	let sameChord: Theory.Chord | null = chords[0].chord
-	let sameKey: Theory.Key = Project.keyAt(project.ref.current.project, chords[0].parentId, chords[0].range.start)
+	let sameKey: Theory.Key = Project.keyAt(Project.global.project, chords[0].parentId, chords[0].range.start)
 	for (const chord of chords)
 	{
 		if (chord.chord !== sameChord)
             sameChord = null
         
-        //const key = Project.keyAt(project.ref.current.project, chord.parentId, chord.range.start)
+        //const key = Project.keyAt(Project.global.project, chord.parentId, chord.range.start)
         //if (key !== sameKey)
         //    sameKey = null
 	}
@@ -59,18 +56,18 @@ export function InspectorChord(props: InspectorChordProps)
 		{
 			const newChord = func(chord)
 			console.log("InspectorKeyChange.modifyChords", chord, newChord)
-			project.ref.current.project = Project.upsertElement(project.ref.current.project, newChord)
+			Project.global.project = Project.upsertElement(Project.global.project, newChord)
 		}
 
-        project.commit()
+        Project.notifyObservers()
         window.dispatchEvent(new Event("timelineRefresh"))
 	}
 
 
     const onChooseChord = (chord: Theory.Chord) =>
     {
-        playback.ref.current.playChordPreview(
-            project.ref.current.project.chordTrackId,
+        Playback.playChordPreview(
+            Project.global.project.chordTrackId,
             chord,
             0, 1)
 

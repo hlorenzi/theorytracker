@@ -1,5 +1,7 @@
 import * as Timeline from "./index"
 import * as Project from "../project"
+import * as Prefs from "../prefs"
+import * as Playback from "../playback"
 import * as Windows from "../windows"
 import Rational from "../util/rational"
 import Rect from "../util/rect"
@@ -16,13 +18,13 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
     data.state.mouse.downDate = new Date()
     data.state.mouse.action = Timeline.MouseAction.None
 
-    const selectMultiple = data.state.keysDown.has(data.prefs.editor.keySelectMultiple)
-    const selectRange = data.state.keysDown.has(data.prefs.editor.keySelectRange)
-    const selectClone = data.state.keysDown.has(data.prefs.editor.keySelectClone)
-    const forcePan = data.state.keysDown.has(data.prefs.editor.keyPan)
+    const selectMultiple = data.state.keysDown.has(Prefs.global.editor.keySelectMultiple)
+    const selectRange = data.state.keysDown.has(Prefs.global.editor.keySelectRange)
+    const selectClone = data.state.keysDown.has(Prefs.global.editor.keySelectClone)
+    const forcePan = data.state.keysDown.has(Prefs.global.editor.keyPan)
     const doubleClick =
         data.state.mouse.downDate.getTime() - prevDownDate.getTime() <
-        data.prefs.editor.mouseDoubleClickThresholdMs
+        Prefs.global.editor.mouseDoubleClickThresholdMs
 
     data.state.drag =
     {
@@ -33,7 +35,7 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
             timeScroll: data.state.timeScroll,
             trackScroll: data.state.trackScroll,
             trackYScroll: data.state.tracks[data.state.mouse.point.trackIndex].yScroll,
-            project: data.project,
+            project: Project.global.project,
         },
 
         xLocked: true,
@@ -66,7 +68,7 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
         data.state.mouse.action = Timeline.MouseAction.Pan
     }
     else if (data.state.mouse.point.pos.x > data.state.trackHeaderW &&
-        (data.state.keysDown.has(data.prefs.editor.keyPencil) || trackAtMouseNoCursor))
+        (data.state.keysDown.has(Prefs.global.editor.keyPencil) || trackAtMouseNoCursor))
     {
         if (!trackAtMouseNoCursor)
         {
@@ -81,7 +83,7 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
     {
         Timeline.keyHandlePendingFinish(data)
 
-        const elem = data.project.elems.get(data.state.hover.id)
+        const elem = Project.global.project.elems.get(data.state.hover.id)
         data.state.drag.elemId = data.state.hover.id
 
         Timeline.selectionToggleHover(data, data.state.hover, selectMultiple)
@@ -115,7 +117,7 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
             {
                 Timeline.cursorSetTime(data, range.start, range.start)
                 Timeline.cursorSetTrack(data, data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
-                data.playback.setStartTime(range.start)
+                Playback.setStartTime(range.start)
             }
             
             if (doubleClick)
@@ -154,7 +156,7 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
                 Timeline.scrollTimeIntoView(data, anchor)
             }
 
-            data.playback.setStartTime(data.state.cursor.time1)
+            Playback.setStartTime(data.state.cursor.time1)
         }
     }
 }

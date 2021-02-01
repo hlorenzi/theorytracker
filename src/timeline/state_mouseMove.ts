@@ -1,4 +1,5 @@
 import * as Timeline from "./index"
+import * as Prefs from "../prefs"
 import Range from "../util/range"
 import Rational from "../util/rational"
 
@@ -36,7 +37,7 @@ export function mouseMove(data: Timeline.WorkData, pos: { x: number, y: number }
             data.state.mouse.point.trackIndex,
             data.state.mouse.point.trackPos)
     }
-    else if (data.state.keysDown.has(data.prefs.editor.keyPencil))
+    else if (data.state.keysDown.has(Prefs.global.editor.keyPencil))
     {
         for (let t = 0; t < data.state.tracks.length; t++)
         {
@@ -56,8 +57,8 @@ export function mouseMove(data: Timeline.WorkData, pos: { x: number, y: number }
 
     if (data.state.hover && hoverPrev)
     {
-        if (data.state.hover!.id != hoverPrev!.id ||
-            data.state.hover!.action != hoverPrev!.action)
+        if (data.state.hover.id != hoverPrev.id ||
+            data.state.hover.action != hoverPrev.action)
             return true
     }
     else if ((!data.state.hover && hoverPrev) || (data.state.hover && !hoverPrev))

@@ -2,6 +2,7 @@ import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
+import * as Playback from "../playback"
 import * as Timeline from "./index"
 import * as Theory from "../theory"
 import Rational from "../util/rational"
@@ -36,7 +37,7 @@ export class TimelineTrackChords extends TimelineTrack
         range: Range)
         : Generator<Project.Chord, void, void>
     {
-        const trackElems = data.project.lists.get(this.projectTrackId)
+        const trackElems = Project.global.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
@@ -80,11 +81,11 @@ export class TimelineTrackChords extends TimelineTrack
 
     click(data: Timeline.WorkData, elemId: Project.ID)
     {
-        const chord = Project.getElem(data.project, elemId, "chord")
+        const chord = Project.getElem(Project.global.project, elemId, "chord")
         if (chord)
         {
             data.state.insertion.duration = chord.range.duration
-            data.playback.playChordPreview(this.projectTrackId, chord.chord, 0, 1)
+            Playback.playChordPreview(this.projectTrackId, chord.chord, 0, 1)
         }
     }
 
@@ -125,16 +126,16 @@ export class TimelineTrackChords extends TimelineTrack
 	{
 		if (this.pencil)
 		{
-            const key = Project.keyAt(data.project, this.projectTrackId, this.pencil.time1)
+            const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1)
 
             const elem = Project.makeChord(
                 this.projectTrackId,
                 new Range(this.pencil.time1, this.pencil.time2).sorted(),
                 new Theory.Chord(key.tonic.chroma, 0, 0, []))
 
-            let project = data.projectCtx.ref.current.project
+            let project = Project.global.project
             const id = project.nextId
-            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
+            Project.global.project = Project.upsertElement(project, elem)
             Timeline.selectionAdd(data, id)
 		}
 	}
@@ -149,7 +150,7 @@ export class TimelineTrackChords extends TimelineTrack
             for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(data, visibleRange))
             {
                 const selected = data.state.selection.contains(chord.id)
-                if (!data.playback.playing && (layer == 0) == selected)
+                if (!Playback.global.playing && (layer == 0) == selected)
                     continue
 
                 if (chord.type != "chord")
@@ -157,7 +158,7 @@ export class TimelineTrackChords extends TimelineTrack
 
                 const key = keyCh.key
                 const hovering = !!data.state.hover && data.state.hover.id == chord.id
-                const playing = data.playback.playing && chord.range.overlapsPoint(data.playback.playTime)
+                const playing = Playback.global.playing && chord.range.overlapsPoint(Playback.global.playTime)
                 
                 this.renderChord(
                     data, chord.range,
@@ -172,7 +173,7 @@ export class TimelineTrackChords extends TimelineTrack
             data.ctx.save()
             data.ctx.globalAlpha = 0.4
 
-            const key = Project.keyAt(data.project, this.projectTrackId, this.pencil.time1)
+            const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1)
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
             this.renderChord(

@@ -10,8 +10,6 @@ import * as Windows from "./windows"
 export default function MenuFile()
 {
     const dockable = Dockable.useDockable()
-    const project = Project.useProject()
-    const playback = Playback.usePlayback()
 
 
     React.useEffect(() =>
@@ -27,20 +25,20 @@ export default function MenuFile()
             reader.readAsArrayBuffer(elem.files![0])
             reader.onload = () =>
             {
-                playback.ref.current.stopPlaying()
+                Playback.setPlaying(false)
 
                 const filename = elem.files![0].name
                 const bytes = new Uint8Array(reader.result as any)
     
                 if (filename.endsWith(".mid"))
                 {
-                    project.ref.current.open(Project.midiImport(bytes))
+                    Project.open(Project.midiImport(bytes))
                 }
                 else if (filename.endsWith(".json") || filename.endsWith(".ttproj"))
                 {
                     const text = new TextDecoder("utf-8").decode(bytes)
                     const json = JSON.parse(text)
-                    project.ref.current.open(Project.jsonImport(json))
+                    Project.open(Project.jsonImport(json))
                 }
                 else
                 {
@@ -64,7 +62,7 @@ export default function MenuFile()
     {
         window.addEventListener("beforeunload", (ev) =>
         {
-            if (project.ref.current.isUnsaved())
+            if (Project.isUnsaved())
             {
                 ev.preventDefault()
                 ev.returnValue = ""
@@ -77,7 +75,7 @@ export default function MenuFile()
 
     const confirmDiscard = () =>
     {
-        if (!project.ref.current.isUnsaved())
+        if (!Project.isUnsaved())
             return true
 
         return window.confirm("Discard current song?")
@@ -89,8 +87,8 @@ export default function MenuFile()
         if (!confirmDiscard())
             return
 
-        project.ref.current.setNew()
-        playback.ref.current.stopPlaying()
+        Project.setNew()
+        Playback.setPlaying(false)
     }
 
     const onOpen = () =>
@@ -103,7 +101,7 @@ export default function MenuFile()
 
     const onJsonDownload = () =>
     {
-        const jsonStr = Project.jsonExport(project.ref.current.project)
+        const jsonStr = Project.jsonExport(Project.global.project)
 
         const element = document.createElement("a")
         element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
@@ -117,7 +115,7 @@ export default function MenuFile()
 
     const onJsonPreview = () =>
     {
-        const jsonStr = Project.jsonExport(project.ref.current.project)
+        const jsonStr = Project.jsonExport(Project.global.project)
 
         const newWindow = window.open()!
         newWindow.document.write("<code style='white-space:pre'>")

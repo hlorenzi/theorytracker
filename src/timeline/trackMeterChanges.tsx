@@ -32,7 +32,7 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.MeterChange, void, void>
     {
-        const trackElems = data.project.lists.get(this.projectTrackId)
+        const trackElems = Project.global.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
@@ -112,9 +112,9 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
                 this.pencil.time,
                 Project.defaultMeter())
 
-            let project = data.projectCtx.ref.current.project
+            let project = Project.global.project
             const id = project.nextId
-            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
+            Project.global.project = Project.upsertElement(project, elem)
             Timeline.selectionAdd(data, id)
 		}
 	}
@@ -123,7 +123,7 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
     render(data: Timeline.WorkData)
     {
         const visibleRange = Timeline.visibleTimeRange(data)
-        const activeMeterAtStart = Project.meterAt(data.project, this.projectTrackId, visibleRange.start)
+        const activeMeterAtStart = Project.meterAt(Project.global.project, this.projectTrackId, visibleRange.start)
 
         let suppressStickyLabel = false
         for (let layer = 0; layer < 2; layer++)
@@ -140,7 +140,7 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
                 const hovering = !!data.state.hover && data.state.hover.id == meterCh.id
                 this.renderMarker(
                     data, meterCh.range.start,
-                    data.prefs.editor.meterChangeColor,
+                    Prefs.global.editor.meterChangeColor,
                     meterCh.meter.str,
                     hovering, selected)
                 
@@ -155,7 +155,7 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
             this.renderMarkerLabel(
                 data,
                 data.state.trackHeaderW + 5,
-                data.prefs.editor.meterChangeColor,
+                Prefs.global.editor.meterChangeColor,
                 activeMeterAtStart.str)
         }
 
@@ -166,7 +166,7 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
 
             this.renderMarker(
                 data, this.pencil.time,
-                data.prefs.editor.meterChangeColor,
+                Prefs.global.editor.meterChangeColor,
                 null,
                 false, false)
             

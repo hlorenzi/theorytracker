@@ -1,4 +1,4 @@
-export * from "./projectContext"
+export * from "./_global"
 export * from "./root"
 export * from "./elem"
 export * from "./midiImport"

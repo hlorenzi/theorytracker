@@ -40,8 +40,6 @@ const StyledModeStackButton = styled.button`
 
 export function Timeline()
 {
-    const prefs = Prefs.usePrefs()
-
     const windowCtx = Dockable.useWindow()
     windowCtx.setTitle("Timeline")
     windowCtx.setPreferredSize(600, 450)
@@ -52,8 +50,6 @@ export function Timeline()
     {
         return {
             state: editorState.ref.current,
-            project: null!,
-            projectCtx: null!,
             playback: null!,
             prefs: null!,
             popup: null!,
@@ -117,7 +113,7 @@ export function Timeline()
         justifyItems: "start",
     }}>
         <StyledModeStackDiv
-            prefs={ prefs.ref.current }
+            prefs={ Prefs.global }
         >
             { modeStack }
         </StyledModeStackDiv>

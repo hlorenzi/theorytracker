@@ -3,6 +3,7 @@ import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
+import * as Playback from "../playback"
 import * as Timeline from "./index"
 import Rational from "../util/rational"
 import Range from "../util/range"
@@ -34,14 +35,14 @@ export class TimelineTrackNoteVelocities extends Timeline.TimelineTrack
 
     parentStart(data: Timeline.WorkData)
     {
-        const noteBlock = data.project.elems.get(this.parentId)
+        const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
     parentRange(data: Timeline.WorkData)
     {
-        const noteBlock = data.project.elems.get(this.parentId)
+        const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
     }
 
@@ -51,7 +52,7 @@ export class TimelineTrackNoteVelocities extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.Note, void, void>
     {
-        const list = data.project.lists.get(this.parentId)
+        const list = Project.global.project.lists.get(this.parentId)
         if (!list)
             return
 
@@ -81,7 +82,7 @@ export class TimelineTrackNoteVelocities extends Timeline.TimelineTrack
         const xMin = Math.min(x1, x2)
         const xMax = Math.max(x1, x2)
 
-        let newProject = data.project
+        let newProject = Project.global.project
 
         for (const note of this.iterNotesAtRange(data, visibleRange))
         {
@@ -98,15 +99,15 @@ export class TimelineTrackNoteVelocities extends Timeline.TimelineTrack
             
                 newProject = Project.upsertElement(newProject, newNote)
                 
-                data.playback.playNotePreview(
-                    Project.parentTrackFor(data.project, newNote.parentId).id,
+                Playback.playNotePreview(
+                    Project.parentTrackFor(Project.global.project, newNote.parentId).id,
                     newNote.midiPitch,
                     newNote.volumeDb,
                     newNote.velocity)
             }
         }
 
-        data.project = newProject
+        Project.global.project = newProject
     }
 
 
@@ -154,8 +155,8 @@ export class TimelineTrackNoteVelocities extends Timeline.TimelineTrack
         
         data.ctx.lineWidth = 2
         data.ctx.strokeStyle = active ?
-            data.prefs.editor.noteVelocityMarkerColor :
-            data.prefs.editor.noteVelocityMarkerInactiveColor
+            Prefs.global.editor.noteVelocityMarkerColor :
+            Prefs.global.editor.noteVelocityMarkerInactiveColor
 		
         data.ctx.beginPath()
         data.ctx.moveTo(x, this.renderRect.h)

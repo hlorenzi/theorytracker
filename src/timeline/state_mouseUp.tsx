@@ -29,10 +29,10 @@ export function mouseUp(data: Timeline.WorkData)
 
     Timeline.selectionRemoveConflictingBehind(data)
 
-    data.project = Project.withRefreshedRange(data.project)
-    data.projectCtx.ref.current.project = data.project
-    data.projectCtx.ref.current.splitUndoPoint()
-    data.projectCtx.ref.current.addUndoPoint("mouseUp")
+    Project.global.project = Project.withRefreshedRange(Project.global.project)
+    Project.global.project = Project.global.project
+    Project.splitUndoPoint()
+    Project.addUndoPoint("mouseUp")
 }
 
 
@@ -45,7 +45,7 @@ function handleTrackDragRelease(data: Timeline.WorkData)
         data.state.selection.has(data.state.tracks[data.state.drag.trackInsertionBefore].projectTrackId))
         return
 
-    let project = data.project
+    let project = Project.global.project
 
     const selectedProjectTracks: Project.Track[] = []
     for (const track of data.state.tracks)
@@ -72,8 +72,8 @@ function handleTrackDragRelease(data: Timeline.WorkData)
     for (const track of selectedProjectTracks.reverse())
         project = Project.upsertTrack(project, track, false, beforeProjectTrackIndex)
 
-    data.project = project
-    data.projectCtx.ref.current.project = project
+    Project.global.project = project
+    Project.global.project = project
 }
 
 

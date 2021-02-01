@@ -19,10 +19,6 @@ interface PrefsProps
 
 export function Render()
 {
-    const prefs = Prefs.usePrefs()
-    const playback = Playback.usePlayback()
-    const projectCtx = Project.useProject()
-
     const windowCtx = Dockable.useWindow()
     windowCtx.setTitle("Render")
     windowCtx.setPreferredSize(600, 450)
@@ -41,11 +37,11 @@ export function Render()
         {
             try
             {
-                const project = projectCtx.ref.current.project
+                const project = Project.global.project
                 const range = project.range
                     //Range.fromStartDuration(playback.ref.current.startTime, new Rational(1))
 
-                const audioBuffer = await playback.ref.current.renderToBuffer(range, setProgress)
+                const audioBuffer = await Playback.renderToBuffer(range, setProgress)
 
                 const wavBuffer = WavEncoder.encode(audioBuffer)
                 console.log("wavBuffer", wavBuffer)

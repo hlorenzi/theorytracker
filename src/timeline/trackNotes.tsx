@@ -3,6 +3,7 @@ import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
+import * as Playback from "../playback"
 import * as Timeline from "./index"
 import Rational from "../util/rational"
 import Range from "../util/range"
@@ -35,14 +36,14 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
     parentStart(data: Timeline.WorkData)
     {
-        const noteBlock = data.project.elems.get(this.parentId)
+        const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
     parentRange(data: Timeline.WorkData)
     {
-        const noteBlock = data.project.elems.get(this.parentId)
+        const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
     }
 
@@ -52,7 +53,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.Note, void, void>
     {
-        const list = data.project.lists.get(this.parentId)
+        const list = Project.global.project.lists.get(this.parentId)
         if (!list)
             return
 
@@ -66,12 +67,12 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         range: Range)
         : Generator<[Project.Note, Project.NoteBlock], void, void>
     {
-        for (const track of data.project.tracks)
+        for (const track of Project.global.project.tracks)
         {
             if (track.trackType != "notes")
                 continue
 
-            const trackElems = data.project.lists.get(track.id)
+            const trackElems = Project.global.project.lists.get(track.id)
             if (!trackElems)
                 continue
             
@@ -83,7 +84,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
                 if (noteBlock.type != "noteBlock")
                     continue
                     
-                const noteList = data.project.lists.get(noteBlock.id)
+                const noteList = Project.global.project.lists.get(noteBlock.id)
                 if (!noteList)
                     continue
 
@@ -145,7 +146,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.Chord, void, void>
     {
-        const trackElems = data.project.lists.get(data.project.chordTrackId)
+        const trackElems = Project.global.project.lists.get(Project.global.project.chordTrackId)
         if (!trackElems)
             return
 
@@ -230,12 +231,12 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
     click(data: Timeline.WorkData, elemId: Project.ID)
     {
-        const note = Project.getElem(data.project, elemId, "note")
+        const note = Project.getElem(Project.global.project, elemId, "note")
         if (note)
         {
             data.state.insertion.nearMidiPitch = note.midiPitch
             data.state.insertion.duration = note.range.duration
-            data.playback.playNotePreview(this.projectTrackId, note.midiPitch, note.volumeDb, note.velocity)
+            Playback.playNotePreview(this.projectTrackId, note.midiPitch, note.volumeDb, note.velocity)
         }
     }
 
@@ -249,7 +250,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     pencilHover(data: Timeline.WorkData)
     {
         const time = data.state.mouse.point.time
-        const key = Project.keyAt(data.project, this.projectTrackId, time)
+        const key = Project.keyAt(Project.global.project, this.projectTrackId, time)
         const row = this.rowAtY(data, data.state.mouse.point.trackPos.y)
         const midiPitch = this.pitchForRow(data, row, key)
 
@@ -266,7 +267,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     {
 		if (this.pencil)
 		{
-            data.playback.playNotePreview(this.projectTrackId, this.pencil.midiPitch, Project.DefaultVolumeDb, 1)
+            Playback.playNotePreview(this.projectTrackId, this.pencil.midiPitch, Project.DefaultVolumeDb, 1)
         }
     }
 
@@ -296,9 +297,9 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
                 Project.DefaultVolumeDb,
                 1)
 
-            let project = data.projectCtx.ref.current.project
+            let project = Project.global.project
             const id = project.nextId
-            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
+            Project.global.project = Project.upsertElement(project, elem)
             Timeline.selectionAdd(data, id)
 		}
 	}
@@ -306,7 +307,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     
     findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
     {
-        const list = data.project.lists.get(this.parentId)
+        const list = Project.global.project.lists.get(this.parentId)
         if (!list)
             return this.parentStart(data)
 
@@ -319,12 +320,12 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 		for (const note of this.iterNotesAtRange(data, range))
 		{
             const removeNote = Project.elemModify(note, { parentId: -1 })
-            data.project = Project.upsertElement(data.project, removeNote)
+            Project.global.project = Project.upsertElement(Project.global.project, removeNote)
             
 			for (const slice of note.range.iterSlices(range))
 			{
 				const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.volumeDb, note.velocity)
-                data.project = Project.upsertElement(data.project, newNote)
+                Project.global.project = Project.upsertElement(Project.global.project, newNote)
 			}
 		}
 	}
@@ -332,15 +333,15 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
 	selectionRemoveConflictingBehind(data: Timeline.WorkData)
 	{
-        data.project = data.projectCtx.ref.current.project
+        Project.global.project = Project.global.project
 
-        const list = data.project.lists.get(this.parentId)
+        const list = Project.global.project.lists.get(this.parentId)
         if (!list)
             return
 
 		for (const id of data.state.selection)
 		{
-			const selectedNote = data.project.elems.get(id)
+			const selectedNote = Project.global.project.elems.get(id)
 			if (!selectedNote)
 				continue
 
@@ -362,17 +363,17 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 					continue
 
                 const removeNote = Project.elemModify(note, { parentId: -1 })
-                data.project = Project.upsertElement(data.project, removeNote)
+                Project.global.project = Project.upsertElement(Project.global.project, removeNote)
 				
 				for (const slice of note.range.iterSlices(selectedNote.range))
 				{
 					const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.volumeDb, note.velocity)
-                    data.project = Project.upsertElement(data.project, newNote)
+                    Project.global.project = Project.upsertElement(Project.global.project, newNote)
 				}
 			}
 		}
 
-        data.projectCtx.ref.current.project = data.project
+        Project.global.project = Project.global.project
 	}
 
 
@@ -491,7 +492,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 				const y = 0.5 + Math.floor(
                     this.yForRow(data, tonicRowOffset + i * 7) + data.state.noteRowH)
 				
-				data.ctx.strokeStyle = data.prefs.editor.octaveDividerColor
+				data.ctx.strokeStyle = Prefs.global.editor.octaveDividerColor
 				data.ctx.beginPath()
 				data.ctx.moveTo(xMin, y)
 				data.ctx.lineTo(xMax, y)
@@ -502,7 +503,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 					const ySuboctave = 0.5 + Math.floor(
                         this.yForRow(data, tonicRowOffset + i * 7 + j) + data.state.noteRowH)
 					
-					data.ctx.strokeStyle = data.prefs.editor.noteRowAlternateBkgColor
+					data.ctx.strokeStyle = Prefs.global.editor.noteRowAlternateBkgColor
                     data.ctx.beginPath()
                     data.ctx.moveTo(xMin, ySuboctave)
                     data.ctx.lineTo(xMax, ySuboctave)
@@ -527,19 +528,19 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
             const fillStyle = CanvasUtils.fillStyleForDegree(
                 data.ctx, key.degreeForMidi(note.midiPitch) + mode, true)
 
-            const playing = data.playback.playing && note.range.displace(noteBlock.range.start).overlapsPoint(data.playback.playTime)
+            const playing = Playback.global.playing && note.range.displace(noteBlock.range.start).overlapsPoint(Playback.global.playTime)
 
             this.renderNote(
                 data, note.range, noteBlock.range.start, row, xMin, xMax, fillStyle,
                 true, false, false, playing)
         }
 
-        for (let layer = 0; layer < (data.playback.playing ? 1 : 2); layer++)
+        for (let layer = 0; layer < (Playback.global.playing ? 1 : 2); layer++)
         {
             for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, visibleRange))
             {
                 const selected = data.state.selection.contains(note.id)
-                if (!data.playback.playing && (layer == 0) == selected)
+                if (!Playback.global.playing && (layer == 0) == selected)
                     continue
 
                 const key = keyCh.key
@@ -549,7 +550,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
                     data.ctx, key.degreeForMidi(note.midiPitch) + mode, false)
 
                 const hovering = !!data.state.hover && data.state.hover.id == note.id
-                const playing = data.playback.playing && note.range.displace(parentStart).overlapsPoint(data.playback.playTime)
+                const playing = Playback.global.playing && note.range.displace(parentStart).overlapsPoint(Playback.global.playTime)
                 
                 this.renderNote(
                     data, note.range, parentStart, row, xMin, xMax, fillStyle,
@@ -563,7 +564,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
             data.ctx.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-			const key = Project.keyAt(data.project, this.projectTrackId, this.pencil.time1.add(this.parentStart(data)))
+			const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1.add(this.parentStart(data)))
 			const row = this.rowForPitch(data, this.pencil.midiPitch, key)
 			const mode = key.scale.metadata!.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(

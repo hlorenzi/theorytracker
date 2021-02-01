@@ -1,4 +1,4 @@
-export * from "./playbackContext"
+export * from "./_global"
 export * from "./synthManager"
 export * from "./instrument"
 export * from "./instrumentBasic"

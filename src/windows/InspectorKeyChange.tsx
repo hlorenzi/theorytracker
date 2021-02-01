@@ -15,14 +15,12 @@ export interface InspectorKeyChangeProps
 export function InspectorKeyChange(props: InspectorKeyChangeProps)
 {
     const windowCtx = Dockable.useWindow()
-    const project = Project.useProject()
-    const prefs = Prefs.usePrefs()
 
 
 	const keyChs: Project.KeyChange[] = []
 	for (const elemId of props.elemIds)
 	{
-		const keyCh = Project.getElem(project.ref.current.project, elemId, "keyChange")
+		const keyCh = Project.getElem(Project.global.project, elemId, "keyChange")
 		if (!keyCh)
 			continue
 
@@ -114,10 +112,10 @@ export function InspectorKeyChange(props: InspectorKeyChangeProps)
 		{
 			const newKeyCh = func(keyCh)
 			console.log("InspectorKeyChange.modifyKeyChs", keyCh, newKeyCh)
-			project.ref.current.project = Project.upsertElement(project.ref.current.project, newKeyCh)
+			Project.global.project = Project.upsertElement(Project.global.project, newKeyCh)
 		}
 
-        project.commit()
+        Project.notifyObservers()
         window.dispatchEvent(new Event("timelineRefresh"))
 	}
 

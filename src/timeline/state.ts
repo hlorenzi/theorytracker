@@ -167,10 +167,6 @@ export interface HoverData
 export interface WorkData
 {
     state: State
-    prefs: Prefs.Prefs
-    project: Project.Root
-    projectCtx: RefState<Project.ProjectContextProps>
-    playback: Playback.PlaybackContextProps
     ctx: CanvasRenderingContext2D
     popup: RefState<Popup.PopupContextProps>
     dockable: RefState<Dockable.DockableContextProps>
@@ -298,8 +294,8 @@ export function reset(data: WorkData)
 export function rewind(data: WorkData)
 {
     data.state.cursor.visible = true
-    data.state.cursor.time1 = data.state.cursor.time2 = data.project.range.start
-    data.playback.setStartTime(data.project.range.start)
+    data.state.cursor.time1 = data.state.cursor.time2 = Project.global.project.range.start
+    Playback.setStartTime(Project.global.project.range.start)
     scrollTimeIntoView(data, data.state.cursor.time1)
 }
 
@@ -308,14 +304,14 @@ export function refreshTracks(data: WorkData)
 {
     const tracks: Timeline.TimelineTrack[] = []
 
-    for (let t = 0; t < data.project.tracks.length; t++)
+    for (let t = 0; t < Project.global.project.tracks.length; t++)
     {
-        const track = data.project.tracks[t]
+        const track = Project.global.project.tracks[t]
         if (track.trackType == "notes")
         {
             if (data.state.mode == Mode.NoteBlock)
             {
-                const noteBlock = data.project.elems.get(data.state.modeNoteBlockId)
+                const noteBlock = Project.global.project.elems.get(data.state.modeNoteBlockId)
                 if (noteBlock && track.id == noteBlock.parentId)
                 {
                     tracks.push(new Timeline.TimelineTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
@@ -432,7 +428,7 @@ export function scrollTimeIntoView(data: WorkData, time: Rational)
 
 export function scrollPlaybackTimeIntoView(data: WorkData)
 {
-    if (!data.playback.playing) 
+    if (!Playback.global.playing) 
         return
 
     if (data.state.mouse.down)
@@ -441,11 +437,11 @@ export function scrollPlaybackTimeIntoView(data: WorkData)
     const range = visibleTimeRange(data)
     const marginPixels = 100
     const marginTime = Rational.fromFloat(marginPixels / data.state.timeScale, 10000)
-    if (data.playback.playTime.compare(range.end.subtract(marginTime)) >= 0 ||
-        data.playback.playTime.compare(range.start.add(marginTime)) <= 0)
+    if (Playback.global.playTime.compare(range.end.subtract(marginTime)) >= 0 ||
+        Playback.global.playTime.compare(range.start.add(marginTime)) <= 0)
     {
         data.state.timeScroll =
-            data.playback.playTime.asFloat() -
+            Playback.global.playTime.asFloat() -
             (data.state.trackHeaderW + marginPixels) / data.state.timeScale
     }
 }
@@ -546,7 +542,7 @@ export function trackControlAtPoint(
     pos: { x: number, y: number })
     : TrackControl
 {
-    const projTrack = Project.getElem(data.project, data.state.tracks[trackIndex].projectTrackId, "track")
+    const projTrack = Project.getElem(Project.global.project, data.state.tracks[trackIndex].projectTrackId, "track")
     if (!projTrack)
         return TrackControl.None
 
@@ -640,14 +636,14 @@ export function selectionRange(data: WorkData): Range | null
 
     for (const id of data.state.selection)
     {
-        const elem = data.project.elems.get(id) as Project.Element
+        const elem = Project.global.project.elems.get(id) as Project.Element
         if (!elem)
             continue
 
         if (elem.type == "track")
             continue
 
-        const absRange = Project.getAbsoluteRange(data.project, elem.parentId, elem.range)
+        const absRange = Project.getAbsoluteRange(Project.global.project, elem.parentId, elem.range)
         range = Range.merge(range, absRange)
     }
 
@@ -707,7 +703,7 @@ export function selectionDelete(data: WorkData)
 
     for (const id of data.state.selection)
     {
-        const elem = data.project.elems.get(id)
+        const elem = Project.global.project.elems.get(id)
         if (!elem)
             continue
 
@@ -715,27 +711,27 @@ export function selectionDelete(data: WorkData)
             continue
 
         const removeElem = Project.elemModify(elem, { parentId: -1 })
-        data.project = Project.upsertElement(data.project, removeElem)
+        Project.global.project = Project.upsertElement(Project.global.project, removeElem)
     }
     
     for (const id of data.state.selection)
     {
-        const track = data.project.elems.get(id)
+        const track = Project.global.project.elems.get(id)
         if (!track)
             continue
 
         if (track.type != "track")
             continue
 
-        if (track.id === data.project.keyChangeTrackId ||
-            track.id === data.project.meterChangeTrackId ||
-            track.id === data.project.chordTrackId)
+        if (track.id === Project.global.project.keyChangeTrackId ||
+            track.id === Project.global.project.meterChangeTrackId ||
+            track.id === Project.global.project.chordTrackId)
             continue
 
-        data.project = Project.upsertTrack(data.project, track, true)
+        Project.global.project = Project.upsertTrack(Project.global.project, track, true)
     }
 
-    data.project = Project.withRefreshedRange(data.project)
+    Project.global.project = Project.withRefreshedRange(Project.global.project)
     data.state.cursor.visible = true
     cursorSetTime(data, range.start, range.start)
     scrollTimeIntoView(data, range.start)
@@ -746,7 +742,7 @@ export function selectionCopy(data: WorkData)
 {
     const copiedData: Project.CopiedData =
     {
-        project: data.project,
+        project: Project.global.project,
         elemsByTrack: [],
     }
 
@@ -755,7 +751,7 @@ export function selectionCopy(data: WorkData)
 
     for (const elemId of data.state.selection)
     {
-        const elem = data.project.elems.get(elemId)
+        const elem = Project.global.project.elems.get(elemId)
         if (!elem || elem.type == "track")
             continue
         
@@ -786,7 +782,7 @@ export function selectionCopy(data: WorkData)
         return
         
     cursorSetTime(data, copiedRange.end, copiedRange.end)
-    data.projectCtx.ref.current.copiedData = copiedData
+    Project.global.copiedData = copiedData
 
     //console.log("copy", copiedData)
 }
@@ -794,7 +790,7 @@ export function selectionCopy(data: WorkData)
 
 export function paste(data: WorkData)
 {
-    const copiedData = data.projectCtx.ref.current.copiedData
+    const copiedData = Project.global.copiedData
     if (!copiedData)
         return
 
@@ -821,7 +817,7 @@ export function paste(data: WorkData)
     
     selectionClear(data)
 
-    let newProject = data.project
+    let newProject = Project.global.project
     let maxAffectedTrackIndex = pasteToTrackIndex
 
     for (let ctr = 0; ctr < copiedData.elemsByTrack.length; ctr++)
@@ -867,8 +863,8 @@ export function paste(data: WorkData)
     cursorSetTrack(data, pasteToTrackIndex, maxAffectedTrackIndex)
     scrollTimeIntoView(data, newCursorTime)
     
-    data.project = Project.withRefreshedRange(newProject)
-    data.projectCtx.ref.current.project = data.project
+    Project.global.project = Project.withRefreshedRange(newProject)
+    Project.global.project = Project.global.project
     selectionRemoveConflictingBehind(data)
 }
 
@@ -917,7 +913,7 @@ export function findPreviousAnchor(
     }
 
     if (!prevAnchor)
-        return data.project.range.start
+        return Project.global.project.range.start
     
     return prevAnchor
 }
@@ -963,7 +959,7 @@ export function insertNote(data: WorkData, time: Rational, chroma: number)
     if (!(track instanceof Timeline.TimelineTrackNotes))
         return
 
-    const noteBlock = Project.getElem(data.project, track.parentId, "noteBlock")
+    const noteBlock = Project.getElem(Project.global.project, track.parentId, "noteBlock")
     if (!noteBlock)
         return
 
@@ -987,11 +983,11 @@ export function insertNote(data: WorkData, time: Rational, chroma: number)
         range.subtract(noteBlock.range.start),
         chosenPitch, volumeDb, velocity)
 
-    let project = data.projectCtx.ref.current.project
+    let project = Project.global.project
     const id = project.nextId
     project = Project.upsertElement(project, note)
     project = Project.withRefreshedRange(project)
-    data.projectCtx.ref.current.project = project
+    Project.global.project = project
 
     data.state.insertion.nearMidiPitch = chosenPitch
 
@@ -1000,7 +996,7 @@ export function insertNote(data: WorkData, time: Rational, chroma: number)
     scrollTimeIntoView(data, range.end)
     selectionClear(data)
     selectionAdd(data, id)
-    data.playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
+    Playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
     selectionRemoveConflictingBehind(data)
 }
 
@@ -1022,18 +1018,18 @@ export function insertChord(data: WorkData, time: Rational, chord: Theory.Chord)
         range,
         chord)
 
-    let project = data.projectCtx.ref.current.project
+    let project = Project.global.project
     const id = project.nextId
     project = Project.upsertElement(project, projChord)
     project = Project.withRefreshedRange(project)
-    data.projectCtx.ref.current.project = project
+    Project.global.project = project
 
     data.state.cursor.visible = false
     cursorSetTime(data, range.end, range.end)
     scrollTimeIntoView(data, range.end)
     selectionClear(data)
     selectionAdd(data, id)
-    data.playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
+    Playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
     selectionRemoveConflictingBehind(data)
 }
 

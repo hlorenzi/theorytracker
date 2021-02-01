@@ -2,6 +2,7 @@ import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
+import * as Playback from "../playback"
 import * as Timeline from "./index"
 import Rational from "../util/rational"
 import Range from "../util/range"
@@ -33,7 +34,7 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.NoteBlock, void, void>
     {
-        const trackElems = data.project.lists.get(this.projectTrackId)
+        const trackElems = Project.global.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
@@ -48,7 +49,7 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.Note, void, void>
     {
-        const list = data.project.lists.get(noteBlock.id)
+        const list = Project.global.project.lists.get(noteBlock.id)
         if (!list)
             return
 
@@ -76,7 +77,7 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
 
     doubleClick(data: Timeline.WorkData, elemId: Project.ID)
     {
-        const elem = data.project.elems.get(elemId)
+        const elem = Project.global.project.elems.get(elemId)
         if (!elem || elem.type != "noteBlock")
             return
         
@@ -127,9 +128,9 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
                 this.projectTrackId,
                 new Range(this.pencil.time1, this.pencil.time2).sorted())
 
-            let project = data.projectCtx.ref.current.project
+            let project = Project.global.project
             const id = project.nextId
-            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
+            Project.global.project = Project.upsertElement(project, elem)
             Timeline.selectionAdd(data, id)
 		}
 	}
@@ -148,7 +149,7 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
                     continue
                 
                 const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
-                const playing = data.playback.playing && noteBlock.range.overlapsPoint(data.playback.playTime)
+                const playing = Playback.global.playing && noteBlock.range.overlapsPoint(Playback.global.playTime)
                 
                 this.renderNoteBlock(
                     data, noteBlock.range,

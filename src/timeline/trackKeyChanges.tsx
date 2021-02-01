@@ -33,7 +33,7 @@ export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
         range: Range)
         : Generator<Project.KeyChange, void, void>
     {
-        const trackElems = data.project.lists.get(this.projectTrackId)
+        const trackElems = Project.global.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
@@ -113,9 +113,9 @@ export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
                 this.pencil.time,
                 Project.defaultKey())
 
-            let project = data.projectCtx.ref.current.project
+            let project = Project.global.project
             const id = project.nextId
-            data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
+            Project.global.project = Project.upsertElement(project, elem)
             Timeline.selectionAdd(data, id)
 		}
 	}
@@ -124,7 +124,7 @@ export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
     render(data: Timeline.WorkData)
     {
         const visibleRange = Timeline.visibleTimeRange(data)
-        const activeKeyAtStart = Project.keyAt(data.project, this.projectTrackId, visibleRange.start)
+        const activeKeyAtStart = Project.keyAt(Project.global.project, this.projectTrackId, visibleRange.start)
 
         let suppressStickyLabel = false
         for (let layer = 0; layer < 2; layer++)
@@ -141,7 +141,7 @@ export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
                 const hovering = !!data.state.hover && data.state.hover.id == keyCh.id
                 this.renderMarker(
                     data, keyCh.range.start,
-                    data.prefs.editor.keyChangeColor,
+                    Prefs.global.editor.keyChangeColor,
                     keyCh.key.str,
                     hovering, selected)
 
@@ -156,7 +156,7 @@ export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
             this.renderMarkerLabel(
                 data,
                 data.state.trackHeaderW + 5,
-                data.prefs.editor.keyChangeColor,
+                Prefs.global.editor.keyChangeColor,
                 activeKeyAtStart.str)
         }
 
@@ -167,7 +167,7 @@ export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
 
             this.renderMarker(
                 data, this.pencil.time,
-                data.prefs.editor.keyChangeColor,
+                Prefs.global.editor.keyChangeColor,
                 null,
                 false, false)
             

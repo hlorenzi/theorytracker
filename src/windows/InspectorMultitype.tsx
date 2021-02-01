@@ -18,16 +18,13 @@ export function InspectorMultitype(props: InspectorMultitypeProps)
     const windowCtx = Dockable.useWindow()
 	windowCtx.setTitle("Multiple Elements")
 	
-    const project = Project.useProject()
-	const prefs = Prefs.usePrefs()
-	
 	const onNarrowSelectionDown = (type: Project.Element["type"]) =>
 	{
 		const newElemIds: Project.ID[] = []
 
 		for (const elemId of props.elemIds)
 		{
-			const elem = project.ref.current.project.elems.get(elemId)
+			const elem = Project.global.project.elems.get(elemId)
 			if (!elem)
 				continue
 

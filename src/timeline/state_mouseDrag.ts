@@ -1,5 +1,7 @@
 import * as Timeline from "./index"
 import * as Project from "../project"
+import * as Prefs from "../prefs"
+import * as Playback from "../playback"
 import Range from "../util/range"
 
 
@@ -31,11 +33,11 @@ export function mouseDrag(
 
     data.state.drag.xLocked =
         data.state.drag.xLocked &&
-        Math.abs(data.state.drag.posDelta.x) < data.prefs.editor.mouseDragXLockedDistance
+        Math.abs(data.state.drag.posDelta.x) < Prefs.global.editor.mouseDragXLockedDistance
 
     data.state.drag.yLocked =
         data.state.drag.yLocked &&
-        Math.abs(data.state.drag.posDelta.y) < data.prefs.editor.mouseDragYLockedDistance
+        Math.abs(data.state.drag.posDelta.y) < Prefs.global.editor.mouseDragYLockedDistance
     
     if (!data.state.drag.yLocked)
     {
@@ -189,7 +191,7 @@ export function mouseDrag(
             {
                 const note = elem as Project.Note
                 const trackId = data.state.tracks[data.state.drag.origin.point.trackIndex].projectTrackId
-                const key = Project.keyAt(data.project, trackId, note.range.start)
+                const key = Project.keyAt(Project.global.project, trackId, note.range.start)
                 const degree = key.octavedDegreeForMidi(note.midiPitch)
                 const newPitch = key.midiForDegree(Math.floor(degree + data.state.drag.rowDelta))
                 changes.midiPitch = newPitch
@@ -200,7 +202,7 @@ export function mouseDrag(
                         (!data.state.drag.notePreviewLast && newPitch != note.midiPitch))
                     {
                         data.state.drag.notePreviewLast = newPitch
-                        data.playback.playNotePreview(trackId, newPitch, note.volumeDb, note.velocity)
+                        Playback.playNotePreview(trackId, newPitch, note.volumeDb, note.velocity)
                     }
                 }
             }
@@ -223,7 +225,7 @@ export function mouseDrag(
                 Project.elemModify(elem, changes))
         }
 
-        data.project = newProject
+        Project.global.project = newProject
         return true
     }
 }
@@ -238,7 +240,7 @@ function handleDragTrackControl(data: Timeline.WorkData)
 
 	const modifySelectedTracks = (func: (tr: Project.Track) => Project.Track) =>
 	{
-        let project = data.project
+        let project = Project.global.project
 
         for (const elemId of data.state.selection)
         {
@@ -250,13 +252,13 @@ function handleDragTrackControl(data: Timeline.WorkData)
 			project = Project.upsertTrack(project, newTrack)
 		}
 
-        data.project = project
+        Project.global.project = project
 	}
 
 
 	const modifyTrackAtMouse = (func: (tr: Project.Track) => Project.Track) =>
 	{
-        let project = data.project
+        let project = Project.global.project
 
         const trackIndex = data.state.mouse.point.trackIndex
         if (trackIndex < 0 || trackIndex >= data.state.tracks.length)
@@ -270,7 +272,7 @@ function handleDragTrackControl(data: Timeline.WorkData)
         const newTrack = func(projTrack)
         project = Project.upsertTrack(project, newTrack)
 
-        data.project = project
+        Project.global.project = project
 	}
 
 
@@ -339,9 +341,9 @@ function handleDragTrackControl(data: Timeline.WorkData)
 
 function handleDragClone(data: Timeline.WorkData)
 {
-    const origProject = data.project
+    const origProject = Project.global.project
 
-    let newProject = data.project
+    let newProject = Project.global.project
     const newIds = []
 
     for (const elemId of data.state.selection)
@@ -365,6 +367,6 @@ function handleDragClone(data: Timeline.WorkData)
 
     data.state.mouse.action = Timeline.MouseAction.DragTimeAndRow
 
-    data.project = newProject
+    Project.global.project = newProject
     data.state.drag.origin.project = newProject
 }

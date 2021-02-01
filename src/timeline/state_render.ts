@@ -1,5 +1,7 @@
 import * as Timeline from "./index"
 import * as Project from "../project"
+import * as Prefs from "../prefs"
+import * as Playback from "../playback"
 import * as Theory from "../theory"
 import Rational from "../util/rational"
 import Range from "../util/range"
@@ -10,17 +12,17 @@ export function render(data: Timeline.WorkData)
 {
     data.ctx.save()
     
-    data.ctx.fillStyle = data.prefs.editor.bkgColor
+    data.ctx.fillStyle = Prefs.global.editor.bkgColor
     data.ctx.fillRect(0, 0, data.state.renderRect.w, data.state.renderRect.h)
 
     const visibleRange = Timeline.visibleTimeRange(data)
 
     const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
     const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
-    const parentX1 = Timeline.xAtTime(data, data.project.range.start)
-    const parentX2 = Timeline.xAtTime(data, data.project.range.end)
+    const parentX1 = Timeline.xAtTime(data, Project.global.project.range.start)
+    const parentX2 = Timeline.xAtTime(data, Project.global.project.range.end)
 
-    data.ctx.fillStyle = data.prefs.editor.bkgVoidColor
+    data.ctx.fillStyle = Prefs.global.editor.bkgVoidColor
     data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, data.state.renderRect.h)
     data.ctx.fillRect(parentX2, 0, visibleX2 - parentX2, data.state.renderRect.h)
     
@@ -98,7 +100,7 @@ export function render(data: Timeline.WorkData)
         data.ctx.restore()
 
         
-        data.ctx.strokeStyle = data.prefs.editor.trackHBorderColor
+        data.ctx.strokeStyle = Prefs.global.editor.trackHBorderColor
         data.ctx.beginPath()
         data.ctx.moveTo(0, y + 0.5)
         data.ctx.lineTo(data.state.renderRect.w, y + 0.5)
@@ -122,7 +124,7 @@ export function render(data: Timeline.WorkData)
                     data.state.tracks[data.state.tracks.length - 1].renderRect.y2 :
                 data.state.tracks[data.state.drag.trackInsertionBefore].renderRect.y)
 
-        data.ctx.strokeStyle = data.prefs.editor.selectionCursorColor
+        data.ctx.strokeStyle = Prefs.global.editor.selectionCursorColor
         data.ctx.lineWidth = 3
         data.ctx.beginPath()
         data.ctx.moveTo(0, y + 0.5)
@@ -150,12 +152,12 @@ export function render(data: Timeline.WorkData)
         renderCursorBeam(data, timeMax, true)
     }
     
-    if (data.playback.playing)
-        renderPlaybackBeam(data, data.playback.playTime)
+    if (Playback.global.playing)
+        renderPlaybackBeam(data, Playback.global.playTime)
 
     data.ctx.restore()
     
-    data.ctx.strokeStyle = data.prefs.editor.trackVBorderColor
+    data.ctx.strokeStyle = Prefs.global.editor.trackVBorderColor
     data.ctx.beginPath()
     data.ctx.moveTo(data.state.trackHeaderW + 0.5, 0)
     data.ctx.lineTo(data.state.trackHeaderW + 0.5, data.state.renderRect.h)
@@ -169,8 +171,8 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
 {
     const visibleRange = Timeline.visibleTimeRange(data)
     
-    const meterChangeTrackId = Project.meterChangeTrackId(data.project)
-    const meterChangeList = data.project.lists.get(meterChangeTrackId)!
+    const meterChangeTrackId = Project.meterChangeTrackId(Project.global.project)
+    const meterChangeList = Project.global.project.lists.get(meterChangeTrackId)!
 
     const iter =
         meterChangeList.size > 0 ?
@@ -209,7 +211,7 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
         const meterCh1X = 0.5 + Math.floor(Timeline.xAtTime(data, timeMin!))
         const meterCh2X = 0.5 + Math.floor(Timeline.xAtTime(data, timeMax))
 
-        data.ctx.strokeStyle = data.prefs.editor.meterChangeColor
+        data.ctx.strokeStyle = Prefs.global.editor.meterChangeColor
         data.ctx.lineCap = "square"
         data.ctx.lineWidth = 1
         
@@ -231,14 +233,14 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
                 const x1 = Math.min(meterCh2X, measureX1)
                 const x2 = Math.min(meterCh2X, measureX2)
                 
-                data.ctx.fillStyle = data.prefs.editor.measureAlternateBkgColor
+                data.ctx.fillStyle = Prefs.global.editor.measureAlternateBkgColor
                 data.ctx.fillRect(x1, 0, x2 - x1, data.state.renderRect.h)
             }
 
             if (time1.compare(meterCh1.range.start) == 0)
-                data.ctx.strokeStyle = data.prefs.editor.meterChangeColor
+                data.ctx.strokeStyle = Prefs.global.editor.meterChangeColor
             else
-                data.ctx.strokeStyle = data.prefs.editor.measureColor
+                data.ctx.strokeStyle = Prefs.global.editor.measureColor
 
             data.ctx.beginPath()
             data.ctx.moveTo(measureX1, 0)
@@ -256,7 +258,7 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
                     const halfSubmeasureX = 0.5 + Math.floor(Timeline.xAtTime(data, halfSubmeasureTime))
                     if (halfSubmeasureX >= meterCh1X && halfSubmeasureX <= meterCh2X)
                     {
-                        data.ctx.strokeStyle = data.prefs.editor.halfSubmeasureColor
+                        data.ctx.strokeStyle = Prefs.global.editor.halfSubmeasureColor
                         data.ctx.beginPath()
                         data.ctx.moveTo(halfSubmeasureX, 0)
                         data.ctx.lineTo(halfSubmeasureX, data.state.renderRect.h)
@@ -276,7 +278,7 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
                     const submeasureX = 0.5 + Math.floor(Timeline.xAtTime(data, submeasureTime))
                     if (submeasureX >= meterCh1X && submeasureX <= meterCh2X)
                     {
-                        data.ctx.strokeStyle = data.prefs.editor.submeasureColor
+                        data.ctx.strokeStyle = Prefs.global.editor.submeasureColor
                         data.ctx.beginPath()
                         data.ctx.moveTo(submeasureX, 0)
                         data.ctx.lineTo(submeasureX, data.state.renderRect.h)
@@ -287,21 +289,23 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
         }
     }
     
-    const keyChangeTrackId = Project.keyChangeTrackId(data.project)
-    const keyChangeList = data.project.lists.get(keyChangeTrackId)!
-
-    for (const keyCh of keyChangeList.iterAtRange(visibleRange))
+    const keyChangeTrackId = Project.keyChangeTrackId(Project.global.project)
+    const keyChangeList = Project.global.project.lists.get(keyChangeTrackId)
+    if (keyChangeList)
     {
-        const keyChX = 0.5 + Math.floor(Timeline.xAtTime(data, keyCh.range.start))
-        
-        data.ctx.strokeStyle = data.prefs.editor.keyChangeColor
-        data.ctx.lineCap = "square"
-        data.ctx.lineWidth = 1
-        
-        data.ctx.beginPath()
-        data.ctx.moveTo(keyChX, 0)
-        data.ctx.lineTo(keyChX, data.state.renderRect.h)
-        data.ctx.stroke()
+        for (const keyCh of keyChangeList.iterAtRange(visibleRange))
+        {
+            const keyChX = 0.5 + Math.floor(Timeline.xAtTime(data, keyCh.range.start))
+            
+            data.ctx.strokeStyle = Prefs.global.editor.keyChangeColor
+            data.ctx.lineCap = "square"
+            data.ctx.lineWidth = 1
+            
+            data.ctx.beginPath()
+            data.ctx.moveTo(keyChX, 0)
+            data.ctx.lineTo(keyChX, data.state.renderRect.h)
+            data.ctx.stroke()
+        }
     }
 }
 	
@@ -327,7 +331,7 @@ function renderCursorHighlight(data: Timeline.WorkData)
     const x1 = Timeline.xAtTime(data, timeMin)
     const x2 = Timeline.xAtTime(data, timeMax)
     
-    data.ctx.fillStyle = data.prefs.editor.selectionBkgColor
+    data.ctx.fillStyle = Prefs.global.editor.selectionBkgColor
     data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
 }
 
@@ -344,8 +348,8 @@ function renderCursorBeam(data: Timeline.WorkData, time: Rational, tipOffsetSide
     
     const x = 0.5 + Math.floor(Timeline.xAtTime(data, time))
     
-    data.ctx.strokeStyle = data.prefs.editor.selectionCursorColor
-    data.ctx.fillStyle = data.prefs.editor.selectionCursorColor
+    data.ctx.strokeStyle = Prefs.global.editor.selectionCursorColor
+    data.ctx.fillStyle = Prefs.global.editor.selectionCursorColor
     data.ctx.lineCap = "square"
     data.ctx.lineWidth = 1
     
@@ -378,7 +382,7 @@ function renderPlaybackBeam(data: Timeline.WorkData, time: Rational)
 {
     const x = 0.5 + Math.floor(Timeline.xAtTime(data, time))
     
-    data.ctx.strokeStyle = data.prefs.editor.playbackCursorColor
+    data.ctx.strokeStyle = Prefs.global.editor.playbackCursorColor
     data.ctx.lineCap = "square"
     data.ctx.lineWidth = 1
     
@@ -392,7 +396,7 @@ function renderPlaybackBeam(data: Timeline.WorkData, time: Rational)
 function renderTrackHeader(data: Timeline.WorkData, trackIndex: number)
 {
     const track = data.state.tracks[trackIndex]
-    const projTrack = Project.getElem(data.project, track.projectTrackId, "track")
+    const projTrack = Project.getElem(Project.global.project, track.projectTrackId, "track")
     if (!projTrack)
         return
 
