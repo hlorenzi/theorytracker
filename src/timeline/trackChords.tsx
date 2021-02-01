@@ -2,16 +2,16 @@ import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
+import * as Timeline from "./index"
 import * as Theory from "../theory"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
-import * as Editor from "./index"
 import * as CanvasUtils from "../util/canvasUtils"
-import { EditorTrack } from "./track"
+import { TimelineTrack } from "./track"
 
 
-export class EditorTrackChords extends EditorTrack
+export class TimelineTrackChords extends TimelineTrack
 {
     pencil: null |
     {
@@ -32,7 +32,7 @@ export class EditorTrackChords extends EditorTrack
 
 
     *iterChordsAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<Project.Chord, void, void>
     {
@@ -46,7 +46,7 @@ export class EditorTrackChords extends EditorTrack
 
 
     *iterChordsAndKeyChangesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<[Project.Chord, Project.KeyChange, number, number], void, void>
     {
@@ -62,7 +62,7 @@ export class EditorTrackChords extends EditorTrack
 
 
     *elemsAtRegion(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
@@ -72,13 +72,13 @@ export class EditorTrackChords extends EditorTrack
     }
 	
 	
-	hover(data: Editor.EditorUpdateData)
+	hover(data: Timeline.WorkData)
 	{
         this.hoverBlockElements(data, (range) => this.iterChordsAtRange(data, range))
     }
 
 
-    click(data: Editor.EditorUpdateData, elemId: Project.ID)
+    click(data: Timeline.WorkData, elemId: Project.ID)
     {
         const chord = Project.getElem(data.project, elemId, "chord")
         if (chord)
@@ -89,13 +89,13 @@ export class EditorTrackChords extends EditorTrack
     }
 
 
-    pencilClear(data: Editor.EditorUpdateData)
+    pencilClear(data: Timeline.WorkData)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Editor.EditorUpdateData)
+    pencilHover(data: Timeline.WorkData)
     {
         const time = data.state.mouse.point.time
 
@@ -107,21 +107,21 @@ export class EditorTrackChords extends EditorTrack
     }
 
 
-    pencilDrag(data: Editor.EditorUpdateData)
+    pencilDrag(data: Timeline.WorkData)
     {
 		if (this.pencil)
 		{
             this.pencil.time2 = data.state.mouse.point.time
             
-            const time1X = Editor.xAtTime(data, this.pencil.time1)
-            const time2X = Editor.xAtTime(data, this.pencil.time2)
+            const time1X = Timeline.xAtTime(data, this.pencil.time1)
+            const time2X = Timeline.xAtTime(data, this.pencil.time2)
 			if (Math.abs(time1X - time2X) < 5)
                 this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
         }
     }
 	
 	
-	pencilComplete(data: Editor.EditorUpdateData)
+	pencilComplete(data: Timeline.WorkData)
 	{
 		if (this.pencil)
 		{
@@ -135,14 +135,14 @@ export class EditorTrackChords extends EditorTrack
             let project = data.projectCtx.ref.current.project
             const id = project.nextId
             data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
-            Editor.selectionAdd(data, id)
+            Timeline.selectionAdd(data, id)
 		}
 	}
 
 
-    render(data: Editor.EditorUpdateData)
+    render(data: Timeline.WorkData)
     {
-        const visibleRange = Editor.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(data)
 
         for (let layer = 0; layer < 2; layer++)
         {
@@ -187,7 +187,7 @@ export class EditorTrackChords extends EditorTrack
 
 
     renderChord(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         xMin: number,
         xMax: number,
@@ -198,9 +198,9 @@ export class EditorTrackChords extends EditorTrack
         playing: boolean)
     {
         const x1 = Math.floor(Math.max(xMin, Math.min(xMax,
-            Editor.xAtTime(data, range.start)))) + 0.5
+            Timeline.xAtTime(data, range.start)))) + 0.5
         const x2 = Math.floor(Math.max(xMin, Math.min(xMax,
-            Editor.xAtTime(data, range.end)))) + 0.5 - 1
+            Timeline.xAtTime(data, range.end)))) + 0.5 - 1
 
         const y1 = 1.5
         const y2 = this.renderRect.h - 0.5

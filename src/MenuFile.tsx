@@ -5,7 +5,6 @@ import * as Menubar from "./menubar"
 import * as Popup from "./popup"
 import * as Playback from "./playback"
 import * as Windows from "./windows"
-import { Input } from "./ui"
 
 
 export default function MenuFile()

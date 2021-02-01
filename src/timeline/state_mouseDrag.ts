@@ -1,10 +1,10 @@
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import * as Project from "../project"
 import Range from "../util/range"
 
 
 export function mouseDrag(
-    data: Editor.EditorUpdateData,
+    data: Timeline.WorkData,
     pos: { x: number, y: number },
     isClick: boolean): boolean
 {
@@ -12,7 +12,7 @@ export function mouseDrag(
         return false
 
     data.state.mouse.pointPrev = data.state.mouse.point
-    data.state.mouse.point = Editor.pointAt(data, pos)
+    data.state.mouse.point = Timeline.pointAt(data, pos)
     
     data.state.drag.posDelta =
     {
@@ -40,20 +40,20 @@ export function mouseDrag(
     if (!data.state.drag.yLocked)
     {
         data.state.drag.trackInsertionBefore =
-            Editor.trackInsertionAtY(data, data.state.mouse.point.pos.y)
+            Timeline.trackInsertionAtY(data, data.state.mouse.point.pos.y)
     }
 
-    function withTrackAtDragOrigin<T>(fn: (track: Editor.EditorTrack) => T)
+    function withTrackAtDragOrigin<T>(fn: (track: Timeline.TimelineTrack) => T)
     {
         return fn(data.state.tracks[data.state.drag.origin.point.trackIndex])
     }
 
-    if (isClick && data.state.mouse.action != Editor.EditorAction.DragTrackControl)
+    if (isClick && data.state.mouse.action != Timeline.MouseAction.DragTrackControl)
     {
         return false
     }
 
-    if (data.state.mouse.action == Editor.EditorAction.Pan)
+    if (data.state.mouse.action == Timeline.MouseAction.Pan)
     {
         data.state.timeScroll =
             data.state.drag.origin.timeScroll -
@@ -74,30 +74,30 @@ export function mouseDrag(
 
         return true
     }
-    else if (data.state.mouse.action == Editor.EditorAction.SelectCursor)
+    else if (data.state.mouse.action == Timeline.MouseAction.SelectCursor)
     {
         data.state.cursor.time2 = data.state.mouse.point.time
         data.state.cursor.trackIndex2 = data.state.mouse.point.trackIndex
 
-        Editor.selectionClear(data)
-        Editor.selectionAddAtCursor(data)
+        Timeline.selectionClear(data)
+        Timeline.selectionAddAtCursor(data)
         return true
     }
-    else if (data.state.mouse.action == Editor.EditorAction.DragTrackHeader)
+    else if (data.state.mouse.action == Timeline.MouseAction.DragTrackHeader)
     {
         return true
     }
-    else if (data.state.mouse.action == Editor.EditorAction.Pencil)
+    else if (data.state.mouse.action == Timeline.MouseAction.Pencil)
     {
         withTrackAtDragOrigin(tr => tr.pencilDrag(data))
         return true
     }
-    else if (data.state.mouse.action == Editor.EditorAction.DragTrackControl)
+    else if (data.state.mouse.action == Timeline.MouseAction.DragTrackControl)
     {
         handleDragTrackControl(data)
         return true
     }
-    else if (data.state.mouse.action == Editor.EditorAction.DragClone)
+    else if (data.state.mouse.action == Timeline.MouseAction.DragClone)
     {
         if (!data.state.drag.xLocked || !data.state.drag.yLocked)
         {
@@ -113,20 +113,20 @@ export function mouseDrag(
         
 		if (data.state.drag.xLocked)
         {
-            if (mouseAction == Editor.EditorAction.DragTime ||
-                mouseAction == Editor.EditorAction.StretchTimeStart ||
-                mouseAction == Editor.EditorAction.StretchTimeEnd)
-                mouseAction = Editor.EditorAction.None
-            else if (mouseAction == Editor.EditorAction.DragTimeAndRow)
-                mouseAction = Editor.EditorAction.DragRow
+            if (mouseAction == Timeline.MouseAction.DragTime ||
+                mouseAction == Timeline.MouseAction.StretchTimeStart ||
+                mouseAction == Timeline.MouseAction.StretchTimeEnd)
+                mouseAction = Timeline.MouseAction.None
+            else if (mouseAction == Timeline.MouseAction.DragTimeAndRow)
+                mouseAction = Timeline.MouseAction.DragRow
         }
 
 		if (data.state.drag.yLocked)
         {
-            if (mouseAction == Editor.EditorAction.DragTimeAndRow)
-                mouseAction = Editor.EditorAction.DragTime
-            else if (mouseAction == Editor.EditorAction.DragRow)
-                mouseAction = Editor.EditorAction.None
+            if (mouseAction == Timeline.MouseAction.DragTimeAndRow)
+                mouseAction = Timeline.MouseAction.DragTime
+            else if (mouseAction == Timeline.MouseAction.DragRow)
+                mouseAction = Timeline.MouseAction.None
         }
 
         const origProject = data.state.drag.origin.project
@@ -143,11 +143,11 @@ export function mouseDrag(
                 
 			let changes: any = {}
 
-            if (mouseAction == Editor.EditorAction.DragTime ||
-                mouseAction == Editor.EditorAction.DragTimeAndRow)
+            if (mouseAction == Timeline.MouseAction.DragTime ||
+                mouseAction == Timeline.MouseAction.DragTimeAndRow)
                 changes.range = elem.range.displace(data.state.drag.timeDelta)
             
-            if (mouseAction == Editor.EditorAction.StretchTimeStart &&
+            if (mouseAction == Timeline.MouseAction.StretchTimeStart &&
                 data.state.drag.origin.range)
             {
                 changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
@@ -165,7 +165,7 @@ export function mouseDrag(
                 changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)
             }
 
-            if (mouseAction == Editor.EditorAction.StretchTimeEnd &&
+            if (mouseAction == Timeline.MouseAction.StretchTimeEnd &&
                 data.state.drag.origin.range)
             {
                 changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
@@ -183,8 +183,8 @@ export function mouseDrag(
                 changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)
             }
         
-            if ((mouseAction == Editor.EditorAction.DragRow ||
-                mouseAction == Editor.EditorAction.DragTimeAndRow) &&
+            if ((mouseAction == Timeline.MouseAction.DragRow ||
+                mouseAction == Timeline.MouseAction.DragTimeAndRow) &&
                 elem.type == "note")
             {
                 const note = elem as Project.Note
@@ -205,9 +205,9 @@ export function mouseDrag(
                 }
             }
 
-            if ((mouseAction == Editor.EditorAction.DragTime ||
-                mouseAction == Editor.EditorAction.DragTimeAndRow ||
-                mouseAction == Editor.EditorAction.DragRow) &&
+            if ((mouseAction == Timeline.MouseAction.DragTime ||
+                mouseAction == Timeline.MouseAction.DragTimeAndRow ||
+                mouseAction == Timeline.MouseAction.DragRow) &&
                 data.state.drag.trackDelta != 0)
             {
                 const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
@@ -229,7 +229,7 @@ export function mouseDrag(
 }
 
 
-function handleDragTrackControl(data: Editor.EditorUpdateData)
+function handleDragTrackControl(data: Timeline.WorkData)
 {
     const origTrack = Project.getElem(data.state.drag.origin.project, data.state.drag.elemId, "track")
     if (!origTrack)
@@ -293,7 +293,7 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
 
     switch (data.state.hoverControl)
     {
-        case Editor.TrackControl.Volume:
+        case Timeline.TrackControl.Volume:
         {
             const volumeDbDelta = -data.state.drag.posDelta.y / 10
             modifySelectedTracks((track) =>
@@ -310,7 +310,7 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
             break
         }
 
-        case Editor.TrackControl.Mute:
+        case Timeline.TrackControl.Mute:
         {
             const mute = origTrack.trackType == "notes" || origTrack.trackType == "chords" ?
                 !origTrack.mute : false
@@ -322,7 +322,7 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
             break
         }
 
-        case Editor.TrackControl.Solo:
+        case Timeline.TrackControl.Solo:
         {
             const solo = origTrack.trackType == "notes" || origTrack.trackType == "chords" ?
                 !origTrack.solo : false
@@ -337,7 +337,7 @@ function handleDragTrackControl(data: Editor.EditorUpdateData)
 }
 
 
-function handleDragClone(data: Editor.EditorUpdateData)
+function handleDragClone(data: Timeline.WorkData)
 {
     const origProject = data.project
 
@@ -359,11 +359,11 @@ function handleDragClone(data: Editor.EditorUpdateData)
             data.state.drag.elemId = newId
     }
 
-    Editor.selectionClear(data)
+    Timeline.selectionClear(data)
     for (const id of newIds)
-        Editor.selectionAdd(data, id)
+        Timeline.selectionAdd(data, id)
 
-    data.state.mouse.action = Editor.EditorAction.DragTimeAndRow
+    data.state.mouse.action = Timeline.MouseAction.DragTimeAndRow
 
     data.project = newProject
     data.state.drag.origin.project = newProject

@@ -1,4 +1,4 @@
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import * as Project from "../project"
 import * as Theory from "../theory"
 import Rational from "../util/rational"
@@ -6,19 +6,19 @@ import Range from "../util/range"
 import Rect from "../util/rect"
 
 
-export function render(data: Editor.EditorUpdateData)
+export function render(data: Timeline.WorkData)
 {
     data.ctx.save()
     
     data.ctx.fillStyle = data.prefs.editor.bkgColor
     data.ctx.fillRect(0, 0, data.state.renderRect.w, data.state.renderRect.h)
 
-    const visibleRange = Editor.visibleTimeRange(data)
+    const visibleRange = Timeline.visibleTimeRange(data)
 
-    const visibleX1 = Editor.xAtTime(data, visibleRange.start)
-    const visibleX2 = Editor.xAtTime(data, visibleRange.end)
-    const parentX1 = Editor.xAtTime(data, data.project.range.start)
-    const parentX2 = Editor.xAtTime(data, data.project.range.end)
+    const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
+    const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
+    const parentX1 = Timeline.xAtTime(data, data.project.range.start)
+    const parentX2 = Timeline.xAtTime(data, data.project.range.end)
 
     data.ctx.fillStyle = data.prefs.editor.bkgVoidColor
     data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, data.state.renderRect.h)
@@ -110,7 +110,7 @@ export function render(data: Editor.EditorUpdateData)
     }
 
     if (data.state.mouse.down &&
-        data.state.mouse.action == Editor.EditorAction.DragTrackHeader &&
+        data.state.mouse.action == Timeline.MouseAction.DragTrackHeader &&
         data.state.drag.trackInsertionBefore >= 0)
     {
         data.ctx.save()
@@ -165,9 +165,9 @@ export function render(data: Editor.EditorUpdateData)
 }
 
 
-function renderBackgroundMeasures(data: Editor.EditorUpdateData)
+function renderBackgroundMeasures(data: Timeline.WorkData)
 {
-    const visibleRange = Editor.visibleTimeRange(data)
+    const visibleRange = Timeline.visibleTimeRange(data)
     
     const meterChangeTrackId = Project.meterChangeTrackId(data.project)
     const meterChangeList = data.project.lists.get(meterChangeTrackId)!
@@ -206,8 +206,8 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
             }
         }
         
-        const meterCh1X = 0.5 + Math.floor(Editor.xAtTime(data, timeMin!))
-        const meterCh2X = 0.5 + Math.floor(Editor.xAtTime(data, timeMax))
+        const meterCh1X = 0.5 + Math.floor(Timeline.xAtTime(data, timeMin!))
+        const meterCh2X = 0.5 + Math.floor(Timeline.xAtTime(data, timeMax))
 
         data.ctx.strokeStyle = data.prefs.editor.meterChangeColor
         data.ctx.lineCap = "square"
@@ -223,8 +223,8 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
             if (time1.compare(timeMax) > 0 || time1.compare(visibleRange.end) > 0)
                 break
 
-            const measureX1 = 0.5 + Math.floor(Editor.xAtTime(data, time1))
-            const measureX2 = 0.5 + Math.floor(Editor.xAtTime(data, time2))
+            const measureX1 = 0.5 + Math.floor(Timeline.xAtTime(data, time1))
+            const measureX2 = 0.5 + Math.floor(Timeline.xAtTime(data, time2))
 
             if (true)//measureAlternate)
             {
@@ -245,7 +245,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
             data.ctx.lineTo(measureX1, data.state.renderRect.h)
             data.ctx.stroke()
 
-            const halfSubmeasureSize = Editor.xAtTime(data, new Rational(1, measureD * 2)) - Editor.xAtTime(data, new Rational(0))
+            const halfSubmeasureSize = Timeline.xAtTime(data, new Rational(1, measureD * 2)) - Timeline.xAtTime(data, new Rational(0))
             if (halfSubmeasureSize > 16)
             {
                 let halfSubmeasureTime = time1.add(new Rational(-1, measureD * 2))
@@ -253,7 +253,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
                 {
                     halfSubmeasureTime = halfSubmeasureTime.add(new Rational(2, measureD * 2))
                     
-                    const halfSubmeasureX = 0.5 + Math.floor(Editor.xAtTime(data, halfSubmeasureTime))
+                    const halfSubmeasureX = 0.5 + Math.floor(Timeline.xAtTime(data, halfSubmeasureTime))
                     if (halfSubmeasureX >= meterCh1X && halfSubmeasureX <= meterCh2X)
                     {
                         data.ctx.strokeStyle = data.prefs.editor.halfSubmeasureColor
@@ -265,7 +265,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
                 }
             }
             
-            const submeasureSize = Editor.xAtTime(data, new Rational(1, measureD)) - Editor.xAtTime(data, new Rational(0))
+            const submeasureSize = Timeline.xAtTime(data, new Rational(1, measureD)) - Timeline.xAtTime(data, new Rational(0))
             if (submeasureSize > 8)
             {
                 let submeasureTime = time1
@@ -273,7 +273,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
                 {
                     submeasureTime = submeasureTime.add(new Rational(1, measureD))
                     
-                    const submeasureX = 0.5 + Math.floor(Editor.xAtTime(data, submeasureTime))
+                    const submeasureX = 0.5 + Math.floor(Timeline.xAtTime(data, submeasureTime))
                     if (submeasureX >= meterCh1X && submeasureX <= meterCh2X)
                     {
                         data.ctx.strokeStyle = data.prefs.editor.submeasureColor
@@ -292,7 +292,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
 
     for (const keyCh of keyChangeList.iterAtRange(visibleRange))
     {
-        const keyChX = 0.5 + Math.floor(Editor.xAtTime(data, keyCh.range.start))
+        const keyChX = 0.5 + Math.floor(Timeline.xAtTime(data, keyCh.range.start))
         
         data.ctx.strokeStyle = data.prefs.editor.keyChangeColor
         data.ctx.lineCap = "square"
@@ -306,7 +306,7 @@ function renderBackgroundMeasures(data: Editor.EditorUpdateData)
 }
 	
 	
-function renderCursorHighlight(data: Editor.EditorUpdateData)
+function renderCursorHighlight(data: Timeline.WorkData)
 {
     if (!data.state.cursor.visible)
         return
@@ -321,18 +321,18 @@ function renderCursorHighlight(data: Editor.EditorUpdateData)
         trackMax >= data.state.tracks.length)
         return
     
-        const y1 = 0.5 + Math.floor(Editor.trackY(data, trackMin))
-    const y2 = 0.5 + Math.floor(Editor.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
+        const y1 = 0.5 + Math.floor(Timeline.trackY(data, trackMin))
+    const y2 = 0.5 + Math.floor(Timeline.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
     
-    const x1 = Editor.xAtTime(data, timeMin)
-    const x2 = Editor.xAtTime(data, timeMax)
+    const x1 = Timeline.xAtTime(data, timeMin)
+    const x2 = Timeline.xAtTime(data, timeMax)
     
     data.ctx.fillStyle = data.prefs.editor.selectionBkgColor
     data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
 }
 
 
-function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffsetSide: boolean)
+function renderCursorBeam(data: Timeline.WorkData, time: Rational, tipOffsetSide: boolean)
 {
     const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
     const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
@@ -342,7 +342,7 @@ function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffs
         trackMax >= data.state.tracks.length)
         return
     
-    const x = 0.5 + Math.floor(Editor.xAtTime(data, time))
+    const x = 0.5 + Math.floor(Timeline.xAtTime(data, time))
     
     data.ctx.strokeStyle = data.prefs.editor.selectionCursorColor
     data.ctx.fillStyle = data.prefs.editor.selectionCursorColor
@@ -352,8 +352,8 @@ function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffs
     const headYSize = 7
     const headXSize = headYSize * (tipOffsetSide ? -1 : 1)
 
-    const y1 = 0.5 + Math.floor(Editor.trackY(data, trackMin))
-    const y2 = 0.5 + Math.floor(Editor.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
+    const y1 = 0.5 + Math.floor(Timeline.trackY(data, trackMin))
+    const y2 = 0.5 + Math.floor(Timeline.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
     
     data.ctx.beginPath()
     data.ctx.moveTo(x,             y1 + headYSize)
@@ -374,9 +374,9 @@ function renderCursorBeam(data: Editor.EditorUpdateData, time: Rational, tipOffs
 }
 	
 	
-function renderPlaybackBeam(data: Editor.EditorUpdateData, time: Rational)
+function renderPlaybackBeam(data: Timeline.WorkData, time: Rational)
 {
-    const x = 0.5 + Math.floor(Editor.xAtTime(data, time))
+    const x = 0.5 + Math.floor(Timeline.xAtTime(data, time))
     
     data.ctx.strokeStyle = data.prefs.editor.playbackCursorColor
     data.ctx.lineCap = "square"
@@ -389,7 +389,7 @@ function renderPlaybackBeam(data: Editor.EditorUpdateData, time: Rational)
 }
 
 
-function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
+function renderTrackHeader(data: Timeline.WorkData, trackIndex: number)
 {
     const track = data.state.tracks[trackIndex]
     const projTrack = Project.getElem(data.project, track.projectTrackId, "track")
@@ -397,9 +397,9 @@ function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
         return
 
 
-    if ((track instanceof Editor.EditorTrackNoteBlocks ||
-        track instanceof Editor.EditorTrackNotes ||
-        track instanceof Editor.EditorTrackChords) &&
+    if ((track instanceof Timeline.TimelineTrackNoteBlocks ||
+        track instanceof Timeline.TimelineTrackNotes ||
+        track instanceof Timeline.TimelineTrackChords) &&
         (projTrack.trackType == "notes" ||
         projTrack.trackType == "chords"))
     {
@@ -431,7 +431,7 @@ function renderTrackHeader(data: Editor.EditorUpdateData, trackIndex: number)
 
 
 function renderControlDial(
-    data: Editor.EditorUpdateData,
+    data: Timeline.WorkData,
     xSlot: number,
     labelFn: (value: number) => string,
     value: number,
@@ -469,7 +469,7 @@ function renderControlDial(
 
 
 function renderControlIcon(
-    data: Editor.EditorUpdateData,
+    data: Timeline.WorkData,
     xSlot: number,
     icon: string,
     enabled: boolean)

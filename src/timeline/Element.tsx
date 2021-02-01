@@ -1,5 +1,5 @@
 import React from "react"
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import * as Project from "../project"
 import * as Playback from "../playback"
 import * as Prefs from "../prefs"
@@ -8,7 +8,6 @@ import * as Dockable from "../dockable"
 import * as UI from "../ui"
 import { useRefState, RefState } from "../util/refState"
 import Rect from "../util/rect"
-import { EditorUpdateData } from "./state"
 import styled from "styled-components"
 
 
@@ -28,12 +27,12 @@ const StyledTrackButton = styled.button`
 `
 
 
-export function EditorElement(props: { state?: RefState<Editor.EditorState> })
+export function TimelineElement(props: { state?: RefState<Timeline.State> })
 {
     const refDiv = React.useRef<HTMLDivElement | null>(null)
     const refCanvas = React.useRef<HTMLCanvasElement | null>(null)
 
-    const editorState = props.state ?? useRefState(() => Editor.init())
+    const editorState = props.state ?? useRefState(() => Timeline.init())
     const project = Project.useProject()
     const playback = Playback.usePlayback()
     const prefs = Prefs.usePrefs()
@@ -43,7 +42,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
     const lastTimelineRenderRef = React.useRef(0)
 
-    const makeUpdateData: () => EditorUpdateData = () =>
+    const makeUpdateData: () => Timeline.WorkData = () =>
     {
         return {
             state: editorState.ref.current,
@@ -72,7 +71,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
         const updateData = makeUpdateData()
         updateData.ctx = refCanvas.current.getContext("2d")!
-        Editor.render(updateData)
+        Timeline.render(updateData)
     }
 
     const onResize = () =>
@@ -94,7 +93,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
         const renderRect = new Rect(x, y, w, h)
 
         const updateData = makeUpdateData()
-        Editor.resize(updateData, renderRect)
+        Timeline.resize(updateData, renderRect)
         render(true)
     }
 
@@ -119,7 +118,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     React.useEffect(() =>
     {
         const updateData = makeUpdateData()
-        Editor.scrollPlaybackTimeIntoView(updateData)
+        Timeline.scrollPlaybackTimeIntoView(updateData)
         render(!playback.ref.current.playing)
         
     }, [playback.update])
@@ -127,7 +126,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
     React.useEffect(() =>
     {
         const updateData = makeUpdateData()
-        Editor.refreshTracks(updateData)
+        Timeline.refreshTracks(updateData)
         render(true)
 
     }, [project.ref.current.project.tracks])
@@ -149,31 +148,31 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
 		const preventDefault = (ev: Event) => ev.preventDefault()
 
-        const setCursor = (state: Editor.EditorState) =>
+        const setCursor = (state: Timeline.State) =>
         {
             let cursor = "text"
             const mouseAction =
                 state.mouse.down ? state.mouse.action :
-                state.hoverControl != Editor.TrackControl.None ? Editor.EditorAction.DragTrackControl :
+                state.hoverControl != Timeline.TrackControl.None ? Timeline.MouseAction.DragTrackControl :
                 state.hover ? state.hover.action :
-                Editor.EditorAction.None
+                Timeline.MouseAction.None
             
             if (state.tracks.some((tr: any) => !!tr.pencil) ||
-                mouseAction == Editor.EditorAction.Pencil)
+                mouseAction == Timeline.MouseAction.Pencil)
                 cursor = "crosshair"
-            else if (mouseAction == Editor.EditorAction.DragTrackControl)
+            else if (mouseAction == Timeline.MouseAction.DragTrackControl)
                 cursor = "crosshair"
-            else if (mouseAction == Editor.EditorAction.DragClone)
+            else if (mouseAction == Timeline.MouseAction.DragClone)
                 cursor = "crosshair"
-            else if (mouseAction == Editor.EditorAction.DragTime ||
-                mouseAction == Editor.EditorAction.DragTimeAndRow ||
-                mouseAction == Editor.EditorAction.DragRow ||
-                mouseAction == Editor.EditorAction.DragTrackHeader)
+            else if (mouseAction == Timeline.MouseAction.DragTime ||
+                mouseAction == Timeline.MouseAction.DragTimeAndRow ||
+                mouseAction == Timeline.MouseAction.DragRow ||
+                mouseAction == Timeline.MouseAction.DragTrackHeader)
                 cursor = (state.mouse.down ? "grabbing" : "grab")
-            else if (mouseAction == Editor.EditorAction.Pan)
+            else if (mouseAction == Timeline.MouseAction.Pan)
                 cursor = "move"
-            else if (mouseAction == Editor.EditorAction.StretchTimeStart ||
-                mouseAction == Editor.EditorAction.StretchTimeEnd)
+            else if (mouseAction == Timeline.MouseAction.StretchTimeStart ||
+                mouseAction == Timeline.MouseAction.StretchTimeEnd)
                 cursor = "col-resize"
 
             refCanvasCurrent.style.cursor = cursor
@@ -186,8 +185,8 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 ev.preventDefault()
                 
             const pos = transformMousePos(refCanvasCurrent, ev)
-            const needsRender1 = Editor.mouseMove(updateData, pos)
-            const needsRender2 = Editor.mouseDrag(updateData, pos, false)
+            const needsRender1 = Timeline.mouseMove(updateData, pos)
+            const needsRender2 = Timeline.mouseDrag(updateData, pos, false)
 
             if (updateData.project !== project.ref.current.project)
             {
@@ -213,9 +212,9 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 
             const updateData = makeUpdateData()
             const pos = transformMousePos(refCanvasCurrent, ev)
-            Editor.mouseMove(updateData, pos)
-            Editor.mouseDown(updateData, ev.button != 0)
-            Editor.mouseDrag(updateData, pos, true)
+            Timeline.mouseMove(updateData, pos)
+            Timeline.mouseDown(updateData, ev.button != 0)
+            Timeline.mouseDrag(updateData, pos, true)
 
             if (updateData.project !== project.ref.current.project)
             {
@@ -235,7 +234,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
                 ev.preventDefault()
 
             const pos = transformMousePos(refCanvasCurrent, ev)
-            Editor.mouseUp(updateData)
+            Timeline.mouseUp(updateData)
 
             if (updateData.project !== project.ref.current.project)
             {
@@ -253,14 +252,14 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		const onMouseWheel = (ev: WheelEvent) =>
 		{
             const updateData = makeUpdateData()
-			Editor.mouseWheel(updateData, ev.deltaX, ev.deltaY)
+			Timeline.mouseWheel(updateData, ev.deltaX, ev.deltaY)
             render()
 		}
 		
 		const onKeyDown = (ev: KeyboardEvent) =>
 		{
             const updateData = makeUpdateData()
-			Editor.keyDown(updateData, ev.key.toLowerCase())
+			Timeline.keyDown(updateData, ev.key.toLowerCase())
             
             if (updateData.project !== project.ref.current.project)
             {
@@ -275,13 +274,13 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		const onKeyUp = (ev: KeyboardEvent) =>
 		{
             const updateData = makeUpdateData()
-			Editor.keyUp(updateData, ev.key.toLowerCase())
+			Timeline.keyUp(updateData, ev.key.toLowerCase())
         }
 
         const onRewind = (ev: Event) =>
         {
             const updateData = makeUpdateData()
-            Editor.rewind(updateData)
+            Timeline.rewind(updateData)
             editorState.commit()
             render(true)
         }
@@ -289,7 +288,7 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		const onRefresh = (ev: Event) =>
 		{
             const updateData = makeUpdateData()
-            Editor.refreshTracks(updateData)
+            Timeline.refreshTracks(updateData)
             editorState.commit()
             render(true)
         }
@@ -297,10 +296,10 @@ export function EditorElement(props: { state?: RefState<Editor.EditorState> })
 		const onReset = (ev: Event) =>
 		{
             const updateData = makeUpdateData()
-            Editor.modeStackPop(updateData, 0)
-            Editor.reset(updateData)
-            Editor.rewind(updateData)
-            Editor.refreshTracks(updateData)
+            Timeline.modeStackPop(updateData, 0)
+            Timeline.reset(updateData)
+            Timeline.rewind(updateData)
+            Timeline.refreshTracks(updateData)
             editorState.commit()
             render(true)
         }

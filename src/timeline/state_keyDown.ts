@@ -5,7 +5,7 @@ import * as Project from "../project"
 import * as Theory from "../theory"
 	
 	
-export function keyDown(data: Editor.EditorUpdateData, key: string)
+export function keyDown(data: Editor.WorkData, key: string)
 {
     data.state.keysDown.add(key)
 
@@ -130,7 +130,7 @@ export function keyDown(data: Editor.EditorUpdateData, key: string)
 
 
 function modifySelectedElems(
-    data: Editor.EditorUpdateData,
+    data: Editor.WorkData,
     func: (elem: Project.Element) => Project.Element)
 {
     let newProject = data.project
@@ -152,7 +152,7 @@ function modifySelectedElems(
 }
 
 
-function handleEscape(data: Editor.EditorUpdateData)
+function handleEscape(data: Editor.WorkData)
 {
     if (data.playback.playing)
     {
@@ -166,7 +166,7 @@ function handleEscape(data: Editor.EditorUpdateData)
 }
 
 
-function handleEnter(data: Editor.EditorUpdateData)
+function handleEnter(data: Editor.WorkData)
 {
     if (data.state.cursor.visible && data.state.selection.size != 0)
     {
@@ -197,13 +197,13 @@ function handleEnter(data: Editor.EditorUpdateData)
 }
 
 
-function handleDelete(data: Editor.EditorUpdateData)
+function handleDelete(data: Editor.WorkData)
 {
     Editor.selectionDelete(data)
 }
 
 
-function handleBackspace(data: Editor.EditorUpdateData)
+function handleBackspace(data: Editor.WorkData)
 {
     if (!data.state.cursor.visible)
     {
@@ -241,7 +241,7 @@ function handleBackspace(data: Editor.EditorUpdateData)
 }
 
 
-function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
+function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
 {
     const keyFast = data.state.keysDown.has(data.prefs.editor.keyDisplaceFast)
     const keyCursor2 = data.state.keysDown.has(data.prefs.editor.keyDisplaceCursor2)
@@ -346,7 +346,7 @@ function handleLeftRight(data: Editor.EditorUpdateData, isLeft: boolean)
 }
 
 
-function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic: boolean)
+function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean)
 {
     const keyFast = data.state.keysDown.has(data.prefs.editor.keyDisplaceFast)
     const keyCursor2 = data.state.keysDown.has(data.prefs.editor.keyDisplaceCursor2)
@@ -438,14 +438,14 @@ function handleUpDown(data: Editor.EditorUpdateData, isUp: boolean, isChromatic:
 }
 
 
-function handleNumber(data: Editor.EditorUpdateData, degree: number)
+function handleNumber(data: Editor.WorkData, degree: number)
 {
     const time = data.state.cursor.time1.min(data.state.cursor.time2)
     const track = data.state.tracks[data.state.cursor.trackIndex1]
     const trackId = track.projectTrackId
     const key = Project.keyAt(data.project, trackId, time)
     
-    if (track instanceof Editor.EditorTrackChords)
+    if (track instanceof Editor.TimelineTrackChords)
     {
         const root = key.midiForDegree(degree)
         

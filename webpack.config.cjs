@@ -7,8 +7,6 @@ module.exports =
 	entry:
 	{
 		main: path.resolve(__dirname, "src/main.js"),
-		//test: path.resolve(__dirname, "src/test.ts"),
-		//sflibWorklet: path.resolve(__dirname, "src/playback/sflibWorklet.ts"),
 	},
 	
 	output:

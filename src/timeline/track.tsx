@@ -1,5 +1,5 @@
 import React from "react"
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import * as Project from "../project"
 import Rect from "../util/rect"
 import Rational from "../util/rational"
@@ -9,7 +9,7 @@ import Range from "../util/range"
 export const MARKER_WIDTH = 12
 
 
-export class EditorTrack
+export class TimelineTrack
 {
     projectTrackId: Project.ID
     parentId: Project.ID
@@ -40,7 +40,7 @@ export class EditorTrack
     }
 
 
-    copyState(data: Editor.EditorUpdateData)
+    copyState(data: Timeline.WorkData)
     {
         for (const track of data.state.tracks)
         {
@@ -54,7 +54,7 @@ export class EditorTrack
 
 
     *elemsAtRegion(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
@@ -64,7 +64,7 @@ export class EditorTrack
 
 
     *iterKeyChangePairsAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
     {
@@ -81,28 +81,28 @@ export class EditorTrack
             const keyCh1 = pair[0] ?? Project.makeKeyChange(-1, range.start, defaultKey)
             const keyCh2 = pair[1] ?? Project.makeKeyChange(-1, range.end,   defaultKey)
             
-            const keyCh1X = Editor.xAtTime(data, keyCh1.range.start)
-            const keyCh2X = Editor.xAtTime(data, keyCh2.range.start)
+            const keyCh1X = Timeline.xAtTime(data, keyCh1.range.start)
+            const keyCh2X = Timeline.xAtTime(data, keyCh2.range.start)
             
             yield [keyCh1 as Project.KeyChange, keyCh2 as Project.KeyChange, keyCh1X, keyCh2X]
         }
     }
 
 
-    hover(data: Editor.EditorUpdateData)
+    hover(data: Timeline.WorkData)
     {
         
     }
 
 
     hoverBlockElements(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         elemsIter: (range: Range) => Generator<Project.Element, void, void>)
     {
         const pos = data.state.mouse.point.trackPos
 
         const margin = 10
-        const checkRange = Editor.timeRangeAtX(data, pos.x - margin, pos.x + margin)
+        const checkRange = Timeline.timeRangeAtX(data, pos.x - margin, pos.x + margin)
 
         let hoverDrag = null
         let hoverStretch = null
@@ -111,8 +111,8 @@ export class EditorTrack
         {
             const margin = 8
 
-            const x1 = Editor.xAtTime(data, elem.range.start)
-            const x2 = Editor.xAtTime(data, elem.range.end)
+            const x1 = Timeline.xAtTime(data, elem.range.start)
+            const x2 = Timeline.xAtTime(data, elem.range.end)
 
             const rectDrag = new Rect(
                 x1,
@@ -132,7 +132,7 @@ export class EditorTrack
                 {
                     id: elem.id,
                     range: elem.range,
-                    action: Editor.EditorAction.DragTime,
+                    action: Timeline.MouseAction.DragTime,
                 }
             }
             else if (rectStretch.contains(pos))
@@ -142,8 +142,8 @@ export class EditorTrack
                     id: elem.id,
                     range: elem.range,
                     action: pos.x < (x1 + x2) / 2 ?
-                        Editor.EditorAction.StretchTimeStart :
-                        Editor.EditorAction.StretchTimeEnd
+                        Timeline.MouseAction.StretchTimeStart :
+                        Timeline.MouseAction.StretchTimeEnd
                 }
             }
         }
@@ -152,61 +152,61 @@ export class EditorTrack
     }
 
 
-    click(data: Editor.EditorUpdateData, elemId: Project.ID)
+    click(data: Timeline.WorkData, elemId: Project.ID)
     {
         
     }
 
 
-    doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
+    doubleClick(data: Timeline.WorkData, elemId: Project.ID)
     {
         
     }
 
 
-    contextMenu(data: Editor.EditorUpdateData, elemId: Project.ID)
+    contextMenu(data: Timeline.WorkData, elemId: Project.ID)
     {
         
     }
 
 
-    pencilClear(data: Editor.EditorUpdateData)
+    pencilClear(data: Timeline.WorkData)
     {
         
     }
 
 
-    pencilHover(data: Editor.EditorUpdateData)
+    pencilHover(data: Timeline.WorkData)
     {
         
     }
 
 
-    pencilStart(data: Editor.EditorUpdateData)
+    pencilStart(data: Timeline.WorkData)
     {
         
     }
 
 
-    pencilDrag(data: Editor.EditorUpdateData)
+    pencilDrag(data: Timeline.WorkData)
     {
         
     }
 
 
-    pencilComplete(data: Editor.EditorUpdateData)
+    pencilComplete(data: Timeline.WorkData)
     {
         
     }
 	
 	
-	rowAtY(data: Editor.EditorUpdateData, y: number): number
+	rowAtY(data: Timeline.WorkData, y: number): number
 	{
         return 0
 	}
     
     
-    findPreviousAnchor(data: Editor.EditorUpdateData, time: Rational): Rational
+    findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
     {
         const list = data.project.lists.get(this.projectTrackId)
         if (!list)
@@ -216,7 +216,7 @@ export class EditorTrack
     }
 	
 	
-	deleteRange(data: Editor.EditorUpdateData, range: Range)
+	deleteRange(data: Timeline.WorkData, range: Range)
 	{
         const list = data.project.lists.get(this.projectTrackId)
         if (!list)
@@ -241,7 +241,7 @@ export class EditorTrack
 	}
 
 
-	selectionRemoveConflictingBehind(data: Editor.EditorUpdateData)
+	selectionRemoveConflictingBehind(data: Timeline.WorkData)
 	{
         data.project = data.projectCtx.ref.current.project
 
@@ -286,16 +286,16 @@ export class EditorTrack
 	}
 
 
-    render(data: Editor.EditorUpdateData)
+    render(data: Timeline.WorkData)
     {
 
     }
 	
 	
-	markerRectAtTime(data: Editor.EditorUpdateData, time: Rational)
+	markerRectAtTime(data: Timeline.WorkData, time: Rational)
 	{
         return new Rect(
-            Editor.xAtTime(data, time) - MARKER_WIDTH / 2,
+            Timeline.xAtTime(data, time) - MARKER_WIDTH / 2,
             0,
             MARKER_WIDTH,
             this.renderRect.h)
@@ -303,14 +303,14 @@ export class EditorTrack
 
 
     renderMarker(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         time: Rational,
         color: string,
         label: string | null,
         hovering: boolean,
         selected: boolean)
     {
-        const xCenter = Math.round(Editor.xAtTime(data, time))
+        const xCenter = Math.round(Timeline.xAtTime(data, time))
         const x1 = xCenter - MARKER_WIDTH / 2
         const x2 = xCenter + MARKER_WIDTH / 2
 
@@ -346,7 +346,7 @@ export class EditorTrack
 
 
     renderMarkerLabel(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         x: number,
         color: string,
         label: string)

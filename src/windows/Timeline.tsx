@@ -1,6 +1,6 @@
 import React from "react"
 import * as Dockable from "../dockable"
-import * as Editor from "../editor"
+import * as TimelineData from "../timeline"
 import * as Prefs from "../prefs"
 import { useRefState } from "../util/refState"
 import styled from "styled-components"
@@ -14,7 +14,7 @@ interface PrefsProps
 
 const StyledModeStackDiv = styled.div<PrefsProps>`
     width: 100%;
-    background-color: ${ props => props.prefs.ui.windowPanelColor};
+    background-color: ${ props => props.prefs.ui.windowPanelColor };
     border-bottom: 1px solid #888;
 `
 
@@ -46,9 +46,9 @@ export function Timeline()
     windowCtx.setTitle("Timeline")
     windowCtx.setPreferredSize(600, 450)
 
-    const editorState = Dockable.useWindowRefState(() => Editor.init())
+    const editorState = Dockable.useWindowRefState(() => TimelineData.init())
 
-    const makeUpdateData: () => Editor.EditorUpdateData = () =>
+    const makeUpdateData: () => TimelineData.WorkData = () =>
     {
         return {
             state: editorState.ref.current,
@@ -63,19 +63,19 @@ export function Timeline()
         }
     }
 
-    const getModeName = (mode: Editor.Mode) =>
+    const getModeName = (mode: TimelineData.Mode) =>
     {
         switch (mode)
         {
-            case Editor.Mode.Project: return "Project Root"
-            case Editor.Mode.NoteBlock: return "Note Block"
+            case TimelineData.Mode.Project: return "Project Root"
+            case TimelineData.Mode.NoteBlock: return "Note Block"
         }
     }
 
     const onClickModeStack = (index: number) =>
     {
         const data = makeUpdateData()
-        Editor.modeStackPop(data, index)
+        TimelineData.modeStackPop(data, index)
         editorState.commit()
         window.dispatchEvent(new Event("timelineRefresh"))
     }
@@ -121,7 +121,7 @@ export function Timeline()
         >
             { modeStack }
         </StyledModeStackDiv>
-        <Editor.EditorElement
+        <TimelineData.TimelineElement
             state={ editorState }
         />
     </div>

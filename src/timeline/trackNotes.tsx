@@ -3,15 +3,14 @@ import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import * as CanvasUtils from "../util/canvasUtils"
-import { EditorTrack } from "./track"
 
 
-export class EditorTrackNotes extends EditorTrack
+export class TimelineTrackNotes extends Timeline.TimelineTrack
 {
     pencil: null |
     {
@@ -34,14 +33,14 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
-    parentStart(data: Editor.EditorUpdateData)
+    parentStart(data: Timeline.WorkData)
     {
         const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
-    parentRange(data: Editor.EditorUpdateData)
+    parentRange(data: Timeline.WorkData)
     {
         const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
@@ -49,7 +48,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *iterNotesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<Project.Note, void, void>
     {
@@ -63,7 +62,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *iterExternalNotesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<[Project.Note, Project.NoteBlock], void, void>
     {
@@ -110,7 +109,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *iterNotesAndKeyChangesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<[Project.Note, Project.KeyChange, number, number], void, void>
     {
@@ -126,7 +125,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *iterExternalNotesAndKeyChangesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<[Project.Note, Project.NoteBlock, Project.KeyChange, number, number], void, void>
     {
@@ -142,7 +141,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *iterChordsAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<Project.Chord, void, void>
     {
@@ -156,7 +155,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *iterChordsAndKeyChangesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<[Project.Chord, Project.KeyChange, number, number], void, void>
     {
@@ -172,7 +171,7 @@ export class EditorTrackNotes extends EditorTrack
 
 
     *elemsAtRegion(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
@@ -182,12 +181,12 @@ export class EditorTrackNotes extends EditorTrack
     }
 	
 	
-	hover(data: Editor.EditorUpdateData)
+	hover(data: Timeline.WorkData)
 	{
         const pos = data.state.mouse.point.trackPos
 
         const margin = 10
-        const checkRange = Editor.timeRangeAtX(data, pos.x - margin, pos.x + margin)
+        const checkRange = Timeline.timeRangeAtX(data, pos.x - margin, pos.x + margin)
 
         let hoverDrag = null
         let hoverStretch = null
@@ -209,7 +208,7 @@ export class EditorTrackNotes extends EditorTrack
                     id: note.id,
                     range: note.range,
                     action:
-                        Editor.EditorAction.DragTimeAndRow,
+                        Timeline.MouseAction.DragTimeAndRow,
                 }
             }
             else if (rectStretch.contains(pos))
@@ -219,8 +218,8 @@ export class EditorTrackNotes extends EditorTrack
                     id: note.id,
                     range: note.range,
                     action: pos.x < (rectDrag.x1 + rectDrag.x2) / 2 ?
-                        Editor.EditorAction.StretchTimeStart :
-                        Editor.EditorAction.StretchTimeEnd
+                        Timeline.MouseAction.StretchTimeStart :
+                        Timeline.MouseAction.StretchTimeEnd
                 }
             }
         }
@@ -229,7 +228,7 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
-    click(data: Editor.EditorUpdateData, elemId: Project.ID)
+    click(data: Timeline.WorkData, elemId: Project.ID)
     {
         const note = Project.getElem(data.project, elemId, "note")
         if (note)
@@ -241,13 +240,13 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
-    pencilClear(data: Editor.EditorUpdateData)
+    pencilClear(data: Timeline.WorkData)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Editor.EditorUpdateData)
+    pencilHover(data: Timeline.WorkData)
     {
         const time = data.state.mouse.point.time
         const key = Project.keyAt(data.project, this.projectTrackId, time)
@@ -263,7 +262,7 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
-    pencilStart(data: Editor.EditorUpdateData)
+    pencilStart(data: Timeline.WorkData)
     {
 		if (this.pencil)
 		{
@@ -272,21 +271,21 @@ export class EditorTrackNotes extends EditorTrack
     }
 
 
-    pencilDrag(data: Editor.EditorUpdateData)
+    pencilDrag(data: Timeline.WorkData)
     {
 		if (this.pencil)
 		{
             this.pencil.time2 = data.state.mouse.point.time.subtract(this.parentStart(data))
             
-            const time1X = Editor.xAtTime(data, this.pencil.time1)
-            const time2X = Editor.xAtTime(data, this.pencil.time2)
+            const time1X = Timeline.xAtTime(data, this.pencil.time1)
+            const time2X = Timeline.xAtTime(data, this.pencil.time2)
 			if (Math.abs(time1X - time2X) < 5)
                 this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
         }
     }
 	
 	
-	pencilComplete(data: Editor.EditorUpdateData)
+	pencilComplete(data: Timeline.WorkData)
 	{
 		if (this.pencil)
 		{
@@ -300,12 +299,12 @@ export class EditorTrackNotes extends EditorTrack
             let project = data.projectCtx.ref.current.project
             const id = project.nextId
             data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
-            Editor.selectionAdd(data, id)
+            Timeline.selectionAdd(data, id)
 		}
 	}
     
     
-    findPreviousAnchor(data: Editor.EditorUpdateData, time: Rational): Rational
+    findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
     {
         const list = data.project.lists.get(this.parentId)
         if (!list)
@@ -315,7 +314,7 @@ export class EditorTrackNotes extends EditorTrack
     }
 	
 	
-	deleteRange(data: Editor.EditorUpdateData, range: Range)
+	deleteRange(data: Timeline.WorkData, range: Range)
 	{
 		for (const note of this.iterNotesAtRange(data, range))
 		{
@@ -331,7 +330,7 @@ export class EditorTrackNotes extends EditorTrack
 	}
 
 
-	selectionRemoveConflictingBehind(data: Editor.EditorUpdateData)
+	selectionRemoveConflictingBehind(data: Timeline.WorkData)
 	{
         data.project = data.projectCtx.ref.current.project
 
@@ -377,26 +376,26 @@ export class EditorTrackNotes extends EditorTrack
 	}
 
 
-	yForRow(data: Editor.EditorUpdateData, row: number): number
+	yForRow(data: Timeline.WorkData, row: number): number
 	{
 		return this.renderRect.h / 2 - (row + 1) * data.state.noteRowH - this.yScroll
 	}
 	
 	
-	rowAtY(data: Editor.EditorUpdateData, y: number): number
+	rowAtY(data: Timeline.WorkData, y: number): number
 	{
         return -Math.floor((y + this.yScroll - this.renderRect.h / 2) / data.state.noteRowH) - 1
 	}
 	
 	
-	rowForPitch(data: Editor.EditorUpdateData, pitch: number, key: Theory.Key): number
+	rowForPitch(data: Timeline.WorkData, pitch: number, key: Theory.Key): number
 	{
 		const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(key.tonic.chroma)
 		return key.octavedDegreeForMidi(pitch - 60) + tonicRowOffset
 	}
 	
 	
-	pitchForRow(data: Editor.EditorUpdateData, row: number, key: Theory.Key): number
+	pitchForRow(data: Timeline.WorkData, row: number, key: Theory.Key): number
 	{
 		const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(key.tonic.chroma)
 		return key.midiForDegree(row - Math.floor(tonicRowOffset)) + 60
@@ -404,7 +403,7 @@ export class EditorTrackNotes extends EditorTrack
 	
 	
     rectForNote(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         parentStart: Rational,
         row: number, xStart: number, xEnd: number,
@@ -412,8 +411,8 @@ export class EditorTrackNotes extends EditorTrack
 	{
         range = range.displace(parentStart)
 
-		const noteOrigX1 = Editor.xAtTime(data, range.start)
-		const noteOrigX2 = Editor.xAtTime(data, range.end)
+		const noteOrigX1 = Timeline.xAtTime(data, range.start)
+		const noteOrigX2 = Timeline.xAtTime(data, range.end)
 		
         let noteY = Math.floor(this.yForRow(data, row))
         if (clampY)
@@ -444,16 +443,16 @@ export class EditorTrackNotes extends EditorTrack
 	}
 
 
-    render(data: Editor.EditorUpdateData)
+    render(data: Timeline.WorkData)
     {
-        const visibleRange = Editor.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(data)
         const parentRange = this.parentRange(data)
         const parentStart = parentRange.start
 
-        const visibleX1 = Editor.xAtTime(data, visibleRange.start)
-        const visibleX2 = Editor.xAtTime(data, visibleRange.end)
-        const parentX1 = Editor.xAtTime(data, parentRange.start)
-        const parentX2 = Editor.xAtTime(data, parentRange.end)
+        const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
+        const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
+        const parentX1 = Timeline.xAtTime(data, parentRange.start)
+        const parentX2 = Timeline.xAtTime(data, parentRange.end)
 
         data.ctx.fillStyle = "#0004"
         data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
@@ -578,7 +577,7 @@ export class EditorTrackNotes extends EditorTrack
 	
 	
 	renderNote(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         parentStart: Rational,
         row: number,
@@ -611,7 +610,7 @@ export class EditorTrackNotes extends EditorTrack
 	
 	
 	renderChordNote(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         parentStart: Rational,
         row: number,

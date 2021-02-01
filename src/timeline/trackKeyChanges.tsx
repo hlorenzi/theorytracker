@@ -2,14 +2,14 @@ import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
-import * as Editor from "./index"
+import * as Timeline from "./index"
+import * as Windows from "../windows"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
-import { EditorTrack } from "./track"
 
 
-export class EditorTrackMeterChanges extends EditorTrack
+export class TimelineTrackKeyChanges extends Timeline.TimelineTrack
 {
     pencil: null |
     {
@@ -23,27 +23,27 @@ export class EditorTrackMeterChanges extends EditorTrack
         this.projectTrackId = this.parentId = projectTrackId
         this.name = name
         this.renderRect = new Rect(0, 0, 0, h)
-        this.acceptedElemTypes.add("meterChange")
+        this.acceptedElemTypes.add("keyChange")
         this.pencil = null
     }
 
 
     *iterAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
-        : Generator<Project.MeterChange, void, void>
+        : Generator<Project.KeyChange, void, void>
     {
         const trackElems = data.project.lists.get(this.projectTrackId)
         if (!trackElems)
             return
 
         for (const elem of trackElems.iterAtRange(range))
-            yield elem as Project.MeterChange
+            yield elem as Project.KeyChange
     }
 
 
     *elemsAtRegion(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
@@ -53,14 +53,14 @@ export class EditorTrackMeterChanges extends EditorTrack
     }
 	
 	
-	hover(data: Editor.EditorUpdateData)
+	hover(data: Timeline.WorkData)
 	{
         const pos = data.state.mouse.point.trackPos
 
-        const checkRange = Editor.timeRangeAtX(
+        const checkRange = Timeline.timeRangeAtX(
             data,
-            pos.x - Editor.MARKER_WIDTH,
-            pos.x + Editor.MARKER_WIDTH)
+            pos.x - Timeline.MARKER_WIDTH,
+            pos.x + Timeline.MARKER_WIDTH)
 
         for (const elem of this.iterAtRange(data, checkRange))
         {
@@ -71,20 +71,20 @@ export class EditorTrackMeterChanges extends EditorTrack
                 {
                     id: elem.id,
                     range: elem.range,
-                    action: Editor.EditorAction.DragTime,
+                    action: Timeline.MouseAction.DragTime,
                 }
             }
         }
     }
 
 
-    pencilClear(data: Editor.EditorUpdateData)
+    pencilClear(data: Timeline.WorkData)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Editor.EditorUpdateData)
+    pencilHover(data: Timeline.WorkData)
     {
         const time = data.state.mouse.point.time
 
@@ -95,7 +95,7 @@ export class EditorTrackMeterChanges extends EditorTrack
     }
 
 
-    pencilDrag(data: Editor.EditorUpdateData)
+    pencilDrag(data: Timeline.WorkData)
     {
 		if (this.pencil)
 		{
@@ -104,48 +104,48 @@ export class EditorTrackMeterChanges extends EditorTrack
     }
 	
 	
-	pencilComplete(data: Editor.EditorUpdateData)
+	pencilComplete(data: Timeline.WorkData)
 	{
 		if (this.pencil)
 		{
-            const elem = Project.makeMeterChange(
+            const elem = Project.makeKeyChange(
                 this.projectTrackId,
                 this.pencil.time,
-                Project.defaultMeter())
+                Project.defaultKey())
 
             let project = data.projectCtx.ref.current.project
             const id = project.nextId
             data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
-            Editor.selectionAdd(data, id)
+            Timeline.selectionAdd(data, id)
 		}
 	}
 
 
-    render(data: Editor.EditorUpdateData)
+    render(data: Timeline.WorkData)
     {
-        const visibleRange = Editor.visibleTimeRange(data)
-        const activeMeterAtStart = Project.meterAt(data.project, this.projectTrackId, visibleRange.start)
+        const visibleRange = Timeline.visibleTimeRange(data)
+        const activeKeyAtStart = Project.keyAt(data.project, this.projectTrackId, visibleRange.start)
 
         let suppressStickyLabel = false
         for (let layer = 0; layer < 2; layer++)
         {
-            for (const meterCh of this.iterAtRange(data, visibleRange))
+            for (const keyCh of this.iterAtRange(data, visibleRange))
             {
-                const selected = data.state.selection.contains(meterCh.id)
+                const selected = data.state.selection.contains(keyCh.id)
                 if ((layer == 0) == selected)
                     continue
-
-                if (meterCh.type != "meterChange")
-                    continue
             
-                const hovering = !!data.state.hover && data.state.hover.id == meterCh.id
+                if (keyCh.type != "keyChange")
+                    continue
+
+                const hovering = !!data.state.hover && data.state.hover.id == keyCh.id
                 this.renderMarker(
-                    data, meterCh.range.start,
-                    data.prefs.editor.meterChangeColor,
-                    meterCh.meter.str,
+                    data, keyCh.range.start,
+                    data.prefs.editor.keyChangeColor,
+                    keyCh.key.str,
                     hovering, selected)
-                
-                const x = Editor.xAtTime(data, meterCh.range.start)
+
+                const x = Timeline.xAtTime(data, keyCh.range.start)
                 if (x > data.state.trackHeaderW && x < data.state.trackHeaderW + 100)
                     suppressStickyLabel = true
             }
@@ -156,8 +156,8 @@ export class EditorTrackMeterChanges extends EditorTrack
             this.renderMarkerLabel(
                 data,
                 data.state.trackHeaderW + 5,
-                data.prefs.editor.meterChangeColor,
-                activeMeterAtStart.str)
+                data.prefs.editor.keyChangeColor,
+                activeKeyAtStart.str)
         }
 
         if (this.pencil)
@@ -167,7 +167,7 @@ export class EditorTrackMeterChanges extends EditorTrack
 
             this.renderMarker(
                 data, this.pencil.time,
-                data.prefs.editor.meterChangeColor,
+                data.prefs.editor.keyChangeColor,
                 null,
                 false, false)
             

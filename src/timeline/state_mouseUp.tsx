@@ -1,33 +1,33 @@
 import React from "react"
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import * as Project from "../project"
 import * as Popup from "../popup"
 import * as Windows from "../windows"
 import Rect from "../util/rect"
 
 
-export function mouseUp(data: Editor.EditorUpdateData)
+export function mouseUp(data: Timeline.WorkData)
 {
     if (!data.state.mouse.down)
         return
 
     data.state.mouse.down = false
     
-    if (data.state.mouse.action == Editor.EditorAction.DragTrackHeader)
+    if (data.state.mouse.action == Timeline.MouseAction.DragTrackHeader)
     {
         handleTrackDragRelease(data)
     }
-    else if (data.state.mouse.action == Editor.EditorAction.Pencil)
+    else if (data.state.mouse.action == Timeline.MouseAction.Pencil)
     {
         for (let t = 0; t < data.state.tracks.length; t++)
             data.state.tracks[t].pencilComplete(data)
     }
-    else if (data.state.mouse.action == Editor.EditorAction.Pan)
+    else if (data.state.mouse.action == Timeline.MouseAction.Pan)
     {
         handleContextMenu(data)
     }
 
-    Editor.selectionRemoveConflictingBehind(data)
+    Timeline.selectionRemoveConflictingBehind(data)
 
     data.project = Project.withRefreshedRange(data.project)
     data.projectCtx.ref.current.project = data.project
@@ -36,7 +36,7 @@ export function mouseUp(data: Editor.EditorUpdateData)
 }
 
 
-function handleTrackDragRelease(data: Editor.EditorUpdateData)
+function handleTrackDragRelease(data: Timeline.WorkData)
 {
     if (data.state.drag.trackInsertionBefore < 0)
         return
@@ -77,7 +77,7 @@ function handleTrackDragRelease(data: Editor.EditorUpdateData)
 }
 
 
-function handleContextMenu(data: Editor.EditorUpdateData)
+function handleContextMenu(data: Timeline.WorkData)
 {
     if (!data.state.hover)
         return
@@ -85,7 +85,7 @@ function handleContextMenu(data: Editor.EditorUpdateData)
     if (!data.state.drag.xLocked || !data.state.drag.yLocked)
         return
 
-    Editor.selectionToggleHover(data, data.state.hover, false)
+    Timeline.selectionToggleHover(data, data.state.hover, false)
 
     if (data.state.hover)
     {

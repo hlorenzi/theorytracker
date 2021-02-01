@@ -2,6 +2,7 @@ import Immutable from "immutable"
 import * as Project from "../project"
 import * as Playback from "../playback"
 import * as Prefs from "../prefs"
+import * as Timeline from "./index"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
 import * as Dockable from "../dockable"
@@ -10,18 +11,9 @@ import Rational from "../util/rational"
 import { RefState } from "../util/refState"
 import Range from "../util/range"
 import Rect from "../util/rect"
-import { EditorTrack } from "./track"
-import { EditorTrackKeyChanges } from "./trackKeyChanges"
-import { EditorTrackMeterChanges } from "./trackMeterChanges"
-import { EditorTrackNoteBlocks } from "./trackNoteBlocks"
-import { EditorTrackChords } from "./trackChords"
-import { EditorTrackNotes } from "./trackNotes"
-import { EditorTrackNoteVolumes } from "./trackNoteVolumes"
-import { EditorTrackNoteVelocities } from "./trackNoteVelocities"
-import { Track } from "../project"
 
 
-export enum EditorAction
+export enum MouseAction
 {
     None,
     Pan,
@@ -65,7 +57,7 @@ export interface ModeStack
 }
 
 
-export interface EditorState
+export interface State
 {
     modeStack: ModeStack[]
     mode: Mode
@@ -78,7 +70,7 @@ export interface EditorState
     trackControlY: number
     trackControlSize: number
 
-    tracks: EditorTrack[]
+    tracks: Timeline.TimelineTrack[]
     trackScroll: number
     trackScrollLocked: boolean
 
@@ -105,10 +97,10 @@ export interface EditorState
         down: boolean
         downDate: Date
 
-        action: EditorAction
+        action: MouseAction
 
-        point: EditorPoint
-        pointPrev: EditorPoint
+        point: Point
+        pointPrev: Point
 
         wheelDate: Date
     }
@@ -117,7 +109,7 @@ export interface EditorState
     {
         origin:
         {
-            point: EditorPoint
+            point: Point
             range: Range | null
             timeScroll: number
             trackScroll: number
@@ -144,7 +136,7 @@ export interface EditorState
         duration: Rational
     }
 
-    hover: EditorHover | null
+    hover: HoverData | null
     hoverControl: TrackControl
     selection: Immutable.Set<Project.ID>
 
@@ -153,7 +145,7 @@ export interface EditorState
 }
 
 
-export interface EditorPoint
+export interface Point
 {
     pos: { x: number, y: number }
     time: Rational
@@ -164,17 +156,17 @@ export interface EditorPoint
 }
 
 
-export interface EditorHover
+export interface HoverData
 {
     id: Project.ID
     range: Range
-    action: EditorAction
+    action: MouseAction
 }
 
 
-export interface EditorUpdateData
+export interface WorkData
 {
-    state: EditorState
+    state: State
     prefs: Prefs.Prefs
     project: Project.Root
     projectCtx: RefState<Project.ProjectContextProps>
@@ -186,7 +178,7 @@ export interface EditorUpdateData
 }
 
 
-export function init(): EditorState
+export function init(): State
 {
     return {
         modeStack: [],
@@ -227,7 +219,7 @@ export function init(): EditorState
             down: false,
             downDate: new Date(),
 
-            action: EditorAction.None,
+            action: MouseAction.None,
             
             point: 
             {
@@ -284,14 +276,14 @@ export function init(): EditorState
 }
 
 
-export function resize(data: EditorUpdateData, rect: Rect)
+export function resize(data: WorkData, rect: Rect)
 {
     data.state.renderRect = rect
     refreshTracks(data)
 }
 
 
-export function reset(data: EditorUpdateData)
+export function reset(data: WorkData)
 {
     data.state.trackScroll = -40
     data.state.trackScrollLocked = true
@@ -303,7 +295,7 @@ export function reset(data: EditorUpdateData)
 }
 
 
-export function rewind(data: EditorUpdateData)
+export function rewind(data: WorkData)
 {
     data.state.cursor.visible = true
     data.state.cursor.time1 = data.state.cursor.time2 = data.project.range.start
@@ -312,9 +304,9 @@ export function rewind(data: EditorUpdateData)
 }
 
 
-export function refreshTracks(data: EditorUpdateData)
+export function refreshTracks(data: WorkData)
 {
-    const tracks: EditorTrack[] = []
+    const tracks: Timeline.TimelineTrack[] = []
 
     for (let t = 0; t < data.project.tracks.length; t++)
     {
@@ -326,24 +318,24 @@ export function refreshTracks(data: EditorUpdateData)
                 const noteBlock = data.project.elems.get(data.state.modeNoteBlockId)
                 if (noteBlock && track.id == noteBlock.parentId)
                 {
-                    tracks.push(new EditorTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
-                    tracks.push(new EditorTrackNoteVolumes(track.id, data.state.modeNoteBlockId, 80))
+                    tracks.push(new Timeline.TimelineTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
+                    tracks.push(new Timeline.TimelineTrackNoteVolumes(track.id, data.state.modeNoteBlockId, 80))
                 }
             }
             else
-                tracks.push(new EditorTrackNoteBlocks(track.id, track.name, 50))
+                tracks.push(new Timeline.TimelineTrackNoteBlocks(track.id, track.name, 50))
         }
         else if (track.trackType == "chords")
         {
-            tracks.push(new EditorTrackChords(track.id, track.name, 50))
+            tracks.push(new Timeline.TimelineTrackChords(track.id, track.name, 50))
         }
         else if (track.trackType == "keyChanges")
         {
-            tracks.push(new EditorTrackKeyChanges(track.id, track.name, 25))
+            tracks.push(new Timeline.TimelineTrackKeyChanges(track.id, track.name, 25))
         }
         else if (track.trackType == "meterChanges")
         {
-            tracks.push(new EditorTrackMeterChanges(track.id, track.name, 25))
+            tracks.push(new Timeline.TimelineTrackMeterChanges(track.id, track.name, 25))
         }
     }
 
@@ -380,7 +372,7 @@ export function refreshTracks(data: EditorUpdateData)
 }
 
 
-export function modeStackPush(data: EditorUpdateData)
+export function modeStackPush(data: WorkData)
 {
     const newStack =
     {
@@ -394,7 +386,7 @@ export function modeStackPush(data: EditorUpdateData)
 }
 
 
-export function modeStackPop(data: EditorUpdateData, index?: number)
+export function modeStackPop(data: WorkData, index?: number)
 {
     if (data.state.modeStack.length == 0)
         return
@@ -418,7 +410,7 @@ export function modeStackPop(data: EditorUpdateData, index?: number)
 }
 
 
-export function scrollTimeIntoView(data: EditorUpdateData, time: Rational)
+export function scrollTimeIntoView(data: WorkData, time: Rational)
 {
     const range = visibleTimeRange(data)
     const marginPixels = 100
@@ -438,7 +430,7 @@ export function scrollTimeIntoView(data: EditorUpdateData, time: Rational)
 }
 
 
-export function scrollPlaybackTimeIntoView(data: EditorUpdateData)
+export function scrollPlaybackTimeIntoView(data: WorkData)
 {
     if (!data.playback.playing) 
         return
@@ -459,13 +451,13 @@ export function scrollPlaybackTimeIntoView(data: EditorUpdateData)
 }
 
 
-export function xAtTime(data: EditorUpdateData, time: Rational): number
+export function xAtTime(data: WorkData, time: Rational): number
 {
     return (time.asFloat() - data.state.timeScroll) * data.state.timeScale
 }
 
 
-export function timeAtX(data: EditorUpdateData, x: number, timeSnap?: Rational): Rational
+export function timeAtX(data: WorkData, x: number, timeSnap?: Rational): Rational
 {
     timeSnap = timeSnap || data.state.timeSnap
     const time = x / data.state.timeScale + data.state.timeScroll
@@ -473,7 +465,7 @@ export function timeAtX(data: EditorUpdateData, x: number, timeSnap?: Rational):
 }
 
 
-export function timeRangeAtX(data: EditorUpdateData, x1: number, x2: number, timeSnap?: Rational)
+export function timeRangeAtX(data: WorkData, x1: number, x2: number, timeSnap?: Rational)
 {
     timeSnap = timeSnap || data.state.timeSnap
     return new Range(
@@ -482,7 +474,7 @@ export function timeRangeAtX(data: EditorUpdateData, x1: number, x2: number, tim
 }
 
 
-export function trackY(data: EditorUpdateData, trackIndex: number): number
+export function trackY(data: WorkData, trackIndex: number): number
 {
     if (trackIndex < 0 || trackIndex >= data.state.tracks.length)
         return 0
@@ -491,7 +483,7 @@ export function trackY(data: EditorUpdateData, trackIndex: number): number
 }
 
 
-export function trackAtY(data: EditorUpdateData, y: number): number | null
+export function trackAtY(data: WorkData, y: number): number | null
 {
     y += data.state.trackScroll
 
@@ -510,7 +502,7 @@ export function trackAtY(data: EditorUpdateData, y: number): number | null
 }
 
 
-export function trackAtYClamped(data: EditorUpdateData, y: number): number
+export function trackAtYClamped(data: WorkData, y: number): number
 {
     y += data.state.trackScroll
 
@@ -529,7 +521,7 @@ export function trackAtYClamped(data: EditorUpdateData, y: number): number
 }
 
 
-export function trackInsertionAtY(data: EditorUpdateData, y: number): number
+export function trackInsertionAtY(data: WorkData, y: number): number
 {
     y += data.state.trackScroll
 
@@ -549,7 +541,7 @@ export function trackInsertionAtY(data: EditorUpdateData, y: number): number
 
 
 export function trackControlAtPoint(
-    data: EditorUpdateData,
+    data: WorkData,
     trackIndex: number,
     pos: { x: number, y: number })
     : TrackControl
@@ -585,7 +577,7 @@ export function trackControlAtPoint(
 }
 
 
-export function rectForTrack(data: EditorUpdateData, trackIndex: number): Rect | null
+export function rectForTrack(data: WorkData, trackIndex: number): Rect | null
 {
     let y = 0
     for (let t = 0; t < data.state.tracks.length; t++)
@@ -608,7 +600,7 @@ export function rectForTrack(data: EditorUpdateData, trackIndex: number): Rect |
 }
 
 
-export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): EditorPoint
+export function pointAt(data: WorkData, pos: { x: number, y: number }): Point
 {
     const trackIndex = trackAtYClamped(data, pos.y)
     const time = timeAtX(data, pos.x)
@@ -636,13 +628,13 @@ export function pointAt(data: EditorUpdateData, pos: { x: number, y: number }): 
 }
     
 
-export function selectionClear(data: EditorUpdateData)
+export function selectionClear(data: WorkData)
 {
     data.state.selection = data.state.selection.clear()
 }
 
 
-export function selectionRange(data: EditorUpdateData): Range | null
+export function selectionRange(data: WorkData): Range | null
 {
     let range: Range | null = null
 
@@ -664,8 +656,8 @@ export function selectionRange(data: EditorUpdateData): Range | null
 
 
 export function selectionToggleHover(
-    data: EditorUpdateData,
-    hover: EditorHover,
+    data: WorkData,
+    hover: HoverData,
     selectMultiple: boolean)
 {
     const alreadySelected = data.state.selection.has(hover.id)
@@ -683,13 +675,13 @@ export function selectionToggleHover(
 }
 
 
-export function selectionAdd(data: EditorUpdateData, id: Project.ID)
+export function selectionAdd(data: WorkData, id: Project.ID)
 {
     data.state.selection = data.state.selection.add(id)
 }
 
 
-export function selectionAddAtCursor(data: EditorUpdateData)
+export function selectionAddAtCursor(data: WorkData)
 {
     const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
     const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
@@ -709,7 +701,7 @@ export function selectionAddAtCursor(data: EditorUpdateData)
 }
 
 
-export function selectionDelete(data: EditorUpdateData)
+export function selectionDelete(data: WorkData)
 {
     const range = selectionRange(data) || new Range(data.state.cursor.time1, data.state.cursor.time1)
 
@@ -750,7 +742,7 @@ export function selectionDelete(data: EditorUpdateData)
 }
 
 
-export function selectionCopy(data: EditorUpdateData)
+export function selectionCopy(data: WorkData)
 {
     const copiedData: Project.CopiedData =
     {
@@ -800,7 +792,7 @@ export function selectionCopy(data: EditorUpdateData)
 }
 
 
-export function paste(data: EditorUpdateData)
+export function paste(data: WorkData)
 {
     const copiedData = data.projectCtx.ref.current.copiedData
     if (!copiedData)
@@ -882,7 +874,7 @@ export function paste(data: EditorUpdateData)
 
 
 export function cursorSetTime(
-    data: EditorUpdateData,
+    data: WorkData,
     time1: Rational | null,
     time2?: Rational | null)
 {
@@ -892,7 +884,7 @@ export function cursorSetTime(
 
 
 export function cursorSetTrack(
-    data: EditorUpdateData,
+    data: WorkData,
     trackIndex1: number | null,
     trackIndex2?: number | null)
 {
@@ -907,7 +899,7 @@ export function cursorSetTrack(
 
 
 export function findPreviousAnchor(
-    data: EditorUpdateData,
+    data: WorkData,
     time: Rational,
     trackIndex1: number,
     trackIndex2: number)
@@ -932,7 +924,7 @@ export function findPreviousAnchor(
 
 
 export function deleteRange(
-    data: EditorUpdateData,
+    data: WorkData,
     range: Range,
     trackIndex1: number,
     trackIndex2: number)
@@ -945,14 +937,14 @@ export function deleteRange(
 }
 
 	
-export function selectionRemoveConflictingBehind(data: EditorUpdateData)
+export function selectionRemoveConflictingBehind(data: WorkData)
 {
     for (let tr = 0; tr < data.state.tracks.length; tr++)
         data.state.tracks[tr].selectionRemoveConflictingBehind(data)
 }
 
 
-export function keyHandlePendingFinish(data: EditorUpdateData)
+export function keyHandlePendingFinish(data: WorkData)
 {
     if (!data.state.needsKeyFinish)
         return
@@ -963,12 +955,12 @@ export function keyHandlePendingFinish(data: EditorUpdateData)
 }
 
 
-export function insertNote(data: EditorUpdateData, time: Rational, chroma: number)
+export function insertNote(data: WorkData, time: Rational, chroma: number)
 {
     keyHandlePendingFinish(data)
 
     const track = data.state.tracks[data.state.cursor.trackIndex1]
-    if (!(track instanceof EditorTrackNotes))
+    if (!(track instanceof Timeline.TimelineTrackNotes))
         return
 
     const noteBlock = Project.getElem(data.project, track.parentId, "noteBlock")
@@ -1013,12 +1005,12 @@ export function insertNote(data: EditorUpdateData, time: Rational, chroma: numbe
 }
 
 
-export function insertChord(data: EditorUpdateData, time: Rational, chord: Theory.Chord)
+export function insertChord(data: WorkData, time: Rational, chord: Theory.Chord)
 {
     keyHandlePendingFinish(data)
 
     const track = data.state.tracks[data.state.cursor.trackIndex1]
-    if (!(track instanceof EditorTrackChords))
+    if (!(track instanceof Timeline.TimelineTrackChords))
         return
 
     const range = new Range(time, time.add(data.state.insertion.duration))
@@ -1046,7 +1038,7 @@ export function insertChord(data: EditorUpdateData, time: Rational, chord: Theor
 }
 
 
-export function visibleTimeRange(data: EditorUpdateData): Range
+export function visibleTimeRange(data: WorkData): Range
 {
     return new Range(
         timeAtX(data, data.state.trackHeaderW).subtract(data.state.timeSnap),

@@ -3,15 +3,14 @@ import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
 import * as Theory from "../theory"
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
 import * as CanvasUtils from "../util/canvasUtils"
-import { EditorTrack } from "./track"
 
 
-export class EditorTrackNoteVolumes extends EditorTrack
+export class TimelineTrackNoteVolumes extends Timeline.TimelineTrack
 {
     minValue: number
     maxValue: number
@@ -38,14 +37,14 @@ export class EditorTrackNoteVolumes extends EditorTrack
     }
 
 
-    parentStart(data: Editor.EditorUpdateData)
+    parentStart(data: Timeline.WorkData)
     {
         const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
-    parentRange(data: Editor.EditorUpdateData)
+    parentRange(data: Timeline.WorkData)
     {
         const noteBlock = data.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
@@ -53,7 +52,7 @@ export class EditorTrackNoteVolumes extends EditorTrack
 
 
     *iterNotesAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<Project.Note, void, void>
     {
@@ -66,23 +65,23 @@ export class EditorTrackNoteVolumes extends EditorTrack
     }
 
 
-    valueAtY(data: Editor.EditorUpdateData, y: number)
+    valueAtY(data: Timeline.WorkData, y: number)
     {
         const f = Math.max(0, Math.min(1, 1 - (y / this.renderRect.h)))
         return this.minValue + f * (this.maxValue - this.minValue)
     }
 
 
-    yAtValue(data: Editor.EditorUpdateData, value: number)
+    yAtValue(data: Timeline.WorkData, value: number)
     {
         const f = (value - this.minValue) / (this.maxValue - this.minValue)
         return (1 - f) * this.renderRect.h
     }
 
 
-    pencilDrag(data: Editor.EditorUpdateData)
+    pencilDrag(data: Timeline.WorkData)
     {
-        const visibleRange = Editor.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(data)
         const parentStart = this.parentStart(data)
         const x1 = data.state.mouse.pointPrev.pos.x
         const x2 = data.state.mouse.point.pos.x
@@ -98,7 +97,7 @@ export class EditorTrackNoteVolumes extends EditorTrack
             if (!active)
                 continue
 
-            const markerX = Editor.xAtTime(data, note.range.start.add(parentStart))
+            const markerX = Timeline.xAtTime(data, note.range.start.add(parentStart))
             if (markerX >= xMin && markerX <= xMax)
             {
                 const volumeDb = this.valueAtY(data, data.state.mouse.point.originTrackPos.y)
@@ -118,16 +117,16 @@ export class EditorTrackNoteVolumes extends EditorTrack
     }
 
 
-    render(data: Editor.EditorUpdateData)
+    render(data: Timeline.WorkData)
     {
-        const visibleRange = Editor.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(data)
         const parentRange = this.parentRange(data)
         const parentStart = parentRange.start
 
-        const visibleX1 = Editor.xAtTime(data, visibleRange.start)
-        const visibleX2 = Editor.xAtTime(data, visibleRange.end)
-        const parentX1 = Editor.xAtTime(data, parentRange.start)
-        const parentX2 = Editor.xAtTime(data, parentRange.end)
+        const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
+        const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
+        const parentX1 = Timeline.xAtTime(data, parentRange.start)
+        const parentX2 = Timeline.xAtTime(data, parentRange.end)
 
         data.ctx.fillStyle = "#0004"
         data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
@@ -150,13 +149,13 @@ export class EditorTrackNoteVolumes extends EditorTrack
 	
 	
 	renderMarkerStick(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         parentStart: Rational,
         range: Range,
         value: number,
         active: boolean)
 	{
-        const x = Math.floor(Editor.xAtTime(data, range.start.add(parentStart))) + 0.5
+        const x = Math.floor(Timeline.xAtTime(data, range.start.add(parentStart))) + 0.5
         const y = this.yAtValue(data, value)
         const arcRadius = 4
         

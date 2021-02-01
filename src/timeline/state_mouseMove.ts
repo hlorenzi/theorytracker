@@ -1,15 +1,15 @@
+import * as Timeline from "./index"
 import Range from "../util/range"
 import Rational from "../util/rational"
-import * as Editor from "./index"
 
 
-export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: number }): boolean
+export function mouseMove(data: Timeline.WorkData, pos: { x: number, y: number }): boolean
 {
     if (data.state.mouse.down)
         return false
 
     data.state.mouse.pointPrev = data.state.mouse.point
-    data.state.mouse.point = Editor.pointAt(data, pos)
+    data.state.mouse.point = Timeline.pointAt(data, pos)
 
     const hoverPrev = data.state.hover
     data.state.hover = null
@@ -19,19 +19,19 @@ export function mouseMove(data: Editor.EditorUpdateData, pos: { x: number, y: nu
 
     if (data.state.mouse.point.pos.x < data.state.trackHeaderW)
     {
-        const trackIndex = Editor.trackAtY(data, data.state.mouse.point.pos.y)
+        const trackIndex = Timeline.trackAtY(data, data.state.mouse.point.pos.y)
         if (trackIndex !== null)
         {
             const track = data.state.tracks[trackIndex]
             data.state.hover =
             {
-                action: Editor.EditorAction.DragTrackHeader,
+                action: Timeline.MouseAction.DragTrackHeader,
                 id: track.projectTrackId,
                 range: new Range(new Rational(0), new Rational(0)),
             }
         }
 
-        data.state.hoverControl = Editor.trackControlAtPoint(
+        data.state.hoverControl = Timeline.trackControlAtPoint(
             data,
             data.state.mouse.point.trackIndex,
             data.state.mouse.point.trackPos)

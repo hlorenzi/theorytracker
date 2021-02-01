@@ -1,4 +1,4 @@
-import React, { useRef } from "react"
+import React from "react"
 import * as Dockable from "./dockable"
 import * as Project from "./project"
 import * as Playback from "./playback"

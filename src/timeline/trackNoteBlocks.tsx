@@ -2,14 +2,13 @@ import React from "react"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Popup from "../popup"
+import * as Timeline from "./index"
 import Rational from "../util/rational"
 import Range from "../util/range"
 import Rect from "../util/rect"
-import * as Editor from "./index"
-import { EditorTrack } from "./track"
 
 
-export class EditorTrackNoteBlocks extends EditorTrack
+export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
 {
     pencil: null |
     {
@@ -30,7 +29,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
 
     *iterNoteBlocksAtRange(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range)
         : Generator<Project.NoteBlock, void, void>
     {
@@ -44,7 +43,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
 
     *iterNotesAtNoteBlock(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         noteBlock: Project.NoteBlock,
         range: Range)
         : Generator<Project.Note, void, void>
@@ -59,7 +58,7 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
 
     *elemsAtRegion(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
@@ -69,32 +68,32 @@ export class EditorTrackNoteBlocks extends EditorTrack
     }
 	
 	
-	hover(data: Editor.EditorUpdateData)
+	hover(data: Timeline.WorkData)
 	{
         this.hoverBlockElements(data, (range) => this.iterNoteBlocksAtRange(data, range))
     }
 
 
-    doubleClick(data: Editor.EditorUpdateData, elemId: Project.ID)
+    doubleClick(data: Timeline.WorkData, elemId: Project.ID)
     {
         const elem = data.project.elems.get(elemId)
         if (!elem || elem.type != "noteBlock")
             return
         
-        Editor.modeStackPush(data)
-        data.state.mode = Editor.Mode.NoteBlock
+        Timeline.modeStackPush(data)
+        data.state.mode = Timeline.Mode.NoteBlock
         data.state.modeNoteBlockId = elemId
-        Editor.refreshTracks(data)
+        Timeline.refreshTracks(data)
     }
 
 
-    pencilClear(data: Editor.EditorUpdateData)
+    pencilClear(data: Timeline.WorkData)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Editor.EditorUpdateData)
+    pencilHover(data: Timeline.WorkData)
     {
         const time = data.state.mouse.point.time
 
@@ -106,21 +105,21 @@ export class EditorTrackNoteBlocks extends EditorTrack
     }
 
 
-    pencilDrag(data: Editor.EditorUpdateData)
+    pencilDrag(data: Timeline.WorkData)
     {
 		if (this.pencil)
 		{
             this.pencil.time2 = data.state.mouse.point.time
             
-            const time1X = Editor.xAtTime(data, this.pencil.time1)
-            const time2X = Editor.xAtTime(data, this.pencil.time2)
+            const time1X = Timeline.xAtTime(data, this.pencil.time1)
+            const time2X = Timeline.xAtTime(data, this.pencil.time2)
 			if (Math.abs(time1X - time2X) < 5)
                 this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
         }
     }
 	
 	
-	pencilComplete(data: Editor.EditorUpdateData)
+	pencilComplete(data: Timeline.WorkData)
 	{
 		if (this.pencil)
 		{
@@ -131,14 +130,14 @@ export class EditorTrackNoteBlocks extends EditorTrack
             let project = data.projectCtx.ref.current.project
             const id = project.nextId
             data.projectCtx.ref.current.project = Project.upsertElement(project, elem)
-            Editor.selectionAdd(data, id)
+            Timeline.selectionAdd(data, id)
 		}
 	}
 
 
-    render(data: Editor.EditorUpdateData)
+    render(data: Timeline.WorkData)
     {
-        const visibleRange = Editor.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(data)
 
         for (let layer = 0; layer < 2; layer++)
         {
@@ -172,15 +171,15 @@ export class EditorTrackNoteBlocks extends EditorTrack
 
 
     renderNoteBlock(
-        data: Editor.EditorUpdateData,
+        data: Timeline.WorkData,
         range: Range,
         notes: Generator<Project.Note, void, void> | null,
         hovering: boolean,
         selected: boolean,
         playing: boolean)
     {
-        const x1 = Math.floor(Editor.xAtTime(data, range.start)) + 0.5
-        const x2 = Math.floor(Editor.xAtTime(data, range.end)) + 0.5 - 1
+        const x1 = Math.floor(Timeline.xAtTime(data, range.start)) + 0.5
+        const x2 = Math.floor(Timeline.xAtTime(data, range.end)) + 0.5 - 1
 
         const y1 = 1.5
         const y2 = this.renderRect.h - 0.5
@@ -202,10 +201,10 @@ export class EditorTrackNoteBlocks extends EditorTrack
                 const noteY2 = noteY + noteH / 2
 
                 const noteX1 = Math.max(x1, Math.min(x2,
-                    Editor.xAtTime(data, noteRange.start) + 0.5))
+                    Timeline.xAtTime(data, noteRange.start) + 0.5))
 
                 const noteX2 = Math.max(x1, Math.min(x2,
-                    Editor.xAtTime(data, noteRange.end) + 0.5))
+                    Timeline.xAtTime(data, noteRange.end) + 0.5))
         
                 data.ctx.fillRect(noteX1, noteY1, noteX2 - noteX1, noteY2 - noteY1)
             }

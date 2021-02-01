@@ -1,6 +1,5 @@
 import React from "react"
 import * as Dockable from "../dockable"
-import * as Editor from "../editor"
 import * as Project from "../project"
 import * as Playback from "../playback"
 import * as Prefs from "../prefs"

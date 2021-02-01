@@ -1,8 +1,8 @@
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import Rational from "../util/rational"
 
 	
-export function mouseWheel(data: Editor.EditorUpdateData, deltaX: number, deltaY: number)
+export function mouseWheel(data: Timeline.WorkData, deltaX: number, deltaY: number)
 {
     if (Math.abs(deltaX) > 0)
     {
@@ -12,7 +12,7 @@ export function mouseWheel(data: Editor.EditorUpdateData, deltaX: number, deltaY
     else if (new Date().getTime() - data.state.mouse.wheelDate.getTime() > 250)
     {
         const snap = new Rational(1, 1024)
-        const prevMouseTime = Editor.timeAtX(
+        const prevMouseTime = Timeline.timeAtX(
             data,
             data.state.mouse.point.pos.x,
             snap)
@@ -21,7 +21,7 @@ export function mouseWheel(data: Editor.EditorUpdateData, deltaX: number, deltaY
         newTimeScale = Math.max(4, Math.min(2048, newTimeScale))
         data.state.timeScale = newTimeScale
         
-        const newMouseTime = Editor.timeAtX(
+        const newMouseTime = Timeline.timeAtX(
             data,
             data.state.mouse.point.pos.x,
             snap)
