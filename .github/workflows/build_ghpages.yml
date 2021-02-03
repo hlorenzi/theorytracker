@@ -1,0 +1,33 @@
+name: Build GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@master
+
+    - name: Use Node.js 15.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 15.x
+
+    - run: git branch -D ghpages
+      continue-on-error: true
+
+    - run: git checkout -b ghpages
+    - run: rm .gitignore
+    - run: mv .gitignore.ghpages .gitignore
+    - run: npm ci
+    - run: npm run build
+    - run: git config user.name github-actions
+    - run: git config user.email github-actions@github.com
+    - run: git add -A
+    - run: git commit -m "build GitHub Pages"
+    - run: git push -f origin ghpages
