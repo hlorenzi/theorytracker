@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@master
+      with:
+        fetch-depth: 0
 
     - name: Use Node.js 15.x
       uses: actions/setup-node@v1
@@ -28,6 +30,7 @@ jobs:
     - run: npm run build
     - run: git config user.name github-actions
     - run: git config user.email github-actions@github.com
+    - run: git describe --tags --match v* > build/build_version.txt
     - run: git add -A
     - run: git commit -m "build GitHub Pages"
     - run: git push -f origin ghpages

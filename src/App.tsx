@@ -33,6 +33,20 @@ export default function App()
     const dockableCtx = Dockable.useDockableInit()
     const popupCtx = useRefState(() => Popup.getDefaultCtx())
 
+    const [version, setVersion] = React.useState("")
+
+    React.useEffect(() =>
+    {
+        ;(async () =>
+        {
+            const versionFile = await fetch("build/build_version.txt")
+            const versionTxt = await versionFile.text()
+            if (versionTxt.startsWith("v0-"))
+                setVersion("v0." + versionTxt.match(".*?\-(.*?)\-")![1])
+        })()
+
+    }, [])
+
 
     React.useEffect(() =>
     {
@@ -91,6 +105,13 @@ export default function App()
                     }}>
                         How to use the app
                     </a>
+                    <span style={{
+                        color: "#aaa",
+                        alignSelf: "center",
+                        marginLeft: "1em",
+                    }}>
+                        { version }
+                    </span>
                 </Menubar.Root>
 
                 { !Playback.global.synthLoading ? null :
