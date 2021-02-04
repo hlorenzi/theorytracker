@@ -245,19 +245,24 @@ export class TimelineTrack
 	{
         Project.global.project = Project.global.project
 
-        const list = Project.global.project.lists.get(this.projectTrackId)
-        if (!list)
-            return
-
 		for (const id of data.state.selection)
 		{
 			const selectedElem = Project.global.project.elems.get(id)
 			if (!selectedElem)
 				continue
 
-            if (selectedElem.parentId !== this.projectTrackId)
+            if (selectedElem.parentId !== this.parentId)
                 continue
 
+            const list = Project.global.project.lists.get(this.parentId)
+            if (!list)
+                continue
+
+            const absSelectedRange = Project.getAbsoluteRange(
+                Project.global.project,
+                selectedElem.parentId,
+                selectedElem.range)
+        
             if (selectedElem.range.duration.isZero())
             {
                 for (const elem of list.iterAtPoint(selectedElem.range.start))
@@ -275,9 +280,15 @@ export class TimelineTrack
                 {
                     if (data.state.selection.has(elem.id))
                         continue
+
+                    if (elem.type == "note" && selectedElem.type == "note" &&
+                        elem.midiPitch != selectedElem.midiPitch)
+                        continue
     
-                    const removeElem = Project.elemModify(elem, { parentId: -1 })
-                    Project.global.project = Project.upsertElement(Project.global.project, removeElem)
+                    Project.global.project = Project.splitElem(
+                        Project.global.project,
+                        elem,
+                        absSelectedRange)
                 }
             }
 		}

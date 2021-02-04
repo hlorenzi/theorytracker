@@ -365,6 +365,85 @@ export function cloneElem(
 }
 
 
+export function splitElem(
+    project: Root,
+    elem: Project.Element,
+    splitRange: Range)
+    : Root
+{
+    const origProject = project
+    const absRange = getAbsoluteRange(origProject, elem.parentId, elem.range)
+
+    if (!absRange.overlapsRange(splitRange))
+        return project
+
+    const removeElem = Project.elemModify(elem, { parentId: -1 })
+    project = Project.upsertElement(project, removeElem)
+    
+    project = splitInnerElem(
+        origProject,
+        project,
+        elem.parentId,
+        elem,
+        new Rational(0),
+        splitRange,
+        absRange)
+
+    return project
+}
+
+
+function splitInnerElem(
+    origProject: Root,
+    project: Root,
+    newParentId: Project.ID,
+    elem: Project.Element,
+    relativeDisplace: Rational,
+    splitRange: Range,
+    keepRange: Range)
+    : Root
+{
+    const innerList = origProject.lists.get(elem.id)
+
+    // FIXME: Also keep inner elements that were outside parent's range
+    const absRange = getAbsoluteRange(origProject, elem.parentId, elem.range)
+    if (!absRange.overlapsRange(keepRange))
+        return project
+
+    for (const slice of absRange.iterSlices(splitRange))
+    {
+        const newElemPart = Project.elemModify(elem, {
+            id: -1,
+            parentId: newParentId,
+            range: getRelativeRange(origProject, elem.parentId, slice)
+                .subtract(relativeDisplace),
+        })
+        
+        const newElemPartId = project.nextId
+        project = Project.upsertElement(project, newElemPart)
+        
+        if (innerList)
+        {
+            const innerRelativeDisplace = slice.start.subtract(absRange.start)
+
+            for (const innerElem of innerList.iterAll())
+            {
+                project = splitInnerElem(
+                    origProject,
+                    project,
+                    newElemPartId,
+                    innerElem,
+                    innerRelativeDisplace,
+                    splitRange,
+                    slice)
+            }
+        }
+    }
+
+    return project
+}
+
+
 export function parentTrackFor(project: Root, elemId: Project.ID): Project.Track
 {
     while (true)

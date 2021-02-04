@@ -190,16 +190,16 @@ export default class Range
 		if (slice.start.compare(this.start) <= 0)
 		{
 			if (slice.end.compare(this.end) < 0)
-				yield new Range(slice.end, this.end)
+				yield new Range(slice.end.max(this.start), this.end)
 		}
 		else
 		{
 			if (slice.end.compare(this.end) >= 0)
-				yield new Range(this.start, slice.start)
+				yield new Range(this.start, slice.start.min(this.end))
 			else
 			{
-				yield new Range(this.start, slice.start)
-				yield new Range(slice.end, this.end)
+				yield new Range(this.start, slice.start.min(this.end))
+				yield new Range(slice.end.max(this.start), this.end)
 			}
 		}
 	}
@@ -230,6 +230,18 @@ export default class Range
 		
 		const checkStart = (this.startInclusive && range.endInclusive   ? (compStart <= 0) : (compStart < 0))
 		const checkEnd   = (this.endInclusive   && range.startInclusive ? (compEnd   >= 0) : (compEnd   > 0))
+		
+		return checkStart && checkEnd
+	}
+	
+	
+	containsRangeCompletely(range: Range): boolean
+	{
+		const compStart = this.start.compare(range.start)
+		const compEnd   = this.end.compare(range.end)
+		
+		const checkStart = (this.startInclusive ? (compStart <= 0) : (compStart < 0))
+		const checkEnd   = (this.endInclusive   ? (compEnd   >= 0) : (compEnd   > 0))
 		
 		return checkStart && checkEnd
 	}

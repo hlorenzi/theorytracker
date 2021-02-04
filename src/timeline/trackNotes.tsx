@@ -335,52 +335,6 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 	}
 
 
-	selectionRemoveConflictingBehind(data: Timeline.WorkData)
-	{
-        Project.global.project = Project.global.project
-
-        const list = Project.global.project.lists.get(this.parentId)
-        if (!list)
-            return
-
-		for (const id of data.state.selection)
-		{
-			const selectedNote = Project.global.project.elems.get(id)
-			if (!selectedNote)
-				continue
-
-            if (selectedNote.parentId !== this.parentId)
-                continue
-
-            if (selectedNote.type != "note")
-                continue
-
-			for (const note of list.iterAtRange(selectedNote.range))
-			{
-				if (data.state.selection.has(note.id))
-					continue
-
-                if (note.type != "note")
-                    continue
-    
-				if (note.midiPitch !== selectedNote.midiPitch)
-					continue
-
-                const removeNote = Project.elemModify(note, { parentId: -1 })
-                Project.global.project = Project.upsertElement(Project.global.project, removeNote)
-				
-				for (const slice of note.range.iterSlices(selectedNote.range))
-				{
-					const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.volumeDb, note.velocity)
-                    Project.global.project = Project.upsertElement(Project.global.project, newNote)
-				}
-			}
-		}
-
-        Project.global.project = Project.global.project
-	}
-
-
 	yForRow(data: Timeline.WorkData, row: number): number
 	{
 		return this.renderRect.h / 2 - (row + 1) * data.state.noteRowH - this.yScroll
