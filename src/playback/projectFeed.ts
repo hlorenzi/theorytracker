@@ -14,9 +14,6 @@ export function feedNotes(
     playbackStart: Rational,
     feedRange: Range)
 {
-    const anySolo = project.tracks.some(tr => tr.solo)
-
-    const playbackStartMs = Project.getMillisecondsAt(project, playbackStart)
     const feedRangeStartMs = Project.getMillisecondsAt(project, feedRange.start)
 
     const makeNoteRequest = (trackId: Project.ID, range: Range, midiPitch: number, volumeDb: number, velocity: number) =>
@@ -47,19 +44,13 @@ export function feedNotes(
 
     for (const [track, note] of iterNotesAtRange(project, feedRange))
     {
-        if (anySolo && !track.solo)
-            continue
-
-        if (track.mute && !track.solo)
-            continue
-
         if (feedRange.overlapsPoint(note.range.start) ||
             (isStart && feedRange.overlapsPoint(playbackStart)))
         {
             const request = makeNoteRequest(
                 track.id, note.range,
                 note.midiPitch,
-                track.volumeDb + note.volumeDb,
+                note.volumeDb,
                 note.velocity)
 
             synth.playNote(request)
@@ -72,12 +63,6 @@ export function feedNotes(
     {
         for (const chord of chordList.iterAtRange(feedRange))
         {
-            if (anySolo && !chordTrack.solo)
-                continue
-
-            if (chordTrack.mute && !chordTrack.solo)
-                continue
-
             if (feedRange.overlapsPoint(chord.range.start) ||
                 (isStart && feedRange.overlapsPoint(playbackStart)))
             {
@@ -147,7 +132,7 @@ function playChord(
             chordTrack.id,
             Range.fromStartDuration(start, duration),
             midiPitch,
-            chordTrack.volumeDb + MathUtils.linearGainToDb(volume),
+            MathUtils.linearGainToDb(volume),
             1)
 
         synth.playNote(request)

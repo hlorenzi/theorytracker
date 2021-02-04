@@ -26,9 +26,13 @@ export class InstrumentSflib extends Playback.Instrument
     notes: Note[]
 
 
-	constructor(synth: Playback.SynthManager, collectionId: string, instrumentId: string)
+	constructor(
+        synth: Playback.SynthManager,
+        outputNode: AudioNode,
+        collectionId: string,
+        instrumentId: string)
 	{
-        super(synth)
+        super(synth, outputNode)
         this.collectionId = collectionId
         this.instrumentId = instrumentId
         this.sflibInstrument = null
@@ -187,7 +191,7 @@ export class InstrumentSflib extends Playback.Instrument
 
         sourceNode.connect(envelopeNode)
         envelopeNode.connect(volumeNode)
-        volumeNode.connect(this.synth.nodeGain)
+        volumeNode.connect(this.outputNode)
         
         sourceNode.start(time)
         

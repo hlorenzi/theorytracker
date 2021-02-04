@@ -191,13 +191,17 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
         let hoverDrag = null
         let hoverStretch = null
+
+        const parentStart = this.parentStart(data)
         
         for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, checkRange))
         {
             const margin = 8
 
             const row = this.rowForPitch(data, note.midiPitch, keyCh.key)
-            const rect = this.rectForNote(data, note.range, this.parentStart(data), row, xMin, xMax, true)
+            const rect = this.rectForNote(
+                data, note.range.displace(parentStart),
+                row, xMin, xMax, true)
 
             const rectDrag = rect
             const rectStretch = rect.expandW(margin)
@@ -406,12 +410,9 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     rectForNote(
         data: Timeline.WorkData,
         range: Range,
-        parentStart: Rational,
         row: number, xStart: number, xEnd: number,
         clampY: boolean)
 	{
-        range = range.displace(parentStart)
-
 		const noteOrigX1 = Timeline.xAtTime(data, range.start)
 		const noteOrigX2 = Timeline.xAtTime(data, range.end)
 		
@@ -478,7 +479,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
                 for (let i = octaveAtBottom; i <= octaveAtTop; i++)
                 {
                     this.renderChordNote(
-                        data, chord.range, parentStart, row + i * 7, xMin, xMax, fillStyle)
+                        data, chord.range, row + i * 7, xMin, xMax, fillStyle)
                 }
             }
         }
@@ -587,7 +588,9 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         external?: boolean,
         hovering?: boolean, selected?: boolean, playing?: boolean)
 	{
-		const rect = this.rectForNote(data, range, parentStart, row, xMin, xMax, true)
+		const rect = this.rectForNote(
+            data, range.displace(parentStart),
+            row, xMin, xMax, true)
 		
         data.ctx.fillStyle = fillStyle
 		
@@ -613,12 +616,13 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 	renderChordNote(
         data: Timeline.WorkData,
         range: Range,
-        parentStart: Rational,
         row: number,
         xMin: number, xMax: number,
         fillStyle: any)
 	{
-		const rect = this.rectForNote(data, range, parentStart, row, xMin, xMax, false)
+		const rect = this.rectForNote(
+            data, range,
+            row, xMin, xMax, false)
 		
         data.ctx.globalAlpha = 0.1
         data.ctx.fillStyle = fillStyle

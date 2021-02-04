@@ -1,12 +1,14 @@
 import * as Playback from "./index"
 import * as Project from "../project"
+import * as MathUtils from "../util/mathUtils"
 
 
 export class SynthManager
 {
     audioCtx: BaseAudioContext
-	nodeGain: GainNode
 	nodeCompressor: DynamicsCompressorNode
+	nodeGlobalVolume: GainNode
+	nodeTrackVolumes: GainNode[]
 
 	trackInstruments: Map<Project.ID, Playback.Instrument>
 
@@ -24,8 +26,8 @@ export class SynthManager
 			this.audioCtx = new AudioContext()
 		}
 
-		this.nodeGain = this.audioCtx.createGain()
-		this.nodeGain.gain.value = 0.1
+		this.nodeGlobalVolume = this.audioCtx.createGain()
+		this.nodeGlobalVolume.gain.value = 0.1
 
 		this.nodeCompressor = this.audioCtx.createDynamicsCompressor()
 		this.nodeCompressor.threshold.value = -10
@@ -34,14 +36,16 @@ export class SynthManager
 		this.nodeCompressor.attack.value = 0
 		this.nodeCompressor.release.value = 0.05
 		
-		this.nodeGain.connect(this.nodeCompressor)
+		this.nodeGlobalVolume.connect(this.nodeCompressor)
 		this.nodeCompressor.connect(this.audioCtx.destination)
+
+		this.nodeTrackVolumes = []
 	}
 
 
 	async prepare(project: Project.Root)
 	{
-		// TODO: Diff instruments and only modify what's needed
+		// TODO: Diff instruments and tracks, and only modify what's needed
 
 		for (const [trackId, instrument] of this.trackInstruments)
 		{
@@ -51,20 +55,38 @@ export class SynthManager
 
 		this.trackInstruments.clear()
 
+		for (const nodeTrackVolume of this.nodeTrackVolumes)
+			nodeTrackVolume.disconnect()
+
+		this.nodeTrackVolumes = []
+
+
+		const anySolo = project.tracks.some(tr => tr.solo)
+
 		for (const track of project.tracks)
 		{
 			if (track.trackType != "notes" && track.trackType != "chords")
 				continue
 
+			const trackIsMuted = (anySolo && !track.solo) || (track.mute && !track.solo)
+
+			const trackVolumeNode = this.audioCtx.createGain()
+			trackVolumeNode.gain.value = trackIsMuted ? 0 : MathUtils.dbToLinearGain(track.volumeDb)
+			trackVolumeNode.connect(this.nodeGlobalVolume)
+			this.nodeTrackVolumes.push(trackVolumeNode)
+		
 			let instrument = null
 			switch (track.instrument.type)
 			{
 				case "basic":
-					instrument = new Playback.InstrumentBasic(this)
+					instrument = new Playback.InstrumentBasic(
+						this,
+						trackVolumeNode)
 					break
 				case "sflib":
 					instrument = new Playback.InstrumentSflib(
 						this,
+						trackVolumeNode,
 						track.instrument.collectionId,
 						track.instrument.instrumentId)
 					break

@@ -26,11 +26,13 @@ export interface TimeVariableProperty
 export class Instrument
 {
 	synth: Playback.SynthManager
+	outputNode: AudioNode
 
 
-	constructor(synth: Playback.SynthManager)
+	constructor(synth: Playback.SynthManager, outputNode: AudioNode)
 	{
 		this.synth = synth
+		this.outputNode = outputNode
 	}
 
 

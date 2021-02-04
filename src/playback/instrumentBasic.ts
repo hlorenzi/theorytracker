@@ -35,9 +35,9 @@ export class InstrumentBasic extends Playback.Instrument
     notes: Map<Project.ID, Note>
 
 
-	constructor(synth: Playback.SynthManager)
+	constructor(synth: Playback.SynthManager, outputNode: AudioNode)
 	{
-        super(synth)
+        super(synth, outputNode)
         this.samples = []
         this.notes = new Map<Project.ID, Note>()
     }
@@ -188,7 +188,7 @@ export class InstrumentBasic extends Playback.Instrument
 		
 		sourceNode.connect(envelopeNode)
 		envelopeNode.connect(volumeNode)
-        volumeNode.connect(this.synth.nodeGain)
+        volumeNode.connect(this.outputNode)
         
 		sourceNode.start(0)
 		

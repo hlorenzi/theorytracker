@@ -8,8 +8,9 @@ import * as Misc from "../util/misc"
 export type ID = number
 
 export const MinVolumeDb = -30
-export const DefaultVolumeDb = 0
 export const MaxVolumeDb = 0
+export const DefaultVolumeDb = 0
+export const DefaultChordVolumeDb = -4
 
 
 export interface ElementBase
@@ -161,7 +162,7 @@ export function makeTrackChords(): TrackChords
         parentId: 0,
         range: Range.dummy(),
         name: "Chords",
-        volumeDb: DefaultVolumeDb,
+        volumeDb: DefaultChordVolumeDb,
         mute: false,
         solo: false,
         instrument: makeInstrument(),
