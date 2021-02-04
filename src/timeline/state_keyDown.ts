@@ -49,6 +49,39 @@ export function keyDown(data: Editor.WorkData, key: string)
             break
         }
 
+        case "c":
+        {
+            if (data.state.keysDown.has("control"))
+                Editor.selectionCopy(data)
+
+            break
+        }
+
+        case "x":
+        {
+            if (data.state.keysDown.has("control"))
+            {
+                Editor.selectionCopy(data)
+                Editor.selectionDelete(data)
+                Project.splitUndoPoint()
+                Project.addUndoPoint("cut")
+            }
+
+            break
+        }
+
+        case "v":
+        {
+            if (data.state.keysDown.has("control"))
+            {
+                Editor.paste(data)
+                Project.splitUndoPoint()
+                Project.addUndoPoint("copy")
+            }
+                
+            break
+        }
+
         case "arrowright":
         case "arrowleft":
         {
@@ -95,36 +128,34 @@ export function keyDown(data: Editor.WorkData, key: string)
             break
         }
 
-        case "c":
+        case "h":
         {
-            if (data.state.keysDown.has("control"))
-                Editor.selectionCopy(data)
-
+            handleLengthChange(data, 0)
             break
         }
 
-        case "x":
+        case "j":
         {
-            if (data.state.keysDown.has("control"))
-            {
-                Editor.selectionCopy(data)
-                Editor.selectionDelete(data)
-                Project.splitUndoPoint()
-                Project.addUndoPoint("cut")
-            }
-
+            handleLengthChange(data, 1)
             break
         }
 
-        case "v":
+        case "k":
         {
-            if (data.state.keysDown.has("control"))
-            {
-                Editor.paste(data)
-                Project.splitUndoPoint()
-                Project.addUndoPoint("copy")
-            }
-                
+            handleLengthChange(data, 2)
+            break
+        }
+
+        case "l":
+        {
+            handleLengthChange(data, 3)
+            break
+        }
+
+        case ";":
+        case ":":
+        {
+            handleLengthChange(data, 4)
             break
         }
     }
@@ -464,4 +495,31 @@ function handleNumber(data: Editor.WorkData, degree: number)
         const chroma = key.chromaForDegree(degree)
         Editor.insertNote(data, time, chroma)
     }
+}
+
+
+function handleLengthChange(data: Editor.WorkData, lengthIndex: number)
+{
+    const lengths = [
+        new Rational(1, 16),
+        new Rational(1, 8),
+        new Rational(1, 4),
+        new Rational(1, 2),
+        new Rational(1, 1),
+    ]
+
+    const length = lengths[lengthIndex]
+
+    modifySelectedElems(data, (elem) =>
+    {
+        if (elem.type == "note" || elem.type == "chord")
+        {
+            const newRange = Range.fromStartDuration(elem.range.start, length)
+            return Project.elemModify(elem, { range: newRange })
+        }
+        else
+            return elem
+    })
+    
+    data.state.needsKeyFinish = true
 }
