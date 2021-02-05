@@ -894,6 +894,18 @@ export function cursorSetTrack(
 }
 
 
+export function cursorSetTrackByParentId(
+    data: WorkData,
+    parentId: Project.ID)
+{
+    const trackIndex = data.state.tracks.findIndex(tr => tr.parentId === parentId)
+    if (trackIndex < 0)
+        return
+
+    data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 = trackIndex
+}
+
+
 export function findPreviousAnchor(
     data: WorkData,
     time: Rational,
@@ -1031,6 +1043,44 @@ export function insertChord(data: WorkData, time: Rational, chord: Theory.Chord)
     selectionAdd(data, id)
     Playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
     selectionRemoveConflictingBehind(data)
+}
+
+
+export function insertNoteBlock(data: WorkData, time: Rational): Project.ID | null
+{
+    keyHandlePendingFinish(data)
+
+    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    if (!(track instanceof Timeline.TimelineTrackNoteBlocks))
+        return null
+
+    let endTime = time.add(new Rational(4))
+
+    const list = Project.global.project.lists.get(track.projectTrackId)
+    if (list)
+    {
+        for (const elem of list.iterAtRange(new Range(time, endTime)))
+            endTime = endTime.min(elem.range.start)
+    }
+
+    if (endTime.compare(time) <= 0)
+        return null
+
+    const noteBlock = Project.makeNoteBlock(
+        track.projectTrackId,
+        new Range(time, endTime))
+
+    let project = Project.global.project
+    const id = project.nextId
+    project = Project.upsertElement(project, noteBlock)
+    project = Project.withRefreshedRange(project)
+    Project.global.project = project
+
+    scrollTimeIntoView(data, time)
+    selectionClear(data)
+    selectionAdd(data, id)
+    selectionRemoveConflictingBehind(data)
+    return id
 }
 
 

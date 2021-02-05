@@ -1,4 +1,4 @@
-import * as Editor from "./index"
+import * as Timeline from "./index"
 import * as Project from "../project"
 import * as Prefs from "../prefs"
 import * as Theory from "../theory"
@@ -7,7 +7,7 @@ import Range from "../util/range"
 import Rational from "../util/rational"
 
 	
-export function keyDown(data: Editor.WorkData, key: string)
+export function keyDown(data: Timeline.WorkData, key: string)
 {
     data.state.keysDown.add(key)
 
@@ -52,7 +52,7 @@ export function keyDown(data: Editor.WorkData, key: string)
         case "c":
         {
             if (data.state.keysDown.has("control"))
-                Editor.selectionCopy(data)
+                Timeline.selectionCopy(data)
 
             break
         }
@@ -61,8 +61,8 @@ export function keyDown(data: Editor.WorkData, key: string)
         {
             if (data.state.keysDown.has("control"))
             {
-                Editor.selectionCopy(data)
-                Editor.selectionDelete(data)
+                Timeline.selectionCopy(data)
+                Timeline.selectionDelete(data)
                 Project.splitUndoPoint()
                 Project.addUndoPoint("cut")
             }
@@ -74,7 +74,7 @@ export function keyDown(data: Editor.WorkData, key: string)
         {
             if (data.state.keysDown.has("control"))
             {
-                Editor.paste(data)
+                Timeline.paste(data)
                 Project.splitUndoPoint()
                 Project.addUndoPoint("copy")
             }
@@ -163,7 +163,7 @@ export function keyDown(data: Editor.WorkData, key: string)
 
 
 function modifySelectedElems(
-    data: Editor.WorkData,
+    data: Timeline.WorkData,
     func: (elem: Project.Element) => Project.Element)
 {
     let newProject = Project.global.project
@@ -185,7 +185,7 @@ function modifySelectedElems(
 }
 
 
-function handleEscape(data: Editor.WorkData)
+function handleEscape(data: Timeline.WorkData)
 {
     if (Playback.global.playing)
     {
@@ -194,12 +194,12 @@ function handleEscape(data: Editor.WorkData)
     }
     else
     {
-        Editor.rewind(data)
+        Timeline.rewind(data)
     }
 }
 
 
-function handleEnter(data: Editor.WorkData)
+function handleEnter(data: Timeline.WorkData)
 {
     if (data.state.cursor.visible && data.state.selection.size != 0)
     {
@@ -209,7 +209,7 @@ function handleEnter(data: Editor.WorkData)
 
     data.state.cursor.visible = true
 
-    const range = Editor.selectionRange(data)
+    const range = Timeline.selectionRange(data)
     if (range)
     {
         let trackId = data.state.tracks[0].projectTrackId
@@ -220,27 +220,27 @@ function handleEnter(data: Editor.WorkData)
 
         const trackIndex = data.state.tracks.findIndex(tr => tr.projectTrackId === trackId)
 
-        Editor.cursorSetTime(data, range.end, range.end)
-        Editor.cursorSetTrack(data, trackIndex, trackIndex)
-        Editor.scrollTimeIntoView(data, range.end)
+        Timeline.cursorSetTime(data, range.end, range.end)
+        Timeline.cursorSetTrack(data, trackIndex, trackIndex)
+        Timeline.scrollTimeIntoView(data, range.end)
     }
 
-    Editor.keyHandlePendingFinish(data)
-    Editor.selectionClear(data)
+    Timeline.keyHandlePendingFinish(data)
+    Timeline.selectionClear(data)
 }
 
 
-function handleDelete(data: Editor.WorkData)
+function handleDelete(data: Timeline.WorkData)
 {
-    Editor.selectionDelete(data)
+    Timeline.selectionDelete(data)
 }
 
 
-function handleBackspace(data: Editor.WorkData)
+function handleBackspace(data: Timeline.WorkData)
 {
     if (!data.state.cursor.visible)
     {
-        Editor.selectionDelete(data)
+        Timeline.selectionDelete(data)
         return
     }
 
@@ -250,31 +250,31 @@ function handleBackspace(data: Editor.WorkData)
     if (data.state.cursor.time1.compare(data.state.cursor.time2) == 0)
     {
         const time = data.state.cursor.time1.min(data.state.cursor.time2)
-        const prevAnchor = Editor.findPreviousAnchor(data, time, track1, track2)
+        const prevAnchor = Timeline.findPreviousAnchor(data, time, track1, track2)
         const range = new Range(prevAnchor, time, false, false)
-        Editor.deleteRange(data, range, track1, track2)
+        Timeline.deleteRange(data, range, track1, track2)
 
         data.state.cursor.visible = true
-        Editor.cursorSetTime(data, prevAnchor, prevAnchor)
-        Editor.scrollTimeIntoView(data, prevAnchor)
+        Timeline.cursorSetTime(data, prevAnchor, prevAnchor)
+        Timeline.scrollTimeIntoView(data, prevAnchor)
     }
     else
     {
         const time1 = data.state.cursor.time1.min(data.state.cursor.time2)
         const time2 = data.state.cursor.time1.max(data.state.cursor.time2)
         const range = new Range(time1, time2, false, false)
-        Editor.deleteRange(data, range, track1, track2)
+        Timeline.deleteRange(data, range, track1, track2)
 
         data.state.cursor.visible = true
-        Editor.cursorSetTime(data, time1, time1)
-        Editor.scrollTimeIntoView(data, time1)
+        Timeline.cursorSetTime(data, time1, time1)
+        Timeline.scrollTimeIntoView(data, time1)
     }
     
     Project.global.project = Project.withRefreshedRange(Project.global.project)
 }
 
 
-function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
+function handleLeftRight(data: Timeline.WorkData, isLeft: boolean)
 {
     const keyFast = data.state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
     const keyCursor2 = data.state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
@@ -294,15 +294,15 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
         const timeDelta = data.state.timeSnap.multiplyByFloat(
             (keyFast ? 16 : 1) * (isLeft ? -1 : 1))
 
-        Editor.keyHandlePendingFinish(data)
+        Timeline.keyHandlePendingFinish(data)
 
         if (keyCursor2)
         {
             const newTime = data.state.cursor.time2.add(timeDelta)
-            Editor.cursorSetTime(data, null, newTime)
-            Editor.selectionClear(data)
-            Editor.selectionAddAtCursor(data)
-            Editor.scrollTimeIntoView(data, newTime)
+            Timeline.cursorSetTime(data, null, newTime)
+            Timeline.selectionClear(data)
+            Timeline.selectionAddAtCursor(data)
+            Timeline.scrollTimeIntoView(data, newTime)
             Playback.setStartTime(newTime)
         }
         else
@@ -312,8 +312,8 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
 
             const newTime = (isLeft ? timeMin : timeMax).add(timeDelta)
 
-            Editor.cursorSetTime(data, newTime, newTime)
-            Editor.scrollTimeIntoView(data, newTime)
+            Timeline.cursorSetTime(data, newTime, newTime)
+            Timeline.scrollTimeIntoView(data, newTime)
             Playback.setStartTime(newTime)
         }
     }
@@ -322,7 +322,7 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
         const timeDelta = data.state.timeSnap.multiplyByFloat(
             (keyFast ? 16 : 1) * (isLeft ? -1 : 1))
         
-        const selectionRange = Editor.selectionRange(data)
+        const selectionRange = Timeline.selectionRange(data)
         
         let playedPreview = false
         modifySelectedElems(data, (elem) =>
@@ -368,18 +368,18 @@ function handleLeftRight(data: Editor.WorkData, isLeft: boolean)
             })
         })
 
-        const range = Editor.selectionRange(data) || new Range(new Rational(0), new Rational(0))
+        const range = Timeline.selectionRange(data) || new Range(new Rational(0), new Rational(0))
         const newTime = (isLeft && !keyStretch ? range.start : range.end)
         data.state.cursor.visible = false
-        Editor.cursorSetTime(data, newTime, newTime)
-        Editor.scrollTimeIntoView(data, newTime)
+        Timeline.cursorSetTime(data, newTime, newTime)
+        Timeline.scrollTimeIntoView(data, newTime)
 
         data.state.needsKeyFinish = true
     }
 }
 
 
-function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean)
+function handleUpDown(data: Timeline.WorkData, isUp: boolean, isChromatic: boolean)
 {
     const keyFast = data.state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
     const keyCursor2 = data.state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
@@ -390,14 +390,14 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
     {
         const trackDelta = (isUp ? -1 : 1)
 
-        Editor.keyHandlePendingFinish(data)
+        Timeline.keyHandlePendingFinish(data)
         
         if (keyCursor2)
         {
             const newTrack = data.state.cursor.trackIndex2 + trackDelta
-            Editor.cursorSetTrack(data, null, newTrack)
-            Editor.selectionClear(data)
-            Editor.selectionAddAtCursor(data)
+            Timeline.cursorSetTrack(data, null, newTrack)
+            Timeline.selectionClear(data)
+            Timeline.selectionAddAtCursor(data)
         }
         else
         {
@@ -405,7 +405,7 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
             const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
 
             const newTrack = (isUp ? trackMin : trackMax) + trackDelta
-            Editor.cursorSetTrack(data, newTrack, newTrack)
+            Timeline.cursorSetTrack(data, newTrack, newTrack)
         }
     }
     else
@@ -471,14 +471,14 @@ function handleUpDown(data: Editor.WorkData, isUp: boolean, isChromatic: boolean
 }
 
 
-function handleNumber(data: Editor.WorkData, degree: number)
+function handleNumber(data: Timeline.WorkData, degree: number)
 {
     const time = data.state.cursor.time1.min(data.state.cursor.time2)
     const track = data.state.tracks[data.state.cursor.trackIndex1]
     const trackId = track.projectTrackId
     const key = Project.keyAt(Project.global.project, trackId, time)
     
-    if (track instanceof Editor.TimelineTrackChords)
+    if (track instanceof Timeline.TimelineTrackChords)
     {
         const root = key.midiForDegree(degree)
         
@@ -488,17 +488,33 @@ function handleNumber(data: Editor.WorkData, degree: number)
         
         const kind = Theory.Chord.kindFromPitches(pitches)
         const chord = new Theory.Chord(root, kind, 0, [])
-        Editor.insertChord(data, time, chord)
+        Timeline.insertChord(data, time, chord)
+    }
+    else if (track instanceof Timeline.TimelineTrackNoteBlocks)
+    {
+        const noteBlockId = Timeline.insertNoteBlock(data, time)
+        if (!noteBlockId)
+            return
+
+        Timeline.modeStackPush(data)
+        data.state.mode = Timeline.Mode.NoteBlock
+        data.state.modeNoteBlockId = noteBlockId
+        Timeline.refreshTracks(data)
+
+        Timeline.cursorSetTrackByParentId(data, noteBlockId)
+
+        const chroma = key.chromaForDegree(degree)
+        Timeline.insertNote(data, time, chroma)
     }
     else
     {
         const chroma = key.chromaForDegree(degree)
-        Editor.insertNote(data, time, chroma)
+        Timeline.insertNote(data, time, chroma)
     }
 }
 
 
-function handleLengthChange(data: Editor.WorkData, lengthIndex: number)
+function handleLengthChange(data: Timeline.WorkData, lengthIndex: number)
 {
     const lengths = [
         new Rational(1, 16),
@@ -514,12 +530,20 @@ function handleLengthChange(data: Editor.WorkData, lengthIndex: number)
     {
         if (elem.type == "note" || elem.type == "chord")
         {
+            data.state.insertion.duration = length
+
             const newRange = Range.fromStartDuration(elem.range.start, length)
             return Project.elemModify(elem, { range: newRange })
         }
         else
             return elem
     })
-    
+
+    const range = Timeline.selectionRange(data) || new Range(new Rational(0), new Rational(0))
+    const newTime = range.end
+    data.state.cursor.visible = false
+    Timeline.cursorSetTime(data, newTime, newTime)
+    Timeline.scrollTimeIntoView(data, newTime)
+
     data.state.needsKeyFinish = true
 }
