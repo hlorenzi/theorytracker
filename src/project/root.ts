@@ -511,6 +511,27 @@ export function getRelativeRange(project: Root, parentId: Project.ID, range: Ran
 }
 
 
+export function getRangeForElems(project: Root, elemIds: Iterable<Project.ID>): Range | null
+{
+    let range: Range | null = null
+
+    for (const id of elemIds)
+    {
+        const elem = project.elems.get(id) as Project.Element
+        if (!elem)
+            continue
+
+        if (elem.type == "track")
+            continue
+
+        const absRange = Project.getAbsoluteRange(project, elem.parentId, elem.range)
+        range = Range.merge(range, absRange)
+    }
+
+    return range
+}
+
+
 export function getMillisecondsAt(project: Root, time: Rational): number
 {
     const measuresPerSecond = (project.baseBpm / 4 / 60)

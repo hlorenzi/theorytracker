@@ -89,43 +89,87 @@ function handleContextMenu(data: Timeline.WorkData)
 
     if (data.state.hover)
     {
-        //data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data, data.state.hover!.id)
-        
-        data.dockable.ref.current.createFloatingEphemeral(
-            Windows.Inspector,
-            { elemIds: [...data.state.selection] },
-            1, 1)
-    }
+        const clickDurationMs = (new Date().getTime()) - data.state.mouse.downDate.getTime()
 
-    /*const elems: JSX.Element[] = []
-    const trackCtxMenu = data.state.tracks[data.state.mouse.point.trackIndex].contextMenu(data)
-    if (trackCtxMenu)
+        const fnOpenProperties = () =>
+        {
+            data.dockable.ref.current.createFloatingEphemeral(
+                Windows.Inspector,
+                { elemIds: [...data.state.selection] },
+                1, 1)
+
+            data.dockable.commit()
+        }
+
+        if (clickDurationMs < 150)
+        {
+            fnOpenProperties()
+        }
+        else
+        {
+            data.popup.ref.current.elem = () =>
+            {
+                return <Popup.Root>
+                    { makeContextMenu(data, fnOpenProperties) }
+                </Popup.Root>
+            }
+            data.popup.ref.current.rect = new Rect(
+                data.state.renderRect.x + data.state.mouse.point.pos.x + 2,
+                data.state.renderRect.y + data.state.mouse.point.pos.y + 2,
+                0, 0)
+            data.popup.commit()
+        }
+    }
+}
+
+
+function makeContextMenu(data: Timeline.WorkData, fnOpenProperties: () => void): JSX.Element[]
+{
+    const menuItems: JSX.Element[] = []
+
+    menuItems.push(<Popup.Button
+        label="Properties"
+        onClick={ fnOpenProperties }/>)
+
+    menuItems.push(<Popup.Button
+        label="Delete"
+        onClick={ () =>
+        {
+            Timeline.deleteElems(data, data.state.selection)
+            Timeline.sendEventRefresh()
+            Project.splitUndoPoint()
+            Project.addUndoPoint("menuDelete")
+        }}/>)
+
+
+    const hasElemType = (type: Project.Element["type"]) =>
     {
-        elems.push(trackCtxMenu)
-        elems.push(<Popup.Divider/>)
+        for (const id of data.state.selection)
+        {
+            const elem = Project.global.project.elems.get(id)
+            if (elem && elem.type === type)
+                return true
+        }
+
+        return false
     }
 
-    elems.push(
-        <>
-        <Popup.Button label="Insert track after">
-            <Popup.Button label="Note track"/>
-            <Popup.Button label="Chord track"/>
-            <Popup.Button label="Key Change track"/>
-            <Popup.Button label="Meter Change track"/>
-        </Popup.Button>
-        <Popup.Button label="Delete"/>
-        </>
-    )
 
-    data.popup.ref.current.elem = () =>
+    if (hasElemType("note") || hasElemType("noteBlock"))
     {
-        return <Popup.Root>
-            { elems }
-        </Popup.Root>
+        menuItems.push(<Popup.Divider/>)
+            
+        menuItems.push(<Popup.Button
+            label="Convert to Chords"
+            onClick={ () =>
+            {
+                Timeline.convertNotesToChords(data, data.state.selection)
+                Timeline.sendEventRefresh()
+                Project.splitUndoPoint()
+                Project.addUndoPoint("menuConvertNotesToChords")
+            }}/>)
     }
-    data.popup.ref.current.rect = new Rect(
-        data.state.renderRect.x + data.state.mouse.point.pos.x + 2,
-        data.state.renderRect.y + data.state.mouse.point.pos.y + 2,
-        0, 0)
-    data.popup.commit()*/
+
+
+    return menuItems
 }

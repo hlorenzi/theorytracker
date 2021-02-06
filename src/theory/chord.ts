@@ -50,6 +50,14 @@ export const chordKinds: ChordMetadata[] =
 ]
 
 
+export interface ChordSuggestion
+{
+	chord: Chord
+	matches: number
+	misses: number
+}
+
+
 export default class Chord
 {
 	static kinds: ChordMetadata[] = chordKinds
@@ -87,6 +95,53 @@ export default class Chord
 		return chordKinds.findIndex(k =>
 			k.pitches.length === pitches.length &&
 			k.pitches.every((p, i) => pitches[i] === p))
+	}
+
+
+	static suggestChordsForPitches(pitches: number[]): ChordSuggestion[]
+	{
+		const suggestions: ChordSuggestion[] = []
+
+		for (let k = 0; k < chordKinds.length; k++)
+		{
+			const kind = chordKinds[k]
+
+			for (let root = 0; root < pitches.length; root++)
+			{
+				const rootPitch = pitches[root]
+				const matches = new Set<number>()
+				let misses = 0
+
+				for (let i = 0; i < pitches.length; i++)
+				{
+					const pitch = pitches[(root + i) % pitches.length]
+					const relPitch = MathUtils.mod(pitch - rootPitch, 12)
+
+					const kindMatch = kind.pitches.findIndex(p => p === relPitch)
+					if (kindMatch >= 0)
+						matches.add(kindMatch)
+					else
+						misses++
+				}
+
+				suggestions.push({
+					chord: new Chord(MathUtils.mod(rootPitch, 12), k, 0, []),
+					matches: matches.size,
+					misses,
+				})
+			}
+		}
+
+		suggestions.sort((a, b) =>
+		{
+			if (a.misses != b.misses)
+				return a.misses - b.misses
+
+			return b.matches - a.matches
+		})
+
+		//console.log("suggestions", pitches, suggestions)
+		return suggestions.slice(0, 10)
 	}
 
 

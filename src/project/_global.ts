@@ -1,4 +1,5 @@
 import * as Project from "./index"
+import * as Timeline from "../timeline"
 import * as GlobalObservable from "../util/globalObservable"
 
 
@@ -71,7 +72,7 @@ export function setNew()
 
     clearUndoStack()
     notifyObservers()
-    window.dispatchEvent(new Event("timelineReset"))
+    Timeline.sendEventReset()
 }
 
 
@@ -82,7 +83,7 @@ export function open(openedProject: Project.Root)
 
     clearUndoStack()
     notifyObservers()
-    window.dispatchEvent(new Event("timelineReset"))
+    Timeline.sendEventReset()
 }
 
 
@@ -142,7 +143,7 @@ export function undo()
         
     saveToLocalStorageWithCooldown(global.project)
     notifyObservers()
-    window.dispatchEvent(new Event("timelineRefresh"))
+    Timeline.sendEventRefresh()
 }
 
 
@@ -157,7 +158,7 @@ export function redo()
         
     saveToLocalStorageWithCooldown(global.project)
     notifyObservers()
-    window.dispatchEvent(new Event("timelineRefresh"))
+    Timeline.sendEventRefresh()
 }
 
 

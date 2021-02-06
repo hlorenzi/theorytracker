@@ -632,22 +632,7 @@ export function selectionClear(data: WorkData)
 
 export function selectionRange(data: WorkData): Range | null
 {
-    let range: Range | null = null
-
-    for (const id of data.state.selection)
-    {
-        const elem = Project.global.project.elems.get(id) as Project.Element
-        if (!elem)
-            continue
-
-        if (elem.type == "track")
-            continue
-
-        const absRange = Project.getAbsoluteRange(Project.global.project, elem.parentId, elem.range)
-        range = Range.merge(range, absRange)
-    }
-
-    return range
+    return Project.getRangeForElems(Project.global.project, data.state.selection)
 }
 
 
@@ -697,11 +682,12 @@ export function selectionAddAtCursor(data: WorkData)
 }
 
 
-export function selectionDelete(data: WorkData)
+export function deleteElems(data: WorkData, elemIds: Iterable<Project.ID>)
 {
-    const range = selectionRange(data) || new Range(data.state.cursor.time1, data.state.cursor.time1)
+    const range = Project.getRangeForElems(Project.global.project, elemIds) ||
+        new Range(data.state.cursor.time1, data.state.cursor.time1)
 
-    for (const id of data.state.selection)
+    for (const id of elemIds)
     {
         const elem = Project.global.project.elems.get(id)
         if (!elem)
@@ -714,7 +700,7 @@ export function selectionDelete(data: WorkData)
         Project.global.project = Project.upsertElement(Project.global.project, removeElem)
     }
     
-    for (const id of data.state.selection)
+    for (const id of elemIds)
     {
         const track = Project.global.project.elems.get(id)
         if (!track)

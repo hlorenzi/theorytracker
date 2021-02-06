@@ -394,3 +394,15 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
             editorState.ref.current.trackScroll,
         ])
 }
+
+
+export function sendEventRefresh()
+{
+    window.dispatchEvent(new Event("timelineRefresh"))
+}
+
+
+export function sendEventReset()
+{
+    window.dispatchEvent(new Event("timelineReset"))
+}

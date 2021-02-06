@@ -62,7 +62,7 @@ export function keyDown(data: Timeline.WorkData, key: string)
             if (data.state.keysDown.has("control"))
             {
                 Timeline.selectionCopy(data)
-                Timeline.selectionDelete(data)
+                Timeline.deleteElems(data, data.state.selection)
                 Project.splitUndoPoint()
                 Project.addUndoPoint("cut")
             }
@@ -232,7 +232,7 @@ function handleEnter(data: Timeline.WorkData)
 
 function handleDelete(data: Timeline.WorkData)
 {
-    Timeline.selectionDelete(data)
+    Timeline.deleteElems(data, data.state.selection)
 }
 
 
@@ -240,7 +240,7 @@ function handleBackspace(data: Timeline.WorkData)
 {
     if (!data.state.cursor.visible)
     {
-        Timeline.selectionDelete(data)
+        Timeline.deleteElems(data, data.state.selection)
         return
     }
 

@@ -24,6 +24,7 @@ Several soundfonts are readily available from an online repository.
 * Use the middle or right mouse buttons to pan.
 * Hold <kbd>A</kbd> to draw elements with the mouse.
 * Right-click on an element to change its properties.
+  * Do a long right-click for a context menu with more commands.
 * Double-click on a note block to edit its notes.
   * Click on "Project Root" on the breadcrumb bar to exit note editing mode.
 
