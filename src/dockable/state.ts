@@ -59,6 +59,7 @@ export interface PanelRect
     panel: Panel
     rect: Rect
     floating: boolean
+    zIndex: number
 }
 
 
@@ -85,8 +86,18 @@ export interface Anchor
 export interface Layout
 {
     panelRects: PanelRect[]
+    windows: LayoutWindow[]
     dividers: Divider[]
     anchors: Anchor[]
+}
+
+
+export interface LayoutWindow
+{
+    windowId: WindowId
+    tabIndex: number
+    panel: Panel
+    panelRect: PanelRect
 }
 
 
@@ -374,11 +385,25 @@ export function traverseLayout(panel: Panel, rect: Rect, layout: Layout)
     }
     else
     {
-        layout.panelRects.push({
+        const panelRect = {
             panel,
             rect,
             floating: false,
-        })
+            zIndex: 0,
+        }
+
+        for (let w = 0; w < panel.windowIds.length; w++)
+        {
+            layout.windows.push(
+            {
+                windowId: panel.windowIds[w],
+                tabIndex: w,
+                panel,
+                panelRect,
+            })
+        }
+    
+        layout.panelRects.push(panelRect)
 
         layout.anchors.push({
             panel,
@@ -428,20 +453,37 @@ export function getLayout(root: State, rect: Rect): Layout
     const layout: Layout =
     {
         panelRects: [],
+        windows: [],
         dividers: [],
         anchors: [],
     }
 
     traverseLayout(root.rootPanel, rect, layout)
 
-    for (const floatingPanel of root.floatingPanels)
+    for (let fp = 0; fp < root.floatingPanels.length; fp++)
     {
-        layout.panelRects.push(
+        const floatingPanel = root.floatingPanels[fp]
+
+        const panelRect = 
         {
             panel: floatingPanel,
             rect: floatingPanel.rect,
             floating: true,
-        })
+            zIndex: fp + 1,
+        }
+
+        for (let w = 0; w < floatingPanel.windowIds.length; w++)
+        {
+            layout.windows.push(
+            {
+                windowId: floatingPanel.windowIds[w],
+                tabIndex: w,
+                panel: floatingPanel,
+                panelRect,
+            })
+        }
+
+        layout.panelRects.push(panelRect)
 
         layout.anchors.push({
             panel: floatingPanel,

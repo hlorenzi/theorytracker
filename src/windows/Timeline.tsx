@@ -44,7 +44,7 @@ export function Timeline()
     windowCtx.setTitle("Timeline")
     windowCtx.setPreferredSize(600, 450)
 
-    const editorState = Dockable.useWindowRefState(() => TimelineData.init())
+    const editorState = useRefState(() => TimelineData.init())
 
     const makeUpdateData: () => TimelineData.WorkData = () =>
     {

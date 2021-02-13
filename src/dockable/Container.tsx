@@ -1,4 +1,5 @@
 import React from "react"
+import ReactDOM from "react-dom"
 import * as Dockable from "./index"
 import * as DockableData from "./state"
 import { WindowContext } from "./windowContext"
@@ -29,6 +30,48 @@ const StyledCloseButton = styled.button`
         border: 1px solid #fff;
         background-color: #000;
     }
+`
+
+
+const DivWindow = styled.div<{
+    isCurrentTab: boolean
+}>`
+    display: ${ props => props.isCurrentTab ? "grid" : "none" };
+    grid-template: 100% / 100%;
+
+    position: absolute;
+    box-sizing: border-box;
+
+    color: #fff;
+    text-align: left;
+
+    background-color: transparent;
+    border-radius: 0.5em;
+    overflow: hidden;
+`
+
+
+const DivWindowContent = styled.div`
+    grid-row: 1;
+    grid-column: 1;
+    width: 100%;
+    height: 100%;
+`
+
+
+const DivWindowBottomRightResizeHandle = styled.div<{
+    size: number,
+}>`
+    width: ${ props => props.size }px;
+    height: ${ props => props.size }px;
+
+    grid-row: 1;
+    grid-column: 1;
+    align-self: end;
+    justify-self: end;
+
+    cursor: nwse-resize;
+    z-index: 1;
 `
 
 
@@ -129,6 +172,8 @@ export function Container()
     const anchorSize = 5
     const anchorColor = Prefs.global.ui.windowAnchorColor
 
+    const resizeHandleSize = 20
+
     return <div
         ref={ rootRef }
         style={{
@@ -144,6 +189,80 @@ export function Container()
                 mouseHandler={ mouseData }
             />
         )}
+
+        { layoutRef.current.windows.map(w =>
+        {
+            const component = !dockable.ref.current.contentIdToComponent ? null :
+                dockable.ref.current.contentIdToComponent(w.windowId)
+
+            const data = !dockable.ref.current.contentIdToData ? null :
+                dockable.ref.current.contentIdToData(w.windowId)
+
+            const setTitle = (title: string) =>
+            {
+                if (w.panel.windowTitles[w.tabIndex] != title)
+                {
+                    window.requestAnimationFrame(() =>
+                    {
+                        w.panel.windowTitles[w.tabIndex] = title
+                        dockable.commit()
+                    })
+                }
+            }
+
+            const setPreferredSize = (width: number, height: number) =>
+            {
+                if (w.tabIndex == w.panel.curWindowIndex &&
+                    (width != w.panel.preferredFloatingSize.w ||
+                    height != w.panel.preferredFloatingSize.h))
+                {
+                    window.requestAnimationFrame(() =>
+                    {
+                        w.panel.preferredFloatingSize = new Rect(0, 0, width, height)
+                        dockable.commit()
+
+                        if (w.panel.justOpened)
+                            window.dispatchEvent(new Event("dockableRefreshPreferredSize"))
+                    })
+                }
+            }
+
+            const marginTop = 30
+            const marginOther = 4
+
+            return <DivWindow
+                key={ w.windowId }
+                onMouseDown={ ((ev: MouseEvent) => mouseData.onPanelActivate(ev, w.panel)) as any }
+                isCurrentTab={ w.panel.curWindowIndex == w.tabIndex }
+                style={{
+                    left: w.panelRect.rect.x + marginOther,
+                    top: w.panelRect.rect.y + marginTop,
+                    width: w.panelRect.rect.w - marginOther * 2,
+                    height: w.panelRect.rect.h - marginTop - marginOther,
+                    zIndex: w.panelRect.zIndex * 3 + 1,
+            }}>
+                <WindowContext.Provider
+                    value={{
+                        panel: w.panel,
+                        contentId: w.windowId,
+                        data,
+
+                        setTitle,
+                        setPreferredSize,
+                }}>
+                    <DivWindowContent>
+                        { !component ? null : React.createElement(component) }
+                    </DivWindowContent>
+                </WindowContext.Provider>
+                
+                { !w.panel.floating ? null : 
+                    <DivWindowBottomRightResizeHandle
+                        onMouseDown={ ((ev: MouseEvent) => mouseData.onPanelResize(ev, w.panel)) as any }
+                        size={ resizeHandleSize }
+                    />
+                }
+            </DivWindow>
+        })}
 
         { layoutRef.current.dividers.map(divider =>
             <div
@@ -194,16 +313,6 @@ export function Container()
                 }}/>
         )}
 
-        {/*<div ref={ rootRef } style={{
-            position: "relative",
-            top: "0px",
-            left: "0px",
-            width: "100%",
-            height: "100%",
-            cursor: mouseData.cursor,
-            pointerEvents: mouseData.blockEvents ? "auto" : "none",
-        }}/>*/}
-
     </div>
 }
 
@@ -215,6 +324,16 @@ interface PrefsProps
 
 
 const DivPanel = styled.div<PrefsProps>`
+    background-color: ${ props => props.prefs.ui.windowPanelColor };
+    border-radius: 0.5em;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+
+    display: grid;
+    grid-template: auto 1fr / 1fr;
+    overflow: hidden;
+
     border: 1px solid ${ props => props.prefs.ui.windowVoidColor };
 
     &.active
@@ -230,8 +349,6 @@ function Panel(props: any)
     const panelRect: DockableData.PanelRect = props.panelRect
     const mouseHandler: MouseHandlerData = props.mouseHandler
 
-    const resizeHandleSize = 20
-
     return <div key={ panelRect.panel.id } style={{
         position: "absolute",
         left: (panelRect.rect.x) + "px",
@@ -244,23 +361,13 @@ function Panel(props: any)
         borderRadius: "0.5em",
         padding: "0.25em",
 
-        zIndex: panelRect.panel.floating ? 100 : 0,
+        zIndex: panelRect.zIndex * 3,
     }}>
         <DivPanel
             className={ dockable.ref.current.state.activePanel === panelRect.panel ? "active" : undefined }
             onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelActivate(ev, panelRect.panel)) as any }
             prefs={ Prefs.global }
-            style={{
-                backgroundColor: Prefs.global.ui.windowPanelColor,
-                borderRadius: "0.5em",
-                boxSizing: "border-box",
-                width: "100%",
-                height: "100%",
-                
-                display: "grid",
-                gridTemplate: "auto 1fr / 1fr",
-                overflow: "hidden",
-        }}>
+        >
             <div
                 onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelHeaderMouseDown(ev, panelRect.panel)) as any }
                 style={{
@@ -268,6 +375,10 @@ function Panel(props: any)
                     textAlign: "left",
                     gridRow: 1,
                     gridColumn: 1,
+
+                    display: "grid",
+                    gridTemplate: `auto / repeat(${ panelRect.panel.windowIds.length }, auto) 1fr`,
+                    gridAutoFlow: "column",
             }}>
 
                 { panelRect.panel.windowIds.map((cId, idx) =>
@@ -277,6 +388,8 @@ function Panel(props: any)
                         onContextMenu={ ev => ev.preventDefault() }
                         style={{
                             display: "inline-block",
+                            gridRow: 1,
+                            gridColumn: idx + 1,
                             backgroundColor: panelRect.panel.curWindowIndex == idx ?
                                 Prefs.global.ui.windowPanelColor :
                                 Prefs.global.ui.windowVoidColor,
@@ -297,88 +410,6 @@ function Panel(props: any)
                 )}
 
             </div>
-
-            { panelRect.panel.windowIds.map((cId, idx) =>
-            {
-                const component = !dockable.ref.current.contentIdToComponent ? null :
-                    dockable.ref.current.contentIdToComponent(cId)
-
-                const data = !dockable.ref.current.contentIdToData ? null :
-                    dockable.ref.current.contentIdToData(cId)
-
-                const setTitle = (title: string) =>
-                {
-                    if (panelRect.panel.windowTitles[idx] != title)
-                    {
-                        window.requestAnimationFrame(() =>
-                        {
-                            panelRect.panel.windowTitles[idx] = title
-                            dockable.commit()
-                        })
-                    }
-                }
-
-                const setPreferredSize = (w: number, h: number) =>
-                {
-                    if (idx == panelRect.panel.curWindowIndex &&
-                        (w != panelRect.panel.preferredFloatingSize.w ||
-                        h != panelRect.panel.preferredFloatingSize.h))
-                    {
-                        window.requestAnimationFrame(() =>
-                        {
-                            panelRect.panel.preferredFloatingSize = new Rect(0, 0, w, h)
-                            dockable.commit()
-
-                            if (panelRect.panel.justOpened)
-                                window.dispatchEvent(new Event("dockableRefreshPreferredSize"))
-                        })
-                    }
-                }
-
-                return <WindowContext.Provider key={ cId } value={{
-                    panel: panelRect.panel,
-                    contentId: cId,
-                    data,
-
-                    setTitle,
-                    setPreferredSize,
-                }}>
-                    <div style={{
-                        display: panelRect.panel.curWindowIndex == idx ? "block" : "none",
-                        color: "#fff",
-                        width: "100%",
-                        height: "100%",
-                        minWidth: "0px",
-                        minHeight: "0px",
-                        textAlign: "left",
-                        gridRow: 2,
-                        gridColumn: 1,
-                    }}>
-                        { !component ? null : React.createElement(component, {
-                            key: cId,
-                            contentId: cId,
-                            rect: panelRect,
-                        })}
-                    </div>
-                </WindowContext.Provider>
-            })}
-
-            { !panelRect.panel.floating ? null : 
-                <div
-                    onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelResize(ev, panelRect.panel)) as any }
-                    style={{
-                        width: resizeHandleSize + "px",
-                        height: resizeHandleSize + "px",
-
-                        gridRow: "1 / 3",
-                        gridColumn: 1,
-                        alignSelf: "end",
-                        justifySelf: "end",
-
-                        cursor: "nwse-resize",
-                        zIndex: 1,
-                }}/>
-            }
 
         </DivPanel>
 
@@ -572,6 +603,9 @@ function useMouseHandler(
         
                         for (const anchor of layoutRef.current!.anchors)
                         {
+                            if (anchor.panel === state.grabbedPanel)
+                                continue
+
                             const xx = anchor.x - state.mousePos.x
                             const yy = anchor.y - state.mousePos.y
                             const distSqr = xx * xx + yy * yy

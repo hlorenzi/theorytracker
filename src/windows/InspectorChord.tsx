@@ -17,7 +17,7 @@ export function InspectorChord(props: InspectorChordProps)
 {
     const windowCtx = Dockable.useWindow()
 
-    const [baseChordType, setBaseChordType] = Dockable.useWindowState(() => 5)
+    const [baseChordType, setBaseChordType] = React.useState(5)
 
 
 	const chords: Project.Chord[] = []

@@ -62,7 +62,7 @@ function InstrumentSelectSflib(props: { data: InstrumentSelectProps })
     if (!sflibMeta)
         return null
 
-    const [selCollection, setSelCollection] = Dockable.useWindowState(() => instr ? instr.collectionId : "gm")
+    const [selCollection, setSelCollection] = React.useState(() => instr ? instr.collectionId : "gm")
     const curCollection = sflibMeta.collectionsById.get(selCollection)!
 
     const onChange = (collectionId: string, instrumentId: string) =>

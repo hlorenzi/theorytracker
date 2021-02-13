@@ -1,11 +1,11 @@
 import React from "react"
-import * as Dockable from "../dockable"
+import { useRefState } from "../util/refState"
 import * as Project from "../project"
 
 
 export function Test()
 {
-    const count = Dockable.useWindowRefState(() => 0)
+    const count = useRefState(() => 0)
 
     const increment = () =>
     {

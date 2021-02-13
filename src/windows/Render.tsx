@@ -4,10 +4,6 @@ import * as Project from "../project"
 import * as Playback from "../playback"
 import * as Prefs from "../prefs"
 import * as UI from "../ui"
-import Range from "../util/range"
-import { useRefState } from "../util/refState"
-import styled from "styled-components"
-import Rational from "../util/rational"
 import * as WavEncoder from "../util/wavEncode"
 
 
@@ -24,8 +20,8 @@ export function Render()
     windowCtx.setPreferredSize(600, 450)
 
 
-    const [rendering, setRendering] = Dockable.useWindowState(() => false)
-    const [progress, setProgress] = Dockable.useWindowState(() => 0)
+    const [rendering, setRendering] = React.useState(false)
+    const [progress, setProgress] = React.useState(0)
 
 
     const onRenderAndDownload = () =>
