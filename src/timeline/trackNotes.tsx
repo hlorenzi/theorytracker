@@ -307,32 +307,6 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
             Timeline.selectionAdd(data, id)
 		}
 	}
-    
-    
-    findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
-    {
-        const list = Project.global.project.lists.get(this.parentId)
-        if (!list)
-            return this.parentStart(data)
-
-        return list.findPreviousAnchor(time) || this.parentStart(data)
-    }
-	
-	
-	deleteRange(data: Timeline.WorkData, range: Range)
-	{
-		for (const note of this.iterNotesAtRange(data, range))
-		{
-            const removeNote = Project.elemModify(note, { parentId: -1 })
-            Project.global.project = Project.upsertElement(Project.global.project, removeNote)
-            
-			for (const slice of note.range.iterSlices(range))
-			{
-				const newNote = Project.makeNote(note.parentId, slice, note.midiPitch, note.volumeDb, note.velocity)
-                Project.global.project = Project.upsertElement(Project.global.project, newNote)
-			}
-		}
-	}
 
 
 	yForRow(data: Timeline.WorkData, row: number): number

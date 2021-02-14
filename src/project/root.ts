@@ -477,6 +477,23 @@ export function getAbsoluteTime(project: Root, parentId: Project.ID, time: Ratio
 }
 
 
+export function getRelativeTime(project: Root, parentId: Project.ID, time: Rational): Rational
+{
+    while (true)
+    {
+        const elem = project.elems.get(parentId)
+        if (!elem)
+            return time
+            
+        if (elem.type == "track")
+            return time
+
+        time = time.subtract(elem.range.start)
+        parentId = elem.parentId
+    }
+}
+
+
 export function getAbsoluteRange(project: Root, parentId: Project.ID, range: Range): Range
 {
     while (true)

@@ -208,23 +208,40 @@ export class TimelineTrack
     
     findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
     {
-        const list = Project.global.project.lists.get(this.projectTrackId)
+        const list = Project.global.project.lists.get(this.parentId)
         if (!list)
             return Project.global.project.range.start
+            
+        const relTime = Project.getRelativeTime(
+            Project.global.project,
+            this.parentId,
+            time)
 
-        return list.findPreviousDeletionAnchor(time) || Project.global.project.range.start
+        const anchor = list.findPreviousDeletionAnchor(relTime)
+        if (!anchor)
+            return Project.global.project.range.start
+
+        return Project.getAbsoluteTime(
+            Project.global.project,
+            this.parentId,
+            anchor)
     }
 	
 	
 	deleteRange(data: Timeline.WorkData, range: Range)
 	{
-        const list = Project.global.project.lists.get(this.projectTrackId)
+        const list = Project.global.project.lists.get(this.parentId)
         if (!list)
             return
 
+        const relRange = Project.getRelativeRange(
+            Project.global.project,
+            this.parentId,
+            range)
+    
         if (range.duration.isZero())
         {
-            for (const elem of list.iterAtPoint(range.start))
+            for (const elem of list.iterAtPoint(relRange.start))
             {
                 const removeElem = Project.elemModify(elem, { parentId: -1 })
                 Project.global.project = Project.upsertElement(Project.global.project, removeElem)
@@ -232,10 +249,12 @@ export class TimelineTrack
         }
         else
         {
-            for (const elem of list.iterAtRange(range))
+            for (const elem of list.iterAtRange(relRange))
             {
-                const removeElem = Project.elemModify(elem, { parentId: -1 })
-                Project.global.project = Project.upsertElement(Project.global.project, removeElem)
+                Project.global.project = Project.splitElem(
+                    Project.global.project,
+                    elem,
+                    range)
             }
         }
 	}
@@ -243,8 +262,6 @@ export class TimelineTrack
 
 	selectionRemoveConflictingBehind(data: Timeline.WorkData)
 	{
-        Project.global.project = Project.global.project
-
 		for (const id of data.state.selection)
 		{
 			const selectedElem = Project.global.project.elems.get(id)
@@ -292,8 +309,6 @@ export class TimelineTrack
                 }
             }
 		}
-
-        Project.global.project = Project.global.project
 	}
 
 

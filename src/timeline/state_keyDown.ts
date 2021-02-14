@@ -35,7 +35,6 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "delete":
         {
             handleDelete(data)
-            Project.global.project = Project.global.project
             Project.splitUndoPoint()
             Project.addUndoPoint("keyDown_delete")
             break
@@ -44,7 +43,6 @@ export function keyDown(data: Timeline.WorkData, key: string)
 		case "backspace":
         {
             handleBackspace(data)
-            Project.global.project = Project.global.project
             Project.addUndoPoint("keyDown_backspace")
             break
         }
@@ -86,7 +84,6 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "arrowleft":
         {
             handleLeftRight(data, key === "arrowleft")
-            Project.global.project = Project.global.project
             Project.addUndoPoint("keyDown_move")
             break
         }
@@ -95,7 +92,6 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "arrowdown":
         {
             handleUpDown(data, key === "arrowup", false)
-            Project.global.project = Project.global.project
             Project.addUndoPoint("keyDown_move")
             break
         }
@@ -106,7 +102,6 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "<":
         {
             handleUpDown(data, key === "." || key === ">", true)
-            Project.global.project = Project.global.project
             Project.addUndoPoint("keyDown_move")
             break
         }
@@ -122,7 +117,6 @@ export function keyDown(data: Timeline.WorkData, key: string)
             const degree = key.charCodeAt(0) - "1".charCodeAt(0)
             handleNumber(data, degree)
 
-            Project.global.project = Project.global.project
             Project.splitUndoPoint()
             Project.addUndoPoint("keyDown_insert")
             break
