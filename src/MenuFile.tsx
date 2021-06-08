@@ -1,5 +1,6 @@
 import React from "react"
 import * as Dockable from "./dockable"
+import * as Command from "./command"
 import * as Project from "./project"
 import * as Menubar from "./menubar"
 import * as Popup from "./popup"
@@ -29,21 +30,7 @@ export default function MenuFile()
 
                 const filename = elem.files![0].name
                 const bytes = new Uint8Array(reader.result as any)
-    
-                if (filename.endsWith(".mid"))
-                {
-                    Project.open(Project.midiImport(bytes))
-                }
-                else if (filename.endsWith(".json") || filename.endsWith(".ttproj"))
-                {
-                    const text = new TextDecoder("utf-8").decode(bytes)
-                    const json = JSON.parse(text)
-                    Project.open(Project.jsonImport(json))
-                }
-                else
-                {
-                    window.alert("Unrecognized file format!")
-                }
+                Command.openFromFile(filename, null, bytes)
             }
         }
     
@@ -73,56 +60,6 @@ export default function MenuFile()
     }, [])
 
 
-    const confirmDiscard = () =>
-    {
-        if (!Project.isUnsaved())
-            return true
-
-        return window.confirm("Discard current song?")
-    }
-
-
-    const onNew = () =>
-    {
-        if (!confirmDiscard())
-            return
-
-        Project.setNew()
-        Playback.setPlaying(false)
-    }
-
-    const onOpen = () =>
-    {
-        if (!confirmDiscard())
-            return
-
-        document.getElementById("inputOpenFile")!.click()
-    }
-
-    const onJsonDownload = () =>
-    {
-        const jsonStr = Project.jsonExport(Project.global.project)
-
-        const element = document.createElement("a")
-        element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
-        element.setAttribute("download", "song.ttproj")
-    
-        element.style.display = "none"
-        document.body.appendChild(element)
-        element.click()
-        document.body.removeChild(element)
-    }
-
-    const onJsonPreview = () =>
-    {
-        const jsonStr = Project.jsonExport(Project.global.project)
-
-        const newWindow = window.open()!
-        newWindow.document.write("<code style='white-space:pre'>")
-        newWindow.document.write(jsonStr)
-        newWindow.document.write("</code>")
-    }
-
     const onRender = () =>
     {
         dockable.ref.current.createFloating(Windows.Render, null)
@@ -135,33 +72,39 @@ export default function MenuFile()
                 <Popup.Button
                     icon="📄"
                     label="New"
-                    onClick={ onNew }
+                    onClick={ Command.newProject }
                 />
                 <Popup.Button
                     icon="📂"
                     label="Open..."
-                    onClick={ onOpen }
+                    onClick={ Command.openFile }
                 />
                 <Popup.Divider/>
-                {/*<Popup.Button
+                <Popup.Button
                     icon="💾"
-                    label="Save"
-                    onClick={ onOpen }
+                    label="Save Project"
+                    onClick={ Command.saveProject }
                 />
                 <Popup.Button
                     icon="💾"
-                    label="Save As..."
-                    onClick={ onOpen }
-                />*/}
+                    label="Save Project As..."
+                    onClick={ Command.saveProjectAs }
+                />
+                <Popup.Divider/>
                 <Popup.Button
-                    icon="📥"
-                    label="Download project (JSON)"
-                    onClick={ onJsonDownload }
+                    icon="📂"
+                    label="[Browser] Open..."
+                    onClick={ Command.openFileBrowser }
                 />
                 <Popup.Button
                     icon="📥"
-                    label="Preview as JSON"
-                    onClick={ onJsonPreview }
+                    label="[Browser] Download Project"
+                    onClick={ Command.downloadProjectBrowser }
+                />
+                <Popup.Button
+                    icon="📥"
+                    label="[Browser] Preview Project"
+                    onClick={ Command.previewProjectBrowser }
                 />
                 <Popup.Divider/>
                 <Popup.Button

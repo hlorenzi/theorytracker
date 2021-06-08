@@ -8,6 +8,8 @@ export interface GlobalData
     project: Project.Root
     savedProject: Project.Root
 
+    curFileHandleForSave: FileSystemFileHandle | null
+
     undoStack: UndoPoint[]
     undoIndex: number
 
@@ -40,6 +42,8 @@ export function initGlobal()
     {
         project: initialProject,
         savedProject: initialProject,
+
+        curFileHandleForSave: null,
     
         undoStack: [{
             tag: "new",
@@ -69,6 +73,7 @@ export function setNew()
 {
     global.project = Project.makeNew()
     global.savedProject = global.project
+    global.curFileHandleForSave = null
 
     clearUndoStack()
     notifyObservers()
@@ -84,6 +89,20 @@ export function open(openedProject: Project.Root)
     clearUndoStack()
     notifyObservers()
     Timeline.sendEventReset()
+}
+
+
+export function setFileHandleForSave(fileHandle: FileSystemFileHandle | null)
+{
+    global.curFileHandleForSave = fileHandle
+    notifyObservers()
+}
+
+
+export function markAsSaved()
+{
+    global.savedProject = global.project
+    notifyObservers()
 }
 
 

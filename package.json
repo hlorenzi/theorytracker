@@ -26,6 +26,7 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "@types/styled-components": "^5.1.7",
+    "@types/wicg-file-system-access": "^2020.9.1",
     "babel-loader": "^8.2.2",
     "core-js": "^3.8.1",
     "immutable": "^4.0.0-rc.12",

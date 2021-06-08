@@ -129,7 +129,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             if (noteOn.kind != "noteOn")
                 continue
 
-            let noteOff = null
+            let noteOff: any = null
             for (const ev of midiTrack.events)
             {
                 if (ev.kind != "noteOn" && ev.kind != "noteOff")
@@ -138,7 +138,7 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
                 if (ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
                     continue
                 
-                if (noteOff == null || ev.time < noteOff.time)
+                if (!noteOff || ev.time < noteOff.time)
                 {
                     noteOff = ev
                     break
