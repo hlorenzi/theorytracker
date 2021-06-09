@@ -1,5 +1,6 @@
 import React from "react"
 import * as Dockable from "./dockable"
+import * as Command from "./command"
 import * as Project from "./project"
 import * as Playback from "./playback"
 import * as Prefs from "./prefs"
@@ -71,7 +72,42 @@ export default function App()
             }
             else
             {
-                return
+                let handled = false
+
+                for (const command of Command.allCommands)
+                {
+                    if (!command.shortcut)
+                        continue
+
+                    if (command.isShortcutAvailable && !command.isShortcutAvailable())
+                        continue
+
+                    if (command.isAvailable && !command.isAvailable({}))
+                        continue
+
+                    for (const shortcut of command.shortcut)
+                    {
+                        if (!!shortcut.ctrl !== ev.ctrlKey)
+                            continue
+
+                        if (!!shortcut.shift !== ev.shiftKey)
+                            continue
+
+                        if (key !== shortcut.key)
+                            continue
+
+                        //console.log("handled keyboard command: ", command.name)
+                        command.func({})
+                        handled = true
+                        break
+                    }
+
+                    if (handled)
+                        break
+                }
+
+                if (!handled)
+                    return
             }
 
             ev.preventDefault()

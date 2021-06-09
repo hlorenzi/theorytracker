@@ -50,11 +50,9 @@ export function Timeline()
     {
         return {
             state: editorState.ref.current,
-            playback: null!,
-            prefs: null!,
+            ctx: null!,
             popup: null!,
             dockable: null!,
-            ctx: null!,
             activeWindow: false,
         }
     }

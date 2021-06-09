@@ -2,12 +2,14 @@ import React from "react"
 import Rect from "../util/rect"
 import { Root } from "./Root"
 import { usePopup, usePopupRoot } from "./popupContext"
+import * as Command from "../command"
 
 
 interface PopupButtonProps
 {
+    command?: Command.Command
     icon?: any
-    label: any
+    label?: any
     onClick?: (ev: React.MouseEvent) => void
     children?: any
 }
@@ -60,10 +62,36 @@ export function Button(props: PopupButtonProps)
             popupCtx.ref.current.elem = null
             popupCtx.commit()
         }
+        else if (props.command)
+        {
+            props.command.func({})
+            popupCtx.ref.current.elem = null
+            popupCtx.commit()
+        }
         else
         {
             ev.preventDefault()
             ev.stopPropagation()
+        }
+    }
+
+    const label = props.label || props.command?.name
+    const icon = props.icon || props.command?.icon
+
+    let shortcutStr = ""
+    if (props.command && props.command.shortcut)
+    {
+        if (!props.command.isShortcutAvailable || props.command.isShortcutAvailable())
+        {
+            const shortcut = props.command.shortcut[0]
+
+            if (shortcut.ctrl)
+                shortcutStr += "Ctrl+"
+
+            if (shortcut.shift)
+                shortcutStr += "Shift+"
+
+            shortcutStr += shortcut.key.toUpperCase()
         }
     }
 
@@ -96,7 +124,7 @@ export function Button(props: PopupButtonProps)
             gridColumn: 1,
             alignSelf: "center",
         }}>
-            { props.icon }
+            { icon }
         </div>
 
         <div style={{
@@ -112,14 +140,14 @@ export function Button(props: PopupButtonProps)
             gridColumn: 2,
             alignSelf: "center",
         }}>
-            { props.label }
+            { label }
         </div>
 
         <div style={{
             border: "0px",
             padding: "0.5em 0.5em 0.5em 0.5em",
 
-            textAlign: "left",
+            textAlign: "right",
             fontFamily: "inherit",
             color: "#fff",
             pointerEvents: "none",
@@ -128,7 +156,7 @@ export function Button(props: PopupButtonProps)
             gridColumn: 3,
             alignSelf: "center",
         }}>
-            { !props.children ? "" : "▶" }
+            { !props.children ? shortcutStr : "▶" }
         </div>
 
         { !buttonRef.current || !props.children || popupRootCtx.curSubPopup !== buttonRef.current ? null :

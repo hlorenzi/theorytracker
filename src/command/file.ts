@@ -1,3 +1,4 @@
+import * as Command from "../command"
 import * as Project from "../project"
 import * as Playback from "../playback"
 
@@ -11,22 +12,26 @@ function confirmDiscard()
 }
 
 
-function checkFileSystemAccessAPI()
+function isFileSystemAccessApiAvailable(showAlert?: boolean)
 {
     if ("showOpenFilePicker" in window)
         return true;
 
-    window.alert(
-        "Your browser doesn't support the File System Access API.\n\n" +
-        "Use the other commands labeled as \"Browser\", or " +
-        "switch to a browser with support to that API, like Chrome.")
+    if (showAlert)
+    {
+        window.alert(
+            "Your browser doesn't support the File System Access API.\n\n" +
+            "Use the other commands labeled as \"Browser\", or " +
+            "switch to a browser with support to that API, like Chrome.")
+    }
+
     return false;
 }
 
 
 export function openFromFile(filename: string, fileHandle: FileSystemFileHandle | null, bytes: Uint8Array): boolean
 {
-    if (filename.endsWith(".json") || filename.endsWith(".ttproj"))
+    if (filename.endsWith(".ttproj") || filename.endsWith(".json"))
     {
         const text = new TextDecoder("utf-8").decode(bytes)
         const json = JSON.parse(text)
@@ -48,110 +53,155 @@ export function openFromFile(filename: string, fileHandle: FileSystemFileHandle 
 }
 
 
-export function newProject()
+export const newProject: Command.Command =
 {
-    if (!confirmDiscard())
-        return
-
-    Project.setNew()
-    Playback.setPlaying(false)
-}
-
-
-export async function openFile()
-{
-    if (!confirmDiscard())
-        return
-
-    if (!checkFileSystemAccessAPI())
-        return
-
-    const handles = await window.showOpenFilePicker({
-        multiple: false,
-        types: [{
-            description: "Supported files",
-            accept: {
-                "application/json": [".ttproj", ".json"],
-                "audio/midi": [".mid"],
-            },
-        }]
-    })
-    const handle = handles[0]
-    const file = await handle.getFile()
-    const bytes = await file.arrayBuffer()
-    openFromFile(file.name, handle, new Uint8Array(bytes))
-}
-
-
-export async function saveProjectAs()
-{
-    if (!checkFileSystemAccessAPI())
-        return
-
-    const handle = await window.showSaveFilePicker({
-        types: [{
-            description: "Project file",
-            accept: { "application/json": [".ttproj", ".json"] },
-        }],
-    })
-    const jsonStr = Project.jsonExport(Project.global.project)
-    const writer = await handle.createWritable()
-    await writer.write(jsonStr)
-    await writer.close()
-    Project.setFileHandleForSave(handle)
-    Project.markAsSaved()
-}
-
-
-export async function saveProject()
-{
-    if (!checkFileSystemAccessAPI())
-        return
-
-    if (!Project.global.curFileHandleForSave)
+    name: "New Project",
+    icon: "📄",
+    func: async () =>
     {
-        saveProjectAs()
-        return
+        if (!confirmDiscard())
+            return
+    
+        Project.setNew()
+        Playback.setPlaying(false)
     }
-
-    const jsonStr = Project.jsonExport(Project.global.project)
-    const writer = await Project.global.curFileHandleForSave.createWritable()
-    await writer.write(jsonStr)
-    await writer.close()
-    Project.markAsSaved()
 }
 
 
-export function openFileBrowser()
+export const openFile: Command.Command =
 {
-    if (!confirmDiscard())
-        return
+    name: "Open...",
+    icon: "📂",
+    shortcut: [{ ctrl: true, key: "o" }],
+    isShortcutAvailable: () => isFileSystemAccessApiAvailable(),
+    func: async () =>
+    {
+        if (!confirmDiscard())
+            return
 
-    document.getElementById("inputOpenFile")!.click()
+        if (!isFileSystemAccessApiAvailable(true))
+            return
+
+        const handles = await window.showOpenFilePicker({
+            multiple: false,
+            types: [{
+                description: "Supported files",
+                accept: {
+                    "application/json": [".ttproj", ".json"],
+                    "audio/midi": [".mid"],
+                },
+            }]
+        })
+        const handle = handles[0]
+        const file = await handle.getFile()
+        const bytes = await file.arrayBuffer()
+        openFromFile(file.name, handle, new Uint8Array(bytes))
+    }
 }
 
 
-export function downloadProjectBrowser()
+export const saveProjectAs: Command.Command =
 {
-    const jsonStr = Project.jsonExport(Project.global.project)
+    name: "Save Project As...",
+    icon: "💾",
+    shortcut: [{ ctrl: true, shift: true, key: "s" }],
+    isShortcutAvailable: () => isFileSystemAccessApiAvailable(),
+    func: async () =>
+    {
+        if (!isFileSystemAccessApiAvailable(true))
+            return
 
-    const element = document.createElement("a")
-    element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
-    element.setAttribute("download", "song.ttproj")
-
-    element.style.display = "none"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+        const handle = await window.showSaveFilePicker({
+            types: [{
+                description: "Project file",
+                accept: { "application/json": [".ttproj", ".json"] },
+            }],
+        })
+        const jsonStr = Project.jsonExport(Project.global.project)
+        const writer = await handle.createWritable()
+        await writer.write(jsonStr)
+        await writer.close()
+        Project.setFileHandleForSave(handle)
+        Project.markAsSaved()
+    }
 }
 
 
-export function previewProjectBrowser()
+export const saveProject: Command.Command =
 {
-    const jsonStr = Project.jsonExport(Project.global.project)
+    name: "Save Project",
+    icon: "💾",
+    shortcut: [{ ctrl: true, key: "s" }],
+    isShortcutAvailable: () => isFileSystemAccessApiAvailable(),
+    func: async (args) =>
+    {
+        if (!isFileSystemAccessApiAvailable(true))
+            return
 
-    const newWindow = window.open()!
-    newWindow.document.write("<code style='white-space:pre'>")
-    newWindow.document.write(jsonStr)
-    newWindow.document.write("</code>")
+        if (!Project.global.curFileHandleForSave)
+        {
+            saveProjectAs.func(args)
+            return
+        }
+
+        const jsonStr = Project.jsonExport(Project.global.project)
+        const writer = await Project.global.curFileHandleForSave.createWritable()
+        await writer.write(jsonStr)
+        await writer.close()
+        Project.markAsSaved()
+    }
+}
+
+
+export const openFileBrowser: Command.Command =
+{
+    name: "[Browser] Open...",
+    icon: "📂",
+    shortcut: [{ ctrl: true, key: "o" }],
+    isShortcutAvailable: () => !isFileSystemAccessApiAvailable(),
+    func: async () =>
+    {
+        if (!confirmDiscard())
+            return
+
+        document.getElementById("inputOpenFile")!.click()
+    }
+}
+
+
+export const downloadProjectBrowser: Command.Command =
+{
+    name: "[Browser] Download Project...",
+    icon: "📥",
+    shortcut: [{ ctrl: true, key: "s" }],
+    isShortcutAvailable: () => !isFileSystemAccessApiAvailable(),
+    func: async () =>
+    {
+        const jsonStr = Project.jsonExport(Project.global.project)
+
+        const element = document.createElement("a")
+        element.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr))
+        element.setAttribute("download", "song.ttproj")
+
+        element.style.display = "none"
+        document.body.appendChild(element)
+        element.click()
+        document.body.removeChild(element)
+    }
+}
+
+
+export const previewProjectBrowser: Command.Command =
+{
+    name: "[Browser] Preview Project...",
+    icon: "📥",
+    func: async () =>
+    {
+        const jsonStr = Project.jsonExport(Project.global.project)
+
+        const newWindow = window.open()!
+        newWindow.document.write("<code style='white-space:pre'>")
+        newWindow.document.write(jsonStr)
+        newWindow.document.write("</code>")
+    }
 }

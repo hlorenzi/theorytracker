@@ -69,43 +69,15 @@ export default function MenuFile()
     return <>
         <Menubar.Item label="File">
             <Popup.Root>
-                <Popup.Button
-                    icon="📄"
-                    label="New"
-                    onClick={ Command.newProject }
-                />
-                <Popup.Button
-                    icon="📂"
-                    label="Open..."
-                    onClick={ Command.openFile }
-                />
+                <Popup.Button command={ Command.newProject }/>
+                <Popup.Button command={ Command.openFile }/>
                 <Popup.Divider/>
-                <Popup.Button
-                    icon="💾"
-                    label="Save Project"
-                    onClick={ Command.saveProject }
-                />
-                <Popup.Button
-                    icon="💾"
-                    label="Save Project As..."
-                    onClick={ Command.saveProjectAs }
-                />
+                <Popup.Button command={ Command.saveProject }/>
+                <Popup.Button command={ Command.saveProjectAs }/>
                 <Popup.Divider/>
-                <Popup.Button
-                    icon="📂"
-                    label="[Browser] Open..."
-                    onClick={ Command.openFileBrowser }
-                />
-                <Popup.Button
-                    icon="📥"
-                    label="[Browser] Download Project"
-                    onClick={ Command.downloadProjectBrowser }
-                />
-                <Popup.Button
-                    icon="📥"
-                    label="[Browser] Preview Project"
-                    onClick={ Command.previewProjectBrowser }
-                />
+                <Popup.Button command={ Command.openFileBrowser }/>
+                <Popup.Button command={ Command.downloadProjectBrowser }/>
+                <Popup.Button command={ Command.previewProjectBrowser }/>
                 <Popup.Divider/>
                 <Popup.Button
                     icon="💿"
