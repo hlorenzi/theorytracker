@@ -171,7 +171,7 @@ export const openFileBrowser: Command.Command =
 
 export const downloadProjectBrowser: Command.Command =
 {
-    name: "[Browser] Download Project...",
+    name: "[Browser] Download Project",
     icon: "📥",
     shortcut: [{ ctrl: true, key: "s" }],
     isShortcutAvailable: () => !isFileSystemAccessApiAvailable(),
@@ -193,7 +193,7 @@ export const downloadProjectBrowser: Command.Command =
 
 export const previewProjectBrowser: Command.Command =
 {
-    name: "[Browser] Preview Project...",
+    name: "[Browser] Preview Project",
     icon: "📥",
     func: async () =>
     {

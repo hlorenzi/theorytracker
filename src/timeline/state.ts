@@ -168,8 +168,6 @@ export interface WorkData
 {
     state: State
     ctx: CanvasRenderingContext2D
-    popup: RefState<Popup.PopupContextProps>
-    dockable: RefState<Dockable.DockableContextProps>
     activeWindow: boolean
 }
 

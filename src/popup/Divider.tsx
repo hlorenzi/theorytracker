@@ -1,12 +1,20 @@
 import React from "react"
-import { usePopupRoot } from "./popupContext"
+import * as Popup from "./index"
+import Rect from "../util/rect"
 
 
 export function Divider()
 {
-    const popupRootCtx = usePopupRoot()
+    const popupRootCtx = Popup.usePopupRoot()
+
     const index = popupRootCtx.itemIndex
     popupRootCtx.itemIndex++
+
+    const [_, bugfixRefresh] = React.useState(0)
+    React.useLayoutEffect(() =>
+    {
+        bugfixRefresh(1)
+    }, [])
 
     return <>
         <div style={{

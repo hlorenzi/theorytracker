@@ -1,6 +1,6 @@
 import React from "react"
-import Rect from "../util/rect"
 import * as Popup from "../popup"
+import Rect from "../util/rect"
 
 
 export interface ItemProps
@@ -12,7 +12,6 @@ export interface ItemProps
 
 export function Item(props: ItemProps)
 {
-    const popupCtx = Popup.usePopup()
     const popupElemRef = React.useRef(() => props.children)
     
     const refButton = React.useRef<HTMLButtonElement>(null)
@@ -22,14 +21,14 @@ export function Item(props: ItemProps)
             return
         
         const domRect = refButton.current!.getBoundingClientRect()
-        popupCtx.ref.current.rect = new Rect(domRect.x, domRect.y, domRect.width, domRect.height)
-        popupCtx.ref.current.elem = popupElemRef.current
-        popupCtx.commit()
+        Popup.global.rect = new Rect(domRect.x, domRect.y, domRect.width, domRect.height)
+        Popup.global.elem = popupElemRef.current
+        Popup.notifyObservers()
     }
 
     const isOpen =
         !!props.children &&
-        popupCtx.ref.current.elem == popupElemRef.current
+        Popup.global.elem === popupElemRef.current
 
     return <button
         className="popupButton"

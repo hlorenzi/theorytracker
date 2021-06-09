@@ -9,12 +9,9 @@ import Rect from "./util/rect"
 
 export default function MenuWindow()
 {
-    const dockable = Dockable.useDockable()
-
-
-    const onOpenWindow = (elem: any, data: any) =>
+    const onOpenWindow = (elem: Dockable.WindowElement, data: any) =>
     {
-        dockable.ref.current.createFloating(elem, data)
+        Dockable.createFloating(elem, data)
     }
 
 

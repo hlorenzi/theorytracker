@@ -8,7 +8,6 @@ import * as Popup from "./popup"
 import * as Menubar from "./menubar"
 import * as UI from "./ui"
 import { useRefState } from "./util/refState"
-import * as GlobalObservable from "./util/globalObservable"
 import PlaybackToolbar from "./PlaybackToolbar"
 import MenuFile from "./MenuFile"
 import MenuWindow from "./MenuWindow"
@@ -26,13 +25,14 @@ export default function App()
         Prefs.initGlobal()
         Project.initGlobal()
         Playback.initGlobal()
+        Dockable.initGlobal()
+        Popup.initGlobal()
     }
 
     Project.useGlobal()
     Playback.useGlobal()
-
-    const dockableCtx = Dockable.useDockableInit()
-    const popupCtx = useRefState(() => Popup.getDefaultCtx())
+    Dockable.useGlobal()
+    Popup.useGlobal()
 
     const [version, setVersion] = React.useState("")
 
@@ -118,50 +118,46 @@ export default function App()
 
 
     return <>
-        <Dockable.DockableContext.Provider value={ dockableCtx }>
-        <Popup.PopupContext.Provider value={ popupCtx }>
-            <div style={{
-                display: "grid",
-                gridTemplate: "auto 1fr / 1fr",
-                width: "100vw",
-                height: "100vh",
-            }}>
+        <div style={{
+            display: "grid",
+            gridTemplate: "auto 1fr / 1fr",
+            width: "100vw",
+            height: "100vh",
+        }}>
 
-                <Menubar.Root>
-                    <MenuFile/>
-                    <MenuWindow/>
-                    <PlaybackToolbar/>
-                    <a
-                        href="https://github.com/hlorenzi/theorytracker#how-to-use"
-                        style={{
-                            color: "#fff",
-                            alignSelf: "center",
-                            marginLeft: "1em",
-                            fontSize: "1.25em",
-                    }}>
-                        How to use the app
-                    </a>
-                    <span style={{
-                        color: "#aaa",
+            <Menubar.Root>
+                <MenuFile/>
+                <MenuWindow/>
+                <PlaybackToolbar/>
+                <a
+                    href="https://github.com/hlorenzi/theorytracker#how-to-use"
+                    style={{
+                        color: "#fff",
                         alignSelf: "center",
                         marginLeft: "1em",
-                    }}>
-                        { version }
-                    </span>
-                </Menubar.Root>
+                        fontSize: "1.25em",
+                }}>
+                    How to use the app
+                </a>
+                <span style={{
+                    color: "#aaa",
+                    alignSelf: "center",
+                    marginLeft: "1em",
+                }}>
+                    { version }
+                </span>
+            </Menubar.Root>
 
-                { !Playback.global.synthLoading ? null :
-                    <UI.LoadingBar floating/>
-                }
-
-                <Dockable.Container/>
-
-            </div>
-
-            { !popupCtx.ref.current.elem ? null :
-                <popupCtx.ref.current.elem/>
+            { !Playback.global.synthLoading ? null :
+                <UI.LoadingBar floating/>
             }
-        </Popup.PopupContext.Provider>
-        </Dockable.DockableContext.Provider>
+
+            <Dockable.Container/>
+
+        </div>
+
+        { !Popup.global.elem ? null :
+            <Popup.global.elem/>
+        }
     </>
 }

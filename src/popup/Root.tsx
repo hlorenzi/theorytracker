@@ -1,6 +1,6 @@
 import React from "react"
+import * as Popup from "./index"
 import Rect from "../util/rect"
-import { PopupRootContext, usePopup } from "./popupContext"
 
 
 interface PopupRootProps
@@ -15,14 +15,13 @@ interface PopupRootProps
 
 export function Root(props: PopupRootProps)
 {
-    const popupCtx = usePopup()
-    const rect = props.rect ?? popupCtx.ref.current.rect
-    const [subOpen, setSubOpen] = React.useState<any>(null)
+    const rect = props.rect ?? Popup.global.rect
+    const [subOpen, setSubOpen] = React.useState<HTMLButtonElement | null>(null)
     
     const dismiss = (ev: any) =>
     {
-        popupCtx.ref.current.elem = null
-        popupCtx.commit()
+        Popup.global.elem = null
+        Popup.notifyObservers()
     }
 
     React.useEffect(() =>
@@ -39,7 +38,7 @@ export function Root(props: PopupRootProps)
         }
     })
 
-    return <PopupRootContext.Provider value={{
+    return <Popup.PopupRootContext.Provider value={{
         curSubPopup: subOpen,
         openSubPopup: setSubOpen,
         itemIndex: 1,
@@ -50,12 +49,14 @@ export function Root(props: PopupRootProps)
                 zIndex: 100001,
                 position: "absolute",
                 left: props.isSub ? rect.x2 : rect.x1,
-                top: props.isSub ? rect.y1 :rect.y2,
+                top: props.isSub ? rect.y1 : rect.y2,
+
+                width: "fit-content",
 
                 backgroundColor: "#2f3136",
                 border: "1px solid #fff",
                 borderRadius: "0.5em",
-                overflow: "hidden",
+                //overflow: "hidden",
                 boxShadow: "0 0.5em 0.5em 0.5em #0004",
 
                 textAlign: "left",
@@ -67,5 +68,5 @@ export function Root(props: PopupRootProps)
         }}>
             { props.children }
         </div>
-    </PopupRootContext.Provider>
+    </Popup.PopupRootContext.Provider>
 }

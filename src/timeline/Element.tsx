@@ -33,9 +33,7 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
     const refCanvas = React.useRef<HTMLCanvasElement | null>(null)
 
     const editorState = props.state ?? useRefState(() => Timeline.init())
-    const popup = Popup.usePopup()
     const dockableWindow = Dockable.useWindow()
-    const dockable = Dockable.useDockable()
 
     const lastTimelineRenderRef = React.useRef(0)
 
@@ -43,10 +41,8 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
     {
         return {
             state: editorState.ref.current,
-            popup,
-            dockable,
             activeWindow:
-                dockable.ref.current.state.activePanel === dockableWindow.panel &&
+                Dockable.global.state.activePanel === dockableWindow.panel &&
                 (!document.activeElement || document.activeElement.tagName != "INPUT"),
             ctx: null!,
         }
@@ -200,8 +196,8 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 
             ev.preventDefault()
 
-            Dockable.removeEphemerals(dockable.ref.current.state)
-            dockable.commit()
+            Dockable.removeEphemerals(Dockable.global.state)
+            Dockable.notifyObservers()
 
             const updateData = makeUpdateData()
             const pos = transformMousePos(refCanvasCurrent, ev)
@@ -343,14 +339,14 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 
     const onTrackSettings = (ev: React.MouseEvent, trackIndex: number) =>
     {
-        popup.ref.current.elem = () =>
+        Popup.global.elem = () =>
         {
             return <Popup.Root>
                 <Popup.Button label="Delete"/>
             </Popup.Root>
         }
-        popup.ref.current.rect = Rect.fromElement(ev.target as HTMLElement)
-        popup.commit()
+        Popup.global.rect = Rect.fromElement(ev.target as HTMLElement)
+        Popup.notifyObservers()
     }
 
 	return React.useMemo(() =>

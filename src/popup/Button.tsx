@@ -1,7 +1,7 @@
 import React from "react"
 import Rect from "../util/rect"
 import { Root } from "./Root"
-import { usePopup, usePopupRoot } from "./popupContext"
+import * as Popup from "./index"
 import * as Command from "../command"
 
 
@@ -18,12 +18,22 @@ interface PopupButtonProps
 export function Button(props: PopupButtonProps)
 {
     const buttonRef = React.useRef<HTMLButtonElement>(null)
-    const popupCtx = usePopup()
-    const popupRootCtx = usePopupRoot()
+    const popupRootCtx = Popup.usePopupRoot()
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
 
     const index = popupRootCtx.itemIndex
     popupRootCtx.itemIndex++
+
+    React.useLayoutEffect(() =>
+    {
+        const buttonCurrent = buttonRef.current
+        if (!buttonCurrent)
+            return
+
+        const rect = buttonCurrent.getBoundingClientRect()
+        setRect(new Rect(rect.x, rect.y - 1 - rect.height, rect.width, rect.height))
+
+    }, [])
 
     React.useEffect(() =>
     {
@@ -31,11 +41,9 @@ export function Button(props: PopupButtonProps)
         if (!buttonCurrent)
             return
 
-        const rect = buttonCurrent.getBoundingClientRect()
-        setRect(new Rect(rect.x, rect.y - 1, rect.width, rect.height))
-
         const onEnter = () =>
         {
+            console.log("openSubPopup", index)
             popupRootCtx.openSubPopup(buttonCurrent)
         }
 
@@ -59,14 +67,14 @@ export function Button(props: PopupButtonProps)
         if (props.onClick)
         {
             props.onClick(ev)
-            popupCtx.ref.current.elem = null
-            popupCtx.commit()
+            Popup.global.elem = null
+            Popup.notifyObservers()
         }
         else if (props.command)
         {
             props.command.func({})
-            popupCtx.ref.current.elem = null
-            popupCtx.commit()
+            Popup.global.elem = null
+            Popup.notifyObservers()
         }
         else
         {
@@ -94,6 +102,8 @@ export function Button(props: PopupButtonProps)
             shortcutStr += shortcut.key.toUpperCase()
         }
     }
+
+    console.log("button", index, "isOpen", !buttonRef.current || !props.children || popupRootCtx.curSubPopup !== buttonRef.current, rect)
 
     return <>
         <button

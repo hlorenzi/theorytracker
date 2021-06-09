@@ -22,9 +22,6 @@ export function Inspector()
 	const props: InspectorProps = windowCtx.data
 	const [elemIds, setElemIds] = React.useState(props.elemIds)
 
-    const dockable = Dockable.useDockable()
-	
-
 	const elemTypes = React.useMemo(() =>
 	{
 		const types = new Map<Project.Element["type"], number>()

@@ -10,9 +10,6 @@ import * as Windows from "./windows"
 
 export default function MenuFile()
 {
-    const dockable = Dockable.useDockable()
-
-
     React.useEffect(() =>
     {
         const onOpenFileChange = (ev: Event) =>
@@ -62,7 +59,7 @@ export default function MenuFile()
 
     const onRender = () =>
     {
-        dockable.ref.current.createFloating(Windows.Render, null)
+        Dockable.createFloating(Windows.Render, null)
     }
 
 

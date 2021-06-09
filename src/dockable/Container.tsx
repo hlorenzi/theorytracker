@@ -2,7 +2,6 @@ import React from "react"
 import ReactDOM from "react-dom"
 import * as Dockable from "./index"
 import * as DockableData from "./state"
-import { WindowContext } from "./windowContext"
 import * as Prefs from "../prefs"
 import Rect from "../util/rect"
 import styled from "styled-components"
@@ -77,8 +76,6 @@ const DivWindowBottomRightResizeHandle = styled.div<{
 
 export function Container()
 {
-    const dockable = Dockable.useDockable()
-
     const [rect, setRect] = React.useState(new Rect(0, 0, 0, 0))
     const rootRef = React.useRef<HTMLDivElement>(null)
 
@@ -112,16 +109,16 @@ export function Container()
     rectRef.current = rect
     layoutRef.current = React.useMemo(() =>
     {
-        return DockableData.getLayout(dockable.ref.current.state, rect)
+        return DockableData.getLayout(Dockable.global.state, rect)
 
-    }, [rect, dockable.update])
+    }, [rect, Dockable.globalObservable.updateToken])
 
 
     React.useEffect(() =>
     {
         const onRefreshPreferredSize = () =>
         {
-            for (const panel of dockable.ref.current.state.floatingPanels)
+            for (const panel of Dockable.global.state.floatingPanels)
             {
                 if (!panel.justOpened)
                     continue
@@ -156,8 +153,8 @@ export function Container()
                         break
                 }
 
-                Dockable.clampFloatingPanelStrictly(dockable.ref.current.state, panel, rectRef.current)
-                dockable.commit()
+                Dockable.clampFloatingPanelStrictly(Dockable.global.state, panel, rectRef.current)
+                Dockable.notifyObservers()
             }
         }
 
@@ -192,11 +189,11 @@ export function Container()
 
         { layoutRef.current.windows.map(w =>
         {
-            const component = !dockable.ref.current.contentIdToComponent ? null :
-                dockable.ref.current.contentIdToComponent(w.windowId)
+            const component = !Dockable.global.contentIdToComponent ? null :
+                Dockable.global.contentIdToComponent.get(w.windowId)
 
-            const data = !dockable.ref.current.contentIdToData ? null :
-                dockable.ref.current.contentIdToData(w.windowId)
+            const data = !Dockable.global.contentIdToData ? null :
+                Dockable.global.contentIdToData.get(w.windowId)
 
             const setTitle = (title: string) =>
             {
@@ -205,7 +202,7 @@ export function Container()
                     window.requestAnimationFrame(() =>
                     {
                         w.panel.windowTitles[w.tabIndex] = title
-                        dockable.commit()
+                        Dockable.notifyObservers()
                     })
                 }
             }
@@ -219,7 +216,7 @@ export function Container()
                     window.requestAnimationFrame(() =>
                     {
                         w.panel.preferredFloatingSize = new Rect(0, 0, width, height)
-                        dockable.commit()
+                        Dockable.notifyObservers()
 
                         if (w.panel.justOpened)
                             window.dispatchEvent(new Event("dockableRefreshPreferredSize"))
@@ -241,7 +238,7 @@ export function Container()
                     height: w.panelRect.rect.h - marginTop - marginOther,
                     zIndex: w.panelRect.zIndex * 3 + 1,
             }}>
-                <WindowContext.Provider
+                <Dockable.WindowContext.Provider
                     value={{
                         panel: w.panel,
                         contentId: w.windowId,
@@ -253,7 +250,7 @@ export function Container()
                     <DivWindowContent>
                         { !component ? null : React.createElement(component) }
                     </DivWindowContent>
-                </WindowContext.Provider>
+                </Dockable.WindowContext.Provider>
                 
                 { !w.panel.floating ? null : 
                     <DivWindowBottomRightResizeHandle
@@ -345,7 +342,6 @@ const DivPanel = styled.div<PrefsProps>`
 
 function Panel(props: any)
 {
-    const dockable = Dockable.useDockable()
     const panelRect: DockableData.PanelRect = props.panelRect
     const mouseHandler: MouseHandlerData = props.mouseHandler
 
@@ -364,7 +360,7 @@ function Panel(props: any)
         zIndex: panelRect.zIndex * 3,
     }}>
         <DivPanel
-            className={ dockable.ref.current.state.activePanel === panelRect.panel ? "active" : undefined }
+            className={ Dockable.global.state.activePanel === panelRect.panel ? "active" : undefined }
             onMouseDown={ ((ev: MouseEvent) => mouseHandler.onPanelActivate(ev, panelRect.panel)) as any }
             prefs={ Prefs.global }
         >
@@ -467,8 +463,6 @@ function useMouseHandler(
     rectRef: React.MutableRefObject<Rect>)
     : MouseHandlerData
 {
-    const dockableRef = Dockable.useDockable()
-
     const stateRef = useRefState<MouseHandlerState>(() =>
     {
         return {
@@ -495,13 +489,13 @@ function useMouseHandler(
 
     const bringToFront = (ev: any, panel: Dockable.Panel) =>
     {
-        const dockable = dockableRef.ref.current.state
+        const dockable = Dockable.global.state
         if (panel.windowIds.length != 0)
             dockable.activePanel = panel
 
         if (!panel.floating)
         {
-            dockableRef.commit()
+            Dockable.notifyObservers()
             return
         }
 
@@ -518,14 +512,14 @@ function useMouseHandler(
         if (!panel.ephemeral && !ev.clickedEphemeral)
             Dockable.removeEphemerals(dockable)
      
-        dockableRef.commit()
+        Dockable.notifyObservers()
     }
     
     React.useEffect(() =>
     {
         const onMouseMove = (ev: MouseEvent) =>
         {
-            const dockable = dockableRef.ref.current.state
+            const dockable = Dockable.global.state
             const state = stateRef.ref.current
             const mousePosPrev = state.mousePos
             state.mousePos = transformMouse(ev)
@@ -624,13 +618,13 @@ function useMouseHandler(
             }
 
             stateRef.commit()
-            dockableRef.commit()
+            Dockable.notifyObservers()
         }
 
         const onMouseUp = (ev: MouseEvent) =>
         {
             const state = stateRef.ref.current
-            const dockable = dockableRef.ref.current.state
+            const dockable = Dockable.global.state
 
             if (state.mouseDown && !state.mouseDragLocked)
             {
@@ -650,7 +644,7 @@ function useMouseHandler(
             state.mouseDown = false
             state.mouseAction = MouseAction.None
             stateRef.commit()
-            dockableRef.commit()
+            Dockable.notifyObservers()
         }
 
         window.addEventListener("mousemove", onMouseMove)
@@ -702,7 +696,7 @@ function useMouseHandler(
         state.mouseDownPos = state.mousePos = transformMouse(ev)
         state.mouseDragLocked = true
         stateRef.commit()
-        dockableRef.commit()
+        Dockable.notifyObservers()
 
         bringToFront(ev, panel)
     }
@@ -737,11 +731,11 @@ function useMouseHandler(
     const onPanelTabClose = (ev: MouseEvent, panel: Dockable.Panel, tab: number) =>
     {
         ev.preventDefault()
-        const dockable = dockableRef.ref.current.state
+        const dockable = Dockable.global.state
         const window = panel.windowIds[tab]
         Dockable.removeWindow(dockable, panel, window)
         Dockable.coallesceEmptyPanels(dockable)
-        dockableRef.commit()
+        Dockable.notifyObservers()
     }
 
     return {

@@ -1,6 +1,7 @@
 import React from "react"
 import * as Timeline from "./index"
 import * as Project from "../project"
+import * as Dockable from "../dockable"
 import * as Popup from "../popup"
 import * as Windows from "../windows"
 import Rect from "../util/rect"
@@ -93,12 +94,10 @@ function handleContextMenu(data: Timeline.WorkData)
 
         const fnOpenProperties = () =>
         {
-            data.dockable.ref.current.createFloatingEphemeral(
+            Dockable.createFloatingEphemeral(
                 Windows.Inspector,
                 { elemIds: [...data.state.selection] },
                 1, 1)
-
-            data.dockable.commit()
         }
 
         if (clickDurationMs < 150)
@@ -107,17 +106,19 @@ function handleContextMenu(data: Timeline.WorkData)
         }
         else
         {
-            data.popup.ref.current.elem = () =>
+            Popup.global.elem = () =>
             {
                 return <Popup.Root>
                     { makeContextMenu(data, fnOpenProperties) }
                 </Popup.Root>
             }
-            data.popup.ref.current.rect = new Rect(
+            
+            Popup.global.rect = new Rect(
                 data.state.renderRect.x + data.state.mouse.point.pos.x + 2,
                 data.state.renderRect.y + data.state.mouse.point.pos.y + 2,
                 0, 0)
-            data.popup.commit()
+
+            Popup.notifyObservers()
         }
     }
 }
