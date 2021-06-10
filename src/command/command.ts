@@ -1,7 +1,7 @@
 export interface Command
 {
     name: string
-    icon: string
+    icon?: string
     shortcut?: CommandShortcut[]
     isShortcutAvailable?: () => boolean
     isAvailable?: (args: CommandArguments) => boolean

@@ -1,6 +1,7 @@
 import React from "react"
 import * as Timeline from "./index"
 import * as Project from "../project"
+import * as Command from "../command"
 import * as Dockable from "../dockable"
 import * as Popup from "../popup"
 import * as Windows from "../windows"
@@ -112,7 +113,7 @@ function handleContextMenu(data: Timeline.WorkData)
                     { makeContextMenu(data, fnOpenProperties) }
                 </Popup.Root>
             }
-            
+
             Popup.global.rect = new Rect(
                 data.state.renderRect.x + data.state.mouse.point.pos.x + 2,
                 data.state.renderRect.y + data.state.mouse.point.pos.y + 2,
@@ -159,16 +160,7 @@ function makeContextMenu(data: Timeline.WorkData, fnOpenProperties: () => void):
     if (hasElemType("note") || hasElemType("noteBlock"))
     {
         menuItems.push(<Popup.Divider/>)
-            
-        menuItems.push(<Popup.Button
-            label="Convert to Chords"
-            onClick={ () =>
-            {
-                Timeline.convertNotesToChords(data, data.state.selection)
-                Timeline.sendEventRefresh()
-                Project.splitUndoPoint()
-                Project.addUndoPoint("menuConvertNotesToChords")
-            }}/>)
+        menuItems.push(<Popup.Button command={ Command.convertNotesToChords }/>)
     }
 
 

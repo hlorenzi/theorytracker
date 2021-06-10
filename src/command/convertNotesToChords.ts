@@ -1,77 +1,104 @@
+import * as Command from "../command"
 import * as Project from "../project"
-import * as Timeline from "./index"
+import * as Timeline from "../timeline"
 import * as Theory from "../theory"
-import * as MathUtils from "../util/mathUtils"
+import * as Dockable from "../dockable"
+import * as Windows from "../windows"
 import Rational from "../util/rational"
 import Range from "../util/range"
+import { RefState } from "../util/refState"
 
 
-export function convertNotesToChords(data: Timeline.WorkData, elemIds: Iterable<Project.ID>)
+export const convertNotesToChords: Command.Command =
 {
-    const elems: Project.Note[] = []
-    for (const elemId of elemIds)
+    name: "Convert Notes to Chords",
+    func: async () =>
     {
-        const note = Project.getElem(Project.global.project, elemId, "note")
-        if (note)
-            elems.push(note)
-
-        const noteBlock = Project.getElem(Project.global.project, elemId, "noteBlock")
-        if (noteBlock)
+        const timelineState = Dockable.getMostRecentContentData(Windows.Timeline, (data) =>
         {
-            const list = Project.global.project.lists.get(noteBlock.id)
-            if (list)
+            return data.timelineState as RefState<Timeline.State>
+        })
+
+        if (!timelineState)
+            return
+
+        const data: Timeline.WorkData =
+        {
+            state: timelineState.ref.current,
+            ctx: null!,
+            activeWindow: true,
+        }
+
+        const elemIds = timelineState.ref.current.selection
+
+        const elems: Project.Note[] = []
+        for (const elemId of elemIds)
+        {
+            const note = Project.getElem(Project.global.project, elemId, "note")
+            if (note)
+                elems.push(note)
+
+            const noteBlock = Project.getElem(Project.global.project, elemId, "noteBlock")
+            if (noteBlock)
             {
-                for (const elem of list.iterAll())
+                const list = Project.global.project.lists.get(noteBlock.id)
+                if (list)
                 {
-                    if (elem.type == "note")
-                        elems.push(elem)
+                    for (const elem of list.iterAll())
+                    {
+                        if (elem.type == "note")
+                            elems.push(elem)
+                    }
                 }
             }
         }
-    }
 
-    if (elems.length == 0)
-        return
+        if (elems.length == 0)
+            return
 
-    const trackId = Project.global.project.chordTrackId
-    
-    Timeline.selectionClear(data)
+        const trackId = Project.global.project.chordTrackId
+        
+        Timeline.selectionClear(data)
 
-    const groups = calculateGroups(data, elems)
-    let chordsToAdd: ChordToAdd[] = []
-    for (const group of groups)
-    {
-        const midiPitches = group.elems.map(elem => elem.midiPitch)
-        const chordSuggestions = Theory.Chord.suggestChordsForPitches(midiPitches)
-
-        if (chordSuggestions.length >= 1)
+        const groups = calculateGroups(data, elems)
+        let chordsToAdd: ChordToAdd[] = []
+        for (const group of groups)
         {
-            chordsToAdd.push({
-                chord: chordSuggestions[0].chord,
-                range: group.range,
-            })
+            const midiPitches = group.elems.map(elem => elem.midiPitch)
+            const chordSuggestions = Theory.Chord.suggestChordsForPitches(midiPitches)
+
+            if (chordSuggestions.length >= 1)
+            {
+                chordsToAdd.push({
+                    chord: chordSuggestions[0].chord,
+                    range: group.range,
+                })
+            }
         }
+
+        chordsToAdd = coallesceNeighboringChordsToAdd(chordsToAdd)
+
+        for (const chordToAdd of chordsToAdd)
+        {
+            const projChord = Project.makeChord(
+                trackId,
+                chordToAdd.range,
+                chordToAdd.chord)
+
+            const id = Project.global.project.nextId
+            Project.global.project = Project.upsertElement(Project.global.project, projChord)
+
+            Timeline.selectionAdd(data, id)
+        }
+
+        Project.global.project = Project.withRefreshedRange(Project.global.project)
+
+        data.state.cursor.visible = false
+        Timeline.selectionRemoveConflictingBehind(data)
+        Timeline.sendEventRefresh()
+        Project.splitUndoPoint()
+        Project.addUndoPoint("menuConvertNotesToChords")
     }
-
-    chordsToAdd = coallesceNeighboringChordsToAdd(chordsToAdd)
-
-    for (const chordToAdd of chordsToAdd)
-{
-        const projChord = Project.makeChord(
-            trackId,
-            chordToAdd.range,
-            chordToAdd.chord)
-
-        const id = Project.global.project.nextId
-        Project.global.project = Project.upsertElement(Project.global.project, projChord)
-
-        Timeline.selectionAdd(data, id)
-    }
-
-    Project.global.project = Project.withRefreshedRange(Project.global.project)
-
-    data.state.cursor.visible = false
-    Timeline.selectionRemoveConflictingBehind(data)
 }
 
 

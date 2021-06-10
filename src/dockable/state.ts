@@ -2,7 +2,7 @@ import Rect from "../util/rect"
 
 
 export type PanelId = number
-export type WindowId = any
+export type WindowId = number
 
 
 export interface State

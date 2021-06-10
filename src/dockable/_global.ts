@@ -77,6 +77,38 @@ window.addEventListener("mousemove", (ev: MouseEvent) =>
 })
 
 
+export function modifyContentData(contentId: Dockable.WindowId, modifyFn: (data: any) => void)
+{
+    let data: any = global.contentIdToData.get(contentId)
+    if (!data)
+    {
+        data = {}
+        global.contentIdToData.set(contentId, data)
+    }
+
+    modifyFn(data)
+}
+
+
+export function getMostRecentContentData<T>(elemType: WindowElement, getFn: (data: any) => T | null): T | null
+{
+    const panel = global.state.activePanel
+    if (!panel || panel.windowIds.length < 1)
+        return null
+
+    const contentId = panel.windowIds[0]
+    const elem = global.contentIdToComponent.get(contentId)
+    if (!elem || elem !== elemType)
+        return null
+
+    const data = global.contentIdToData.get(contentId)
+    if (!data)
+        return null
+
+    return getFn(data)
+}
+
+
 export function createFloating(
     elem: WindowElement,
     data: any,

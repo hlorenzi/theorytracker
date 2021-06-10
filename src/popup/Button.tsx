@@ -43,7 +43,6 @@ export function Button(props: PopupButtonProps)
 
         const onEnter = () =>
         {
-            console.log("openSubPopup", index)
             popupRootCtx.openSubPopup(buttonCurrent)
         }
 
@@ -102,8 +101,6 @@ export function Button(props: PopupButtonProps)
             shortcutStr += shortcut.key.toUpperCase()
         }
     }
-
-    console.log("button", index, "isOpen", !buttonRef.current || !props.children || popupRootCtx.curSubPopup !== buttonRef.current, rect)
 
     return <>
         <button

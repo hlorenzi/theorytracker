@@ -46,6 +46,11 @@ export function Timeline()
 
     const editorState = useRefState(() => TimelineData.init())
 
+    Dockable.modifyContentData(windowCtx.contentId, (data) =>
+    {
+        data.timelineState = editorState
+    })
+
     const makeUpdateData: () => TimelineData.WorkData = () =>
     {
         return {
