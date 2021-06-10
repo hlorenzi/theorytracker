@@ -52,6 +52,7 @@ export function Root(props: PopupRootProps)
                 top: props.isSub ? rect.y1 : rect.y2,
 
                 width: "fit-content",
+                contain: "layout",
 
                 backgroundColor: "#2f3136",
                 border: "1px solid #fff",

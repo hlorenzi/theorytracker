@@ -1,7 +1,7 @@
 import * as Timeline from "./index"
 	
 	
-export function keyUp(data: Timeline.WorkData, key: string)
+export function keyUp(state: Timeline.State, key: string)
 {
-    data.state.keysDown.delete(key)
+    state.keysDown.delete(key)
 }

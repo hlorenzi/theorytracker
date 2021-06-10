@@ -6,104 +6,104 @@ import Range from "../util/range"
 
 
 export function mouseDrag(
-    data: Timeline.WorkData,
+    state: Timeline.State,
     pos: { x: number, y: number },
     isClick: boolean): boolean
 {
-    if (!data.state.mouse.down)
+    if (!state.mouse.down)
         return false
 
-    data.state.mouse.pointPrev = data.state.mouse.point
-    data.state.mouse.point = Timeline.pointAt(data, pos)
+    state.mouse.pointPrev = state.mouse.point
+    state.mouse.point = Timeline.pointAt(state, pos)
     
-    data.state.drag.posDelta =
+    state.drag.posDelta =
     {
-        x: data.state.mouse.point.pos.x - data.state.drag.origin.point.pos.x,
-        y: data.state.mouse.point.pos.y - data.state.drag.origin.point.pos.y,
+        x: state.mouse.point.pos.x - state.drag.origin.point.pos.x,
+        y: state.mouse.point.pos.y - state.drag.origin.point.pos.y,
     }
 
-    data.state.drag.timeDelta =
-        data.state.mouse.point.time.subtract(data.state.drag.origin.point.time)
+    state.drag.timeDelta =
+        state.mouse.point.time.subtract(state.drag.origin.point.time)
 
-    data.state.drag.rowDelta =
-        data.state.mouse.point.row - data.state.drag.origin.point.row
+    state.drag.rowDelta =
+        state.mouse.point.row - state.drag.origin.point.row
 
-    data.state.drag.trackDelta =
-        data.state.mouse.point.trackIndex - data.state.drag.origin.point.trackIndex
+    state.drag.trackDelta =
+        state.mouse.point.trackIndex - state.drag.origin.point.trackIndex
 
-    data.state.drag.xLocked =
-        data.state.drag.xLocked &&
-        Math.abs(data.state.drag.posDelta.x) < Prefs.global.editor.mouseDragXLockedDistance
+    state.drag.xLocked =
+        state.drag.xLocked &&
+        Math.abs(state.drag.posDelta.x) < Prefs.global.editor.mouseDragXLockedDistance
 
-    data.state.drag.yLocked =
-        data.state.drag.yLocked &&
-        Math.abs(data.state.drag.posDelta.y) < Prefs.global.editor.mouseDragYLockedDistance
+    state.drag.yLocked =
+        state.drag.yLocked &&
+        Math.abs(state.drag.posDelta.y) < Prefs.global.editor.mouseDragYLockedDistance
     
-    if (!data.state.drag.yLocked)
+    if (!state.drag.yLocked)
     {
-        data.state.drag.trackInsertionBefore =
-            Timeline.trackInsertionAtY(data, data.state.mouse.point.pos.y)
+        state.drag.trackInsertionBefore =
+            Timeline.trackInsertionAtY(state, state.mouse.point.pos.y)
     }
 
     function withTrackAtDragOrigin<T>(fn: (track: Timeline.TimelineTrack) => T)
     {
-        return fn(data.state.tracks[data.state.drag.origin.point.trackIndex])
+        return fn(state.tracks[state.drag.origin.point.trackIndex])
     }
 
-    if (isClick && data.state.mouse.action != Timeline.MouseAction.DragTrackControl)
+    if (isClick && state.mouse.action != Timeline.MouseAction.DragTrackControl)
     {
         return false
     }
 
-    if (data.state.mouse.action == Timeline.MouseAction.Pan)
+    if (state.mouse.action == Timeline.MouseAction.Pan)
     {
-        data.state.timeScroll =
-            data.state.drag.origin.timeScroll -
-            (data.state.drag.posDelta.x / data.state.timeScale)
+        state.timeScroll =
+            state.drag.origin.timeScroll -
+            (state.drag.posDelta.x / state.timeScale)
 
-        if (!data.state.trackScrollLocked)
-            data.state.trackScroll =
-                data.state.drag.origin.trackScroll -
-                data.state.drag.posDelta.y
+        if (!state.trackScrollLocked)
+            state.trackScroll =
+                state.drag.origin.trackScroll -
+                state.drag.posDelta.y
 
         withTrackAtDragOrigin(tr =>
         {
             if (tr.scrollEnabled)
                 tr.yScroll =
-                    data.state.drag.origin.trackYScroll -
-                    data.state.drag.posDelta.y
+                    state.drag.origin.trackYScroll -
+                    state.drag.posDelta.y
         })
 
         return true
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.SelectCursor)
+    else if (state.mouse.action == Timeline.MouseAction.SelectCursor)
     {
-        data.state.cursor.time2 = data.state.mouse.point.time
-        data.state.cursor.trackIndex2 = data.state.mouse.point.trackIndex
+        state.cursor.time2 = state.mouse.point.time
+        state.cursor.trackIndex2 = state.mouse.point.trackIndex
 
-        Timeline.selectionClear(data)
-        Timeline.selectionAddAtCursor(data)
+        Timeline.selectionClear(state)
+        Timeline.selectionAddAtCursor(state)
         return true
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.DragTrackHeader)
+    else if (state.mouse.action == Timeline.MouseAction.DragTrackHeader)
     {
         return true
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.Pencil)
+    else if (state.mouse.action == Timeline.MouseAction.Pencil)
     {
-        withTrackAtDragOrigin(tr => tr.pencilDrag(data))
+        withTrackAtDragOrigin(tr => tr.pencilDrag(state))
         return true
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.DragTrackControl)
+    else if (state.mouse.action == Timeline.MouseAction.DragTrackControl)
     {
-        handleDragTrackControl(data)
+        handleDragTrackControl(state)
         return true
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.DragClone)
+    else if (state.mouse.action == Timeline.MouseAction.DragClone)
     {
-        if (!data.state.drag.xLocked || !data.state.drag.yLocked)
+        if (!state.drag.xLocked || !state.drag.yLocked)
         {
-            handleDragClone(data)
+            handleDragClone(state)
             return true
         }
 
@@ -111,9 +111,9 @@ export function mouseDrag(
     }
     else
     {
-        let mouseAction = data.state.mouse.action
+        let mouseAction = state.mouse.action
         
-		if (data.state.drag.xLocked)
+		if (state.drag.xLocked)
         {
             if (mouseAction == Timeline.MouseAction.DragTime ||
                 mouseAction == Timeline.MouseAction.StretchTimeStart ||
@@ -123,7 +123,7 @@ export function mouseDrag(
                 mouseAction = Timeline.MouseAction.DragRow
         }
 
-		if (data.state.drag.yLocked)
+		if (state.drag.yLocked)
         {
             if (mouseAction == Timeline.MouseAction.DragTimeAndRow)
                 mouseAction = Timeline.MouseAction.DragTime
@@ -131,10 +131,10 @@ export function mouseDrag(
                 mouseAction = Timeline.MouseAction.None
         }
 
-        const origProject = data.state.drag.origin.project
-        let newProject = data.state.drag.origin.project
+        const origProject = state.drag.origin.project
+        let newProject = state.drag.origin.project
 
-		for (const id of data.state.selection)
+		for (const id of state.selection)
 		{
 			const elem = origProject.elems.get(id)
 			if (!elem)
@@ -147,20 +147,20 @@ export function mouseDrag(
 
             if (mouseAction == Timeline.MouseAction.DragTime ||
                 mouseAction == Timeline.MouseAction.DragTimeAndRow)
-                changes.range = elem.range.displace(data.state.drag.timeDelta)
+                changes.range = elem.range.displace(state.drag.timeDelta)
             
             if (mouseAction == Timeline.MouseAction.StretchTimeStart &&
-                data.state.drag.origin.range)
+                state.drag.origin.range)
             {
                 changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
                 changes.range = changes.range.stretch(
-                    data.state.drag.timeDelta,
-                    data.state.drag.origin.range.end,
-                    data.state.drag.origin.range.start)
+                    state.drag.timeDelta,
+                    state.drag.origin.range.end,
+                    state.drag.origin.range.start)
 
-                if (elem.range.start.compare(data.state.drag.origin.range.start) == 0)
+                if (elem.range.start.compare(state.drag.origin.range.start) == 0)
                     changes.range = new Range(
-                        changes.range.start.snap(data.state.timeSnap),
+                        changes.range.start.snap(state.timeSnap),
                         changes.range.end)
                     
                 changes.range = changes.range.sorted()
@@ -168,18 +168,18 @@ export function mouseDrag(
             }
 
             if (mouseAction == Timeline.MouseAction.StretchTimeEnd &&
-                data.state.drag.origin.range)
+                state.drag.origin.range)
             {
                 changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
                 changes.range = changes.range.stretch(
-                    data.state.drag.timeDelta,
-                    data.state.drag.origin.range.start,
-                    data.state.drag.origin.range.end)
+                    state.drag.timeDelta,
+                    state.drag.origin.range.start,
+                    state.drag.origin.range.end)
 
-                if (elem.range.end.compare(data.state.drag.origin.range.end) == 0)
+                if (elem.range.end.compare(state.drag.origin.range.end) == 0)
                     changes.range = new Range(
                         changes.range.start,
-                        changes.range.end.snap(data.state.timeSnap))
+                        changes.range.end.snap(state.timeSnap))
 
                 changes.range = changes.range.sorted()
                 changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)
@@ -190,18 +190,18 @@ export function mouseDrag(
                 elem.type == "note")
             {
                 const note = elem as Project.Note
-                const trackId = data.state.tracks[data.state.drag.origin.point.trackIndex].projectTrackId
+                const trackId = state.tracks[state.drag.origin.point.trackIndex].projectTrackId
                 const key = Project.keyAt(Project.global.project, trackId, note.range.start)
                 const degree = key.octavedDegreeForMidi(note.midiPitch)
-                const newPitch = key.midiForDegree(Math.floor(degree + data.state.drag.rowDelta))
+                const newPitch = key.midiForDegree(Math.floor(degree + state.drag.rowDelta))
                 changes.midiPitch = newPitch
 
-                if (elem.id == data.state.drag.elemId)
+                if (elem.id == state.drag.elemId)
                 {
-                    if ((data.state.drag.notePreviewLast && newPitch != data.state.drag.notePreviewLast) ||
-                        (!data.state.drag.notePreviewLast && newPitch != note.midiPitch))
+                    if ((state.drag.notePreviewLast && newPitch != state.drag.notePreviewLast) ||
+                        (!state.drag.notePreviewLast && newPitch != note.midiPitch))
                     {
-                        data.state.drag.notePreviewLast = newPitch
+                        state.drag.notePreviewLast = newPitch
                         Playback.playNotePreview(trackId, newPitch, note.volumeDb, note.velocity)
                     }
                 }
@@ -210,11 +210,11 @@ export function mouseDrag(
             if ((mouseAction == Timeline.MouseAction.DragTime ||
                 mouseAction == Timeline.MouseAction.DragTimeAndRow ||
                 mouseAction == Timeline.MouseAction.DragRow) &&
-                data.state.drag.trackDelta != 0)
+                state.drag.trackDelta != 0)
             {
-                const origTrackIndex = data.state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
-                const newTrackIndex = Math.max(0, Math.min(data.state.tracks.length - 1, origTrackIndex + data.state.drag.trackDelta))
-                const newTrack = data.state.tracks[newTrackIndex]
+                const origTrackIndex = state.tracks.findIndex(t => t.projectTrackId == elem.parentId)
+                const newTrackIndex = Math.max(0, Math.min(state.tracks.length - 1, origTrackIndex + state.drag.trackDelta))
+                const newTrack = state.tracks[newTrackIndex]
 
                 if (newTrack.acceptedElemTypes.has(elem.type))
                     changes.parentId = newTrack.projectTrackId
@@ -231,9 +231,9 @@ export function mouseDrag(
 }
 
 
-function handleDragTrackControl(data: Timeline.WorkData)
+function handleDragTrackControl(state: Timeline.State)
 {
-    const origTrack = Project.getElem(data.state.drag.origin.project, data.state.drag.elemId, "track")
+    const origTrack = Project.getElem(state.drag.origin.project, state.drag.elemId, "track")
     if (!origTrack)
         return
 
@@ -242,9 +242,9 @@ function handleDragTrackControl(data: Timeline.WorkData)
 	{
         let project = Project.global.project
 
-        for (const elemId of data.state.selection)
+        for (const elemId of state.selection)
         {
-            const track = Project.getElem(data.state.drag.origin.project, elemId, "track")
+            const track = Project.getElem(state.drag.origin.project, elemId, "track")
             if (!track)
                 continue
 
@@ -260,12 +260,12 @@ function handleDragTrackControl(data: Timeline.WorkData)
 	{
         let project = Project.global.project
 
-        const trackIndex = data.state.mouse.point.trackIndex
-        if (trackIndex < 0 || trackIndex >= data.state.tracks.length)
+        const trackIndex = state.mouse.point.trackIndex
+        if (trackIndex < 0 || trackIndex >= state.tracks.length)
             return
         
-        const track = data.state.tracks[trackIndex]
-        const projTrack = Project.getElem(data.state.drag.origin.project, track.projectTrackId, "track")
+        const track = state.tracks[trackIndex]
+        const projTrack = Project.getElem(state.drag.origin.project, track.projectTrackId, "track")
         if (!projTrack)
             return
 
@@ -279,9 +279,9 @@ function handleDragTrackControl(data: Timeline.WorkData)
 	const modifyTrackAtMouseOrSelected = (func: (tr: Project.Track) => Project.Track) =>
 	{
         let numSelected = 0
-        for (const elemId of data.state.selection)
+        for (const elemId of state.selection)
         {
-            const track = Project.getElem(data.state.drag.origin.project, elemId, "track")
+            const track = Project.getElem(state.drag.origin.project, elemId, "track")
             if (track)
                 numSelected++
         }
@@ -293,11 +293,11 @@ function handleDragTrackControl(data: Timeline.WorkData)
     }
 
 
-    switch (data.state.hoverControl)
+    switch (state.hoverControl)
     {
         case Timeline.TrackControl.Volume:
         {
-            const volumeDbDelta = -data.state.drag.posDelta.y / 10
+            const volumeDbDelta = -state.drag.posDelta.y / 10
             modifySelectedTracks((track) =>
             {
                 if (track.trackType != "notes" && track.trackType != "chords")
@@ -339,14 +339,14 @@ function handleDragTrackControl(data: Timeline.WorkData)
 }
 
 
-function handleDragClone(data: Timeline.WorkData)
+function handleDragClone(state: Timeline.State)
 {
     const origProject = Project.global.project
 
     let newProject = Project.global.project
     const newIds = []
 
-    for (const elemId of data.state.selection)
+    for (const elemId of state.selection)
     {
         const elem = origProject.elems.get(elemId)
         if (!elem || elem.type == "track")
@@ -357,16 +357,16 @@ function handleDragClone(data: Timeline.WorkData)
 
         newProject = Project.cloneElem(origProject, elem, newProject)
 
-        if (elemId == data.state.drag.elemId)
-            data.state.drag.elemId = newId
+        if (elemId == state.drag.elemId)
+            state.drag.elemId = newId
     }
 
-    Timeline.selectionClear(data)
+    Timeline.selectionClear(state)
     for (const id of newIds)
-        Timeline.selectionAdd(data, id)
+        Timeline.selectionAdd(state, id)
 
-    data.state.mouse.action = Timeline.MouseAction.DragTimeAndRow
+    state.mouse.action = Timeline.MouseAction.DragTimeAndRow
 
     Project.global.project = newProject
-    data.state.drag.origin.project = newProject
+    state.drag.origin.project = newProject
 }

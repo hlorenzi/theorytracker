@@ -37,17 +37,6 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 
     const lastTimelineRenderRef = React.useRef(0)
 
-    const makeUpdateData: () => Timeline.WorkData = () =>
-    {
-        return {
-            state: editorState.ref.current,
-            activeWindow:
-                Dockable.global.state.activePanel === dockableWindow.panel &&
-                (!document.activeElement || document.activeElement.tagName != "INPUT"),
-            ctx: null!,
-        }
-    }
-
     const render = (force?: boolean) =>
     {
         if (!refCanvas.current)
@@ -60,9 +49,9 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
         //console.log("Timeline render")
         lastTimelineRenderRef.current = now
 
-        const updateData = makeUpdateData()
-        updateData.ctx = refCanvas.current.getContext("2d")!
-        Timeline.render(updateData)
+        Timeline.render(
+            editorState.ref.current,
+            refCanvas.current.getContext("2d")!)
     }
 
     const onResize = () =>
@@ -83,8 +72,7 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 
         const renderRect = new Rect(x, y, w, h)
 
-        const updateData = makeUpdateData()
-        Timeline.resize(updateData, renderRect)
+        Timeline.resize(editorState.ref.current, renderRect)
         render(true)
     }
 
@@ -108,16 +96,14 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 
     React.useEffect(() =>
     {
-        const updateData = makeUpdateData()
-        Timeline.scrollPlaybackTimeIntoView(updateData)
+        Timeline.scrollPlaybackTimeIntoView(editorState.ref.current)
         render(!Playback.global.playing)
         
     }, [Playback.globalObservable.updateToken])
 
     React.useEffect(() =>
     {
-        const updateData = makeUpdateData()
-        Timeline.refreshTracks(updateData)
+        Timeline.refreshTracks(editorState.ref.current)
         render(true)
 
     }, [Project.global.project.tracks])
@@ -171,14 +157,14 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 
 		const onMouseMove = (ev: MouseEvent) =>
 		{
-            const updateData = makeUpdateData()
-            if (updateData.state.mouse.down)
+            const state = editorState.ref.current
+            if (state.mouse.down)
                 ev.preventDefault()
                 
             const pos = transformMousePos(refCanvasCurrent, ev)
             const projectBefore = Project.global.project
-            const needsRender1 = Timeline.mouseMove(updateData, pos)
-            const needsRender2 = Timeline.mouseDrag(updateData, pos, false)
+            const needsRender1 = Timeline.mouseMove(state, pos)
+            const needsRender2 = Timeline.mouseDrag(state, pos, false)
 
             if (projectBefore !== Project.global.project)
                 Project.notifyObservers()
@@ -186,7 +172,7 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
             if (needsRender1 || needsRender2)
                 render(true)
 
-            setCursor(updateData.state)
+            setCursor(state)
         }
         
 		const onMouseDown = (ev: MouseEvent) =>
@@ -199,30 +185,30 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
             Dockable.removeEphemerals(Dockable.global.state)
             Dockable.notifyObservers()
 
-            const updateData = makeUpdateData()
+            const state = editorState.ref.current
             const pos = transformMousePos(refCanvasCurrent, ev)
             const projectBefore = Project.global.project
-            Timeline.mouseMove(updateData, pos)
-            Timeline.mouseDown(updateData, ev.button != 0)
-            Timeline.mouseDrag(updateData, pos, true)
+            Timeline.mouseMove(state, pos)
+            Timeline.mouseDown(state, ev.button != 0)
+            Timeline.mouseDrag(state, pos, true)
 
             if (projectBefore !== Project.global.project)
                 Project.notifyObservers()
 
             render()
-            setCursor(updateData.state)
+            setCursor(state)
             editorState.commit()
         }
         
 		const onMouseUp = (ev: MouseEvent) =>
 		{
-            const updateData = makeUpdateData()
-            if (updateData.state.mouse.down)
+            const state = editorState.ref.current
+            if (state.mouse.down)
                 ev.preventDefault()
 
             const pos = transformMousePos(refCanvasCurrent, ev)
             const projectBefore = Project.global.project
-            Timeline.mouseUp(updateData)
+            Timeline.mouseUp(state)
 
             if (projectBefore !== Project.global.project)
             {
@@ -231,22 +217,24 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
             }
 
             render()
-            setCursor(updateData.state)
+            setCursor(state)
             editorState.commit()
         }
 		
 		const onMouseWheel = (ev: WheelEvent) =>
 		{
-            const updateData = makeUpdateData()
-			Timeline.mouseWheel(updateData, ev.deltaX, ev.deltaY)
+			Timeline.mouseWheel(editorState.ref.current, ev.deltaX, ev.deltaY)
             render()
 		}
 		
 		const onKeyDown = (ev: KeyboardEvent) =>
 		{
-            const updateData = makeUpdateData()
+            const isActiveWindow =
+                Dockable.global.state.activePanel === dockableWindow.panel &&
+                (!document.activeElement || document.activeElement.tagName != "INPUT")
+
             const projectBefore = Project.global.project
-			Timeline.keyDown(updateData, ev.key.toLowerCase())
+			Timeline.keyDown(editorState.ref.current, isActiveWindow, ev.key.toLowerCase())
             
             if (projectBefore !== Project.global.project)
                 Project.notifyObservers()
@@ -257,33 +245,30 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
 		
 		const onKeyUp = (ev: KeyboardEvent) =>
 		{
-            const updateData = makeUpdateData()
-			Timeline.keyUp(updateData, ev.key.toLowerCase())
+			Timeline.keyUp(editorState.ref.current, ev.key.toLowerCase())
         }
 
         const onRewind = (ev: Event) =>
         {
-            const updateData = makeUpdateData()
-            Timeline.rewind(updateData)
+            Timeline.rewind(editorState.ref.current)
             editorState.commit()
             render(true)
         }
 		
 		const onRefresh = (ev: Event) =>
 		{
-            const updateData = makeUpdateData()
-            Timeline.refreshTracks(updateData)
+            Timeline.refreshTracks(editorState.ref.current)
             editorState.commit()
             render(true)
         }
 		
 		const onReset = (ev: Event) =>
 		{
-            const updateData = makeUpdateData()
-            Timeline.modeStackPop(updateData, 0)
-            Timeline.reset(updateData)
-            Timeline.rewind(updateData)
-            Timeline.refreshTracks(updateData)
+            const state = editorState.ref.current
+            Timeline.modeStackPop(state, 0)
+            Timeline.reset(state)
+            Timeline.rewind(state)
+            Timeline.refreshTracks(state)
             editorState.commit()
             render(true)
         }

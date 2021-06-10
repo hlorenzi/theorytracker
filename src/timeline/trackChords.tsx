@@ -33,7 +33,7 @@ export class TimelineTrackChords extends TimelineTrack
 
 
     *iterChordsAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<Project.Chord, void, void>
     {
@@ -47,82 +47,82 @@ export class TimelineTrackChords extends TimelineTrack
 
 
     *iterChordsAndKeyChangesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<[Project.Chord, Project.KeyChange, number, number], void, void>
     {
-        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(state, range))
         {
             const time1 = keyCh1.range.start.max(range.start)!
             const time2 = keyCh2.range.start.min(range.end)!
             
-            for (const chord of this.iterChordsAtRange(data, new Range(time1, time2)))
+            for (const chord of this.iterChordsAtRange(state, new Range(time1, time2)))
                 yield [chord, keyCh1, keyCh1X, keyCh2X]
         }
     }
 
 
     *elemsAtRegion(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const elem of this.iterChordsAtRange(data, range))
+        for (const elem of this.iterChordsAtRange(state, range))
             yield elem.id
     }
 	
 	
-	hover(data: Timeline.WorkData)
+	hover(state: Timeline.State)
 	{
-        this.hoverBlockElements(data, (range) => this.iterChordsAtRange(data, range))
+        this.hoverBlockElements(state, (range) => this.iterChordsAtRange(state, range))
     }
 
 
-    click(data: Timeline.WorkData, elemId: Project.ID)
+    click(state: Timeline.State, elemId: Project.ID)
     {
         const chord = Project.getElem(Project.global.project, elemId, "chord")
         if (chord)
         {
-            data.state.insertion.duration = chord.range.duration
+            state.insertion.duration = chord.range.duration
             Playback.playChordPreview(this.projectTrackId, chord.chord, 0, 1)
         }
     }
 
 
-    pencilClear(data: Timeline.WorkData)
+    pencilClear(state: Timeline.State)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Timeline.WorkData)
+    pencilHover(state: Timeline.State)
     {
-        const time = data.state.mouse.point.time
+        const time = state.mouse.point.time
 
         this.pencil =
         {
             time1: time,
-            time2: time.add(data.state.timeSnap.multiply(new Rational(4))),
+            time2: time.add(state.timeSnap.multiply(new Rational(4))),
         }
     }
 
 
-    pencilDrag(data: Timeline.WorkData)
+    pencilDrag(state: Timeline.State)
     {
 		if (this.pencil)
 		{
-            this.pencil.time2 = data.state.mouse.point.time
+            this.pencil.time2 = state.mouse.point.time
             
-            const time1X = Timeline.xAtTime(data, this.pencil.time1)
-            const time2X = Timeline.xAtTime(data, this.pencil.time2)
+            const time1X = Timeline.xAtTime(state, this.pencil.time1)
+            const time2X = Timeline.xAtTime(state, this.pencil.time2)
 			if (Math.abs(time1X - time2X) < 5)
-                this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
+                this.pencil.time2 = this.pencil.time1.add(state.timeSnap.multiply(new Rational(4)))
         }
     }
 	
 	
-	pencilComplete(data: Timeline.WorkData)
+	pencilComplete(state: Timeline.State)
 	{
 		if (this.pencil)
 		{
@@ -136,20 +136,20 @@ export class TimelineTrackChords extends TimelineTrack
             let project = Project.global.project
             const id = project.nextId
             Project.global.project = Project.upsertElement(project, elem)
-            Timeline.selectionAdd(data, id)
+            Timeline.selectionAdd(state, id)
 		}
 	}
 
 
-    render(data: Timeline.WorkData)
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
-        const visibleRange = Timeline.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(state)
 
         for (let layer = 0; layer < 2; layer++)
         {
-            for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(data, visibleRange))
+            for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(state, visibleRange))
             {
-                const selected = data.state.selection.contains(chord.id)
+                const selected = state.selection.contains(chord.id)
                 if (!Playback.global.playing && (layer == 0) == selected)
                     continue
 
@@ -157,11 +157,11 @@ export class TimelineTrackChords extends TimelineTrack
                     continue
 
                 const key = keyCh.key
-                const hovering = !!data.state.hover && data.state.hover.id == chord.id
+                const hovering = !!state.hover && state.hover.id == chord.id
                 const playing = Playback.global.playing && chord.range.overlapsPoint(Playback.global.playTime)
                 
                 this.renderChord(
-                    data, chord.range,
+                    state, canvas, chord.range,
                     xMin, xMax,
                     chord.chord, key,
                     hovering, selected, playing)
@@ -170,25 +170,26 @@ export class TimelineTrackChords extends TimelineTrack
 
         if (this.pencil)
         {
-            data.ctx.save()
-            data.ctx.globalAlpha = 0.4
+            canvas.save()
+            canvas.globalAlpha = 0.4
 
             const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1)
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
             this.renderChord(
-                data, range, -Infinity, Infinity,
+                state, canvas, range, -Infinity, Infinity,
                 new Theory.Chord(key.tonic.chroma, 0, 0, []),
                 key,
                 false, false, false)
             
-            data.ctx.restore()
+            canvas.restore()
         }
     }
 
 
     renderChord(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         range: Range,
         xMin: number,
         xMax: number,
@@ -199,22 +200,22 @@ export class TimelineTrackChords extends TimelineTrack
         playing: boolean)
     {
         const x1 = Math.floor(Math.max(xMin, Math.min(xMax,
-            Timeline.xAtTime(data, range.start)))) + 0.5
+            Timeline.xAtTime(state, range.start)))) + 0.5
         const x2 = Math.floor(Math.max(xMin, Math.min(xMax,
-            Timeline.xAtTime(data, range.end)))) + 0.5 - 1
+            Timeline.xAtTime(state, range.end)))) + 0.5 - 1
 
         const y1 = 1.5
         const y2 = this.renderRect.h - 0.5
 
-		data.ctx.fillStyle = (selected || playing) ? "#222" : "#000"
-        data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+		canvas.fillStyle = (selected || playing) ? "#222" : "#000"
+        canvas.fillRect(x1, y1, x2 - x1, y2 - y1)
 
         CanvasUtils.renderChord(
-            data.ctx,
+            canvas,
             x1, y1, x2, y2,
             chord, key)
             
-        data.ctx.strokeStyle = (selected || playing) ? "#fff" : hovering ? "#888" : "#444"
-        data.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)
+        canvas.strokeStyle = (selected || playing) ? "#fff" : hovering ? "#888" : "#444"
+        canvas.strokeRect(x1, y1, x2 - x1, y2 - y1)
     }
 }

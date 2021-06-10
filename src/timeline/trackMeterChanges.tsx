@@ -28,7 +28,7 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
 
 
     *iterAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<Project.MeterChange, void, void>
     {
@@ -42,31 +42,31 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
 
 
     *elemsAtRegion(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const elem of this.iterAtRange(data, range))
+        for (const elem of this.iterAtRange(state, range))
             yield elem.id
     }
 	
 	
-	hover(data: Timeline.WorkData)
+	hover(state: Timeline.State)
 	{
-        const pos = data.state.mouse.point.trackPos
+        const pos = state.mouse.point.trackPos
 
         const checkRange = Timeline.timeRangeAtX(
-            data,
+            state,
             pos.x - Timeline.MARKER_WIDTH,
             pos.x + Timeline.MARKER_WIDTH)
 
-        for (const elem of this.iterAtRange(data, checkRange))
+        for (const elem of this.iterAtRange(state, checkRange))
         {
-            const rect = this.markerRectAtTime(data, elem.range.start)
+            const rect = this.markerRectAtTime(state, elem.range.start)
             if (rect.contains(pos))
             {
-                data.state.hover =
+                state.hover =
                 {
                     id: elem.id,
                     range: elem.range,
@@ -77,15 +77,15 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
     }
 
 
-    pencilClear(data: Timeline.WorkData)
+    pencilClear(state: Timeline.State)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Timeline.WorkData)
+    pencilHover(state: Timeline.State)
     {
-        const time = data.state.mouse.point.time
+        const time = state.mouse.point.time
 
         this.pencil =
         {
@@ -94,16 +94,16 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
     }
 
 
-    pencilDrag(data: Timeline.WorkData)
+    pencilDrag(state: Timeline.State)
     {
 		if (this.pencil)
 		{
-            this.pencil.time = data.state.mouse.point.time
+            this.pencil.time = state.mouse.point.time
         }
     }
 	
 	
-	pencilComplete(data: Timeline.WorkData)
+	pencilComplete(state: Timeline.State)
 	{
 		if (this.pencil)
 		{
@@ -115,37 +115,37 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
             let project = Project.global.project
             const id = project.nextId
             Project.global.project = Project.upsertElement(project, elem)
-            Timeline.selectionAdd(data, id)
+            Timeline.selectionAdd(state, id)
 		}
 	}
 
 
-    render(data: Timeline.WorkData)
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
-        const visibleRange = Timeline.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(state)
         const activeMeterAtStart = Project.meterAt(Project.global.project, this.projectTrackId, visibleRange.start)
 
         let suppressStickyLabel = false
         for (let layer = 0; layer < 2; layer++)
         {
-            for (const meterCh of this.iterAtRange(data, visibleRange))
+            for (const meterCh of this.iterAtRange(state, visibleRange))
             {
-                const selected = data.state.selection.contains(meterCh.id)
+                const selected = state.selection.contains(meterCh.id)
                 if ((layer == 0) == selected)
                     continue
 
                 if (meterCh.type != "meterChange")
                     continue
             
-                const hovering = !!data.state.hover && data.state.hover.id == meterCh.id
+                const hovering = !!state.hover && state.hover.id == meterCh.id
                 this.renderMarker(
-                    data, meterCh.range.start,
+                    state, canvas, meterCh.range.start,
                     Prefs.global.editor.meterChangeColor,
                     meterCh.meter.str,
                     hovering, selected)
                 
-                const x = Timeline.xAtTime(data, meterCh.range.start)
-                if (x > data.state.trackHeaderW && x < data.state.trackHeaderW + 100)
+                const x = Timeline.xAtTime(state, meterCh.range.start)
+                if (x > state.trackHeaderW && x < state.trackHeaderW + 100)
                     suppressStickyLabel = true
             }
         }
@@ -153,24 +153,24 @@ export class TimelineTrackMeterChanges extends Timeline.TimelineTrack
         if (!suppressStickyLabel)
         {
             this.renderMarkerLabel(
-                data,
-                data.state.trackHeaderW + 5,
+                state, canvas,
+                state.trackHeaderW + 5,
                 Prefs.global.editor.meterChangeColor,
                 activeMeterAtStart.str)
         }
 
         if (this.pencil)
         {
-            data.ctx.save()
-            data.ctx.globalAlpha = 0.4
+            canvas.save()
+            canvas.globalAlpha = 0.4
 
             this.renderMarker(
-                data, this.pencil.time,
+                state, canvas, this.pencil.time,
                 Prefs.global.editor.meterChangeColor,
                 null,
                 false, false)
             
-            data.ctx.restore()
+            canvas.restore()
         }
     }
 }

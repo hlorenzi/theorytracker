@@ -38,14 +38,14 @@ export class TimelineTrackNoteVolumes extends Timeline.TimelineTrack
     }
 
 
-    parentStart(data: Timeline.WorkData)
+    parentStart(state: Timeline.State)
     {
         const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
-    parentRange(data: Timeline.WorkData)
+    parentRange(state: Timeline.State)
     {
         const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
@@ -53,7 +53,7 @@ export class TimelineTrackNoteVolumes extends Timeline.TimelineTrack
 
 
     *iterNotesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<Project.Note, void, void>
     {
@@ -61,47 +61,47 @@ export class TimelineTrackNoteVolumes extends Timeline.TimelineTrack
         if (!list)
             return
 
-        for (const elem of list.iterAtRange(range.displace(this.parentStart(data).negate())))
+        for (const elem of list.iterAtRange(range.displace(this.parentStart(state).negate())))
             yield elem as Project.Note
     }
 
 
-    valueAtY(data: Timeline.WorkData, y: number)
+    valueAtY(state: Timeline.State, y: number)
     {
         const f = Math.max(0, Math.min(1, 1 - (y / this.renderRect.h)))
         return this.minValue + f * (this.maxValue - this.minValue)
     }
 
 
-    yAtValue(data: Timeline.WorkData, value: number)
+    yAtValue(state: Timeline.State, value: number)
     {
         const f = (value - this.minValue) / (this.maxValue - this.minValue)
         return (1 - f) * this.renderRect.h
     }
 
 
-    pencilDrag(data: Timeline.WorkData)
+    pencilDrag(state: Timeline.State)
     {
-        const visibleRange = Timeline.visibleTimeRange(data)
-        const parentStart = this.parentStart(data)
-        const x1 = data.state.mouse.pointPrev.pos.x
-        const x2 = data.state.mouse.point.pos.x
+        const visibleRange = Timeline.visibleTimeRange(state)
+        const parentStart = this.parentStart(state)
+        const x1 = state.mouse.pointPrev.pos.x
+        const x2 = state.mouse.point.pos.x
         const xMin = Math.min(x1, x2)
         const xMax = Math.max(x1, x2)
 
         let newProject = Project.global.project
 
-        for (const note of this.iterNotesAtRange(data, visibleRange))
+        for (const note of this.iterNotesAtRange(state, visibleRange))
         {
-            const selected = data.state.selection.contains(note.id)
-            const active = data.state.selection.size == 0 || selected
+            const selected = state.selection.contains(note.id)
+            const active = state.selection.size == 0 || selected
             if (!active)
                 continue
 
-            const markerX = Timeline.xAtTime(data, note.range.start.add(parentStart))
+            const markerX = Timeline.xAtTime(state, note.range.start.add(parentStart))
             if (markerX >= xMin && markerX <= xMax)
             {
-                const volumeDb = this.valueAtY(data, data.state.mouse.point.originTrackPos.y)
+                const volumeDb = this.valueAtY(state, state.mouse.point.originTrackPos.y)
                 const newNote = Project.elemModify(note, { volumeDb })
             
                 newProject = Project.upsertElement(newProject, newNote)
@@ -118,57 +118,58 @@ export class TimelineTrackNoteVolumes extends Timeline.TimelineTrack
     }
 
 
-    render(data: Timeline.WorkData)
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
-        const visibleRange = Timeline.visibleTimeRange(data)
-        const parentRange = this.parentRange(data)
+        const visibleRange = Timeline.visibleTimeRange(state)
+        const parentRange = this.parentRange(state)
         const parentStart = parentRange.start
 
-        const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
-        const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
-        const parentX1 = Timeline.xAtTime(data, parentRange.start)
-        const parentX2 = Timeline.xAtTime(data, parentRange.end)
+        const visibleX1 = Timeline.xAtTime(state, visibleRange.start)
+        const visibleX2 = Timeline.xAtTime(state, visibleRange.end)
+        const parentX1 = Timeline.xAtTime(state, parentRange.start)
+        const parentX2 = Timeline.xAtTime(state, parentRange.end)
 
-        data.ctx.fillStyle = "#0004"
-        data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
-        data.ctx.fillRect(parentX2, 0, visibleX2 - parentX2, this.renderRect.h)
+        canvas.fillStyle = "#0004"
+        canvas.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
+        canvas.fillRect(parentX2, 0, visibleX2 - parentX2, this.renderRect.h)
     
         for (let layer = 0; layer < 2; layer++)
         {
-            for (const note of this.iterNotesAtRange(data, visibleRange))
+            for (const note of this.iterNotesAtRange(state, visibleRange))
             {
-                const selected = data.state.selection.contains(note.id)
-                const active = data.state.selection.size == 0 || selected
+                const selected = state.selection.contains(note.id)
+                const active = state.selection.size == 0 || selected
                 if ((layer == 0) == active)
                     continue
 
                 this.renderMarkerStick(
-                    data, parentStart, note.range, note.volumeDb, active)
+                    state, canvas, parentStart, note.range, note.volumeDb, active)
             }
         }
     }
 	
 	
 	renderMarkerStick(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         parentStart: Rational,
         range: Range,
         value: number,
         active: boolean)
 	{
-        const x = Math.floor(Timeline.xAtTime(data, range.start.add(parentStart))) + 0.5
-        const y = this.yAtValue(data, value)
+        const x = Math.floor(Timeline.xAtTime(state, range.start.add(parentStart))) + 0.5
+        const y = this.yAtValue(state, value)
         const arcRadius = 4
         
-        data.ctx.lineWidth = 2
-        data.ctx.strokeStyle = active ?
+        canvas.lineWidth = 2
+        canvas.strokeStyle = active ?
             Prefs.global.editor.noteVelocityMarkerColor :
             Prefs.global.editor.noteVelocityMarkerInactiveColor
 		
-        data.ctx.beginPath()
-        data.ctx.moveTo(x, this.renderRect.h)
-        data.ctx.lineTo(x, y + arcRadius)
-        data.ctx.arc(x, y, arcRadius, Math.PI * 0.5, Math.PI * 2.5)
-        data.ctx.stroke()
+        canvas.beginPath()
+        canvas.moveTo(x, this.renderRect.h)
+        canvas.lineTo(x, y + arcRadius)
+        canvas.arc(x, y, arcRadius, Math.PI * 0.5, Math.PI * 2.5)
+        canvas.stroke()
 	}
 }

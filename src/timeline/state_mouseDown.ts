@@ -7,34 +7,34 @@ import Rational from "../util/rational"
 import Rect from "../util/rect"
 
 
-export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
+export function mouseDown(state: Timeline.State, rightButton: boolean)
 {
-    if (data.state.mouse.down)
+    if (state.mouse.down)
         return
             
-    const prevDownDate = data.state.mouse.downDate
+    const prevDownDate = state.mouse.downDate
 
-    data.state.mouse.down = true
-    data.state.mouse.downDate = new Date()
-    data.state.mouse.action = Timeline.MouseAction.None
+    state.mouse.down = true
+    state.mouse.downDate = new Date()
+    state.mouse.action = Timeline.MouseAction.None
 
-    const selectMultiple = data.state.keysDown.has(Prefs.global.editor.keySelectMultiple)
-    const selectRange = data.state.keysDown.has(Prefs.global.editor.keySelectRange)
-    const selectClone = data.state.keysDown.has(Prefs.global.editor.keySelectClone)
-    const forcePan = data.state.keysDown.has(Prefs.global.editor.keyPan)
+    const selectMultiple = state.keysDown.has(Prefs.global.editor.keySelectMultiple)
+    const selectRange = state.keysDown.has(Prefs.global.editor.keySelectRange)
+    const selectClone = state.keysDown.has(Prefs.global.editor.keySelectClone)
+    const forcePan = state.keysDown.has(Prefs.global.editor.keyPan)
     const doubleClick =
-        data.state.mouse.downDate.getTime() - prevDownDate.getTime() <
+        state.mouse.downDate.getTime() - prevDownDate.getTime() <
         Prefs.global.editor.mouseDoubleClickThresholdMs
 
-    data.state.drag =
+    state.drag =
     {
         origin:
         {
-            point: { ...data.state.mouse.point },
+            point: { ...state.mouse.point },
             range: null,
-            timeScroll: data.state.timeScroll,
-            trackScroll: data.state.trackScroll,
-            trackYScroll: data.state.tracks[data.state.mouse.point.trackIndex].yScroll,
+            timeScroll: state.timeScroll,
+            trackScroll: state.trackScroll,
+            trackYScroll: state.tracks[state.mouse.point.trackIndex].yScroll,
             project: Project.global.project,
         },
 
@@ -52,10 +52,10 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
 
     function withTrackAtMouse<T>(fn: (track: Timeline.TimelineTrack) => T | null)
     {
-        for (let t = 0; t < data.state.tracks.length; t++)
+        for (let t = 0; t < state.tracks.length; t++)
         {
-            if (t == data.state.mouse.point.trackIndex)
-                return fn(data.state.tracks[t])
+            if (t == state.mouse.point.trackIndex)
+                return fn(state.tracks[t])
         }
 
         return null
@@ -65,113 +65,113 @@ export function mouseDown(data: Timeline.WorkData, rightButton: boolean)
 
     if (rightButton || forcePan)
     {
-        data.state.mouse.action = Timeline.MouseAction.Pan
+        state.mouse.action = Timeline.MouseAction.Pan
     }
-    else if (data.state.mouse.point.pos.x > data.state.trackHeaderW &&
-        (data.state.keysDown.has(Prefs.global.editor.keyPencil) || trackAtMouseNoCursor))
+    else if (state.mouse.point.pos.x > state.trackHeaderW &&
+        (state.keysDown.has(Prefs.global.editor.keyPencil) || trackAtMouseNoCursor))
     {
         if (!trackAtMouseNoCursor)
         {
-            Timeline.selectionClear(data)
-            data.state.cursor.visible = false
+            Timeline.selectionClear(state)
+            state.cursor.visible = false
         }
 
-        data.state.mouse.action = Timeline.MouseAction.Pencil
-        withTrackAtMouse(tr => tr.pencilStart(data))
+        state.mouse.action = Timeline.MouseAction.Pencil
+        withTrackAtMouse(tr => tr.pencilStart(state))
     }
-    else if (data.state.hover)
+    else if (state.hover)
     {
-        Timeline.keyHandlePendingFinish(data)
+        Timeline.keyHandlePendingFinish(state)
 
-        const elem = Project.global.project.elems.get(data.state.hover.id)
-        data.state.drag.elemId = data.state.hover.id
+        const elem = Project.global.project.elems.get(state.hover.id)
+        state.drag.elemId = state.hover.id
 
-        Timeline.selectionToggleHover(data, data.state.hover, selectMultiple)
-        data.state.cursor.visible = false
+        Timeline.selectionToggleHover(state, state.hover, selectMultiple)
+        state.cursor.visible = false
 
         if (elem && elem.type == "track")
         {
             if (!selectRange)
             {
-                data.state.rangeSelectOriginTrackIndex = data.state.mouse.point.trackIndex
-                if (data.state.hoverControl != Timeline.TrackControl.None)
+                state.rangeSelectOriginTrackIndex = state.mouse.point.trackIndex
+                if (state.hoverControl != Timeline.TrackControl.None)
                 {
-                    data.state.mouse.action = Timeline.MouseAction.DragTrackControl
+                    state.mouse.action = Timeline.MouseAction.DragTrackControl
                 }
             }
-            else if (data.state.rangeSelectOriginTrackIndex >= 0)
+            else if (state.rangeSelectOriginTrackIndex >= 0)
             {
-                selectTrackRange(data,
-                    data.state.rangeSelectOriginTrackIndex,
-                    data.state.mouse.point.trackIndex)
+                selectTrackRange(state,
+                    state.rangeSelectOriginTrackIndex,
+                    state.mouse.point.trackIndex)
             }
         }
         else
         {
-            data.state.rangeSelectOriginTrackIndex = -1
+            state.rangeSelectOriginTrackIndex = -1
 
-            withTrackAtMouse(tr => tr.click(data, data.state.hover!.id))
+            withTrackAtMouse(tr => tr.click(state, state.hover!.id))
 
-            const range = Timeline.selectionRange(data)
+            const range = Timeline.selectionRange(state)
             if (range)
             {
-                Timeline.cursorSetTime(data, range.start, range.start)
-                Timeline.cursorSetTrack(data, data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
+                Timeline.cursorSetTime(state, range.start, range.start)
+                Timeline.cursorSetTrack(state, state.mouse.point.trackIndex, state.mouse.point.trackIndex)
                 Playback.setStartTime(range.start)
             }
             
             if (doubleClick)
             {
-                withTrackAtMouse(tr => tr.doubleClick(data, data.state.hover!.id))
+                withTrackAtMouse(tr => tr.doubleClick(state, state.hover!.id))
             }
 
             if (selectClone)
             {
-                data.state.mouse.action = Timeline.MouseAction.DragClone
+                state.mouse.action = Timeline.MouseAction.DragClone
             }
         }
     }
     else
     {
-        Timeline.keyHandlePendingFinish(data)
+        Timeline.keyHandlePendingFinish(state)
 
         if (!selectMultiple)
-            Timeline.selectionClear(data)
+            Timeline.selectionClear(state)
 
-        if (data.state.mouse.point.pos.x > data.state.trackHeaderW)
+        if (state.mouse.point.pos.x > state.trackHeaderW)
         {
-            data.state.mouse.action = Timeline.MouseAction.SelectCursor
-            data.state.cursor.visible = true
-            Timeline.cursorSetTime(data, data.state.mouse.point.time, data.state.mouse.point.time)
-            data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 =
-                data.state.mouse.point.trackIndex
+            state.mouse.action = Timeline.MouseAction.SelectCursor
+            state.cursor.visible = true
+            Timeline.cursorSetTime(state, state.mouse.point.time, state.mouse.point.time)
+            state.cursor.trackIndex1 = state.cursor.trackIndex2 =
+                state.mouse.point.trackIndex
 
             if (doubleClick)
             {
                 const anchor = Timeline.findPreviousAnchor(
-                    data, data.state.mouse.point.time,
-                    data.state.mouse.point.trackIndex, data.state.mouse.point.trackIndex)
+                    state, state.mouse.point.time,
+                    state.mouse.point.trackIndex, state.mouse.point.trackIndex)
                     
-                Timeline.cursorSetTime(data, anchor, anchor)
-                Timeline.scrollTimeIntoView(data, anchor)
+                Timeline.cursorSetTime(state, anchor, anchor)
+                Timeline.scrollTimeIntoView(state, anchor)
             }
 
-            Playback.setStartTime(data.state.cursor.time1)
+            Playback.setStartTime(state.cursor.time1)
         }
     }
 }
 
 
 function selectTrackRange(
-    data: Timeline.WorkData,
+    state: Timeline.State,
     trackIndex1: number,
     trackIndex2: number)
 {
     const trackIndexMin = Math.min(trackIndex1, trackIndex2)
     const trackIndexMax = Math.max(trackIndex1, trackIndex2)
 
-    Timeline.selectionClear(data)
+    Timeline.selectionClear(state)
 
     for (var i = trackIndexMin; i <= trackIndexMax; i++)
-        Timeline.selectionAdd(data, data.state.tracks[i].projectTrackId)
+        Timeline.selectionAdd(state, state.tracks[i].projectTrackId)
 }

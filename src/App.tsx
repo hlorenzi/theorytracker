@@ -10,6 +10,7 @@ import * as UI from "./ui"
 import { useRefState } from "./util/refState"
 import PlaybackToolbar from "./PlaybackToolbar"
 import MenuFile from "./MenuFile"
+import MenuEdit from "./MenuEdit"
 import MenuWindow from "./MenuWindow"
 import "./types"
 
@@ -58,60 +59,35 @@ export default function App()
 
             const key = ev.key.toLowerCase()
 
-            if (key == " ")
+            for (const command of Command.allCommands)
             {
-                Playback.togglePlaying()
-            }
-            else if ((key == "y" && ev.ctrlKey) || (key == "z" && ev.ctrlKey && ev.shiftKey))
-            {
-                Project.redo()
-            }
-            else if (key == "z" && ev.ctrlKey)
-            {
-                Project.undo()
-            }
-            else
-            {
-                let handled = false
+                if (!command.shortcut)
+                    continue
 
-                for (const command of Command.allCommands)
+                if (command.isShortcutAvailable && !command.isShortcutAvailable())
+                    continue
+
+                if (command.isAvailable && !command.isAvailable({}))
+                    continue
+
+                for (const shortcut of command.shortcut)
                 {
-                    if (!command.shortcut)
+                    if (!!shortcut.ctrl !== ev.ctrlKey)
                         continue
 
-                    if (command.isShortcutAvailable && !command.isShortcutAvailable())
+                    if (!!shortcut.shift !== ev.shiftKey)
                         continue
 
-                    if (command.isAvailable && !command.isAvailable({}))
+                    if (key !== shortcut.key)
                         continue
 
-                    for (const shortcut of command.shortcut)
-                    {
-                        if (!!shortcut.ctrl !== ev.ctrlKey)
-                            continue
-
-                        if (!!shortcut.shift !== ev.shiftKey)
-                            continue
-
-                        if (key !== shortcut.key)
-                            continue
-
-                        //console.log("handled keyboard command: ", command.name)
-                        command.func({})
-                        handled = true
-                        break
-                    }
-
-                    if (handled)
-                        break
-                }
-
-                if (!handled)
+                    //console.log("handled keyboard command: ", command.name)
+                    command.func({})
+                    ev.preventDefault()
+                    ev.stopPropagation()
                     return
+                }
             }
-
-            ev.preventDefault()
-            ev.stopPropagation()
         })
 
     }, [])
@@ -127,6 +103,7 @@ export default function App()
 
             <Menubar.Root>
                 <MenuFile/>
+                <MenuEdit/>
                 <MenuWindow/>
                 <PlaybackToolbar/>
                 <a

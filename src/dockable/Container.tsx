@@ -237,6 +237,7 @@ export function Container()
                     width: w.panelRect.rect.w - marginOther * 2,
                     height: w.panelRect.rect.h - marginTop - marginOther,
                     zIndex: w.panelRect.zIndex * 3 + 1,
+                    contain: "strict",
             }}>
                 <Dockable.WindowContext.Provider
                     value={{
@@ -352,6 +353,7 @@ function Panel(props: any)
         width: (panelRect.rect.w) + "px",
         height: (panelRect.rect.h) + "px",
         boxSizing: "border-box",
+        contain: "strict",
 
         backgroundColor: Prefs.global.ui.windowVoidColor,
         borderRadius: "0.5em",

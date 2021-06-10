@@ -4,27 +4,27 @@ import Range from "../util/range"
 import Rational from "../util/rational"
 
 
-export function mouseMove(data: Timeline.WorkData, pos: { x: number, y: number }): boolean
+export function mouseMove(state: Timeline.State, pos: { x: number, y: number }): boolean
 {
-    if (data.state.mouse.down)
+    if (state.mouse.down)
         return false
 
-    data.state.mouse.pointPrev = data.state.mouse.point
-    data.state.mouse.point = Timeline.pointAt(data, pos)
+    state.mouse.pointPrev = state.mouse.point
+    state.mouse.point = Timeline.pointAt(state, pos)
 
-    const hoverPrev = data.state.hover
-    data.state.hover = null
+    const hoverPrev = state.hover
+    state.hover = null
 
-    for (let t = 0; t < data.state.tracks.length; t++)
-        data.state.tracks[t].pencilClear(data)
+    for (let t = 0; t < state.tracks.length; t++)
+        state.tracks[t].pencilClear(state)
 
-    if (data.state.mouse.point.pos.x < data.state.trackHeaderW)
+    if (state.mouse.point.pos.x < state.trackHeaderW)
     {
-        const trackIndex = Timeline.trackAtY(data, data.state.mouse.point.pos.y)
+        const trackIndex = Timeline.trackAtY(state, state.mouse.point.pos.y)
         if (trackIndex !== null)
         {
-            const track = data.state.tracks[trackIndex]
-            data.state.hover =
+            const track = state.tracks[trackIndex]
+            state.hover =
             {
                 action: Timeline.MouseAction.DragTrackHeader,
                 id: track.projectTrackId,
@@ -32,36 +32,36 @@ export function mouseMove(data: Timeline.WorkData, pos: { x: number, y: number }
             }
         }
 
-        data.state.hoverControl = Timeline.trackControlAtPoint(
-            data,
-            data.state.mouse.point.trackIndex,
-            data.state.mouse.point.trackPos)
+        state.hoverControl = Timeline.trackControlAtPoint(
+            state,
+            state.mouse.point.trackIndex,
+            state.mouse.point.trackPos)
     }
-    else if (data.state.keysDown.has(Prefs.global.editor.keyPencil))
+    else if (state.keysDown.has(Prefs.global.editor.keyPencil))
     {
-        for (let t = 0; t < data.state.tracks.length; t++)
+        for (let t = 0; t < state.tracks.length; t++)
         {
-            if (t == data.state.mouse.point.trackIndex)
-                data.state.tracks[t].pencilHover(data)
+            if (t == state.mouse.point.trackIndex)
+                state.tracks[t].pencilHover(state)
         }
         return true
     }
     else
     {
-        for (let t = 0; t < data.state.tracks.length; t++)
+        for (let t = 0; t < state.tracks.length; t++)
         {
-            if (t == data.state.mouse.point.trackIndex)
-                data.state.tracks[t].hover(data)
+            if (t == state.mouse.point.trackIndex)
+                state.tracks[t].hover(state)
         }
     }
 
-    if (data.state.hover && hoverPrev)
+    if (state.hover && hoverPrev)
     {
-        if (data.state.hover.id != hoverPrev.id ||
-            data.state.hover.action != hoverPrev.action)
+        if (state.hover.id != hoverPrev.id ||
+            state.hover.action != hoverPrev.action)
             return true
     }
-    else if ((!data.state.hover && hoverPrev) || (data.state.hover && !hoverPrev))
+    else if ((!state.hover && hoverPrev) || (state.hover && !hoverPrev))
         return true
 
     return false

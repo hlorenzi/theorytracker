@@ -152,7 +152,7 @@ export function Button(props: PopupButtonProps)
 
         <div style={{
             border: "0px",
-            padding: "0.5em 0.5em 0.5em 0.5em",
+            padding: !props.children ? "0.5em 1em 0.5em 0.5em" : "0.5em 0.5em 0.5em 0.5em",
 
             textAlign: "right",
             fontFamily: "inherit",

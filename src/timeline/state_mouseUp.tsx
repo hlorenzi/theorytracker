@@ -8,28 +8,28 @@ import * as Windows from "../windows"
 import Rect from "../util/rect"
 
 
-export function mouseUp(data: Timeline.WorkData)
+export function mouseUp(state: Timeline.State)
 {
-    if (!data.state.mouse.down)
+    if (!state.mouse.down)
         return
 
-    data.state.mouse.down = false
+    state.mouse.down = false
     
-    if (data.state.mouse.action == Timeline.MouseAction.DragTrackHeader)
+    if (state.mouse.action == Timeline.MouseAction.DragTrackHeader)
     {
-        handleTrackDragRelease(data)
+        handleTrackDragRelease(state)
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.Pencil)
+    else if (state.mouse.action == Timeline.MouseAction.Pencil)
     {
-        for (let t = 0; t < data.state.tracks.length; t++)
-            data.state.tracks[t].pencilComplete(data)
+        for (let t = 0; t < state.tracks.length; t++)
+            state.tracks[t].pencilComplete(state)
     }
-    else if (data.state.mouse.action == Timeline.MouseAction.Pan)
+    else if (state.mouse.action == Timeline.MouseAction.Pan)
     {
-        handleContextMenu(data)
+        handleContextMenu(state)
     }
 
-    Timeline.selectionRemoveConflictingBehind(data)
+    Timeline.selectionRemoveConflictingBehind(state)
 
     Project.global.project = Project.withRefreshedRange(Project.global.project)
     Project.global.project = Project.global.project
@@ -38,21 +38,21 @@ export function mouseUp(data: Timeline.WorkData)
 }
 
 
-function handleTrackDragRelease(data: Timeline.WorkData)
+function handleTrackDragRelease(state: Timeline.State)
 {
-    if (data.state.drag.trackInsertionBefore < 0)
+    if (state.drag.trackInsertionBefore < 0)
         return
 
-    if (data.state.drag.trackInsertionBefore < data.state.tracks.length &&
-        data.state.selection.has(data.state.tracks[data.state.drag.trackInsertionBefore].projectTrackId))
+    if (state.drag.trackInsertionBefore < state.tracks.length &&
+        state.selection.has(state.tracks[state.drag.trackInsertionBefore].projectTrackId))
         return
 
     let project = Project.global.project
 
     const selectedProjectTracks: Project.Track[] = []
-    for (const track of data.state.tracks)
+    for (const track of state.tracks)
     {
-        if (data.state.selection.has(track.projectTrackId) &&
+        if (state.selection.has(track.projectTrackId) &&
             !selectedProjectTracks.find(tr => tr.id == track.projectTrackId))
         {
             const projTrack = project.tracks.find(tr => tr.id == track.projectTrackId)
@@ -65,9 +65,9 @@ function handleTrackDragRelease(data: Timeline.WorkData)
         project = Project.upsertTrack(project, track, true)
 
     let beforeProjectTrackIndex = project.tracks.length
-    if (data.state.drag.trackInsertionBefore < data.state.tracks.length)
+    if (state.drag.trackInsertionBefore < state.tracks.length)
     {
-        const trackId = data.state.tracks[data.state.drag.trackInsertionBefore].projectTrackId
+        const trackId = state.tracks[state.drag.trackInsertionBefore].projectTrackId
         beforeProjectTrackIndex = project.tracks.findIndex(tr => tr.id == trackId)
     }
 
@@ -79,25 +79,25 @@ function handleTrackDragRelease(data: Timeline.WorkData)
 }
 
 
-function handleContextMenu(data: Timeline.WorkData)
+function handleContextMenu(state: Timeline.State)
 {
-    if (!data.state.hover)
+    if (!state.hover)
         return
 
-    if (!data.state.drag.xLocked || !data.state.drag.yLocked)
+    if (!state.drag.xLocked || !state.drag.yLocked)
         return
 
-    Timeline.selectionToggleHover(data, data.state.hover, false)
+    Timeline.selectionToggleHover(state, state.hover, false)
 
-    if (data.state.hover)
+    if (state.hover)
     {
-        const clickDurationMs = (new Date().getTime()) - data.state.mouse.downDate.getTime()
+        const clickDurationMs = (new Date().getTime()) - state.mouse.downDate.getTime()
 
         const fnOpenProperties = () =>
         {
             Dockable.createFloatingEphemeral(
                 Windows.Inspector,
-                { elemIds: [...data.state.selection] },
+                { elemIds: [...state.selection] },
                 1, 1)
         }
 
@@ -107,25 +107,18 @@ function handleContextMenu(data: Timeline.WorkData)
         }
         else
         {
-            Popup.global.elem = () =>
+            Popup.showAtMouse(() =>
             {
                 return <Popup.Root>
-                    { makeContextMenu(data, fnOpenProperties) }
+                    { makeContextMenu(state, fnOpenProperties) }
                 </Popup.Root>
-            }
-
-            Popup.global.rect = new Rect(
-                data.state.renderRect.x + data.state.mouse.point.pos.x + 2,
-                data.state.renderRect.y + data.state.mouse.point.pos.y + 2,
-                0, 0)
-
-            Popup.notifyObservers()
+            })
         }
     }
 }
 
 
-function makeContextMenu(data: Timeline.WorkData, fnOpenProperties: () => void): JSX.Element[]
+function makeContextMenu(state: Timeline.State, fnOpenProperties: () => void): JSX.Element[]
 {
     const menuItems: JSX.Element[] = []
 
@@ -137,7 +130,7 @@ function makeContextMenu(data: Timeline.WorkData, fnOpenProperties: () => void):
         label="Delete"
         onClick={ () =>
         {
-            Timeline.deleteElems(data, data.state.selection)
+            Timeline.deleteElems(state, state.selection)
             Timeline.sendEventRefresh()
             Project.splitUndoPoint()
             Project.addUndoPoint("menuDelete")
@@ -146,7 +139,7 @@ function makeContextMenu(data: Timeline.WorkData, fnOpenProperties: () => void):
 
     const hasElemType = (type: Project.Element["type"]) =>
     {
-        for (const id of data.state.selection)
+        for (const id of state.selection)
         {
             const elem = Project.global.project.elems.get(id)
             if (elem && elem.type === type)

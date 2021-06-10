@@ -8,168 +8,166 @@ import Range from "../util/range"
 import Rect from "../util/rect"
 
 
-export function render(data: Timeline.WorkData)
+export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
 {
-    data.ctx.save()
+    canvas.save()
     
-    data.ctx.fillStyle = Prefs.global.editor.bkgColor
-    data.ctx.fillRect(0, 0, data.state.renderRect.w, data.state.renderRect.h)
+    canvas.fillStyle = Prefs.global.editor.bkgColor
+    canvas.fillRect(0, 0, state.renderRect.w, state.renderRect.h)
 
-    const visibleRange = Timeline.visibleTimeRange(data)
+    const visibleRange = Timeline.visibleTimeRange(state)
 
-    const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
-    const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
-    const parentX1 = Timeline.xAtTime(data, Project.global.project.range.start)
-    const parentX2 = Timeline.xAtTime(data, Project.global.project.range.end)
+    const visibleX1 = Timeline.xAtTime(state, visibleRange.start)
+    const visibleX2 = Timeline.xAtTime(state, visibleRange.end)
+    const parentX1 = Timeline.xAtTime(state, Project.global.project.range.start)
+    const parentX2 = Timeline.xAtTime(state, Project.global.project.range.end)
 
-    data.ctx.fillStyle = Prefs.global.editor.bkgVoidColor
-    data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, data.state.renderRect.h)
-    data.ctx.fillRect(parentX2, 0, visibleX2 - parentX2, data.state.renderRect.h)
+    canvas.fillStyle = Prefs.global.editor.bkgVoidColor
+    canvas.fillRect(visibleX1, 0, parentX1 - visibleX1, state.renderRect.h)
+    canvas.fillRect(parentX2, 0, visibleX2 - parentX2, state.renderRect.h)
     
-    data.ctx.save()
-    data.ctx.beginPath()
-    data.ctx.rect(
-        data.state.trackHeaderW,
+    canvas.save()
+    canvas.beginPath()
+    canvas.rect(
+        state.trackHeaderW,
         0,
-        data.state.renderRect.w - data.state.trackHeaderW,
-        data.state.renderRect.h)
-    data.ctx.clip()
+        state.renderRect.w - state.trackHeaderW,
+        state.renderRect.h)
+    canvas.clip()
 
-    renderCursorHighlight(data)
-    renderBackgroundMeasures(data)
+    renderCursorHighlight(state, canvas)
+    renderBackgroundMeasures(state, canvas)
 
-    data.ctx.restore()
+    canvas.restore()
     
-    let y = -data.state.trackScroll
-    for (let t = 0; t < data.state.tracks.length; t++)
+    let y = -state.trackScroll
+    for (let t = 0; t < state.tracks.length; t++)
     {
-        const y2 = y + data.state.tracks[t].renderRect.h
+        const y2 = y + state.tracks[t].renderRect.h
 
-        if (y >= data.state.renderRect.h ||
-            y + data.state.tracks[t].renderRect.h <= 0)
+        if (y >= state.renderRect.h ||
+            y + state.tracks[t].renderRect.h <= 0)
         {
             y = y2
             continue
         }
 
-        data.ctx.save()
-        data.ctx.translate(0, y)
+        canvas.save()
+        canvas.translate(0, y)
 
-        const hover = !!data.state.hover && data.state.hover.id == data.state.tracks[t].projectTrackId
-        const selected = data.state.selection.has(data.state.tracks[t].projectTrackId)
+        const hover = !!state.hover && state.hover.id == state.tracks[t].projectTrackId
+        const selected = state.selection.has(state.tracks[t].projectTrackId)
 
-        data.ctx.fillStyle = "#000"
-        data.ctx.strokeStyle = "transparent"
+        canvas.fillStyle = "#000"
+        canvas.strokeStyle = "transparent"
         if (selected)
         {
-            data.ctx.fillStyle = "#222"
-            data.ctx.strokeStyle = "#fff"
+            canvas.fillStyle = "#222"
+            canvas.strokeStyle = "#fff"
         }
         else if (hover)
         {
-            data.ctx.fillStyle = "#000"
-            data.ctx.strokeStyle = "#888"
+            canvas.fillStyle = "#000"
+            canvas.strokeStyle = "#888"
         }
         
-        data.ctx.beginPath()
-        data.ctx.rect(
+        canvas.beginPath()
+        canvas.rect(
             0.5, 1.5,
-            data.state.trackHeaderW - 1,
-            data.state.tracks[t].renderRect.h - 2)
-        data.ctx.fill()
-        data.ctx.stroke()
+            state.trackHeaderW - 1,
+            state.tracks[t].renderRect.h - 2)
+        canvas.fill()
+        canvas.stroke()
 
-        renderTrackHeader(
-            data,
-            t)
+        renderTrackHeader(state, canvas, t)
         
-        data.ctx.beginPath()
-        data.ctx.rect(
-            data.state.trackHeaderW,
+        canvas.beginPath()
+        canvas.rect(
+            state.trackHeaderW,
             1,
-            data.state.renderRect.w - data.state.trackHeaderW,
-            data.state.tracks[t].renderRect.h - 1)
-        data.ctx.clip()
+            state.renderRect.w - state.trackHeaderW,
+            state.tracks[t].renderRect.h - 1)
+        canvas.clip()
 
-        //data.ctx.translate(0, -data.state.tracks[t].yScroll)
+        //canvas.translate(0, -state.tracks[t].yScroll)
 
         //Editor.renderRectCursorHighlight(state, ctx, t)
-        data.state.tracks[t].render(data)
+        state.tracks[t].render(state, canvas)
         //Editor.renderRectCursorContour(state, ctx, t)
 
-        data.ctx.restore()
+        canvas.restore()
 
         
-        data.ctx.strokeStyle = Prefs.global.editor.trackHBorderColor
-        data.ctx.beginPath()
-        data.ctx.moveTo(0, y + 0.5)
-        data.ctx.lineTo(data.state.renderRect.w, y + 0.5)
-        data.ctx.moveTo(0, y2 + 0.5)
-        data.ctx.lineTo(data.state.renderRect.w, y2 + 0.5)
-        data.ctx.stroke()
+        canvas.strokeStyle = Prefs.global.editor.trackHBorderColor
+        canvas.beginPath()
+        canvas.moveTo(0, y + 0.5)
+        canvas.lineTo(state.renderRect.w, y + 0.5)
+        canvas.moveTo(0, y2 + 0.5)
+        canvas.lineTo(state.renderRect.w, y2 + 0.5)
+        canvas.stroke()
 
         y = y2
     }
 
-    if (data.state.mouse.down &&
-        data.state.mouse.action == Timeline.MouseAction.DragTrackHeader &&
-        data.state.drag.trackInsertionBefore >= 0)
+    if (state.mouse.down &&
+        state.mouse.action == Timeline.MouseAction.DragTrackHeader &&
+        state.drag.trackInsertionBefore >= 0)
     {
-        data.ctx.save()
+        canvas.save()
 
         const y =
-            -data.state.trackScroll +
-                (data.state.tracks.length == 0 ? 0 :
-                data.state.drag.trackInsertionBefore >= data.state.tracks.length ?
-                    data.state.tracks[data.state.tracks.length - 1].renderRect.y2 :
-                data.state.tracks[data.state.drag.trackInsertionBefore].renderRect.y)
+            -state.trackScroll +
+                (state.tracks.length == 0 ? 0 :
+                state.drag.trackInsertionBefore >= state.tracks.length ?
+                    state.tracks[state.tracks.length - 1].renderRect.y2 :
+                state.tracks[state.drag.trackInsertionBefore].renderRect.y)
 
-        data.ctx.strokeStyle = Prefs.global.editor.selectionCursorColor
-        data.ctx.lineWidth = 3
-        data.ctx.beginPath()
-        data.ctx.moveTo(0, y + 0.5)
-        data.ctx.lineTo(data.state.renderRect.w, y + 0.5)
-        data.ctx.stroke()
+        canvas.strokeStyle = Prefs.global.editor.selectionCursorColor
+        canvas.lineWidth = 3
+        canvas.beginPath()
+        canvas.moveTo(0, y + 0.5)
+        canvas.lineTo(state.renderRect.w, y + 0.5)
+        canvas.stroke()
 
-        data.ctx.restore()
+        canvas.restore()
     }
     
-    data.ctx.save()
+    canvas.save()
 
-    data.ctx.beginPath()
-    data.ctx.rect(
-        data.state.trackHeaderW,
+    canvas.beginPath()
+    canvas.rect(
+        state.trackHeaderW,
         0,
-        data.state.renderRect.w - data.state.trackHeaderW,
-        data.state.renderRect.h)
-    data.ctx.clip()
+        state.renderRect.w - state.trackHeaderW,
+        state.renderRect.h)
+    canvas.clip()
 
-    if (data.state.cursor.visible)
+    if (state.cursor.visible)
     {
-        const timeMin = data.state.cursor.time1.min(data.state.cursor.time2)!
-        const timeMax = data.state.cursor.time1.max(data.state.cursor.time2)!
-        renderCursorBeam(data, timeMin, false)
-        renderCursorBeam(data, timeMax, true)
+        const timeMin = state.cursor.time1.min(state.cursor.time2)!
+        const timeMax = state.cursor.time1.max(state.cursor.time2)!
+        renderCursorBeam(state, canvas, timeMin, false)
+        renderCursorBeam(state, canvas, timeMax, true)
     }
     
     if (Playback.global.playing)
-        renderPlaybackBeam(data, Playback.global.playTime)
+        renderPlaybackBeam(state, canvas, Playback.global.playTime)
 
-    data.ctx.restore()
+    canvas.restore()
     
-    data.ctx.strokeStyle = Prefs.global.editor.trackVBorderColor
-    data.ctx.beginPath()
-    data.ctx.moveTo(data.state.trackHeaderW + 0.5, 0)
-    data.ctx.lineTo(data.state.trackHeaderW + 0.5, data.state.renderRect.h)
-    data.ctx.stroke()
+    canvas.strokeStyle = Prefs.global.editor.trackVBorderColor
+    canvas.beginPath()
+    canvas.moveTo(state.trackHeaderW + 0.5, 0)
+    canvas.lineTo(state.trackHeaderW + 0.5, state.renderRect.h)
+    canvas.stroke()
 
-    data.ctx.restore()
+    canvas.restore()
 }
 
 
-function renderBackgroundMeasures(data: Timeline.WorkData)
+function renderBackgroundMeasures(state: Timeline.State, canvas: CanvasRenderingContext2D)
 {
-    const visibleRange = Timeline.visibleTimeRange(data)
+    const visibleRange = Timeline.visibleTimeRange(state)
     
     const meterChangeTrackId = Project.meterChangeTrackId(Project.global.project)
     const meterChangeList = Project.global.project.lists.get(meterChangeTrackId)!
@@ -208,12 +206,12 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
             }
         }
         
-        const meterCh1X = 0.5 + Math.floor(Timeline.xAtTime(data, timeMin!))
-        const meterCh2X = 0.5 + Math.floor(Timeline.xAtTime(data, timeMax))
+        const meterCh1X = 0.5 + Math.floor(Timeline.xAtTime(state, timeMin!))
+        const meterCh2X = 0.5 + Math.floor(Timeline.xAtTime(state, timeMax))
 
-        data.ctx.strokeStyle = Prefs.global.editor.meterChangeColor
-        data.ctx.lineCap = "square"
-        data.ctx.lineWidth = 1
+        canvas.strokeStyle = Prefs.global.editor.meterChangeColor
+        canvas.lineCap = "square"
+        canvas.lineWidth = 1
         
         for (const [measureN, measureD, time1, time2] of meterCh1.meter.iterMeasuresPairwise(timeMin))
         {
@@ -225,29 +223,29 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
             if (time1.compare(timeMax) > 0 || time1.compare(visibleRange.end) > 0)
                 break
 
-            const measureX1 = 0.5 + Math.floor(Timeline.xAtTime(data, time1))
-            const measureX2 = 0.5 + Math.floor(Timeline.xAtTime(data, time2))
+            const measureX1 = 0.5 + Math.floor(Timeline.xAtTime(state, time1))
+            const measureX2 = 0.5 + Math.floor(Timeline.xAtTime(state, time2))
 
             if (true)//measureAlternate)
             {
                 const x1 = Math.min(meterCh2X, measureX1)
                 const x2 = Math.min(meterCh2X, measureX2)
                 
-                data.ctx.fillStyle = Prefs.global.editor.measureAlternateBkgColor
-                data.ctx.fillRect(x1, 0, x2 - x1, data.state.renderRect.h)
+                canvas.fillStyle = Prefs.global.editor.measureAlternateBkgColor
+                canvas.fillRect(x1, 0, x2 - x1, state.renderRect.h)
             }
 
             if (time1.compare(meterCh1.range.start) == 0)
-                data.ctx.strokeStyle = Prefs.global.editor.meterChangeColor
+                canvas.strokeStyle = Prefs.global.editor.meterChangeColor
             else
-                data.ctx.strokeStyle = Prefs.global.editor.measureColor
+                canvas.strokeStyle = Prefs.global.editor.measureColor
 
-            data.ctx.beginPath()
-            data.ctx.moveTo(measureX1, 0)
-            data.ctx.lineTo(measureX1, data.state.renderRect.h)
-            data.ctx.stroke()
+            canvas.beginPath()
+            canvas.moveTo(measureX1, 0)
+            canvas.lineTo(measureX1, state.renderRect.h)
+            canvas.stroke()
 
-            const halfSubmeasureSize = Timeline.xAtTime(data, new Rational(1, measureD * 2)) - Timeline.xAtTime(data, new Rational(0))
+            const halfSubmeasureSize = Timeline.xAtTime(state, new Rational(1, measureD * 2)) - Timeline.xAtTime(state, new Rational(0))
             if (halfSubmeasureSize > 16)
             {
                 let halfSubmeasureTime = time1.add(new Rational(-1, measureD * 2))
@@ -255,19 +253,19 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
                 {
                     halfSubmeasureTime = halfSubmeasureTime.add(new Rational(2, measureD * 2))
                     
-                    const halfSubmeasureX = 0.5 + Math.floor(Timeline.xAtTime(data, halfSubmeasureTime))
+                    const halfSubmeasureX = 0.5 + Math.floor(Timeline.xAtTime(state, halfSubmeasureTime))
                     if (halfSubmeasureX >= meterCh1X && halfSubmeasureX <= meterCh2X)
                     {
-                        data.ctx.strokeStyle = Prefs.global.editor.halfSubmeasureColor
-                        data.ctx.beginPath()
-                        data.ctx.moveTo(halfSubmeasureX, 0)
-                        data.ctx.lineTo(halfSubmeasureX, data.state.renderRect.h)
-                        data.ctx.stroke()
+                        canvas.strokeStyle = Prefs.global.editor.halfSubmeasureColor
+                        canvas.beginPath()
+                        canvas.moveTo(halfSubmeasureX, 0)
+                        canvas.lineTo(halfSubmeasureX, state.renderRect.h)
+                        canvas.stroke()
                     }
                 }
             }
             
-            const submeasureSize = Timeline.xAtTime(data, new Rational(1, measureD)) - Timeline.xAtTime(data, new Rational(0))
+            const submeasureSize = Timeline.xAtTime(state, new Rational(1, measureD)) - Timeline.xAtTime(state, new Rational(0))
             if (submeasureSize > 8)
             {
                 let submeasureTime = time1
@@ -275,14 +273,14 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
                 {
                     submeasureTime = submeasureTime.add(new Rational(1, measureD))
                     
-                    const submeasureX = 0.5 + Math.floor(Timeline.xAtTime(data, submeasureTime))
+                    const submeasureX = 0.5 + Math.floor(Timeline.xAtTime(state, submeasureTime))
                     if (submeasureX >= meterCh1X && submeasureX <= meterCh2X)
                     {
-                        data.ctx.strokeStyle = Prefs.global.editor.submeasureColor
-                        data.ctx.beginPath()
-                        data.ctx.moveTo(submeasureX, 0)
-                        data.ctx.lineTo(submeasureX, data.state.renderRect.h)
-                        data.ctx.stroke()
+                        canvas.strokeStyle = Prefs.global.editor.submeasureColor
+                        canvas.beginPath()
+                        canvas.moveTo(submeasureX, 0)
+                        canvas.lineTo(submeasureX, state.renderRect.h)
+                        canvas.stroke()
                     }
                 }
             }
@@ -295,107 +293,117 @@ function renderBackgroundMeasures(data: Timeline.WorkData)
     {
         for (const keyCh of keyChangeList.iterAtRange(visibleRange))
         {
-            const keyChX = 0.5 + Math.floor(Timeline.xAtTime(data, keyCh.range.start))
+            const keyChX = 0.5 + Math.floor(Timeline.xAtTime(state, keyCh.range.start))
             
-            data.ctx.strokeStyle = Prefs.global.editor.keyChangeColor
-            data.ctx.lineCap = "square"
-            data.ctx.lineWidth = 1
+            canvas.strokeStyle = Prefs.global.editor.keyChangeColor
+            canvas.lineCap = "square"
+            canvas.lineWidth = 1
             
-            data.ctx.beginPath()
-            data.ctx.moveTo(keyChX, 0)
-            data.ctx.lineTo(keyChX, data.state.renderRect.h)
-            data.ctx.stroke()
+            canvas.beginPath()
+            canvas.moveTo(keyChX, 0)
+            canvas.lineTo(keyChX, state.renderRect.h)
+            canvas.stroke()
         }
     }
 }
 	
 	
-function renderCursorHighlight(data: Timeline.WorkData)
+function renderCursorHighlight(state: Timeline.State, canvas: CanvasRenderingContext2D)
 {
-    if (!data.state.cursor.visible)
+    if (!state.cursor.visible)
         return
     
-    const timeMin = data.state.cursor.time1.min(data.state.cursor.time2)!
-    const timeMax = data.state.cursor.time1.max(data.state.cursor.time2)!
-    const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
-    const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const timeMin = state.cursor.time1.min(state.cursor.time2)!
+    const timeMax = state.cursor.time1.max(state.cursor.time2)!
+    const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
     
     if (trackMin < 0 || trackMax < 0 ||
-        trackMin >= data.state.tracks.length ||
-        trackMax >= data.state.tracks.length)
+        trackMin >= state.tracks.length ||
+        trackMax >= state.tracks.length)
         return
     
-        const y1 = 0.5 + Math.floor(Timeline.trackY(data, trackMin))
-    const y2 = 0.5 + Math.floor(Timeline.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
+        const y1 = 0.5 + Math.floor(Timeline.trackY(state, trackMin))
+    const y2 = 0.5 + Math.floor(Timeline.trackY(state, trackMax) + state.tracks[trackMax].renderRect.h)
     
-    const x1 = Timeline.xAtTime(data, timeMin)
-    const x2 = Timeline.xAtTime(data, timeMax)
+    const x1 = Timeline.xAtTime(state, timeMin)
+    const x2 = Timeline.xAtTime(state, timeMax)
     
-    data.ctx.fillStyle = Prefs.global.editor.selectionBkgColor
-    data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+    canvas.fillStyle = Prefs.global.editor.selectionBkgColor
+    canvas.fillRect(x1, y1, x2 - x1, y2 - y1)
 }
 
 
-function renderCursorBeam(data: Timeline.WorkData, time: Rational, tipOffsetSide: boolean)
+function renderCursorBeam(
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
+    time: Rational,
+    tipOffsetSide: boolean)
 {
-    const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
-    const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
     
     if (trackMin < 0 || trackMax < 0 ||
-        trackMin >= data.state.tracks.length ||
-        trackMax >= data.state.tracks.length)
+        trackMin >= state.tracks.length ||
+        trackMax >= state.tracks.length)
         return
     
-    const x = 0.5 + Math.floor(Timeline.xAtTime(data, time))
+    const x = 0.5 + Math.floor(Timeline.xAtTime(state, time))
     
-    data.ctx.strokeStyle = Prefs.global.editor.selectionCursorColor
-    data.ctx.fillStyle = Prefs.global.editor.selectionCursorColor
-    data.ctx.lineCap = "square"
-    data.ctx.lineWidth = 1
+    canvas.strokeStyle = Prefs.global.editor.selectionCursorColor
+    canvas.fillStyle = Prefs.global.editor.selectionCursorColor
+    canvas.lineCap = "square"
+    canvas.lineWidth = 1
     
     const headYSize = 7
     const headXSize = headYSize * (tipOffsetSide ? -1 : 1)
 
-    const y1 = 0.5 + Math.floor(Timeline.trackY(data, trackMin))
-    const y2 = 0.5 + Math.floor(Timeline.trackY(data, trackMax) + data.state.tracks[trackMax].renderRect.h)
+    const y1 = 0.5 + Math.floor(Timeline.trackY(state, trackMin))
+    const y2 = 0.5 + Math.floor(Timeline.trackY(state, trackMax) + state.tracks[trackMax].renderRect.h)
     
-    data.ctx.beginPath()
-    data.ctx.moveTo(x,             y1 + headYSize)
-    data.ctx.lineTo(x + headXSize, y1)
-    data.ctx.lineTo(x,             y1)
-    data.ctx.fill()
+    canvas.beginPath()
+    canvas.moveTo(x,             y1 + headYSize)
+    canvas.lineTo(x + headXSize, y1)
+    canvas.lineTo(x,             y1)
+    canvas.fill()
 
-    data.ctx.beginPath()
-    data.ctx.moveTo(x,             y2 - headYSize)
-    data.ctx.lineTo(x + headXSize, y2)
-    data.ctx.lineTo(x,             y2)
-    data.ctx.fill()
+    canvas.beginPath()
+    canvas.moveTo(x,             y2 - headYSize)
+    canvas.lineTo(x + headXSize, y2)
+    canvas.lineTo(x,             y2)
+    canvas.fill()
 
-    data.ctx.beginPath()
-    data.ctx.moveTo(x, y1)
-    data.ctx.lineTo(x, y2)
-    data.ctx.stroke()
+    canvas.beginPath()
+    canvas.moveTo(x, y1)
+    canvas.lineTo(x, y2)
+    canvas.stroke()
 }
 	
 	
-function renderPlaybackBeam(data: Timeline.WorkData, time: Rational)
+function renderPlaybackBeam(
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
+    time: Rational)
 {
-    const x = 0.5 + Math.floor(Timeline.xAtTime(data, time))
+    const x = 0.5 + Math.floor(Timeline.xAtTime(state, time))
     
-    data.ctx.strokeStyle = Prefs.global.editor.playbackCursorColor
-    data.ctx.lineCap = "square"
-    data.ctx.lineWidth = 1
+    canvas.strokeStyle = Prefs.global.editor.playbackCursorColor
+    canvas.lineCap = "square"
+    canvas.lineWidth = 1
     
-    data.ctx.beginPath()
-    data.ctx.lineTo(x, 0)
-    data.ctx.lineTo(x, data.state.renderRect.h)
-    data.ctx.stroke()
+    canvas.beginPath()
+    canvas.lineTo(x, 0)
+    canvas.lineTo(x, state.renderRect.h)
+    canvas.stroke()
 }
 
 
-function renderTrackHeader(data: Timeline.WorkData, trackIndex: number)
+function renderTrackHeader(
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
+    trackIndex: number)
 {
-    const track = data.state.tracks[trackIndex]
+    const track = state.tracks[trackIndex]
     const projTrack = Project.getElem(Project.global.project, track.projectTrackId, "track")
     if (!projTrack)
         return
@@ -407,64 +415,65 @@ function renderTrackHeader(data: Timeline.WorkData, trackIndex: number)
         (projTrack.trackType == "notes" ||
         projTrack.trackType == "chords"))
     {
-        data.ctx.fillStyle = "#fff"
-        data.ctx.textAlign = "left"
-        data.ctx.textBaseline = "top"
-        data.ctx.font = "10px system-ui"
+        canvas.fillStyle = "#fff"
+        canvas.textAlign = "left"
+        canvas.textBaseline = "top"
+        canvas.font = "10px system-ui"
     
         const displayName = Project.trackDisplayName(projTrack)
-        data.ctx.fillText(displayName, 10, 8, data.state.trackHeaderW - 20)
+        canvas.fillText(displayName, 10, 8, state.trackHeaderW - 20)
 
-        renderControlDial(data, 0,
+        renderControlDial(state, canvas, 0,
             (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + " dB",
             projTrack.volumeDb, Project.MinVolumeDb, Project.MaxVolumeDb)
 
-        renderControlIcon(data, 7, "🔇", projTrack.mute)
-        renderControlIcon(data, 8, "🎚️", projTrack.solo)
+        renderControlIcon(state, canvas, 7, "🔇", projTrack.mute)
+        renderControlIcon(state, canvas, 8, "🎚️", projTrack.solo)
     }
     else
     {
-        data.ctx.fillStyle = "#fff"
-        data.ctx.textAlign = "left"
-        data.ctx.textBaseline = "top"
-        data.ctx.font = "14px system-ui"
+        canvas.fillStyle = "#fff"
+        canvas.textAlign = "left"
+        canvas.textBaseline = "top"
+        canvas.font = "14px system-ui"
     
-        data.ctx.fillText(track.name, 10, 8, data.state.trackHeaderW - 20)
+        canvas.fillText(track.name, 10, 8, state.trackHeaderW - 20)
     }    
 }
 
 
 function renderControlDial(
-    data: Timeline.WorkData,
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
     xSlot: number,
     labelFn: (value: number) => string,
     value: number,
     minValue: number,
     maxValue: number)
 {
-    const x = data.state.trackControlX + data.state.trackControlSize * xSlot
-    const y = data.state.trackControlY
-    const size = data.state.trackControlSize
+    const x = state.trackControlX + state.trackControlSize * xSlot
+    const y = state.trackControlY
+    const size = state.trackControlSize
 
     const factor = (value - minValue) / (maxValue - minValue)
 
-    data.ctx.fillStyle = "#888"
-    data.ctx.fillRect(
+    canvas.fillStyle = "#888"
+    canvas.fillRect(
         x, y,
         5, size)
     
-    data.ctx.fillStyle = "#0f0"
-    data.ctx.fillRect(
+    canvas.fillStyle = "#0f0"
+    canvas.fillRect(
         x, y + size - factor * size,
         5, factor * size)
 
-    data.ctx.fillStyle = "#fff"
-    data.ctx.textAlign = "left"
-    data.ctx.textBaseline = "middle"
-    data.ctx.font = (size * 0.5) + "px system-ui"
+    canvas.fillStyle = "#fff"
+    canvas.textAlign = "left"
+    canvas.textBaseline = "middle"
+    canvas.font = (size * 0.5) + "px system-ui"
 
-    //data.ctx.fillText(label, x + 5 + (size - 5) / 2, y + (size / 4))
-    data.ctx.fillText(
+    //canvas.fillText(label, x + 5 + (size - 5) / 2, y + (size / 4))
+    canvas.fillText(
         labelFn(value),
         x + 10,
         y + (size / 2),
@@ -473,19 +482,20 @@ function renderControlDial(
 
 
 function renderControlIcon(
-    data: Timeline.WorkData,
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
     xSlot: number,
     icon: string,
     enabled: boolean)
 {
-    const x = data.state.trackControlX + data.state.trackControlSize * xSlot
-    const y = data.state.trackControlY
-    const size = data.state.trackControlSize
+    const x = state.trackControlX + state.trackControlSize * xSlot
+    const y = state.trackControlY
+    const size = state.trackControlSize
 
-    data.ctx.fillStyle = enabled ? "#fff" : "#fff4"
-    data.ctx.textAlign = "center"
-    data.ctx.textBaseline = "middle"
-    data.ctx.font = (size * 0.8) + "px system-ui"
+    canvas.fillStyle = enabled ? "#fff" : "#fff4"
+    canvas.textAlign = "center"
+    canvas.textBaseline = "middle"
+    canvas.font = (size * 0.8) + "px system-ui"
 
-    data.ctx.fillText(icon, x + size / 2, y + size / 2)
+    canvas.fillText(icon, x + size / 2, y + size / 2)
 }

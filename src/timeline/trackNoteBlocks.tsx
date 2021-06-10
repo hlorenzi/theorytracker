@@ -30,7 +30,7 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
 
 
     *iterNoteBlocksAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<Project.NoteBlock, void, void>
     {
@@ -44,7 +44,7 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
 
 
     *iterNotesAtNoteBlock(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         noteBlock: Project.NoteBlock,
         range: Range)
         : Generator<Project.Note, void, void>
@@ -59,68 +59,68 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
 
 
     *elemsAtRegion(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const note of this.iterNoteBlocksAtRange(data, range))
+        for (const note of this.iterNoteBlocksAtRange(state, range))
             yield note.id
     }
 	
 	
-	hover(data: Timeline.WorkData)
+	hover(state: Timeline.State)
 	{
-        this.hoverBlockElements(data, (range) => this.iterNoteBlocksAtRange(data, range))
+        this.hoverBlockElements(state, (range) => this.iterNoteBlocksAtRange(state, range))
     }
 
 
-    doubleClick(data: Timeline.WorkData, elemId: Project.ID)
+    doubleClick(state: Timeline.State, elemId: Project.ID)
     {
         const elem = Project.global.project.elems.get(elemId)
         if (!elem || elem.type != "noteBlock")
             return
         
-        Timeline.modeStackPush(data)
-        data.state.mode = Timeline.Mode.NoteBlock
-        data.state.modeNoteBlockId = elemId
-        Timeline.refreshTracks(data)
+        Timeline.modeStackPush(state)
+        state.mode = Timeline.Mode.NoteBlock
+        state.modeNoteBlockId = elemId
+        Timeline.refreshTracks(state)
     }
 
 
-    pencilClear(data: Timeline.WorkData)
+    pencilClear(state: Timeline.State)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Timeline.WorkData)
+    pencilHover(state: Timeline.State)
     {
-        const time = data.state.mouse.point.time
+        const time = state.mouse.point.time
 
         this.pencil =
         {
             time1: time,
-            time2: time.add(data.state.timeSnap.multiply(new Rational(4))),
+            time2: time.add(state.timeSnap.multiply(new Rational(4))),
         }
     }
 
 
-    pencilDrag(data: Timeline.WorkData)
+    pencilDrag(state: Timeline.State)
     {
 		if (this.pencil)
 		{
-            this.pencil.time2 = data.state.mouse.point.time
+            this.pencil.time2 = state.mouse.point.time
             
-            const time1X = Timeline.xAtTime(data, this.pencil.time1)
-            const time2X = Timeline.xAtTime(data, this.pencil.time2)
+            const time1X = Timeline.xAtTime(state, this.pencil.time1)
+            const time2X = Timeline.xAtTime(state, this.pencil.time2)
 			if (Math.abs(time1X - time2X) < 5)
-                this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
+                this.pencil.time2 = this.pencil.time1.add(state.timeSnap.multiply(new Rational(4)))
         }
     }
 	
 	
-	pencilComplete(data: Timeline.WorkData)
+	pencilComplete(state: Timeline.State)
 	{
 		if (this.pencil)
 		{
@@ -131,66 +131,67 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
             let project = Project.global.project
             const id = project.nextId
             Project.global.project = Project.upsertElement(project, elem)
-            Timeline.selectionAdd(data, id)
+            Timeline.selectionAdd(state, id)
 		}
 	}
 
 
-    render(data: Timeline.WorkData)
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
-        const visibleRange = Timeline.visibleTimeRange(data)
+        const visibleRange = Timeline.visibleTimeRange(state)
 
         for (let layer = 0; layer < 2; layer++)
         {
-            for (const noteBlock of this.iterNoteBlocksAtRange(data, visibleRange))
+            for (const noteBlock of this.iterNoteBlocksAtRange(state, visibleRange))
             {
-                const selected = data.state.selection.contains(noteBlock.id)
+                const selected = state.selection.contains(noteBlock.id)
                 if ((layer == 0) == selected)
                     continue
                 
-                const hovering = !!data.state.hover && data.state.hover.id == noteBlock.id
+                const hovering = !!state.hover && state.hover.id == noteBlock.id
                 const playing = Playback.global.playing && noteBlock.range.overlapsPoint(Playback.global.playTime)
                 
                 this.renderNoteBlock(
-                    data, noteBlock.range,
-                    this.iterNotesAtNoteBlock(data, noteBlock, visibleRange.displace(noteBlock.range.start.negate())),
+                    state, canvas, noteBlock.range,
+                    this.iterNotesAtNoteBlock(state, noteBlock, visibleRange.displace(noteBlock.range.start.negate())),
                     hovering, selected, playing)
             }
         }
 
         if (this.pencil)
         {
-            data.ctx.save()
-            data.ctx.globalAlpha = 0.4
+            canvas.save()
+            canvas.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-            this.renderNoteBlock(data, range, null, false, false, false)
+            this.renderNoteBlock(state, canvas, range, null, false, false, false)
             
-            data.ctx.restore()
+            canvas.restore()
         }
     }
 
 
     renderNoteBlock(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         range: Range,
         notes: Generator<Project.Note, void, void> | null,
         hovering: boolean,
         selected: boolean,
         playing: boolean)
     {
-        const x1 = Math.floor(Timeline.xAtTime(data, range.start)) + 0.5
-        const x2 = Math.floor(Timeline.xAtTime(data, range.end)) + 0.5 - 1
+        const x1 = Math.floor(Timeline.xAtTime(state, range.start)) + 0.5
+        const x2 = Math.floor(Timeline.xAtTime(state, range.end)) + 0.5 - 1
 
         const y1 = 1.5
         const y2 = this.renderRect.h - 0.5
 
-		data.ctx.fillStyle = (selected || playing) ? "#222" : "#000"
-        data.ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+		canvas.fillStyle = (selected || playing) ? "#222" : "#000"
+        canvas.fillRect(x1, y1, x2 - x1, y2 - y1)
 
         if (notes)
         {
-            data.ctx.fillStyle = "#fff"
+            canvas.fillStyle = "#fff"
             for (const note of notes)
             {
                 const noteH = 2
@@ -202,16 +203,16 @@ export class TimelineTrackNoteBlocks extends Timeline.TimelineTrack
                 const noteY2 = noteY + noteH / 2
 
                 const noteX1 = Math.max(x1, Math.min(x2,
-                    Timeline.xAtTime(data, noteRange.start) + 0.5))
+                    Timeline.xAtTime(state, noteRange.start) + 0.5))
 
                 const noteX2 = Math.max(x1, Math.min(x2,
-                    Timeline.xAtTime(data, noteRange.end) + 0.5))
+                    Timeline.xAtTime(state, noteRange.end) + 0.5))
         
-                data.ctx.fillRect(noteX1, noteY1, noteX2 - noteX1, noteY2 - noteY1)
+                canvas.fillRect(noteX1, noteY1, noteX2 - noteX1, noteY2 - noteY1)
             }
         }
 		
-        data.ctx.strokeStyle = (selected || playing) ? "#fff" : hovering ? "#888" : "#444"
-        data.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)
+        canvas.strokeStyle = (selected || playing) ? "#fff" : hovering ? "#888" : "#444"
+        canvas.strokeRect(x1, y1, x2 - x1, y2 - y1)
     }
 }

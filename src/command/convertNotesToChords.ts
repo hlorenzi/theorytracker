@@ -22,13 +22,7 @@ export const convertNotesToChords: Command.Command =
         if (!timelineState)
             return
 
-        const data: Timeline.WorkData =
-        {
-            state: timelineState.ref.current,
-            ctx: null!,
-            activeWindow: true,
-        }
-
+        const state = timelineState.ref.current
         const elemIds = timelineState.ref.current.selection
 
         const elems: Project.Note[] = []
@@ -58,9 +52,9 @@ export const convertNotesToChords: Command.Command =
 
         const trackId = Project.global.project.chordTrackId
         
-        Timeline.selectionClear(data)
+        Timeline.selectionClear(state)
 
-        const groups = calculateGroups(data, elems)
+        const groups = calculateGroups(elems)
         let chordsToAdd: ChordToAdd[] = []
         for (const group of groups)
         {
@@ -88,13 +82,13 @@ export const convertNotesToChords: Command.Command =
             const id = Project.global.project.nextId
             Project.global.project = Project.upsertElement(Project.global.project, projChord)
 
-            Timeline.selectionAdd(data, id)
+            Timeline.selectionAdd(state, id)
         }
 
         Project.global.project = Project.withRefreshedRange(Project.global.project)
 
-        data.state.cursor.visible = false
-        Timeline.selectionRemoveConflictingBehind(data)
+        state.cursor.visible = false
+        Timeline.selectionRemoveConflictingBehind(state)
         Timeline.sendEventRefresh()
         Project.splitUndoPoint()
         Project.addUndoPoint("menuConvertNotesToChords")
@@ -153,7 +147,7 @@ interface Group
 }
 
 
-function calculateGroups(data: Timeline.WorkData, elems: Project.Note[]): Group[]
+function calculateGroups(elems: Project.Note[]): Group[]
 {
     const minTime = elems.reduce<Rational | null>((accum, elem) =>
     {

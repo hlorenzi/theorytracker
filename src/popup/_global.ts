@@ -1,11 +1,15 @@
 import React from "react"
+import * as Dockable from "../dockable"
 import * as GlobalObservable from "../util/globalObservable"
 import Rect from "../util/rect"
 
 
+export type PopupElement = (() => JSX.Element) | null
+
+
 export interface Global
 {
-    elem: (() => JSX.Element) | null
+    elem: PopupElement
     rect: Rect
 }
 
@@ -32,6 +36,19 @@ export function useGlobal()
 export function notifyObservers()
 {
     globalObservable.notifyObservers()
+}
+
+
+export function showAtMouse(elem: PopupElement)
+{
+    global.elem = elem
+
+    global.rect = new Rect(
+        Dockable.mousePos.x + 2,
+        Dockable.mousePos.y + 2,
+        0, 0)
+
+    notifyObservers()
 }
 
 

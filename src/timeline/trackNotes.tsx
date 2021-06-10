@@ -34,14 +34,14 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     }
 
 
-    parentStart(data: Timeline.WorkData)
+    parentStart(state: Timeline.State)
     {
         const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range?.start ?? new Rational(0)
     }
 
 
-    parentRange(data: Timeline.WorkData)
+    parentRange(state: Timeline.State)
     {
         const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
@@ -49,7 +49,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
 
     *iterNotesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<Project.Note, void, void>
     {
@@ -57,13 +57,13 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         if (!list)
             return
 
-        for (const elem of list.iterAtRange(range.subtract(this.parentStart(data))))
+        for (const elem of list.iterAtRange(range.subtract(this.parentStart(state))))
             yield elem as Project.Note
     }
 
 
     *iterExternalNotesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<[Project.Note, Project.NoteBlock], void, void>
     {
@@ -110,39 +110,39 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
 
     *iterNotesAndKeyChangesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<[Project.Note, Project.KeyChange, number, number], void, void>
     {
-        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(state, range))
         {
             const time1 = keyCh1.range.start.max(range.start)!
             const time2 = keyCh2.range.start.min(range.end)!
             
-            for (const note of this.iterNotesAtRange(data, new Range(time1, time2)))
+            for (const note of this.iterNotesAtRange(state, new Range(time1, time2)))
                 yield [note, keyCh1, keyCh1X, keyCh2X]
         }
     }
 
 
     *iterExternalNotesAndKeyChangesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<[Project.Note, Project.NoteBlock, Project.KeyChange, number, number], void, void>
     {
-        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(state, range))
         {
             const time1 = keyCh1.range.start.max(range.start)!
             const time2 = keyCh2.range.start.min(range.end)!
             
-            for (const [note, noteBlock] of this.iterExternalNotesAtRange(data, new Range(time1, time2)))
+            for (const [note, noteBlock] of this.iterExternalNotesAtRange(state, new Range(time1, time2)))
                 yield [note, noteBlock, keyCh1, keyCh1X, keyCh2X]
         }
     }
 
 
     *iterChordsAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<Project.Chord, void, void>
     {
@@ -156,51 +156,51 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
 
     *iterChordsAndKeyChangesAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<[Project.Chord, Project.KeyChange, number, number], void, void>
     {
-        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(data, range))
+        for (const [keyCh1, keyCh2, keyCh1X, keyCh2X] of this.iterKeyChangePairsAtRange(state, range))
         {
             const time1 = keyCh1.range.start.max(range.start)!
             const time2 = keyCh2.range.start.min(range.end)!
             
-            for (const chord of this.iterChordsAtRange(data, new Range(time1, time2)))
+            for (const chord of this.iterChordsAtRange(state, new Range(time1, time2)))
                 yield [chord, keyCh1, keyCh1X, keyCh2X]
         }
     }
 
 
     *elemsAtRegion(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const note of this.iterNotesAtRange(data, range))
+        for (const note of this.iterNotesAtRange(state, range))
             yield note.id
     }
 	
 	
-	hover(data: Timeline.WorkData)
+	hover(state: Timeline.State)
 	{
-        const pos = data.state.mouse.point.trackPos
+        const pos = state.mouse.point.trackPos
 
         const margin = 10
-        const checkRange = Timeline.timeRangeAtX(data, pos.x - margin, pos.x + margin)
+        const checkRange = Timeline.timeRangeAtX(state, pos.x - margin, pos.x + margin)
 
         let hoverDrag = null
         let hoverStretch = null
 
-        const parentStart = this.parentStart(data)
+        const parentStart = this.parentStart(state)
         
-        for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, checkRange))
+        for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(state, checkRange))
         {
             const margin = 8
 
-            const row = this.rowForPitch(data, note.midiPitch, keyCh.key)
+            const row = this.rowForPitch(state, note.midiPitch, keyCh.key)
             const rect = this.rectForNote(
-                data, note.range.displace(parentStart),
+                state, note.range.displace(parentStart),
                 row, xMin, xMax, true)
 
             const rectDrag = rect
@@ -229,45 +229,45 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
             }
         }
 
-        data.state.hover = hoverDrag ?? hoverStretch
+        state.hover = hoverDrag ?? hoverStretch
     }
 
 
-    click(data: Timeline.WorkData, elemId: Project.ID)
+    click(state: Timeline.State, elemId: Project.ID)
     {
         const note = Project.getElem(Project.global.project, elemId, "note")
         if (note)
         {
-            data.state.insertion.nearMidiPitch = note.midiPitch
-            data.state.insertion.duration = note.range.duration
+            state.insertion.nearMidiPitch = note.midiPitch
+            state.insertion.duration = note.range.duration
             Playback.playNotePreview(this.projectTrackId, note.midiPitch, note.volumeDb, note.velocity)
         }
     }
 
 
-    pencilClear(data: Timeline.WorkData)
+    pencilClear(state: Timeline.State)
     {
         this.pencil = null
     }
 
 
-    pencilHover(data: Timeline.WorkData)
+    pencilHover(state: Timeline.State)
     {
-        const time = data.state.mouse.point.time
+        const time = state.mouse.point.time
         const key = Project.keyAt(Project.global.project, this.projectTrackId, time)
-        const row = this.rowAtY(data, data.state.mouse.point.trackPos.y)
-        const midiPitch = this.pitchForRow(data, row, key)
+        const row = this.rowAtY(state, state.mouse.point.trackPos.y)
+        const midiPitch = this.pitchForRow(state, row, key)
 
         this.pencil =
         {
-            time1: time.subtract(this.parentStart(data)),
-            time2: time.subtract(this.parentStart(data)).add(data.state.timeSnap.multiply(new Rational(4))),
+            time1: time.subtract(this.parentStart(state)),
+            time2: time.subtract(this.parentStart(state)).add(state.timeSnap.multiply(new Rational(4))),
             midiPitch,
         }
     }
 
 
-    pencilStart(data: Timeline.WorkData)
+    pencilStart(state: Timeline.State)
     {
 		if (this.pencil)
 		{
@@ -276,21 +276,21 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     }
 
 
-    pencilDrag(data: Timeline.WorkData)
+    pencilDrag(state: Timeline.State)
     {
 		if (this.pencil)
 		{
-            this.pencil.time2 = data.state.mouse.point.time.subtract(this.parentStart(data))
+            this.pencil.time2 = state.mouse.point.time.subtract(this.parentStart(state))
             
-            const time1X = Timeline.xAtTime(data, this.pencil.time1)
-            const time2X = Timeline.xAtTime(data, this.pencil.time2)
+            const time1X = Timeline.xAtTime(state, this.pencil.time1)
+            const time2X = Timeline.xAtTime(state, this.pencil.time2)
 			if (Math.abs(time1X - time2X) < 5)
-                this.pencil.time2 = this.pencil.time1.add(data.state.timeSnap.multiply(new Rational(4)))
+                this.pencil.time2 = this.pencil.time1.add(state.timeSnap.multiply(new Rational(4)))
         }
     }
 	
 	
-	pencilComplete(data: Timeline.WorkData)
+	pencilComplete(state: Timeline.State)
 	{
 		if (this.pencil)
 		{
@@ -304,31 +304,31 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
             let project = Project.global.project
             const id = project.nextId
             Project.global.project = Project.upsertElement(project, elem)
-            Timeline.selectionAdd(data, id)
+            Timeline.selectionAdd(state, id)
 		}
 	}
 
 
-	yForRow(data: Timeline.WorkData, row: number): number
+	yForRow(state: Timeline.State, row: number): number
 	{
-		return this.renderRect.h / 2 - (row + 1) * data.state.noteRowH - this.yScroll
+		return this.renderRect.h / 2 - (row + 1) * state.noteRowH - this.yScroll
 	}
 	
 	
-	rowAtY(data: Timeline.WorkData, y: number): number
+	rowAtY(state: Timeline.State, y: number): number
 	{
-        return -Math.floor((y + this.yScroll - this.renderRect.h / 2) / data.state.noteRowH) - 1
+        return -Math.floor((y + this.yScroll - this.renderRect.h / 2) / state.noteRowH) - 1
 	}
 	
 	
-	rowForPitch(data: Timeline.WorkData, pitch: number, key: Theory.Key): number
+	rowForPitch(state: Timeline.State, pitch: number, key: Theory.Key): number
 	{
 		const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(key.tonic.chroma)
 		return key.octavedDegreeForMidi(pitch - 60) + tonicRowOffset
 	}
 	
 	
-	pitchForRow(data: Timeline.WorkData, row: number, key: Theory.Key): number
+	pitchForRow(state: Timeline.State, row: number, key: Theory.Key): number
 	{
 		const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(key.tonic.chroma)
 		return key.midiForDegree(row - Math.floor(tonicRowOffset)) + 60
@@ -336,20 +336,20 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 	
 	
     rectForNote(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range,
         row: number, xStart: number, xEnd: number,
         clampY: boolean)
 	{
-		const noteOrigX1 = Timeline.xAtTime(data, range.start)
-		const noteOrigX2 = Timeline.xAtTime(data, range.end)
+		const noteOrigX1 = Timeline.xAtTime(state, range.start)
+		const noteOrigX2 = Timeline.xAtTime(state, range.end)
 		
-        let noteY = Math.floor(this.yForRow(data, row))
+        let noteY = Math.floor(this.yForRow(state, row))
         if (clampY)
         {
             noteY =
-                Math.max(-data.state.noteRowH / 2 + 0.5,
-                Math.min(this.renderRect.h - data.state.noteRowH / 2 - 0.5,
+                Math.max(-state.noteRowH / 2 + 0.5,
+                Math.min(this.renderRect.h - state.noteRowH / 2 - 0.5,
                 noteY))
         }
 		
@@ -368,75 +368,76 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 		const noteW = Math.max(2, noteX2 - noteX1)
 		
 		return Object.assign(
-            new Rect(noteX1, noteY, noteW, data.state.noteRowH),
+            new Rect(noteX1, noteY, noteW, state.noteRowH),
             { cutStart, cutEnd })
 	}
 
 
-    render(data: Timeline.WorkData)
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
-        const visibleRange = Timeline.visibleTimeRange(data)
-        const parentRange = this.parentRange(data)
+        const visibleRange = Timeline.visibleTimeRange(state)
+        const parentRange = this.parentRange(state)
         const parentStart = parentRange.start
 
-        const visibleX1 = Timeline.xAtTime(data, visibleRange.start)
-        const visibleX2 = Timeline.xAtTime(data, visibleRange.end)
-        const parentX1 = Timeline.xAtTime(data, parentRange.start)
-        const parentX2 = Timeline.xAtTime(data, parentRange.end)
+        const visibleX1 = Timeline.xAtTime(state, visibleRange.start)
+        const visibleX2 = Timeline.xAtTime(state, visibleRange.end)
+        const parentX1 = Timeline.xAtTime(state, parentRange.start)
+        const parentX2 = Timeline.xAtTime(state, parentRange.end)
 
-        data.ctx.fillStyle = "#0004"
-        data.ctx.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
-        data.ctx.fillRect(parentX2, 0, visibleX2 - parentX2, this.renderRect.h)
+        canvas.fillStyle = "#0004"
+        canvas.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
+        canvas.fillRect(parentX2, 0, visibleX2 - parentX2, this.renderRect.h)
         
-        const rowAtTop = this.rowAtY(data, 0)
-        const rowAtBottom = this.rowAtY(data, this.renderRect.h)
+        const rowAtTop = this.rowAtY(state, 0)
+        const rowAtBottom = this.rowAtY(state, this.renderRect.h)
 
         const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
         const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
 
-		for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(data, visibleRange))
+		for (const [chord, keyCh, xMin, xMax] of this.iterChordsAndKeyChangesAtRange(state, visibleRange))
 		{
             for (const midiPitch of chord.chord.pitches)
             {
                 const key = keyCh.key
-                const row = this.rowForPitch(data, midiPitch + 60, key)
+                const row = this.rowForPitch(state, midiPitch + 60, key)
                 const mode = key.scale.metadata!.mode
                 const fillStyle = CanvasUtils.fillStyleForDegree(
-                    data.ctx, key.degreeForMidi(midiPitch) + mode, true)
+                    canvas, key.degreeForMidi(midiPitch) + mode, true)
 
                 for (let i = octaveAtBottom; i <= octaveAtTop; i++)
                 {
                     this.renderChordNote(
-                        data, chord.range, row + i * 7, xMin, xMax, fillStyle)
+                        state, canvas, chord.range,
+                        row + i * 7, xMin, xMax, fillStyle)
                 }
             }
         }
         
-		for (const [keyCh1, keyCh2, xMin, xMax] of this.iterKeyChangePairsAtRange(data, visibleRange))
+		for (const [keyCh1, keyCh2, xMin, xMax] of this.iterKeyChangePairsAtRange(state, visibleRange))
 		{
 			const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(keyCh1.key.tonic.chroma)
 
 			for (let i = octaveAtBottom; i <= octaveAtTop; i++)
 			{
 				const y = 0.5 + Math.floor(
-                    this.yForRow(data, tonicRowOffset + i * 7) + data.state.noteRowH)
+                    this.yForRow(state, tonicRowOffset + i * 7) + state.noteRowH)
 				
-				data.ctx.strokeStyle = Prefs.global.editor.octaveDividerColor
-				data.ctx.beginPath()
-				data.ctx.moveTo(xMin, y)
-				data.ctx.lineTo(xMax, y)
-				data.ctx.stroke()
+				canvas.strokeStyle = Prefs.global.editor.octaveDividerColor
+				canvas.beginPath()
+				canvas.moveTo(xMin, y)
+				canvas.lineTo(xMax, y)
+				canvas.stroke()
 
 				for (let j = 1; j < 7; j += 1)
 				{
 					const ySuboctave = 0.5 + Math.floor(
-                        this.yForRow(data, tonicRowOffset + i * 7 + j) + data.state.noteRowH)
+                        this.yForRow(state, tonicRowOffset + i * 7 + j) + state.noteRowH)
 					
-					data.ctx.strokeStyle = Prefs.global.editor.noteRowAlternateBkgColor
-                    data.ctx.beginPath()
-                    data.ctx.moveTo(xMin, ySuboctave)
-                    data.ctx.lineTo(xMax, ySuboctave)
-                    data.ctx.stroke()
+					canvas.strokeStyle = Prefs.global.editor.noteRowAlternateBkgColor
+                    canvas.beginPath()
+                    canvas.moveTo(xMin, ySuboctave)
+                    canvas.lineTo(xMax, ySuboctave)
+                    canvas.stroke()
 				}
 				
 				/*if (i == 0)
@@ -449,65 +450,66 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 			}
         }
 
-        for (const [note, noteBlock, keyCh, xMin, xMax] of this.iterExternalNotesAndKeyChangesAtRange(data, visibleRange))
+        for (const [note, noteBlock, keyCh, xMin, xMax] of this.iterExternalNotesAndKeyChangesAtRange(state, visibleRange))
         {
             const key = keyCh.key
-            const row = this.rowForPitch(data, note.midiPitch, key)
+            const row = this.rowForPitch(state, note.midiPitch, key)
             const mode = key.scale.metadata!.mode
             const fillStyle = CanvasUtils.fillStyleForDegree(
-                data.ctx, key.degreeForMidi(note.midiPitch) + mode, true)
+                canvas, key.degreeForMidi(note.midiPitch) + mode, true)
 
             const playing = Playback.global.playing && note.range.displace(noteBlock.range.start).overlapsPoint(Playback.global.playTime)
 
             this.renderNote(
-                data, note.range, noteBlock.range.start, row, xMin, xMax, fillStyle,
+                state, canvas, note.range, noteBlock.range.start, row, xMin, xMax, fillStyle,
                 true, false, false, playing)
         }
 
         for (let layer = 0; layer < (Playback.global.playing ? 1 : 2); layer++)
         {
-            for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(data, visibleRange))
+            for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(state, visibleRange))
             {
-                const selected = data.state.selection.contains(note.id)
+                const selected = state.selection.contains(note.id)
                 if (!Playback.global.playing && (layer == 0) == selected)
                     continue
 
                 const key = keyCh.key
-                const row = this.rowForPitch(data, note.midiPitch, key)
+                const row = this.rowForPitch(state, note.midiPitch, key)
                 const mode = key.scale.metadata!.mode
                 const fillStyle = CanvasUtils.fillStyleForDegree(
-                    data.ctx, key.degreeForMidi(note.midiPitch) + mode, false)
+                    canvas, key.degreeForMidi(note.midiPitch) + mode, false)
 
-                const hovering = !!data.state.hover && data.state.hover.id == note.id
+                const hovering = !!state.hover && state.hover.id == note.id
                 const playing = Playback.global.playing && note.range.displace(parentStart).overlapsPoint(Playback.global.playTime)
                 
                 this.renderNote(
-                    data, note.range, parentStart, row, xMin, xMax, fillStyle,
+                    state, canvas, note.range, parentStart, row, xMin, xMax, fillStyle,
                     false, hovering, selected, playing)
             }
         }
 
         if (this.pencil)
         {
-            data.ctx.save()
-            data.ctx.globalAlpha = 0.4
+            canvas.save()
+            canvas.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-			const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1.add(this.parentStart(data)))
-			const row = this.rowForPitch(data, this.pencil.midiPitch, key)
+			const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1.add(this.parentStart(state)))
+			const row = this.rowForPitch(state, this.pencil.midiPitch, key)
 			const mode = key.scale.metadata!.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(
-                data.ctx, key.degreeForMidi(this.pencil.midiPitch) + mode, false)
+                canvas, key.degreeForMidi(this.pencil.midiPitch) + mode, false)
 
-			this.renderNote(data, range, parentStart, row, -Infinity, Infinity, fillStyle)
+			this.renderNote(state, canvas, range, parentStart, row, -Infinity, Infinity, fillStyle)
             
-            data.ctx.restore()
+            canvas.restore()
         }
     }
 	
 	
 	renderNote(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         range: Range,
         parentStart: Rational,
         row: number,
@@ -517,47 +519,48 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         hovering?: boolean, selected?: boolean, playing?: boolean)
 	{
 		const rect = this.rectForNote(
-            data, range.displace(parentStart),
+            state, range.displace(parentStart),
             row, xMin, xMax, true)
 		
-        data.ctx.fillStyle = fillStyle
+        canvas.fillStyle = fillStyle
 		
-		data.ctx.beginPath()
-        data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+		canvas.beginPath()
+        canvas.fillRect(rect.x, rect.y, rect.w, rect.h)
 		
 		if (hovering || playing)
 		{
-			data.ctx.globalAlpha = 0.4
-			data.ctx.fillStyle = external ? "#888" : "#fff"
-			data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
-			data.ctx.globalAlpha = 1
+			canvas.globalAlpha = 0.4
+			canvas.fillStyle = external ? "#888" : "#fff"
+			canvas.fillRect(rect.x, rect.y, rect.w, rect.h)
+			canvas.globalAlpha = 1
 		}
 		
 		if (selected || playing)
 		{
-			data.ctx.strokeStyle = external ? "#888" : "#fff"
-			data.ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1)
+			canvas.strokeStyle = external ? "#888" : "#fff"
+			canvas.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1)
 		}
 	}
 	
 	
 	renderChordNote(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         range: Range,
         row: number,
         xMin: number, xMax: number,
         fillStyle: any)
 	{
 		const rect = this.rectForNote(
-            data, range,
+            state, range,
             row, xMin, xMax, false)
 		
-        data.ctx.globalAlpha = 0.1
-        data.ctx.fillStyle = fillStyle
+        canvas.globalAlpha = 0.1
+        canvas.fillStyle = fillStyle
 		
-		data.ctx.beginPath()
-        data.ctx.fillRect(rect.x, rect.y, rect.w, rect.h)
+		canvas.beginPath()
+        canvas.fillRect(rect.x, rect.y, rect.w, rect.h)
 
-        data.ctx.globalAlpha = 1
+        canvas.globalAlpha = 1
 	}
 }

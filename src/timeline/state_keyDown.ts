@@ -7,34 +7,34 @@ import Range from "../util/range"
 import Rational from "../util/rational"
 
 	
-export function keyDown(data: Timeline.WorkData, key: string)
+export function keyDown(state: Timeline.State, activeWindow: boolean, key: string)
 {
-    data.state.keysDown.add(key)
+    state.keysDown.add(key)
 
     //console.log("keyDown", key, data.activeWindow)
 
-    if (!data.activeWindow)
+    if (!activeWindow)
         return
 
     switch (key)
     {
         case "escape":
         {
-            handleEscape(data)
+            handleEscape(state)
             Project.splitUndoPoint()
             break
         }
 
         case "enter":
         {
-            handleEnter(data)
+            handleEnter(state)
             Project.splitUndoPoint()
             break
         }
 
         case "delete":
         {
-            handleDelete(data)
+            handleDelete(state)
             Project.splitUndoPoint()
             Project.addUndoPoint("keyDown_delete")
             break
@@ -42,25 +42,25 @@ export function keyDown(data: Timeline.WorkData, key: string)
 
 		case "backspace":
         {
-            handleBackspace(data)
+            handleBackspace(state)
             Project.addUndoPoint("keyDown_backspace")
             break
         }
 
         case "c":
         {
-            if (data.state.keysDown.has("control"))
-                Timeline.selectionCopy(data)
+            if (state.keysDown.has("control"))
+                Timeline.selectionCopy(state)
 
             break
         }
 
         case "x":
         {
-            if (data.state.keysDown.has("control"))
+            if (state.keysDown.has("control"))
             {
-                Timeline.selectionCopy(data)
-                Timeline.deleteElems(data, data.state.selection)
+                Timeline.selectionCopy(state)
+                Timeline.deleteElems(state, state.selection)
                 Project.splitUndoPoint()
                 Project.addUndoPoint("cut")
             }
@@ -70,9 +70,9 @@ export function keyDown(data: Timeline.WorkData, key: string)
 
         case "v":
         {
-            if (data.state.keysDown.has("control"))
+            if (state.keysDown.has("control"))
             {
-                Timeline.paste(data)
+                Timeline.paste(state)
                 Project.splitUndoPoint()
                 Project.addUndoPoint("copy")
             }
@@ -83,7 +83,7 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "arrowright":
         case "arrowleft":
         {
-            handleLeftRight(data, key === "arrowleft")
+            handleLeftRight(state, key === "arrowleft")
             Project.addUndoPoint("keyDown_move")
             break
         }
@@ -91,7 +91,7 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "arrowup":
         case "arrowdown":
         {
-            handleUpDown(data, key === "arrowup", false)
+            handleUpDown(state, key === "arrowup", false)
             Project.addUndoPoint("keyDown_move")
             break
         }
@@ -101,7 +101,7 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case ",":
         case "<":
         {
-            handleUpDown(data, key === "." || key === ">", true)
+            handleUpDown(state, key === "." || key === ">", true)
             Project.addUndoPoint("keyDown_move")
             break
         }
@@ -115,7 +115,7 @@ export function keyDown(data: Timeline.WorkData, key: string)
         case "7":
         {
             const degree = key.charCodeAt(0) - "1".charCodeAt(0)
-            handleNumber(data, degree)
+            handleNumber(state, degree)
 
             Project.splitUndoPoint()
             Project.addUndoPoint("keyDown_insert")
@@ -124,32 +124,32 @@ export function keyDown(data: Timeline.WorkData, key: string)
 
         case "h":
         {
-            handleLengthChange(data, 0)
+            handleLengthChange(state, 0)
             break
         }
 
         case "j":
         {
-            handleLengthChange(data, 1)
+            handleLengthChange(state, 1)
             break
         }
 
         case "k":
         {
-            handleLengthChange(data, 2)
+            handleLengthChange(state, 2)
             break
         }
 
         case "l":
         {
-            handleLengthChange(data, 3)
+            handleLengthChange(state, 3)
             break
         }
 
         case ";":
         case ":":
         {
-            handleLengthChange(data, 4)
+            handleLengthChange(state, 4)
             break
         }
     }
@@ -157,12 +157,12 @@ export function keyDown(data: Timeline.WorkData, key: string)
 
 
 function modifySelectedElems(
-    data: Timeline.WorkData,
+    state: Timeline.State,
     func: (elem: Project.Element) => Project.Element)
 {
     let newProject = Project.global.project
 
-    for (const id of data.state.selection)
+    for (const id of state.selection)
     {
         const elem = Project.global.project.elems.get(id)
         if (!elem)
@@ -179,7 +179,7 @@ function modifySelectedElems(
 }
 
 
-function handleEscape(data: Timeline.WorkData)
+function handleEscape(state: Timeline.State)
 {
     if (Playback.global.playing)
     {
@@ -188,138 +188,138 @@ function handleEscape(data: Timeline.WorkData)
     }
     else
     {
-        Timeline.rewind(data)
+        Timeline.rewind(state)
     }
 }
 
 
-function handleEnter(data: Timeline.WorkData)
+function handleEnter(state: Timeline.State)
 {
-    if (data.state.cursor.visible && data.state.selection.size != 0)
+    if (state.cursor.visible && state.selection.size != 0)
     {
-        data.state.cursor.visible = false
+        state.cursor.visible = false
         return
     }
 
-    data.state.cursor.visible = true
+    state.cursor.visible = true
 
-    const range = Timeline.selectionRange(data)
+    const range = Timeline.selectionRange(state)
     if (range)
     {
-        let trackId = data.state.tracks[0].projectTrackId
-        for (const id of data.state.selection)
+        let trackId = state.tracks[0].projectTrackId
+        for (const id of state.selection)
         {
             trackId = Project.parentTrackFor(Project.global.project, id).id
         }
 
-        const trackIndex = data.state.tracks.findIndex(tr => tr.projectTrackId === trackId)
+        const trackIndex = state.tracks.findIndex(tr => tr.projectTrackId === trackId)
 
-        Timeline.cursorSetTime(data, range.end, range.end)
-        Timeline.cursorSetTrack(data, trackIndex, trackIndex)
-        Timeline.scrollTimeIntoView(data, range.end)
+        Timeline.cursorSetTime(state, range.end, range.end)
+        Timeline.cursorSetTrack(state, trackIndex, trackIndex)
+        Timeline.scrollTimeIntoView(state, range.end)
     }
 
-    Timeline.keyHandlePendingFinish(data)
-    Timeline.selectionClear(data)
+    Timeline.keyHandlePendingFinish(state)
+    Timeline.selectionClear(state)
 }
 
 
-function handleDelete(data: Timeline.WorkData)
+function handleDelete(state: Timeline.State)
 {
-    Timeline.deleteElems(data, data.state.selection)
+    Timeline.deleteElems(state, state.selection)
 }
 
 
-function handleBackspace(data: Timeline.WorkData)
+function handleBackspace(state: Timeline.State)
 {
-    if (!data.state.cursor.visible)
+    if (!state.cursor.visible)
     {
-        Timeline.deleteElems(data, data.state.selection)
+        Timeline.deleteElems(state, state.selection)
         return
     }
 
-    const track1 = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
-    const track2 = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const track1 = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const track2 = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
     
-    if (data.state.cursor.time1.compare(data.state.cursor.time2) == 0)
+    if (state.cursor.time1.compare(state.cursor.time2) == 0)
     {
-        const time = data.state.cursor.time1.min(data.state.cursor.time2)
-        const prevAnchor = Timeline.findPreviousAnchor(data, time, track1, track2)
+        const time = state.cursor.time1.min(state.cursor.time2)
+        const prevAnchor = Timeline.findPreviousAnchor(state, time, track1, track2)
         const range = new Range(prevAnchor, time, false, false)
-        Timeline.deleteRange(data, range, track1, track2)
+        Timeline.deleteRange(state, range, track1, track2)
 
-        data.state.cursor.visible = true
-        Timeline.cursorSetTime(data, prevAnchor, prevAnchor)
-        Timeline.scrollTimeIntoView(data, prevAnchor)
+        state.cursor.visible = true
+        Timeline.cursorSetTime(state, prevAnchor, prevAnchor)
+        Timeline.scrollTimeIntoView(state, prevAnchor)
     }
     else
     {
-        const time1 = data.state.cursor.time1.min(data.state.cursor.time2)
-        const time2 = data.state.cursor.time1.max(data.state.cursor.time2)
+        const time1 = state.cursor.time1.min(state.cursor.time2)
+        const time2 = state.cursor.time1.max(state.cursor.time2)
         const range = new Range(time1, time2, false, false)
-        Timeline.deleteRange(data, range, track1, track2)
+        Timeline.deleteRange(state, range, track1, track2)
 
-        data.state.cursor.visible = true
-        Timeline.cursorSetTime(data, time1, time1)
-        Timeline.scrollTimeIntoView(data, time1)
+        state.cursor.visible = true
+        Timeline.cursorSetTime(state, time1, time1)
+        Timeline.scrollTimeIntoView(state, time1)
     }
     
     Project.global.project = Project.withRefreshedRange(Project.global.project)
 }
 
 
-function handleLeftRight(data: Timeline.WorkData, isLeft: boolean)
+function handleLeftRight(state: Timeline.State, isLeft: boolean)
 {
-    const keyFast = data.state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
-    const keyCursor2 = data.state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
-    const keyStretch = data.state.keysDown.has(Prefs.global.editor.keyDisplaceStretch)
+    const keyFast = state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
+    const keyCursor2 = state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
+    const keyStretch = state.keysDown.has(Prefs.global.editor.keyDisplaceStretch)
 
 
     if (Playback.global.playing)
     {
-        const timeDelta = data.state.timeSnap.multiplyByFloat(
+        const timeDelta = state.timeSnap.multiplyByFloat(
             (keyFast ? 64 : 16) * (isLeft ? -1 : 1))
 
         Playback.setStartTime(Playback.global.playTime.add(timeDelta))
         Playback.setPlaying(true)
     }
-    else if (data.state.cursor.visible && (data.state.selection.size == 0 || keyCursor2))
+    else if (state.cursor.visible && (state.selection.size == 0 || keyCursor2))
     {
-        const timeDelta = data.state.timeSnap.multiplyByFloat(
+        const timeDelta = state.timeSnap.multiplyByFloat(
             (keyFast ? 16 : 1) * (isLeft ? -1 : 1))
 
-        Timeline.keyHandlePendingFinish(data)
+        Timeline.keyHandlePendingFinish(state)
 
         if (keyCursor2)
         {
-            const newTime = data.state.cursor.time2.add(timeDelta)
-            Timeline.cursorSetTime(data, null, newTime)
-            Timeline.selectionClear(data)
-            Timeline.selectionAddAtCursor(data)
-            Timeline.scrollTimeIntoView(data, newTime)
+            const newTime = state.cursor.time2.add(timeDelta)
+            Timeline.cursorSetTime(state, null, newTime)
+            Timeline.selectionClear(state)
+            Timeline.selectionAddAtCursor(state)
+            Timeline.scrollTimeIntoView(state, newTime)
             Playback.setStartTime(newTime)
         }
         else
         {
-            const timeMin = data.state.cursor.time1.min(data.state.cursor.time2)
-            const timeMax = data.state.cursor.time1.max(data.state.cursor.time2)
+            const timeMin = state.cursor.time1.min(state.cursor.time2)
+            const timeMax = state.cursor.time1.max(state.cursor.time2)
 
             const newTime = (isLeft ? timeMin : timeMax).add(timeDelta)
 
-            Timeline.cursorSetTime(data, newTime, newTime)
-            Timeline.scrollTimeIntoView(data, newTime)
+            Timeline.cursorSetTime(state, newTime, newTime)
+            Timeline.scrollTimeIntoView(state, newTime)
             Playback.setStartTime(newTime)
         }
     }
     else
     {
-        const timeDelta = data.state.timeSnap.multiplyByFloat(
+        const timeDelta = state.timeSnap.multiplyByFloat(
             (keyFast ? 16 : 1) * (isLeft ? -1 : 1))
         
-        const selectionRange = Timeline.selectionRange(data)
+        const selectionRange = Timeline.selectionRange(state)
         
         let playedPreview = false
-        modifySelectedElems(data, (elem) =>
+        modifySelectedElems(state, (elem) =>
         {
             if (elem.type == "track")
                 return elem
@@ -347,13 +347,13 @@ function handleLeftRight(data: Timeline.WorkData, isLeft: boolean)
                 if (elem.type == "note")
                 {
                     playedPreview = true
-                    data.state.insertion.nearMidiPitch = elem.midiPitch
-                    data.state.insertion.duration = newRange.duration
+                    state.insertion.nearMidiPitch = elem.midiPitch
+                    state.insertion.duration = newRange.duration
                 }
                 else if (elem.type == "chord")
                 {
                     playedPreview = true
-                    data.state.insertion.duration = newRange.duration
+                    state.insertion.duration = newRange.duration
                 }
             }
 
@@ -362,44 +362,44 @@ function handleLeftRight(data: Timeline.WorkData, isLeft: boolean)
             })
         })
 
-        const range = Timeline.selectionRange(data) || new Range(new Rational(0), new Rational(0))
+        const range = Timeline.selectionRange(state) || new Range(new Rational(0), new Rational(0))
         const newTime = (isLeft && !keyStretch ? range.start : range.end)
-        data.state.cursor.visible = false
-        Timeline.cursorSetTime(data, newTime, newTime)
-        Timeline.scrollTimeIntoView(data, newTime)
+        state.cursor.visible = false
+        Timeline.cursorSetTime(state, newTime, newTime)
+        Timeline.scrollTimeIntoView(state, newTime)
 
-        data.state.needsKeyFinish = true
+        state.needsKeyFinish = true
     }
 }
 
 
-function handleUpDown(data: Timeline.WorkData, isUp: boolean, isChromatic: boolean)
+function handleUpDown(state: Timeline.State, isUp: boolean, isChromatic: boolean)
 {
-    const keyFast = data.state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
-    const keyCursor2 = data.state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
-    const keyChromatic = data.state.keysDown.has(Prefs.global.editor.keyDisplaceChromatically)
+    const keyFast = state.keysDown.has(Prefs.global.editor.keyDisplaceFast)
+    const keyCursor2 = state.keysDown.has(Prefs.global.editor.keyDisplaceCursor2)
+    const keyChromatic = state.keysDown.has(Prefs.global.editor.keyDisplaceChromatically)
 
     
-    if (!isChromatic && data.state.cursor.visible && (data.state.selection.size == 0 || keyCursor2))
+    if (!isChromatic && state.cursor.visible && (state.selection.size == 0 || keyCursor2))
     {
         const trackDelta = (isUp ? -1 : 1)
 
-        Timeline.keyHandlePendingFinish(data)
+        Timeline.keyHandlePendingFinish(state)
         
         if (keyCursor2)
         {
-            const newTrack = data.state.cursor.trackIndex2 + trackDelta
-            Timeline.cursorSetTrack(data, null, newTrack)
-            Timeline.selectionClear(data)
-            Timeline.selectionAddAtCursor(data)
+            const newTrack = state.cursor.trackIndex2 + trackDelta
+            Timeline.cursorSetTrack(state, null, newTrack)
+            Timeline.selectionClear(state)
+            Timeline.selectionAddAtCursor(state)
         }
         else
         {
-            const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
-            const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+            const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+            const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
 
             const newTrack = (isUp ? trackMin : trackMax) + trackDelta
-            Timeline.cursorSetTrack(data, newTrack, newTrack)
+            Timeline.cursorSetTrack(state, newTrack, newTrack)
         }
     }
     else
@@ -408,7 +408,7 @@ function handleUpDown(data: Timeline.WorkData, isUp: boolean, isChromatic: boole
         const degreeDelta = (keyFast || isChromatic ? 0 : 1) * (isUp ? 1 : -1)
 
         let playedPreview = false
-        modifySelectedElems(data, (elem) =>
+        modifySelectedElems(state, (elem) =>
         {
             if (elem.type == "note")
             {
@@ -424,8 +424,8 @@ function handleUpDown(data: Timeline.WorkData, isUp: boolean, isChromatic: boole
                 {
                     playedPreview = true
                     Playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
-                    data.state.insertion.nearMidiPitch = newPitch
-                    data.state.insertion.duration = elem.range.duration
+                    state.insertion.nearMidiPitch = newPitch
+                    state.insertion.duration = elem.range.duration
                 }
 
                 return Project.elemModify(elem, { midiPitch: newPitch })
@@ -448,7 +448,7 @@ function handleUpDown(data: Timeline.WorkData, isUp: boolean, isChromatic: boole
                 {
                     playedPreview = true
                     Playback.playChordPreview(track.id, newChord, 0, 1)
-                    data.state.insertion.duration = elem.range.duration
+                    state.insertion.duration = elem.range.duration
                 }
 
                 return Project.elemModify(elem, { chord: newChord })
@@ -459,16 +459,16 @@ function handleUpDown(data: Timeline.WorkData, isUp: boolean, isChromatic: boole
             }
         })
 
-        data.state.cursor.visible = false
-        data.state.needsKeyFinish = true
+        state.cursor.visible = false
+        state.needsKeyFinish = true
     }
 }
 
 
-function handleNumber(data: Timeline.WorkData, degree: number)
+function handleNumber(state: Timeline.State, degree: number)
 {
-    const time = data.state.cursor.time1.min(data.state.cursor.time2)
-    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    const time = state.cursor.time1.min(state.cursor.time2)
+    const track = state.tracks[state.cursor.trackIndex1]
     const trackId = track.projectTrackId
     const key = Project.keyAt(Project.global.project, trackId, time)
     
@@ -482,33 +482,33 @@ function handleNumber(data: Timeline.WorkData, degree: number)
         
         const kind = Theory.Chord.kindFromPitches(pitches)
         const chord = new Theory.Chord(root, kind, 0, [])
-        Timeline.insertChord(data, time, chord)
+        Timeline.insertChord(state, time, chord)
     }
     else if (track instanceof Timeline.TimelineTrackNoteBlocks)
     {
-        const noteBlockId = Timeline.insertNoteBlock(data, time)
+        const noteBlockId = Timeline.insertNoteBlock(state, time)
         if (!noteBlockId)
             return
 
-        Timeline.modeStackPush(data)
-        data.state.mode = Timeline.Mode.NoteBlock
-        data.state.modeNoteBlockId = noteBlockId
-        Timeline.refreshTracks(data)
+        Timeline.modeStackPush(state)
+        state.mode = Timeline.Mode.NoteBlock
+        state.modeNoteBlockId = noteBlockId
+        Timeline.refreshTracks(state)
 
-        Timeline.cursorSetTrackByParentId(data, noteBlockId)
+        Timeline.cursorSetTrackByParentId(state, noteBlockId)
 
         const chroma = key.chromaForDegree(degree)
-        Timeline.insertNote(data, time, chroma)
+        Timeline.insertNote(state, time, chroma)
     }
     else
     {
         const chroma = key.chromaForDegree(degree)
-        Timeline.insertNote(data, time, chroma)
+        Timeline.insertNote(state, time, chroma)
     }
 }
 
 
-function handleLengthChange(data: Timeline.WorkData, lengthIndex: number)
+function handleLengthChange(state: Timeline.State, lengthIndex: number)
 {
     const lengths = [
         new Rational(1, 16),
@@ -520,11 +520,11 @@ function handleLengthChange(data: Timeline.WorkData, lengthIndex: number)
 
     const length = lengths[lengthIndex]
 
-    modifySelectedElems(data, (elem) =>
+    modifySelectedElems(state, (elem) =>
     {
         if (elem.type == "note" || elem.type == "chord")
         {
-            data.state.insertion.duration = length
+            state.insertion.duration = length
 
             const newRange = Range.fromStartDuration(elem.range.start, length)
             return Project.elemModify(elem, { range: newRange })
@@ -533,11 +533,11 @@ function handleLengthChange(data: Timeline.WorkData, lengthIndex: number)
             return elem
     })
 
-    const range = Timeline.selectionRange(data) || new Range(new Rational(0), new Rational(0))
+    const range = Timeline.selectionRange(state) || new Range(new Rational(0), new Rational(0))
     const newTime = range.end
-    data.state.cursor.visible = false
-    Timeline.cursorSetTime(data, newTime, newTime)
-    Timeline.scrollTimeIntoView(data, newTime)
+    state.cursor.visible = false
+    Timeline.cursorSetTime(state, newTime, newTime)
+    Timeline.scrollTimeIntoView(state, newTime)
 
-    data.state.needsKeyFinish = true
+    state.needsKeyFinish = true
 }

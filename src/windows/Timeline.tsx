@@ -51,17 +51,6 @@ export function Timeline()
         data.timelineState = editorState
     })
 
-    const makeUpdateData: () => TimelineData.WorkData = () =>
-    {
-        return {
-            state: editorState.ref.current,
-            ctx: null!,
-            popup: null!,
-            dockable: null!,
-            activeWindow: false,
-        }
-    }
-
     const getModeName = (mode: TimelineData.Mode) =>
     {
         switch (mode)
@@ -73,8 +62,7 @@ export function Timeline()
 
     const onClickModeStack = (index: number) =>
     {
-        const data = makeUpdateData()
-        TimelineData.modeStackPop(data, index)
+        TimelineData.modeStackPop(editorState.ref.current, index)
         editorState.commit()
         window.dispatchEvent(new Event("timelineRefresh"))
     }

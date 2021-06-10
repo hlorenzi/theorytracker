@@ -40,9 +40,9 @@ export class TimelineTrack
     }
 
 
-    copyState(data: Timeline.WorkData)
+    copyState(state: Timeline.State)
     {
-        for (const track of data.state.tracks)
+        for (const track of state.tracks)
         {
             if (track.projectTrackId == this.projectTrackId)
             {
@@ -54,7 +54,7 @@ export class TimelineTrack
 
 
     *elemsAtRegion(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range,
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
@@ -64,7 +64,7 @@ export class TimelineTrack
 
 
     *iterKeyChangePairsAtRange(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         range: Range)
         : Generator<[Project.KeyChange, Project.KeyChange, number, number], void, void>
     {
@@ -81,28 +81,28 @@ export class TimelineTrack
             const keyCh1 = pair[0] ?? Project.makeKeyChange(-1, range.start, defaultKey)
             const keyCh2 = pair[1] ?? Project.makeKeyChange(-1, range.end,   defaultKey)
             
-            const keyCh1X = Timeline.xAtTime(data, keyCh1.range.start)
-            const keyCh2X = Timeline.xAtTime(data, keyCh2.range.start)
+            const keyCh1X = Timeline.xAtTime(state, keyCh1.range.start)
+            const keyCh2X = Timeline.xAtTime(state, keyCh2.range.start)
             
             yield [keyCh1 as Project.KeyChange, keyCh2 as Project.KeyChange, keyCh1X, keyCh2X]
         }
     }
 
 
-    hover(data: Timeline.WorkData)
+    hover(state: Timeline.State)
     {
         
     }
 
 
     hoverBlockElements(
-        data: Timeline.WorkData,
+        state: Timeline.State,
         elemsIter: (range: Range) => Generator<Project.Element, void, void>)
     {
-        const pos = data.state.mouse.point.trackPos
+        const pos = state.mouse.point.trackPos
 
         const margin = 10
-        const checkRange = Timeline.timeRangeAtX(data, pos.x - margin, pos.x + margin)
+        const checkRange = Timeline.timeRangeAtX(state, pos.x - margin, pos.x + margin)
 
         let hoverDrag = null
         let hoverStretch = null
@@ -111,8 +111,8 @@ export class TimelineTrack
         {
             const margin = 8
 
-            const x1 = Timeline.xAtTime(data, elem.range.start)
-            const x2 = Timeline.xAtTime(data, elem.range.end)
+            const x1 = Timeline.xAtTime(state, elem.range.start)
+            const x2 = Timeline.xAtTime(state, elem.range.end)
 
             const rectDrag = new Rect(
                 x1,
@@ -148,65 +148,65 @@ export class TimelineTrack
             }
         }
 
-        data.state.hover = hoverDrag ?? hoverStretch
+        state.hover = hoverDrag ?? hoverStretch
     }
 
 
-    click(data: Timeline.WorkData, elemId: Project.ID)
+    click(state: Timeline.State, elemId: Project.ID)
     {
         
     }
 
 
-    doubleClick(data: Timeline.WorkData, elemId: Project.ID)
+    doubleClick(state: Timeline.State, elemId: Project.ID)
     {
         
     }
 
 
-    contextMenu(data: Timeline.WorkData, elemId: Project.ID)
+    contextMenu(state: Timeline.State, elemId: Project.ID)
     {
         
     }
 
 
-    pencilClear(data: Timeline.WorkData)
+    pencilClear(state: Timeline.State)
     {
         
     }
 
 
-    pencilHover(data: Timeline.WorkData)
+    pencilHover(state: Timeline.State)
     {
         
     }
 
 
-    pencilStart(data: Timeline.WorkData)
+    pencilStart(state: Timeline.State)
     {
         
     }
 
 
-    pencilDrag(data: Timeline.WorkData)
+    pencilDrag(state: Timeline.State)
     {
         
     }
 
 
-    pencilComplete(data: Timeline.WorkData)
+    pencilComplete(state: Timeline.State)
     {
         
     }
 	
 	
-	rowAtY(data: Timeline.WorkData, y: number): number
+	rowAtY(state: Timeline.State, y: number): number
 	{
         return 0
 	}
     
     
-    findPreviousAnchor(data: Timeline.WorkData, time: Rational): Rational
+    findPreviousAnchor(state: Timeline.State, time: Rational): Rational
     {
         const list = Project.global.project.lists.get(this.parentId)
         if (!list)
@@ -228,7 +228,7 @@ export class TimelineTrack
     }
 	
 	
-	deleteRange(data: Timeline.WorkData, range: Range)
+	deleteRange(state: Timeline.State, range: Range)
 	{
         const list = Project.global.project.lists.get(this.parentId)
         if (!list)
@@ -260,9 +260,9 @@ export class TimelineTrack
 	}
 
 
-	selectionRemoveConflictingBehind(data: Timeline.WorkData)
+	selectionRemoveConflictingBehind(state: Timeline.State)
 	{
-		for (const id of data.state.selection)
+		for (const id of state.selection)
 		{
 			const selectedElem = Project.global.project.elems.get(id)
 			if (!selectedElem)
@@ -284,7 +284,7 @@ export class TimelineTrack
             {
                 for (const elem of list.iterAtPoint(selectedElem.range.start))
                 {
-                    if (data.state.selection.has(elem.id))
+                    if (state.selection.has(elem.id))
                         continue
     
                     const removeElem = Project.elemModify(elem, { parentId: -1 })
@@ -295,7 +295,7 @@ export class TimelineTrack
             {
                 for (const elem of list.iterAtRange(selectedElem.range))
                 {
-                    if (data.state.selection.has(elem.id))
+                    if (state.selection.has(elem.id))
                         continue
 
                     if (elem.type == "note" && selectedElem.type == "note" &&
@@ -312,16 +312,16 @@ export class TimelineTrack
 	}
 
 
-    render(data: Timeline.WorkData)
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
 
     }
 	
 	
-	markerRectAtTime(data: Timeline.WorkData, time: Rational)
+	markerRectAtTime(state: Timeline.State, time: Rational)
 	{
         return new Rect(
-            Timeline.xAtTime(data, time) - MARKER_WIDTH / 2,
+            Timeline.xAtTime(state, time) - MARKER_WIDTH / 2,
             0,
             MARKER_WIDTH,
             this.renderRect.h)
@@ -329,50 +329,52 @@ export class TimelineTrack
 
 
     renderMarker(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         time: Rational,
         color: string,
         label: string | null,
         hovering: boolean,
         selected: boolean)
     {
-        const xCenter = Math.round(Timeline.xAtTime(data, time))
+        const xCenter = Math.round(Timeline.xAtTime(state, time))
         const x1 = xCenter - MARKER_WIDTH / 2
         const x2 = xCenter + MARKER_WIDTH / 2
 
         const y1 = 0.5
         const y2 = this.renderRect.h
 
-        data.ctx.beginPath()
-        data.ctx.moveTo(x1, y1)
-        data.ctx.lineTo(x2, y1)
-        data.ctx.lineTo(x2, y2 - MARKER_WIDTH / 2)
-        data.ctx.lineTo(xCenter, y2)
-        data.ctx.lineTo(x1, y2 - MARKER_WIDTH / 2)
-        data.ctx.lineTo(x1, y1)
+        canvas.beginPath()
+        canvas.moveTo(x1, y1)
+        canvas.lineTo(x2, y1)
+        canvas.lineTo(x2, y2 - MARKER_WIDTH / 2)
+        canvas.lineTo(xCenter, y2)
+        canvas.lineTo(x1, y2 - MARKER_WIDTH / 2)
+        canvas.lineTo(x1, y1)
 
-        data.ctx.fillStyle = color
-        data.ctx.fill()
+        canvas.fillStyle = color
+        canvas.fill()
 
-        if (label && xCenter > data.state.trackHeaderW)
-            this.renderMarkerLabel(data, x2, color, label)
+        if (label && xCenter > state.trackHeaderW)
+            this.renderMarkerLabel(state, canvas, x2, color, label)
 
         if (hovering)
         {
-            data.ctx.fillStyle = "#fff8"
-            data.ctx.fill()
+            canvas.fillStyle = "#fff8"
+            canvas.fill()
         }
 
         if (selected)
         {
-            data.ctx.strokeStyle = "#fff"
-            data.ctx.stroke()
+            canvas.strokeStyle = "#fff"
+            canvas.stroke()
         }
     }
 
 
     renderMarkerLabel(
-        data: Timeline.WorkData,
+        state: Timeline.State,
+        canvas: CanvasRenderingContext2D,
         x: number,
         color: string,
         label: string)
@@ -380,10 +382,10 @@ export class TimelineTrack
         const y1 = 0.5
         const y2 = this.renderRect.h
 
-        data.ctx.fillStyle = color
-        data.ctx.font = Math.floor(y2 - y1 - 10) + "px system-ui"
-        data.ctx.textAlign = "left"
-        data.ctx.textBaseline = "middle"
-        data.ctx.fillText(label, x + 5, (y1 + y2) / 2)
+        canvas.fillStyle = color
+        canvas.font = Math.floor(y2 - y1 - 10) + "px system-ui"
+        canvas.textAlign = "left"
+        canvas.textBaseline = "middle"
+        canvas.fillText(label, x + 5, (y1 + y2) / 2)
     }
 }

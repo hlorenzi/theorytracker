@@ -164,14 +164,6 @@ export interface HoverData
 }
 
 
-export interface WorkData
-{
-    state: State
-    ctx: CanvasRenderingContext2D
-    activeWindow: boolean
-}
-
-
 export function init(): State
 {
     return {
@@ -270,35 +262,35 @@ export function init(): State
 }
 
 
-export function resize(data: WorkData, rect: Rect)
+export function resize(state: Timeline.State, rect: Rect)
 {
-    data.state.renderRect = rect
-    refreshTracks(data)
+    state.renderRect = rect
+    refreshTracks(state)
 }
 
 
-export function reset(data: WorkData)
+export function reset(state: Timeline.State)
 {
-    data.state.trackScroll = -40
-    data.state.trackScrollLocked = true
+    state.trackScroll = -40
+    state.trackScrollLocked = true
 
-    data.state.timeScroll = -2.5
-    data.state.timeScale = 100
-    data.state.timeSnap = new Rational(1, 8)
-    data.state.timeSnapBase = new Rational(1, 16)
+    state.timeScroll = -2.5
+    state.timeScale = 100
+    state.timeSnap = new Rational(1, 8)
+    state.timeSnapBase = new Rational(1, 16)
 }
 
 
-export function rewind(data: WorkData)
+export function rewind(state: Timeline.State)
 {
-    data.state.cursor.visible = true
-    data.state.cursor.time1 = data.state.cursor.time2 = Project.global.project.range.start
+    state.cursor.visible = true
+    state.cursor.time1 = state.cursor.time2 = Project.global.project.range.start
     Playback.setStartTime(Project.global.project.range.start)
-    scrollTimeIntoView(data, data.state.cursor.time1)
+    scrollTimeIntoView(state, state.cursor.time1)
 }
 
 
-export function refreshTracks(data: WorkData)
+export function refreshTracks(state: Timeline.State)
 {
     const tracks: Timeline.TimelineTrack[] = []
 
@@ -307,13 +299,13 @@ export function refreshTracks(data: WorkData)
         const track = Project.global.project.tracks[t]
         if (track.trackType == "notes")
         {
-            if (data.state.mode == Mode.NoteBlock)
+            if (state.mode == Mode.NoteBlock)
             {
-                const noteBlock = Project.global.project.elems.get(data.state.modeNoteBlockId)
+                const noteBlock = Project.global.project.elems.get(state.modeNoteBlockId)
                 if (noteBlock && track.id == noteBlock.parentId)
                 {
-                    tracks.push(new Timeline.TimelineTrackNotes(track.id, data.state.modeNoteBlockId, track.name, 0))
-                    tracks.push(new Timeline.TimelineTrackNoteVolumes(track.id, data.state.modeNoteBlockId, 80))
+                    tracks.push(new Timeline.TimelineTrackNotes(track.id, state.modeNoteBlockId, track.name, 0))
+                    tracks.push(new Timeline.TimelineTrackNoteVolumes(track.id, state.modeNoteBlockId, 80))
                 }
             }
             else
@@ -334,9 +326,9 @@ export function refreshTracks(data: WorkData)
     }
 
     for (let t = 0; t < tracks.length; t++)
-        tracks[t].copyState(data)
+        tracks[t].copyState(state)
 
-    data.state.trackScrollLocked = false
+    state.trackScrollLocked = false
 
     let fixedH = 0
     for (let t = 0; t < tracks.length; t++)
@@ -349,9 +341,9 @@ export function refreshTracks(data: WorkData)
     {
         if (tracks[t].renderRect.h == 0)
         {
-            tracks[t].renderRect.h = data.state.renderRect.h - fixedH
-            data.state.trackScroll = 0
-            data.state.trackScrollLocked = true
+            tracks[t].renderRect.h = state.renderRect.h - fixedH
+            state.trackScroll = 0
+            state.trackScrollLocked = true
         }
     }
 
@@ -362,131 +354,131 @@ export function refreshTracks(data: WorkData)
         y += tracks[t].renderRect.h
     }
 
-    data.state.tracks = tracks
+    state.tracks = tracks
 }
 
 
-export function modeStackPush(data: WorkData)
+export function modeStackPush(state: Timeline.State)
 {
     const newStack =
     {
-        mode: data.state.mode,
-        modeNoteBlockId: data.state.modeNoteBlockId,
-        trackScroll: data.state.trackScroll,
+        mode: state.mode,
+        modeNoteBlockId: state.modeNoteBlockId,
+        trackScroll: state.trackScroll,
     }
 
-    data.state.modeStack.push(newStack)
-    selectionClear(data)
+    state.modeStack.push(newStack)
+    selectionClear(state)
 }
 
 
-export function modeStackPop(data: WorkData, index?: number)
+export function modeStackPop(state: Timeline.State, index?: number)
 {
-    if (data.state.modeStack.length == 0)
+    if (state.modeStack.length == 0)
         return
 
     if (index !== undefined)
     {
-        if (index >= data.state.modeStack.length)
+        if (index >= state.modeStack.length)
             return
 
-        while (data.state.modeStack.length > index + 1)
-            data.state.modeStack.pop()
+        while (state.modeStack.length > index + 1)
+            state.modeStack.pop()
     }
     
-    const stackElem = data.state.modeStack.pop()!
+    const stackElem = state.modeStack.pop()!
 
-    data.state.mode = stackElem.mode
-    data.state.modeNoteBlockId = stackElem.modeNoteBlockId
-    data.state.trackScroll = stackElem.trackScroll
+    state.mode = stackElem.mode
+    state.modeNoteBlockId = stackElem.modeNoteBlockId
+    state.trackScroll = stackElem.trackScroll
 
-    selectionClear(data)
+    selectionClear(state)
 }
 
 
-export function scrollTimeIntoView(data: WorkData, time: Rational)
+export function scrollTimeIntoView(state: Timeline.State, time: Rational)
 {
-    const range = visibleTimeRange(data)
+    const range = visibleTimeRange(state)
     const marginPixels = 100
-    const marginTime = Rational.fromFloat(marginPixels / data.state.timeScale, 10000)
+    const marginTime = Rational.fromFloat(marginPixels / state.timeScale, 10000)
     if (time.compare(range.end.subtract(marginTime)) >= 0)
     {
-        data.state.timeScroll =
+        state.timeScroll =
             time.asFloat() -
-            (data.state.renderRect.w - data.state.trackHeaderW + marginPixels) / data.state.timeScale
+            (state.renderRect.w - state.trackHeaderW + marginPixels) / state.timeScale
     }
     else if (time.compare(range.start.add(marginTime)) <= 0)
     {
-        data.state.timeScroll =
+        state.timeScroll =
             time.asFloat() -
-            (data.state.trackHeaderW + marginPixels) / data.state.timeScale
+            (state.trackHeaderW + marginPixels) / state.timeScale
     }
 }
 
 
-export function scrollPlaybackTimeIntoView(data: WorkData)
+export function scrollPlaybackTimeIntoView(state: Timeline.State)
 {
     if (!Playback.global.playing) 
         return
 
-    if (data.state.mouse.down)
+    if (state.mouse.down)
         return
 
-    const range = visibleTimeRange(data)
+    const range = visibleTimeRange(state)
     const marginPixels = 100
-    const marginTime = Rational.fromFloat(marginPixels / data.state.timeScale, 10000)
+    const marginTime = Rational.fromFloat(marginPixels / state.timeScale, 10000)
     if (Playback.global.playTime.compare(range.end.subtract(marginTime)) >= 0 ||
         Playback.global.playTime.compare(range.start.add(marginTime)) <= 0)
     {
-        data.state.timeScroll =
+        state.timeScroll =
             Playback.global.playTime.asFloat() -
-            (data.state.trackHeaderW + marginPixels) / data.state.timeScale
+            (state.trackHeaderW + marginPixels) / state.timeScale
     }
 }
 
 
-export function xAtTime(data: WorkData, time: Rational): number
+export function xAtTime(state: Timeline.State, time: Rational): number
 {
-    return (time.asFloat() - data.state.timeScroll) * data.state.timeScale
+    return (time.asFloat() - state.timeScroll) * state.timeScale
 }
 
 
-export function timeAtX(data: WorkData, x: number, timeSnap?: Rational): Rational
+export function timeAtX(state: Timeline.State, x: number, timeSnap?: Rational): Rational
 {
-    timeSnap = timeSnap || data.state.timeSnap
-    const time = x / data.state.timeScale + data.state.timeScroll
+    timeSnap = timeSnap || state.timeSnap
+    const time = x / state.timeScale + state.timeScroll
     return Rational.fromFloat(time, timeSnap.denominator)
 }
 
 
-export function timeRangeAtX(data: WorkData, x1: number, x2: number, timeSnap?: Rational)
+export function timeRangeAtX(state: Timeline.State, x1: number, x2: number, timeSnap?: Rational)
 {
-    timeSnap = timeSnap || data.state.timeSnap
+    timeSnap = timeSnap || state.timeSnap
     return new Range(
-        timeAtX(data, x1, timeSnap).subtract(timeSnap),
-        timeAtX(data, x2, timeSnap).add(timeSnap))
+        timeAtX(state, x1, timeSnap).subtract(timeSnap),
+        timeAtX(state, x2, timeSnap).add(timeSnap))
 }
 
 
-export function trackY(data: WorkData, trackIndex: number): number
+export function trackY(state: Timeline.State, trackIndex: number): number
 {
-    if (trackIndex < 0 || trackIndex >= data.state.tracks.length)
+    if (trackIndex < 0 || trackIndex >= state.tracks.length)
         return 0
     
-    return data.state.tracks[trackIndex].renderRect.y - data.state.trackScroll
+    return state.tracks[trackIndex].renderRect.y - state.trackScroll
 }
 
 
-export function trackAtY(data: WorkData, y: number): number | null
+export function trackAtY(state: Timeline.State, y: number): number | null
 {
-    y += data.state.trackScroll
+    y += state.trackScroll
 
     if (y < 0)
         return null
 
-    for (let t = 0; t < data.state.tracks.length; t++)
+    for (let t = 0; t < state.tracks.length; t++)
     {
-        const track = data.state.tracks[t]
+        const track = state.tracks[t]
 
         if (y >= track.renderRect.y && y <= track.renderRect.y + track.renderRect.h)
             return t
@@ -496,58 +488,58 @@ export function trackAtY(data: WorkData, y: number): number | null
 }
 
 
-export function trackAtYClamped(data: WorkData, y: number): number
+export function trackAtYClamped(state: Timeline.State, y: number): number
 {
-    y += data.state.trackScroll
+    y += state.trackScroll
 
     if (y < 0)
         return 0
 
-    for (let t = 0; t < data.state.tracks.length; t++)
+    for (let t = 0; t < state.tracks.length; t++)
     {
-        const track = data.state.tracks[t]
+        const track = state.tracks[t]
 
         if (y >= track.renderRect.y && y <= track.renderRect.y + track.renderRect.h)
             return t
     }
 
-    return data.state.tracks.length - 1
+    return state.tracks.length - 1
 }
 
 
-export function trackInsertionAtY(data: WorkData, y: number): number
+export function trackInsertionAtY(state: Timeline.State, y: number): number
 {
-    y += data.state.trackScroll
+    y += state.trackScroll
 
     if (y < 0)
         return 0
 
-    for (let t = 0; t < data.state.tracks.length; t++)
+    for (let t = 0; t < state.tracks.length; t++)
     {
-        const track = data.state.tracks[t]
+        const track = state.tracks[t]
 
         if (y <= track.renderRect.y + track.renderRect.h / 2)
             return t
     }
 
-    return data.state.tracks.length
+    return state.tracks.length
 }
 
 
 export function trackControlAtPoint(
-    data: WorkData,
+    state: Timeline.State,
     trackIndex: number,
     pos: { x: number, y: number })
     : TrackControl
 {
-    const projTrack = Project.getElem(Project.global.project, data.state.tracks[trackIndex].projectTrackId, "track")
+    const projTrack = Project.getElem(Project.global.project, state.tracks[trackIndex].projectTrackId, "track")
     if (!projTrack)
         return TrackControl.None
 
-    if (pos.y < data.state.trackControlY || pos.y > data.state.trackControlY + data.state.trackControlSize)
+    if (pos.y < state.trackControlY || pos.y > state.trackControlY + state.trackControlSize)
         return TrackControl.None
 
-    const xSlot = Math.floor((pos.x - data.state.trackControlX) / data.state.trackControlSize)
+    const xSlot = Math.floor((pos.x - state.trackControlX) / state.trackControlSize)
     if (xSlot < 0)
         return TrackControl.None
 
@@ -571,19 +563,19 @@ export function trackControlAtPoint(
 }
 
 
-export function rectForTrack(data: WorkData, trackIndex: number): Rect | null
+export function rectForTrack(state: Timeline.State, trackIndex: number): Rect | null
 {
     let y = 0
-    for (let t = 0; t < data.state.tracks.length; t++)
+    for (let t = 0; t < state.tracks.length; t++)
     {
-        const h = data.state.tracks[t].renderRect.h
+        const h = state.tracks[t].renderRect.h
 
         if (t == trackIndex)
         {
             return new Rect(
-                data.state.trackHeaderW,
+                state.trackHeaderW,
                 y,
-                data.state.renderRect.w - data.state.trackHeaderW,
+                state.renderRect.w - state.trackHeaderW,
                 h)
         }
 
@@ -594,20 +586,20 @@ export function rectForTrack(data: WorkData, trackIndex: number): Rect | null
 }
 
 
-export function pointAt(data: WorkData, pos: { x: number, y: number }): Point
+export function pointAt(state: Timeline.State, pos: { x: number, y: number }): Point
 {
-    const trackIndex = trackAtYClamped(data, pos.y)
-    const time = timeAtX(data, pos.x)
+    const trackIndex = trackAtYClamped(state, pos.y)
+    const time = timeAtX(state, pos.x)
     
-    const trackPosY = pos.y - trackY(data, data.state.mouse.point.trackIndex)
+    const trackPosY = pos.y - trackY(state, state.mouse.point.trackIndex)
     const trackPos = { x: pos.x, y: trackPosY }
 
-    const row = data.state.tracks[trackIndex].rowAtY(data, trackPosY)
+    const row = state.tracks[trackIndex].rowAtY(state, trackPosY)
 
     let originTrackPos = trackPos
-    if (data.state.drag.origin)
+    if (state.drag.origin)
     {
-        const originTrackPosY = pos.y - trackY(data, data.state.drag.origin.point.trackIndex)
+        const originTrackPosY = pos.y - trackY(state, state.drag.origin.point.trackIndex)
         originTrackPos = { x: pos.x, y: originTrackPosY }
     }
     
@@ -622,68 +614,68 @@ export function pointAt(data: WorkData, pos: { x: number, y: number }): Point
 }
     
 
-export function selectionClear(data: WorkData)
+export function selectionClear(state: Timeline.State)
 {
-    data.state.selection = data.state.selection.clear()
+    state.selection = state.selection.clear()
 }
 
 
-export function selectionRange(data: WorkData): Range | null
+export function selectionRange(state: Timeline.State): Range | null
 {
-    return Project.getRangeForElems(Project.global.project, data.state.selection)
+    return Project.getRangeForElems(Project.global.project, state.selection)
 }
 
 
 export function selectionToggleHover(
-    data: WorkData,
+    state: Timeline.State,
     hover: HoverData,
     selectMultiple: boolean)
 {
-    const alreadySelected = data.state.selection.has(hover.id)
+    const alreadySelected = state.selection.has(hover.id)
 
     if (!selectMultiple && !alreadySelected)
-        selectionClear(data)
+        selectionClear(state)
 
     if (!alreadySelected || !selectMultiple)
-        data.state.selection = data.state.selection.add(hover.id)
+        state.selection = state.selection.add(hover.id)
     else
-        data.state.selection = data.state.selection.remove(hover.id)
+        state.selection = state.selection.remove(hover.id)
 
-    data.state.drag.origin.range = selectionRange(data)
-    data.state.mouse.action = hover.action
+    state.drag.origin.range = selectionRange(state)
+    state.mouse.action = hover.action
 }
 
 
-export function selectionAdd(data: WorkData, id: Project.ID)
+export function selectionAdd(state: Timeline.State, id: Project.ID)
 {
-    data.state.selection = data.state.selection.add(id)
+    state.selection = state.selection.add(id)
 }
 
 
-export function selectionAddAtCursor(data: WorkData)
+export function selectionAddAtCursor(state: Timeline.State)
 {
-    const trackMin = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
-    const trackMax = Math.max(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
     
-    const time1 = data.state.cursor.time1
-    const time2 = data.state.cursor.time2
+    const time1 = state.cursor.time1
+    const time2 = state.cursor.time2
     if (time1.compare(time2) != 0)
     {
         const range = new Range(time1, time2, false, false).sorted()
 
         for (let t = trackMin; t <= trackMax; t++)
         {
-            for (const id of data.state.tracks[t].elemsAtRegion(data, range))
-                selectionAdd(data, id)
+            for (const id of state.tracks[t].elemsAtRegion(state, range))
+                selectionAdd(state, id)
         }
     }
 }
 
 
-export function deleteElems(data: WorkData, elemIds: Iterable<Project.ID>)
+export function deleteElems(state: Timeline.State, elemIds: Iterable<Project.ID>)
 {
     const range = Project.getRangeForElems(Project.global.project, elemIds) ||
-        new Range(data.state.cursor.time1, data.state.cursor.time1)
+        new Range(state.cursor.time1, state.cursor.time1)
 
     for (const id of elemIds)
     {
@@ -716,13 +708,13 @@ export function deleteElems(data: WorkData, elemIds: Iterable<Project.ID>)
     }
 
     Project.global.project = Project.withRefreshedRange(Project.global.project)
-    data.state.cursor.visible = true
-    cursorSetTime(data, range.start, range.start)
-    scrollTimeIntoView(data, range.start)
+    state.cursor.visible = true
+    cursorSetTime(state, range.start, range.start)
+    scrollTimeIntoView(state, range.start)
 }
 
 
-export function selectionCopy(data: WorkData)
+export function selectionCopy(state: Timeline.State)
 {
     const copiedData: Project.CopiedData =
     {
@@ -730,16 +722,16 @@ export function selectionCopy(data: WorkData)
         elemsByTrack: [],
     }
 
-    for (let tr = 0; tr < data.state.tracks.length; tr++)
+    for (let tr = 0; tr < state.tracks.length; tr++)
         copiedData.elemsByTrack.push([])
 
-    for (const elemId of data.state.selection)
+    for (const elemId of state.selection)
     {
         const elem = Project.global.project.elems.get(elemId)
         if (!elem || elem.type == "track")
             continue
         
-        const trackIndex = data.state.tracks.findIndex(tr => tr.parentId == elem.parentId)
+        const trackIndex = state.tracks.findIndex(tr => tr.parentId == elem.parentId)
         if (trackIndex < 0)
             continue
 
@@ -765,21 +757,21 @@ export function selectionCopy(data: WorkData)
     if (!copiedRange)
         return
         
-    cursorSetTime(data, copiedRange.end, copiedRange.end)
+    cursorSetTime(state, copiedRange.end, copiedRange.end)
     Project.global.copiedData = copiedData
 
     //console.log("copy", copiedData)
 }
 
 
-export function paste(data: WorkData)
+export function paste(state: Timeline.State)
 {
     const copiedData = Project.global.copiedData
     if (!copiedData)
         return
 
-    const pasteToTime = data.state.cursor.time1.min(data.state.cursor.time2)
-    const pasteToTrackIndex = Math.min(data.state.cursor.trackIndex1, data.state.cursor.trackIndex2)
+    const pasteToTime = state.cursor.time1.min(state.cursor.time2)
+    const pasteToTrackIndex = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
 
     let copiedRange: Range | null = null
     for (let ctr = 0; ctr < copiedData.elemsByTrack.length; ctr++)
@@ -799,7 +791,7 @@ export function paste(data: WorkData)
         
     //console.log("paste", copiedData, copiedRange)
     
-    selectionClear(data)
+    selectionClear(state)
 
     let newProject = Project.global.project
     let maxAffectedTrackIndex = pasteToTrackIndex
@@ -810,14 +802,14 @@ export function paste(data: WorkData)
 
         for (const elem of copiedTrack)
         {
-            const pasteTrackIndex = data.state.tracks
+            const pasteTrackIndex = state.tracks
                 .slice(pasteToTrackIndex + ctr)
                 .findIndex(tr => tr.acceptedElemTypes.has(elem.type))
 
             if (pasteTrackIndex < 0)
                 continue
 
-            const copyToTrack = data.state.tracks[pasteToTrackIndex + ctr + pasteTrackIndex]
+            const copyToTrack = state.tracks[pasteToTrackIndex + ctr + pasteTrackIndex]
             maxAffectedTrackIndex = Math.max(maxAffectedTrackIndex, pasteToTrackIndex + ctr + pasteTrackIndex)
 
             const absRange = Project.getAbsoluteRange(copiedData.project, elem.parentId, elem.range)
@@ -838,60 +830,60 @@ export function paste(data: WorkData)
             //console.log("paste elem", elem, newElem)
 
             newProject = Project.upsertElement(newProject, newElem)
-            selectionAdd(data, newElemId)
+            selectionAdd(state, newElemId)
         }
     }
 
     const newCursorTime = pasteToTime.add(copiedRange.duration)
-    cursorSetTime(data, newCursorTime, newCursorTime)
-    cursorSetTrack(data, pasteToTrackIndex, maxAffectedTrackIndex)
-    scrollTimeIntoView(data, newCursorTime)
+    cursorSetTime(state, newCursorTime, newCursorTime)
+    cursorSetTrack(state, pasteToTrackIndex, maxAffectedTrackIndex)
+    scrollTimeIntoView(state, newCursorTime)
     
     Project.global.project = Project.withRefreshedRange(newProject)
     Project.global.project = Project.global.project
-    selectionRemoveConflictingBehind(data)
+    selectionRemoveConflictingBehind(state)
 }
 
 
 export function cursorSetTime(
-    data: WorkData,
+    state: Timeline.State,
     time1: Rational | null,
     time2?: Rational | null)
 {
-    data.state.cursor.time1 = time1 || data.state.cursor.time1
-    data.state.cursor.time2 = time2 || data.state.cursor.time2
+    state.cursor.time1 = time1 || state.cursor.time1
+    state.cursor.time2 = time2 || state.cursor.time2
 }
 
 
 export function cursorSetTrack(
-    data: WorkData,
+    state: Timeline.State,
     trackIndex1: number | null,
     trackIndex2?: number | null)
 {
-    data.state.cursor.trackIndex1 =
-        Math.max(0, Math.min(data.state.tracks.length - 1,
-            trackIndex1 ?? data.state.cursor.trackIndex1))
+    state.cursor.trackIndex1 =
+        Math.max(0, Math.min(state.tracks.length - 1,
+            trackIndex1 ?? state.cursor.trackIndex1))
 
-    data.state.cursor.trackIndex2 = 
-        Math.max(0, Math.min(data.state.tracks.length - 1,
-            trackIndex2 ?? data.state.cursor.trackIndex2))
+    state.cursor.trackIndex2 = 
+        Math.max(0, Math.min(state.tracks.length - 1,
+            trackIndex2 ?? state.cursor.trackIndex2))
 }
 
 
 export function cursorSetTrackByParentId(
-    data: WorkData,
+    state: Timeline.State,
     parentId: Project.ID)
 {
-    const trackIndex = data.state.tracks.findIndex(tr => tr.parentId === parentId)
+    const trackIndex = state.tracks.findIndex(tr => tr.parentId === parentId)
     if (trackIndex < 0)
         return
 
-    data.state.cursor.trackIndex1 = data.state.cursor.trackIndex2 = trackIndex
+    state.cursor.trackIndex1 = state.cursor.trackIndex2 = trackIndex
 }
 
 
 export function findPreviousAnchor(
-    data: WorkData,
+    state: Timeline.State,
     time: Rational,
     trackIndex1: number,
     trackIndex2: number)
@@ -902,9 +894,9 @@ export function findPreviousAnchor(
     const trackMin = Math.min(trackIndex1, trackIndex2)
     const trackMax = Math.max(trackIndex1, trackIndex2)
     
-    for (let tr = Math.max(0, trackMin); tr <= Math.min(data.state.tracks.length - 1, trackMax); tr++)
+    for (let tr = Math.max(0, trackMin); tr <= Math.min(state.tracks.length - 1, trackMax); tr++)
     {
-        const anchor = data.state.tracks[tr].findPreviousAnchor(data, time)
+        const anchor = state.tracks[tr].findPreviousAnchor(state, time)
         prevAnchor = Rational.max(prevAnchor, anchor)
     }
 
@@ -916,7 +908,7 @@ export function findPreviousAnchor(
 
 
 export function deleteRange(
-    data: WorkData,
+    state: Timeline.State,
     range: Range,
     trackIndex1: number,
     trackIndex2: number)
@@ -924,34 +916,34 @@ export function deleteRange(
     const trackMin = Math.min(trackIndex1, trackIndex2)
     const trackMax = Math.max(trackIndex1, trackIndex2)
     
-    for (let tr = Math.max(0, trackMin); tr <= Math.min(data.state.tracks.length - 1, trackMax); tr++)
-        data.state.tracks[tr].deleteRange(data, range)
+    for (let tr = Math.max(0, trackMin); tr <= Math.min(state.tracks.length - 1, trackMax); tr++)
+        state.tracks[tr].deleteRange(state, range)
 }
 
 	
-export function selectionRemoveConflictingBehind(data: WorkData)
+export function selectionRemoveConflictingBehind(state: Timeline.State)
 {
-    for (let tr = 0; tr < data.state.tracks.length; tr++)
-        data.state.tracks[tr].selectionRemoveConflictingBehind(data)
+    for (let tr = 0; tr < state.tracks.length; tr++)
+        state.tracks[tr].selectionRemoveConflictingBehind(state)
 }
 
 
-export function keyHandlePendingFinish(data: WorkData)
+export function keyHandlePendingFinish(state: Timeline.State)
 {
-    if (!data.state.needsKeyFinish)
+    if (!state.needsKeyFinish)
         return
 
-    data.state.needsKeyFinish = false
+    state.needsKeyFinish = false
 
-    selectionRemoveConflictingBehind(data)
+    selectionRemoveConflictingBehind(state)
 }
 
 
-export function insertNote(data: WorkData, time: Rational, chroma: number)
+export function insertNote(state: Timeline.State, time: Rational, chroma: number)
 {
-    keyHandlePendingFinish(data)
+    keyHandlePendingFinish(state)
 
-    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    const track = state.tracks[state.cursor.trackIndex1]
     if (!(track instanceof Timeline.TimelineTrackNotes))
         return
 
@@ -959,18 +951,18 @@ export function insertNote(data: WorkData, time: Rational, chroma: number)
     if (!noteBlock)
         return
 
-    const insertOctave = Math.floor(data.state.insertion.nearMidiPitch / 12)
+    const insertOctave = Math.floor(state.insertion.nearMidiPitch / 12)
     const possiblePitches = [-1, 0, 1].map(offset =>
     {
         const pitch = (insertOctave + offset) * 12 + (MathUtils.mod(chroma, 12))
-        const delta = Math.abs(pitch - data.state.insertion.nearMidiPitch)
+        const delta = Math.abs(pitch - state.insertion.nearMidiPitch)
         return { pitch, delta }
     })
 
     possiblePitches.sort((a, b) => a.delta - b.delta)
     const chosenPitch = possiblePitches[0].pitch
 
-    const range = new Range(time, time.add(data.state.insertion.duration))
+    const range = new Range(time, time.add(state.insertion.duration))
     const volumeDb = 0
     const velocity = 1
         
@@ -985,27 +977,27 @@ export function insertNote(data: WorkData, time: Rational, chroma: number)
     project = Project.withRefreshedRange(project)
     Project.global.project = project
 
-    data.state.insertion.nearMidiPitch = chosenPitch
+    state.insertion.nearMidiPitch = chosenPitch
 
-    data.state.cursor.visible = false
-    cursorSetTime(data, range.end, range.end)
-    scrollTimeIntoView(data, range.end)
-    selectionClear(data)
-    selectionAdd(data, id)
+    state.cursor.visible = false
+    cursorSetTime(state, range.end, range.end)
+    scrollTimeIntoView(state, range.end)
+    selectionClear(state)
+    selectionAdd(state, id)
     Playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
-    selectionRemoveConflictingBehind(data)
+    selectionRemoveConflictingBehind(state)
 }
 
 
-export function insertChord(data: WorkData, time: Rational, chord: Theory.Chord)
+export function insertChord(state: Timeline.State, time: Rational, chord: Theory.Chord)
 {
-    keyHandlePendingFinish(data)
+    keyHandlePendingFinish(state)
 
-    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    const track = state.tracks[state.cursor.trackIndex1]
     if (!(track instanceof Timeline.TimelineTrackChords))
         return
 
-    const range = new Range(time, time.add(data.state.insertion.duration))
+    const range = new Range(time, time.add(state.insertion.duration))
     const volumeDb = 0
     const velocity = 1
         
@@ -1020,21 +1012,21 @@ export function insertChord(data: WorkData, time: Rational, chord: Theory.Chord)
     project = Project.withRefreshedRange(project)
     Project.global.project = project
 
-    data.state.cursor.visible = false
-    cursorSetTime(data, range.end, range.end)
-    scrollTimeIntoView(data, range.end)
-    selectionClear(data)
-    selectionAdd(data, id)
+    state.cursor.visible = false
+    cursorSetTime(state, range.end, range.end)
+    scrollTimeIntoView(state, range.end)
+    selectionClear(state)
+    selectionAdd(state, id)
     Playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
-    selectionRemoveConflictingBehind(data)
+    selectionRemoveConflictingBehind(state)
 }
 
 
-export function insertNoteBlock(data: WorkData, time: Rational): Project.ID | null
+export function insertNoteBlock(state: Timeline.State, time: Rational): Project.ID | null
 {
-    keyHandlePendingFinish(data)
+    keyHandlePendingFinish(state)
 
-    const track = data.state.tracks[data.state.cursor.trackIndex1]
+    const track = state.tracks[state.cursor.trackIndex1]
     if (!(track instanceof Timeline.TimelineTrackNoteBlocks))
         return null
 
@@ -1060,17 +1052,17 @@ export function insertNoteBlock(data: WorkData, time: Rational): Project.ID | nu
     project = Project.withRefreshedRange(project)
     Project.global.project = project
 
-    scrollTimeIntoView(data, time)
-    selectionClear(data)
-    selectionAdd(data, id)
-    selectionRemoveConflictingBehind(data)
+    scrollTimeIntoView(state, time)
+    selectionClear(state)
+    selectionAdd(state, id)
+    selectionRemoveConflictingBehind(state)
     return id
 }
 
 
-export function visibleTimeRange(data: WorkData): Range
+export function visibleTimeRange(state: Timeline.State): Range
 {
     return new Range(
-        timeAtX(data, data.state.trackHeaderW).subtract(data.state.timeSnap),
-        timeAtX(data, data.state.renderRect.w).add(data.state.timeSnap))
+        timeAtX(state, state.trackHeaderW).subtract(state.timeSnap),
+        timeAtX(state, state.renderRect.w).add(state.timeSnap))
 }
