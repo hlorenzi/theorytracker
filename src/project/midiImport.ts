@@ -10,63 +10,75 @@ import * as MathUtils from "../util/mathUtils"
 export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
 {
     const midi = Midi.Decoder.fromBytes(bytes)
+    const tracks = splitTracksAtProgramChanges(midi.tracks)
     console.log("midiImport", midi)
 
-    const tracks = splitTracksAtProgramChanges(midi.tracks)
-    
-    const findFirstEvent = (kind: string) =>
+
+    function findFirstEvent<T extends Midi.Event["kind"]>(
+        kind: T)
+        : Extract<Midi.Event, { kind: T }> | null
     {
         for (const track of tracks)
             for (const ev of track.events)
-                if (ev.kind == kind)
-                    return ev
+                if (ev.kind === kind)
+                    return ev as Extract<Midi.Event, { kind: T }>
                 
         return null
     }
     
-    const findFirstEventOnChannel = (channel: number, kind: string) =>
+
+    function findFirstEventOnChannel<T extends Midi.Event["kind"]>(
+        channel: number,
+        kind: string)
+        : Extract<Midi.Event, { kind: T }> | null
     {
         for (const track of tracks)
             for (const ev of track.events)
-                if (ev.kind == kind && ev.channel == channel)
-                    return ev
+                if (ev.kind === kind && (ev as any).channel === channel)
+                    return ev as Extract<Midi.Event, { kind: T }>
                 
         return null
     }
+
     
-    const findFirstEventOnTrack = (midiTrack: Midi.Track, kind: string) =>
+    function findFirstEventOnTrack<T extends Midi.Event["kind"]>(
+        midiTrack: Midi.Track,
+        kind: string)
+        : Extract<Midi.Event, { kind: T }> | null
     {
         for (const ev of midiTrack.events)
-            if (ev.kind == kind)
+            if (ev.kind === kind)
+                return ev as Extract<Midi.Event, { kind: T }>
+                
+        return null
+    }
+    
+
+    function findFirstControllerOnChannel(channel: number, kind: string): Midi.EventController | null
+    {
+        for (const track of tracks)
+            for (const ev of track.events)
+                if (ev.kind === "controller" && ev.controllerName === kind && ev.channel === channel)
+                    return ev
+                
+        return null
+    }
+    
+
+    function findFirstControllerOnTrack(midiTrack: Midi.Track, kind: string): Midi.EventController | null
+    {
+        for (const ev of midiTrack.events)
+            if (ev.kind === "controller" && ev.controllerName === kind)
                 return ev
                 
         return null
     }
-    
-    const findFirstControllerOnChannel = (channel: number, kind: string) =>
-    {
-        for (const track of tracks)
-            for (const ev of track.events)
-                if (ev.kind == "controller" && ev.controllerName == kind && ev.channel == channel)
-                    return ev
-                
-        return null
-    }
-    
-    const findFirstControllerOnTrack = (midiTrack: Midi.Track, kind: string) =>
-    {
-        for (const ev of midiTrack.events)
-            if (ev.kind == "controller" && ev.controllerName == kind)
-                return ev
-                
-        return null
-    }
+
 
     let project = Project.makeEmpty()
     
-    const tempoEv = findFirstEvent("setTempo")
-    const msPerQuarterNote = (tempoEv ? tempoEv.msPerQuarterNote : 500000)
-    project.baseBpm = Math.round(60 * 1000 * 1000 / msPerQuarterNote)
+    const evSetTempo = findFirstEvent("setTempo")
+    project.baseBpm = Math.round(evSetTempo ? evSetTempo.bpm : 120)
     
     const trackKeyChanges = project.nextId
     project.keyChangeTrackId = trackKeyChanges
@@ -95,10 +107,9 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             if (index < 0 || index >= tonicPitches.length)
                 continue
             
-            const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, 27720)
             project = Project.upsertElement(project, Project.makeKeyChange(
                 trackKeyChanges,
-                time,
+                ev.tick,
                 new Theory.Key(
                     new Theory.PitchName(tonicLetters[index], tonicAccidentals[index]),
                     Theory.Scale.parse(ev.scale == 0 ? "Major" : "Minor"))))
@@ -112,10 +123,9 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             if (ev.kind != "setTimeSignature")
                 continue
             
-            const time = Rational.fromFloat(ev.time / midi.ticksPerQuarterNote / 4, 27720)
             project = Project.upsertElement(project, Project.makeMeterChange(
                 trackMeterChanges,
-                time,
+                ev.tick,
                 new Theory.Meter(ev.numerator, ev.denominator)))
         }
     }
@@ -129,30 +139,29 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
             if (noteOn.kind != "noteOn")
                 continue
 
-            let noteOff: any = null
+            let noteOffTime: Rational | null = null
             for (const ev of midiTrack.events)
             {
                 if (ev.kind != "noteOn" && ev.kind != "noteOff")
                     continue
                 
-                if (ev.time <= noteOn.time || ev.channel != noteOn.channel || ev.key != noteOn.key)
+                if (ev.tick.compare(noteOn.tick) <= 0 ||
+                    ev.channel != noteOn.channel ||
+                    ev.key != noteOn.key)
                     continue
                 
-                if (!noteOff || ev.time < noteOff.time)
+                if (!noteOffTime || ev.tick.compare(noteOffTime) < 0)
                 {
-                    noteOff = ev
+                    noteOffTime = ev.tick
                     break
                 }
             }
             
-            if (!noteOff)
+            if (!noteOffTime)
                 continue
             
-            const onTick  = Rational.fromFloat(noteOn .time / midi.ticksPerQuarterNote / 4, 27720)
-            const offTick = Rational.fromFloat(noteOff.time / midi.ticksPerQuarterNote / 4, 27720)
-            
             notes.push({
-                range: new Range(onTick, offTick),
+                range: new Range(noteOn.tick, noteOffTime),
                 midiPitch: noteOn.key,
                 velocity: MathUtils.midiVolumeToDb(noteOn.velocity / 127),
                 channel: noteOn.channel,
@@ -170,28 +179,35 @@ export function midiImport(bytes: number[] | Buffer | Uint8Array): Project.Root
     {
         const midiTrack = tracks[notesForTrack[0].midiTrackIndex]
 
-        const findFirstEventOnChannelOrTrack = (ev: string) =>
+
+        function findFirstEventOnChannelOrTrack<T extends Midi.Event["kind"]>(
+            kind: T)
+            : Extract<Midi.Event, { kind: T }> | null
         {
             if (midi.format == 0)
-                return findFirstEventOnChannel(notesForTrack[0].channel, ev)
+                return findFirstEventOnChannel(notesForTrack[0].channel, kind)
             else
-                return findFirstEventOnTrack(midiTrack, ev)
+                return findFirstEventOnTrack(midiTrack, kind)
         }
 
-        const findFirstControllerOnChannelOrTrack = (ev: string) =>
+
+        function findFirstControllerOnChannelOrTrack(
+            kind: Midi.EventController["controllerName"])
+            : Midi.EventController | null
         {
             if (midi.format == 0)
-                return findFirstControllerOnChannel(notesForTrack[0].channel, ev)
+                return findFirstControllerOnChannel(notesForTrack[0].channel, kind)
             else
-                return findFirstControllerOnTrack(midiTrack, ev)
+                return findFirstControllerOnTrack(midiTrack, kind)
         }
+
 
         const trackId = project.nextId
         const track = Project.makeTrackNotes()
 
         const trackName = findFirstEventOnChannelOrTrack("trackName")
         if (trackName)
-            track.name = trackName.text
+            track.name = trackName.name
 
         const trackVolume = findFirstControllerOnChannelOrTrack("channelVolumeCoarse")
         if (trackVolume)
@@ -316,7 +332,7 @@ function splitTracksAtProgramChanges(tracks: Midi.Track[]): Midi.Track[]
 
         for (const splitTrack of splitTracksByOrder)
         {
-            splitTrack.events.sort((a, b) => a.time - b.time)
+            splitTrack.events.sort((a, b) => a.tick.compare(b.tick))
             newTracks.push(splitTrack)
         }
     }

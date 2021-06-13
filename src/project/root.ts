@@ -319,7 +319,7 @@ export function getElem<T extends Project.Element["type"]>(
     if (!elem || elem.type != type)
         return null
 
-    return elem as any
+    return elem as Extract<Project.Element, { type: T }>
 }
 
 
@@ -333,7 +333,7 @@ export function getTrack<T extends Project.Track["trackType"]>(
     if (!elem || elem.type != "track" || elem.trackType != trackType)
         return null
 
-    return elem as any
+    return elem as Extract<Project.Track, { trackType: T }>
 }
 
 

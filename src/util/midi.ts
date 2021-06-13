@@ -1,4 +1,5 @@
 import { BinaryReader } from "./binaryReader"
+import Rational from "./rational"
 
 
 export interface Root
@@ -16,7 +17,119 @@ export interface Root
 export interface Track
 {
 	length: number
-	events: any[]
+	events: Event[]
+}
+
+
+export type Event =
+	EventUnknown |
+	EventNoteOn |
+	EventNoteOff |
+	EventController |
+	EventProgramChange |
+	EventEndOfTrack |
+	EventTrackName |
+	EventSetTempo |
+	EventSetTimeSignature |
+	EventSetKeySignature |
+	EventSequencerSpecific
+
+
+export interface EventCommon
+{
+	tick: Rational
+}
+
+
+export interface EventUnknown extends EventCommon
+{
+	kind: "unknown"
+	code: number
+	metaCode: number | null
+	rawData: number[]
+}
+
+
+export interface EventNoteOn extends EventCommon
+{
+	kind: "noteOn"
+	channel: number
+	key: number
+	velocity: number
+}
+
+
+export interface EventNoteOff extends EventCommon
+{
+	kind: "noteOff"
+	channel: number
+	key: number
+	velocity: number
+}
+
+
+export interface EventController extends EventCommon
+{
+	kind: "controller"
+	channel: number
+	controllerNumber: number
+	controllerValue: number
+	controllerName:
+		"channelVolumeCoarse" |
+		"channelVolumeFine"
+}
+
+
+export interface EventProgramChange extends EventCommon
+{
+	kind: "programChange"
+	channel: number
+	program: number
+}
+
+
+export interface EventEndOfTrack extends EventCommon
+{
+	kind: "endOfTrack"
+}
+
+
+export interface EventTrackName extends EventCommon
+{
+	kind: "trackName"
+	name: string
+}
+
+
+export interface EventSetTempo extends EventCommon
+{
+	kind: "setTempo"
+	bpm: number
+}
+
+
+export interface EventSetTimeSignature extends EventCommon
+{
+	kind: "setTimeSignature"
+	numerator: number
+	denominator: number
+	ticks: number
+	quarterNoteTicks: number
+}
+
+
+export interface EventSetKeySignature extends EventCommon
+{
+	kind: "setKeySignature"
+	accidentals: number
+	scale: number
+}
+
+
+export interface EventSequencerSpecific extends EventCommon
+{
+	kind: "sequencerSpecific"
+	text: string
 }
 
 
@@ -65,7 +178,7 @@ export class Decoder
 	}
 	
 	
-	static readTrack(r: BinaryReader, midi: Root)
+	static readTrack(r: BinaryReader, root: Root): Track
 	{
 		if (r.readAsciiLength(4) != "MTrk")
 			throw "invalid midi track magic"
@@ -77,14 +190,16 @@ export class Decoder
 		}
 		
 		let runningModePreviousCode = -1
-		let currentTime = 0
+		let currentMidiTime = 0
 		
 		let eventStartPos = r.getPosition()
 		while (r.getPosition() < eventStartPos + track.length)
 		{
-			const event = Decoder.readTrackEvent(r, currentTime, runningModePreviousCode)
-			runningModePreviousCode = event.code
-			currentTime = event.time
+			const { event, code, midiTime } = Decoder.readTrackEvent(
+				r, root, currentMidiTime, runningModePreviousCode)
+
+			runningModePreviousCode = code
+			currentMidiTime = midiTime
 			track.events.push(event)
 		}
 		
@@ -94,158 +209,265 @@ export class Decoder
 	}
 	
 	
-	static readTrackEvent(r: BinaryReader, currentTime: number, runningModePreviousCode: number)
+	static readTrackEvent(
+		r: BinaryReader,
+		root: Root,
+		currentMidiTime: number,
+		runningModePreviousCode: number)
+		:
+		{
+			event: Event,
+			code: number,
+			midiTime: number,
+		}
 	{
-		let event: any = {}
-		
-		event.deltaTime = this.readVarLengthUInt(r)
-		event.time = currentTime + event.deltaTime
+		const midiDeltaTime = this.readVarLengthUInt(r)
+		const midiTime = currentMidiTime + midiDeltaTime
+
+		let code = 0
 		
 		if ((r.peekByte() & 0x80) == 0)
-			event.code = runningModePreviousCode
+			code = runningModePreviousCode
 		else
-			event.code = r.readByte()
-		
-		if (event.code >= 0x80 && event.code <= 0xef)
-		{
-			if (event.code >= 0xc0 && event.code <= 0xdf)
-				event.rawData = r.readBytes(1)
-			else
-				event.rawData = r.readBytes(2)
+			code = r.readByte()
 			
-			this.decodeChannelVoiceEvent(event)
-		}
-		else if (event.code >= 0xf0 && event.code <= 0xfe)
+		const event: EventCommon =
 		{
-			event.length = this.readVarLengthUInt(r)
-			event.rawData = r.readBytes(event.length)
+			tick: Rational.fromFloat(midiTime / root.ticksPerQuarterNote / 4, 27720),
 		}
-		else if (event.code == 0xff)
+
+		let finalEvent: Event
+		
+		if (code >= 0x80 && code <= 0xef)
 		{
-			event.metaType = r.readByte()
-			event.length = this.readVarLengthUInt(r)
-			event.rawData = r.readBytes(event.length)
-			this.decodeMetaEvent(event)
+			let rawData: number[] = []
+
+			if (code >= 0xc0 && code <= 0xdf)
+				rawData = r.readBytes(1)
+			else
+				rawData = r.readBytes(2)
+			
+			finalEvent = this.decodeChannelVoiceEvent(event, code, rawData)
+		}
+		else if (code >= 0xf0 && code <= 0xfe)
+		{
+			const length = this.readVarLengthUInt(r)
+			const eventUnknown: EventUnknown =
+			{
+				...event,
+				kind: "unknown",
+				code,
+				metaCode: null,
+				rawData: r.readBytes(length),
+			}
+
+			finalEvent = eventUnknown
+		}
+		else if (code == 0xff)
+		{
+			const metaCode = r.readByte()
+			const length = this.readVarLengthUInt(r)
+			const rawData = r.readBytes(length)
+			finalEvent = this.decodeMetaEvent(event, metaCode, rawData)
 		}
 		else
-			throw "invalid track event code 0x" + event.code.toString(16)
-		
-		return event
+			throw "invalid track event code 0x" + code.toString(16)
+
+		return {
+			event: finalEvent,
+			code,
+			midiTime,
+		}
 	}
 	
 	
-	static decodeChannelVoiceEvent(event: any)
+	static decodeChannelVoiceEvent(event: EventCommon, code: number, rawData: number[]): Event
 	{
-		const isNoteOff = (event.code & 0xf0) == 0x80
-		const isNoteOn = (event.code & 0xf0) == 0x90
-		const isController = (event.code & 0xf0) == 0xb0
-		const isProgramChange = (event.code & 0xf0) == 0xc0
+		const isNoteOff = (code & 0xf0) == 0x80
+		const isNoteOn = (code & 0xf0) == 0x90
+		const isController = (code & 0xf0) == 0xb0
+		const isProgramChange = (code & 0xf0) == 0xc0
 		
 		if (isNoteOff || isNoteOn)
 		{
-			const isReallyNoteOff = isNoteOff || event.rawData[1] == 0
+			const channel = (code & 0x0f)
+			const key = rawData[0]
+			const velocity = rawData[1]
 
-			event.kind = (isReallyNoteOff ? "noteOff" : "noteOn")
-			event.channel = (event.code & 0x0f)
-			event.key = event.rawData[0]
-			event.velocity = event.rawData[1]
-			
-			const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-			const noteName = noteNames[event.key % 12]
-			const noteOctave = Math.floor(event.key / 12)
-			
-			event.description =
-				(isReallyNoteOff ? "[8*] Note Off: " : "[9*] Note On: ") +
-				noteName + noteOctave + ", Velocity: " + event.velocity
+			const isReallyNoteOff = isNoteOff || rawData[1] == 0
+
+			if (isReallyNoteOff)
+			{
+				const eventNoteOff: EventNoteOff =
+				{
+					...event,
+					kind: "noteOff",
+					channel, key, velocity,
+				}
+
+				return eventNoteOff
+			}
+			else
+			{
+				const eventNoteOn: EventNoteOn =
+				{
+					...event,
+					kind: "noteOn",
+					channel, key, velocity,
+				}
+
+				return eventNoteOn
+			}
 		}
 		else if (isController)
 		{
-			event.kind = "controller"
-			event.channel = (event.code & 0x0f)
-			event.controllerNumber = event.rawData[0]
-			event.controllerValue = event.rawData[1]
-
-			const controllerNames: any =
+			const controllerNames: { [id: number]: EventController["controllerName"] } =
 			{
 				7: "channelVolumeCoarse",
 				39: "channelVolumeFine",
 			}
 
-			event.controllerName = controllerNames[event.controllerNumber]
-			event.description =
-				"Controller: " +
-				"[" + event.controllerNumber + "] " + event.controllerName +
-				": " + event.controllerValue
+			const eventController: EventController =
+			{
+				...event,
+				kind: "controller",
+				channel: (code & 0x0f),
+				controllerNumber: rawData[0],
+				controllerValue: rawData[1],
+				controllerName: controllerNames[rawData[0]] || "unknown",
+			}
+
+			return eventController
 		}
 		else if (isProgramChange)
 		{
-			event.kind = "programChange"
-			event.channel = (event.code & 0x0f)
-			event.program = event.rawData[0]
-			event.description = "Program Change: " + event.program
+			const eventProgramChange: EventProgramChange =
+			{
+				...event,
+				kind: "programChange",
+				channel: (code & 0x0f),
+				program: rawData[0],
+			}
+
+			return eventProgramChange
+		}
+		else
+		{
+			const eventUnknown: EventUnknown =
+			{
+				...event,
+				kind: "unknown",
+				code,
+				metaCode: null,
+				rawData,
+			}
+
+			return eventUnknown
 		}
 	}
 	
 	
-	static decodeMetaEvent(event: any)
+	static decodeMetaEvent(event: EventCommon, metaCode: number, rawData: number[]): Event
 	{
-		let r = new BinaryReader(event.rawData)
+		let r = new BinaryReader(rawData)
 		
-		if (event.metaType == 0x03)
+		if (metaCode == 0x03)
 		{
-			event.kind = "trackName"
-			event.text = r.readAsciiLength(event.length)
-			event.description =
-				"[FF 03] Track Name: " + event.text
+			const name = r.readAsciiLength(r.getLength())
+
+			const eventTrackName: EventTrackName =
+			{
+				...event,
+				kind: "trackName",
+				name,
+			}
+
+			return eventTrackName
 		}
 
-		else if (event.metaType == 0x2f)
+		else if (metaCode == 0x2f)
 		{
-			event.kind = "endOfTrack"
-			event.description = "[FF 2F] End of Track"
+			const eventEndOfTrack: EventEndOfTrack =
+			{
+				...event,
+				kind: "endOfTrack",
+			}
+
+			return eventEndOfTrack
 		}
 		
-		else if (event.metaType == 0x51)
+		else if (metaCode == 0x51)
 		{
-			event.kind = "setTempo"
-			event.msPerQuarterNote = r.readUInt24BE()
-			event.description =
-				"[FF 51] Set Tempo: " +
-				event.msPerQuarterNote + " µs/quarter note"
+			const msPerQuarterNote = r.readUInt24BE()
+			
+			const eventSetTempo: EventSetTempo =
+			{
+				...event,
+				kind: "setTempo",
+				bpm: 60 * 1000 * 1000 / msPerQuarterNote,
+			}
+
+			return eventSetTempo
 		}
 		
-		else if (event.metaType == 0x58)
+		else if (metaCode == 0x58)
 		{
-			event.kind = "setTimeSignature"
-			event.numerator = r.readByte()
-			event.denominator = Math.pow(2, r.readByte())
-			event.ticks = r.readByte()
-			event.quarterNoteTicks = r.readByte()
-			event.description =
-				"[FF 51] Set Time Signature: " +
-				event.numerator + " / "+ event.denominator + ", " +
-				"ticks: " + event.ticks + ", " +
-				"quarter note ticks: " + event.quarterNoteTicks
+			const numerator = r.readByte()
+			const denominator = Math.pow(2, r.readByte())
+			const ticks = r.readByte()
+			const quarterNoteTicks = r.readByte()
+			
+			const eventSetTimeSignature: EventSetTimeSignature =
+			{
+				...event,
+				kind: "setTimeSignature",
+				numerator, denominator,
+				ticks, quarterNoteTicks,
+			}
+
+			return eventSetTimeSignature
 		}
 		
-		else if (event.metaType == 0x59)
+		else if (metaCode == 0x59)
 		{
-			event.kind = "setKeySignature"
-			event.accidentals = r.readSByte()
-			event.scale = r.readByte()
-			event.description =
-				"[FF 51] Set Key Signature: " +
-				event.accidentals + " accidentals, " +
-				"scale: " + event.scale
+			const accidentals = r.readSByte()
+			const scale = r.readByte()
+
+			const eventSetKeySignature: EventSetKeySignature =
+			{
+				...event,
+				kind: "setKeySignature",
+				accidentals, scale,
+			}
+
+			return eventSetKeySignature
 		}
 		
-		else if (event.metaType == 0x7f)
+		else if (metaCode == 0x7f)
 		{
-			event.kind = "sequencerSpecific"
-			event.text = r.readAsciiLength(event.length)
-			event.description =
-				"[FF 7F] Sequencer-Specific: " +
-				event.text
+			const text = r.readAsciiLength(r.getLength())
+
+			const eventSequencerSpecific: EventSequencerSpecific =
+			{
+				...event,
+				kind: "sequencerSpecific",
+				text,
+			}
+
+			return eventSequencerSpecific
+		}
+		else
+		{
+			const eventUnknown: EventUnknown =
+			{
+				...event,
+				kind: "unknown",
+				code: 0xff,
+				metaCode,
+				rawData
+			}
+
+			return eventUnknown
 		}
 	}
 	
