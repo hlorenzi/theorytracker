@@ -34,14 +34,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     }
 
 
-    parentStart(state: Timeline.State)
-    {
-        const noteBlock = Project.global.project.elems.get(this.parentId)
-        return noteBlock?.range?.start ?? new Rational(0)
-    }
-
-
-    parentRange(state: Timeline.State)
+    getActiveRange(state: Timeline.State): Range
     {
         const noteBlock = Project.global.project.elems.get(this.parentId)
         return noteBlock?.range ?? new Range(new Rational(0), new Rational(0))
@@ -57,7 +50,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         if (!list)
             return
 
-        for (const elem of list.iterAtRange(range.subtract(this.parentStart(state))))
+        for (const elem of list.iterAtRange(range.subtract(this.getActiveRange(state).start)))
             yield elem as Project.Note
     }
 
@@ -192,7 +185,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         let hoverDrag = null
         let hoverStretch = null
 
-        const parentStart = this.parentStart(state)
+        const parentStart = this.getActiveRange(state).start
         
         for (const [note, keyCh, xMin, xMax] of this.iterNotesAndKeyChangesAtRange(state, checkRange))
         {
@@ -260,8 +253,8 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 
         this.pencil =
         {
-            time1: time.subtract(this.parentStart(state)),
-            time2: time.subtract(this.parentStart(state)).add(state.timeSnap.multiply(new Rational(4))),
+            time1: time.subtract(this.getActiveRange(state).start),
+            time2: time.subtract(this.getActiveRange(state).start).add(state.timeSnap.multiply(new Rational(4))),
             midiPitch,
         }
     }
@@ -280,7 +273,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
     {
 		if (this.pencil)
 		{
-            this.pencil.time2 = state.mouse.point.time.subtract(this.parentStart(state))
+            this.pencil.time2 = state.mouse.point.time.subtract(this.getActiveRange(state).start)
             
             const time1X = Timeline.xAtTime(state, this.pencil.time1)
             const time2X = Timeline.xAtTime(state, this.pencil.time2)
@@ -373,21 +366,10 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 	}
 
 
-    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
+    renderBackground(state: Timeline.State, canvas: CanvasRenderingContext2D)
     {
         const visibleRange = Timeline.visibleTimeRange(state)
-        const parentRange = this.parentRange(state)
-        const parentStart = parentRange.start
 
-        const visibleX1 = Timeline.xAtTime(state, visibleRange.start)
-        const visibleX2 = Timeline.xAtTime(state, visibleRange.end)
-        const parentX1 = Timeline.xAtTime(state, parentRange.start)
-        const parentX2 = Timeline.xAtTime(state, parentRange.end)
-
-        canvas.fillStyle = "#0004"
-        canvas.fillRect(visibleX1, 0, parentX1 - visibleX1, this.renderRect.h)
-        canvas.fillRect(parentX2, 0, visibleX2 - parentX2, this.renderRect.h)
-        
         const rowAtTop = this.rowAtY(state, 0)
         const rowAtBottom = this.rowAtY(state, this.renderRect.h)
 
@@ -417,38 +399,63 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
 		{
 			const tonicRowOffset = Theory.Utils.chromaToDegreeInCMajor(keyCh1.key.tonic.chroma)
 
-			for (let i = octaveAtBottom; i <= octaveAtTop; i++)
-			{
-				const y = 0.5 + Math.floor(
-                    this.yForRow(state, tonicRowOffset + i * 7) + state.noteRowH)
-				
-				canvas.strokeStyle = Prefs.global.editor.octaveDividerColor
-				canvas.beginPath()
-				canvas.moveTo(xMin, y)
-				canvas.lineTo(xMax, y)
-				canvas.stroke()
+            let renderOctaveLabels = true
 
-				for (let j = 1; j < 7; j += 1)
-				{
-					const ySuboctave = 0.5 + Math.floor(
-                        this.yForRow(state, tonicRowOffset + i * 7 + j) + state.noteRowH)
-					
-					canvas.strokeStyle = Prefs.global.editor.noteRowAlternateBkgColor
+            canvas.fillStyle = Prefs.global.editor.octaveLabelColor
+            canvas.font = Math.floor(state.noteRowH - 4) + "px system-ui"
+            canvas.textAlign = "left"
+            canvas.textBaseline = "bottom"
+
+            for (const measure of Project.iterMeasuresAtRange(Project.global.project, new Range(keyCh1.range.start, keyCh2.range.start)))
+            {
+                const x1 = Math.max(xMin, 0.5 + Math.floor(Timeline.xAtTime(state, measure.time1)))
+                const x2 = Math.min(xMax, 0.5 + Math.floor(Timeline.xAtTime(state, measure.time2)))
+
+                for (let i = octaveAtBottom; i <= octaveAtTop; i++)
+                {
+                    const y = 0.5 + Math.floor(
+                        this.yForRow(state, tonicRowOffset + i * 7) + state.noteRowH)
+                    
+                    canvas.strokeStyle =
+                        measure.num % 2 != 0 ?
+                        Prefs.global.editor.bkgColor :
+                        Prefs.global.editor.bkgAlternateMeasureColor
+
+                    const labelX = Math.max(x1 + 5, state.trackHeaderW + 5)
+                    if (renderOctaveLabels && labelX + 30 < xMax)
+                    {
+                        canvas.fillText(keyCh1.key.tonic.str + (i + 5).toString(), labelX, y - 1)
+                    }
+        
                     canvas.beginPath()
-                    canvas.moveTo(xMin, ySuboctave)
-                    canvas.lineTo(xMax, ySuboctave)
+                    canvas.moveTo(x1, y)
+                    canvas.lineTo(x2, y)
+                    canvas.moveTo(x1, y + 1)
+                    canvas.lineTo(x2, y + 1)
                     canvas.stroke()
-				}
-				
-				/*if (i == 0)
-				{
-					ctx.globalAlpha = 0.05
-					ctx.fillStyle = "#fff"
-					ctx.fillRect(xMin, y - 7 * state.trackState.rowScale, xMax - xMin, 7 * state.trackState.rowScale)
-					ctx.globalAlpha = 1
-				}*/
-			}
+
+                    for (let j = 1; j < 7; j += 1)
+                    {
+                        const ySuboctave = 0.5 + Math.floor(
+                            this.yForRow(state, tonicRowOffset + i * 7 + j) + state.noteRowH)
+                        
+                        canvas.beginPath()
+                        canvas.moveTo(x1, ySuboctave)
+                        canvas.lineTo(x2, ySuboctave)
+                        canvas.stroke()
+                    }
+                }
+
+                renderOctaveLabels = false
+            }
         }
+    }
+
+
+    render(state: Timeline.State, canvas: CanvasRenderingContext2D)
+    {
+        const visibleRange = Timeline.visibleTimeRange(state)
+        const parentStart = this.getActiveRange(state).start
 
         for (const [note, noteBlock, keyCh, xMin, xMax] of this.iterExternalNotesAndKeyChangesAtRange(state, visibleRange))
         {
@@ -494,7 +501,7 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
             canvas.globalAlpha = 0.4
 
             const range = new Range(this.pencil.time1, this.pencil.time2).sorted()
-			const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1.add(this.parentStart(state)))
+			const key = Project.keyAt(Project.global.project, this.projectTrackId, this.pencil.time1.add(this.getActiveRange(state).start))
 			const row = this.rowForPitch(state, this.pencil.midiPitch, key)
 			const mode = key.scale.metadata!.mode
 			const fillStyle = CanvasUtils.fillStyleForDegree(

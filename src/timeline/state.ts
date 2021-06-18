@@ -65,6 +65,7 @@ export interface State
 
     renderRect: Rect
 
+    trackMeasuresH: number
     trackHeaderW: number
     trackControlX: number
     trackControlY: number
@@ -173,6 +174,7 @@ export function init(): State
 
         renderRect: new Rect(0, 0, 0, 0),
 
+        trackMeasuresH: 20,
         trackHeaderW: 200,
         trackControlX: 10,
         trackControlY: 25,
@@ -335,19 +337,22 @@ export function refreshTracks(state: Timeline.State)
     {
         if (tracks[t].renderRect.h > 0)
             fixedH += tracks[t].renderRect.h
+        else
+            state.trackScrollLocked = true
     }
+
+    const availableH = state.renderRect.h - (state.trackScrollLocked ? state.trackMeasuresH : 0)
 
     for (let t = 0; t < tracks.length; t++)
     {
         if (tracks[t].renderRect.h == 0)
         {
-            tracks[t].renderRect.h = state.renderRect.h - fixedH
+            tracks[t].renderRect.h = availableH - fixedH
             state.trackScroll = 0
-            state.trackScrollLocked = true
         }
     }
 
-    let y = 0
+    let y = state.trackScrollLocked ? state.trackMeasuresH : 0
     for (let t = 0; t < tracks.length; t++)
     {
         tracks[t].renderRect.y = y

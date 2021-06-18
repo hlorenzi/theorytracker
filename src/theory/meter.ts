@@ -20,20 +20,20 @@ export default class Meter
 	}
 
 
-	*iterMeasuresPairwise(time: any = null): Generator<[number, number, any, any], void, void>
+	*iterMeasuresPairwise(time: Rational | null = null): Generator<[number, number, any, any], void, void>
 	{
 		time = time || new Rational(0)
 
 		while (true)
 		{
-			const nextTime = time.add(new Rational(this.numerator, this.denominator))
+			const nextTime: Rational = time.add(new Rational(this.numerator, this.denominator))
 			yield [this.numerator, this.denominator, time, nextTime]
 			time = nextTime
 		}
 	}
 
 
-	get fullCycleDuration(): any
+	get fullCycleDuration(): Rational
 	{
 		return new Rational(this.numerator, this.denominator)
 	}

@@ -15,17 +15,6 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     canvas.fillStyle = Prefs.global.editor.bkgColor
     canvas.fillRect(0, 0, state.renderRect.w, state.renderRect.h)
 
-    const visibleRange = Timeline.visibleTimeRange(state)
-
-    const visibleX1 = Timeline.xAtTime(state, visibleRange.start)
-    const visibleX2 = Timeline.xAtTime(state, visibleRange.end)
-    const parentX1 = Timeline.xAtTime(state, Project.global.project.range.start)
-    const parentX2 = Timeline.xAtTime(state, Project.global.project.range.end)
-
-    canvas.fillStyle = Prefs.global.editor.bkgVoidColor
-    canvas.fillRect(visibleX1, 0, parentX1 - visibleX1, state.renderRect.h)
-    canvas.fillRect(parentX2, 0, visibleX2 - parentX2, state.renderRect.h)
-    
     canvas.save()
     canvas.beginPath()
     canvas.rect(
@@ -35,12 +24,21 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
         state.renderRect.h)
     canvas.clip()
 
+    renderBackground(state, canvas)
     renderCursorHighlight(state, canvas)
-    renderBackgroundMeasures(state, canvas)
 
     canvas.restore()
     
-    let y = -state.trackScroll
+    // clip inverse of top measure track
+    canvas.save()
+    canvas.beginPath()
+    canvas.rect(
+        0, state.trackMeasuresH,
+        state.renderRect.w,
+        state.renderRect.h)
+    canvas.clip()
+    
+    let y = -state.trackScroll + state.tracks[0].renderRect.y
     for (let t = 0; t < state.tracks.length; t++)
     {
         const y2 = y + state.tracks[t].renderRect.h
@@ -81,12 +79,15 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
 
         renderTrackHeader(state, canvas, t)
         
+        const clipY1 = 1 + Math.max(0, state.trackMeasuresH - y)
+        const clipY2 = state.tracks[t].renderRect.h
+
         canvas.beginPath()
         canvas.rect(
             state.trackHeaderW,
-            1,
+            clipY1,
             state.renderRect.w - state.trackHeaderW,
-            state.tracks[t].renderRect.h - 1)
+            clipY2 - clipY1)
         canvas.clip()
 
         //canvas.translate(0, -state.tracks[t].yScroll)
@@ -97,7 +98,6 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
 
         canvas.restore()
 
-        
         canvas.strokeStyle = Prefs.global.editor.trackHBorderColor
         canvas.beginPath()
         canvas.moveTo(0, y + 0.5)
@@ -108,6 +108,8 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
 
         y = y2
     }
+
+    renderMeasuresTrack(state, canvas)
 
     if (state.mouse.down &&
         state.mouse.action == Timeline.MouseAction.DragTrackHeader &&
@@ -162,142 +164,141 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
     canvas.stroke()
 
     canvas.restore()
+    canvas.restore()
 }
 
 
-function renderBackgroundMeasures(state: Timeline.State, canvas: CanvasRenderingContext2D)
+function renderTracksByFn(
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
+    fn: (track: Timeline.TimelineTrack) => void)
+{
+    let y = -state.trackScroll + state.tracks[0].renderRect.y
+    for (let t = 0; t < state.tracks.length; t++)
+    {
+        const y2 = y + state.tracks[t].renderRect.h
+
+        if (y >= state.renderRect.h ||
+            y + state.tracks[t].renderRect.h <= 0)
+        {
+            y = y2
+            continue
+        }
+
+        canvas.save()
+        canvas.translate(0, y)
+
+        const clipY1 = 1 + Math.max(0, state.trackMeasuresH - y)
+        const clipY2 = state.tracks[t].renderRect.h
+
+        canvas.beginPath()
+        canvas.rect(
+            state.trackHeaderW,
+            clipY1,
+            state.renderRect.w - state.trackHeaderW,
+            clipY2 - clipY1)
+        canvas.clip()
+
+        fn(state.tracks[t])
+
+        canvas.restore()
+
+        y = y2
+    }
+}
+
+
+function renderBackground(state: Timeline.State, canvas: CanvasRenderingContext2D)
 {
     const visibleRange = Timeline.visibleTimeRange(state)
-    
-    const meterChangeTrackId = Project.meterChangeTrackId(Project.global.project)
-    const meterChangeList = Project.global.project.lists.get(meterChangeTrackId)!
 
-    const iter =
-        meterChangeList.size > 0 ?
-        meterChangeList.iterActiveAtRangePairwise(visibleRange) :
-        [
-            [null, Project.makeMeterChange(-1, new Rational(0), new Theory.Meter(4, 4))],
-            [Project.makeMeterChange(-1, new Rational(0), new Theory.Meter(4, 4)), null]
-        ]
-
-    for (const [meterCh1Raw, meterCh2Raw] of iter)
+    // Render alternating measure background and sub-measure dividers.
+    for (const measure of Project.iterMeasuresAtRange(Project.global.project, visibleRange))
     {
-        let timeMin = (meterCh1Raw ? meterCh1Raw.range.start : null)
-        let timeMax = (meterCh2Raw ? meterCh2Raw.range.start : visibleRange.end)
+        const x1 = 0.5 + Math.floor(Timeline.xAtTime(state, measure.time1))
+        const x2 = 0.5 + Math.floor(Timeline.xAtTime(state, measure.time2))
 
-        let measureAlternate = true
-
-        let meterCh1 = meterCh1Raw as (Project.MeterChange | null)
-        let meterCh2 = meterCh2Raw as (Project.MeterChange | null)
-
-        if (!meterCh1)
+        if (measure.num % 2 != 0)
         {
-            if (!meterCh2)
-                continue
-            
-            meterCh1 = meterCh2
-            timeMin = meterCh2.range.start
-            while (timeMin.compare(visibleRange.start) > 0)
-            {
-                timeMin = timeMin.subtract(meterCh2.meter.fullCycleDuration)
+            canvas.fillStyle = Prefs.global.editor.bkgAlternateMeasureColor
+            canvas.fillRect(x1, 0, x2 - x1, state.renderRect.h)
+        }
 
-                if (meterCh2.meter.alternatingMeasureCount % 2 != 0)
-                    measureAlternate = !measureAlternate
+        const submeasureSize =
+            Timeline.xAtTime(state, new Rational(1, measure.meterCh.meter.denominator)) -
+            Timeline.xAtTime(state, new Rational(0))
+
+        if (submeasureSize > 8)
+        {
+            canvas.strokeStyle = measure.num % 2 != 0 ?
+                Prefs.global.editor.bkgColor :
+                Prefs.global.editor.bkgAlternateMeasureColor
+
+            for (let n = 1; n < measure.meterCh.meter.numerator; n++)
+            {
+                const submeasureX = x1 + Math.round(submeasureSize * n)
+                if (submeasureX >= x2)
+                    break
+
+                canvas.beginPath()
+                canvas.moveTo(submeasureX, 0)
+                canvas.lineTo(submeasureX, state.renderRect.h)
+                canvas.stroke()
             }
         }
-        
-        const meterCh1X = 0.5 + Math.floor(Timeline.xAtTime(state, timeMin!))
-        const meterCh2X = 0.5 + Math.floor(Timeline.xAtTime(state, timeMax))
+    }
 
+    // Render track-specific background, such as note row dividers.
+    renderTracksByFn(state, canvas, (tr) => tr.renderBackground(state, canvas))
+
+    // Render dark overlay for areas beyond current active range.
+    let activeRange: Range | null = null
+    for (const track of state.tracks)
+        activeRange = Range.intersect(activeRange, track.getActiveRange(state))
+
+    if (!activeRange)
+        activeRange = Project.global.project.range
+
+    const visibleX1 = Timeline.xAtTime(state, visibleRange.start)
+    const visibleX2 = Timeline.xAtTime(state, visibleRange.end)
+    const activeX1 = Timeline.xAtTime(state, activeRange.start)
+    const activeX2 = Timeline.xAtTime(state, activeRange.end)
+    
+    canvas.fillStyle = Prefs.global.editor.bkgInactiveOverlayColor
+    canvas.fillRect(visibleX1, 0, activeX1 - visibleX1, state.renderRect.h)
+    canvas.fillRect(activeX2, 0, visibleX2 - activeX2, state.renderRect.h)
+    
+    // Render numbering for measures at the topmost track.
+    let suppressLabelUntilX = 0
+    for (const measure of Project.iterMeasuresAtRange(Project.global.project, visibleRange))
+    {
+        const x1 = 0.5 + Math.floor(Timeline.xAtTime(state, measure.time1))
+        const x2 = 0.5 + Math.floor(Timeline.xAtTime(state, measure.time2))
+
+        if (x1 > suppressLabelUntilX)
+        {
+            canvas.fillStyle = Prefs.global.editor.measureLabelColor
+            canvas.font = Math.floor(state.trackMeasuresH - 6) + "px system-ui"
+            canvas.textAlign = "left"
+            canvas.textBaseline = "middle"
+            canvas.fillText(measure.num.toString(), x1 + 5, state.trackMeasuresH / 2 + 1.5)
+
+            suppressLabelUntilX = x1 + 40
+        }
+    }
+    
+    // Render meter change dividers.
+    const meterChangeTrackId = Project.meterChangeTrackId(Project.global.project)
+    const meterChangeList = Project.global.project.lists.get(meterChangeTrackId)
+    if (meterChangeList)
+    {
         canvas.strokeStyle = Prefs.global.editor.meterChangeColor
         canvas.lineCap = "square"
         canvas.lineWidth = 1
         
-        for (const [measureN, measureD, time1, time2] of meterCh1.meter.iterMeasuresPairwise(timeMin))
-        {
-            measureAlternate = !measureAlternate
-
-            if (time2.compare(visibleRange.start) < 0)
-                continue
-
-            if (time1.compare(timeMax) > 0 || time1.compare(visibleRange.end) > 0)
-                break
-
-            const measureX1 = 0.5 + Math.floor(Timeline.xAtTime(state, time1))
-            const measureX2 = 0.5 + Math.floor(Timeline.xAtTime(state, time2))
-
-            if (true)//measureAlternate)
-            {
-                const x1 = Math.min(meterCh2X, measureX1)
-                const x2 = Math.min(meterCh2X, measureX2)
-                
-                canvas.fillStyle = Prefs.global.editor.measureAlternateBkgColor
-                canvas.fillRect(x1, 0, x2 - x1, state.renderRect.h)
-            }
-
-            if (time1.compare(meterCh1.range.start) == 0)
-                canvas.strokeStyle = Prefs.global.editor.meterChangeColor
-            else
-                canvas.strokeStyle = Prefs.global.editor.measureColor
-
-            canvas.beginPath()
-            canvas.moveTo(measureX1, 0)
-            canvas.lineTo(measureX1, state.renderRect.h)
-            canvas.stroke()
-
-            const halfSubmeasureSize = Timeline.xAtTime(state, new Rational(1, measureD * 2)) - Timeline.xAtTime(state, new Rational(0))
-            if (halfSubmeasureSize > 16)
-            {
-                let halfSubmeasureTime = time1.add(new Rational(-1, measureD * 2))
-                for (let sub = 1; sub <= measureN; sub++)
-                {
-                    halfSubmeasureTime = halfSubmeasureTime.add(new Rational(2, measureD * 2))
-                    
-                    const halfSubmeasureX = 0.5 + Math.floor(Timeline.xAtTime(state, halfSubmeasureTime))
-                    if (halfSubmeasureX >= meterCh1X && halfSubmeasureX <= meterCh2X)
-                    {
-                        canvas.strokeStyle = Prefs.global.editor.halfSubmeasureColor
-                        canvas.beginPath()
-                        canvas.moveTo(halfSubmeasureX, 0)
-                        canvas.lineTo(halfSubmeasureX, state.renderRect.h)
-                        canvas.stroke()
-                    }
-                }
-            }
-            
-            const submeasureSize = Timeline.xAtTime(state, new Rational(1, measureD)) - Timeline.xAtTime(state, new Rational(0))
-            if (submeasureSize > 8)
-            {
-                let submeasureTime = time1
-                for (let sub = 1; sub <= measureN; sub++)
-                {
-                    submeasureTime = submeasureTime.add(new Rational(1, measureD))
-                    
-                    const submeasureX = 0.5 + Math.floor(Timeline.xAtTime(state, submeasureTime))
-                    if (submeasureX >= meterCh1X && submeasureX <= meterCh2X)
-                    {
-                        canvas.strokeStyle = Prefs.global.editor.submeasureColor
-                        canvas.beginPath()
-                        canvas.moveTo(submeasureX, 0)
-                        canvas.lineTo(submeasureX, state.renderRect.h)
-                        canvas.stroke()
-                    }
-                }
-            }
-        }
-    }
-    
-    const keyChangeTrackId = Project.keyChangeTrackId(Project.global.project)
-    const keyChangeList = Project.global.project.lists.get(keyChangeTrackId)
-    if (keyChangeList)
-    {
-        for (const keyCh of keyChangeList.iterAtRange(visibleRange))
+        for (const keyCh of meterChangeList.iterAtRange(visibleRange))
         {
             const keyChX = 0.5 + Math.floor(Timeline.xAtTime(state, keyCh.range.start))
-            
-            canvas.strokeStyle = Prefs.global.editor.keyChangeColor
-            canvas.lineCap = "square"
-            canvas.lineWidth = 1
             
             canvas.beginPath()
             canvas.moveTo(keyChX, 0)
@@ -305,6 +306,62 @@ function renderBackgroundMeasures(state: Timeline.State, canvas: CanvasRendering
             canvas.stroke()
         }
     }
+    
+    // Render key change dividers.
+    const keyChangeTrackId = Project.keyChangeTrackId(Project.global.project)
+    const keyChangeList = Project.global.project.lists.get(keyChangeTrackId)
+    if (keyChangeList)
+    {
+        canvas.strokeStyle = Prefs.global.editor.keyChangeColor
+        canvas.lineCap = "square"
+        canvas.lineWidth = 1
+        
+        for (const keyCh of keyChangeList.iterAtRange(visibleRange))
+        {
+            const keyChX = 0.5 + Math.floor(Timeline.xAtTime(state, keyCh.range.start))
+            
+            canvas.beginPath()
+            canvas.moveTo(keyChX, 0)
+            canvas.lineTo(keyChX, state.renderRect.h)
+            canvas.stroke()
+        }
+    }
+}
+
+
+function renderMeasuresTrack(state: Timeline.State, canvas: CanvasRenderingContext2D)
+{
+    const y1 = 0
+    const y2 = state.trackMeasuresH
+
+    canvas.save()
+
+    canvas.fillStyle = Prefs.global.editor.bkgColor
+
+    canvas.beginPath()
+    canvas.rect(
+        0.5, 1.5,
+        state.trackHeaderW - 1,
+        state.trackMeasuresH - 2)
+    canvas.fill()
+
+    canvas.beginPath()
+    canvas.rect(
+        state.trackHeaderW,
+        1,
+        state.renderRect.w - state.trackHeaderW,
+        state.trackMeasuresH)
+    canvas.clip()
+
+    canvas.restore()
+
+    canvas.strokeStyle = Prefs.global.editor.trackHBorderColor
+    canvas.beginPath()
+    canvas.moveTo(0, y1 + 0.5)
+    canvas.lineTo(state.renderRect.w, y1 + 0.5)
+    canvas.moveTo(0, y2 + 0.5)
+    canvas.lineTo(state.renderRect.w, y2 + 0.5)
+    canvas.stroke()
 }
 	
 	

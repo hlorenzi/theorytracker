@@ -150,19 +150,19 @@ export class TimelineTrackNoteVelocities extends Timeline.TimelineTrack
         value: number,
         active: boolean)
 	{
-        const x = Math.floor(Timeline.xAtTime(state, range.start.add(parentStart))) + 0.5
-        const y = this.yAtValue(state, value)
-        const arcRadius = 4
+        const x = Math.floor(Timeline.xAtTime(state, range.start.add(parentStart)))
+        const y = Math.floor(this.yAtValue(state, value))
+        const rectSize = 3
         
         canvas.lineWidth = 2
-        canvas.strokeStyle = active ?
+        canvas.strokeStyle = canvas.fillStyle = active ?
             Prefs.global.editor.noteVelocityMarkerColor :
             Prefs.global.editor.noteVelocityMarkerInactiveColor
 		
         canvas.beginPath()
         canvas.moveTo(x, this.renderRect.h)
-        canvas.lineTo(x, y + arcRadius)
-        canvas.arc(x, y, arcRadius, Math.PI * 0.5, Math.PI * 2.5)
+        canvas.lineTo(x, y + rectSize)
+        canvas.fillRect(x - rectSize, y - rectSize, rectSize * 2, rectSize * 2)
         canvas.stroke()
 	}
 }

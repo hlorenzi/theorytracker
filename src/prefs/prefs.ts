@@ -12,7 +12,8 @@ export interface Prefs
     editor:
     {
         bkgColor: string
-        bkgVoidColor: string
+        bkgAlternateMeasureColor: string
+        bkgInactiveOverlayColor: string
         trackVBorderColor: string
         trackHBorderColor: string
         
@@ -24,10 +25,9 @@ export interface Prefs
         measureColor: string
         submeasureColor: string
         halfSubmeasureColor: string
-        measureAlternateBkgColor: string
 
-        octaveDividerColor: string
-        noteRowAlternateBkgColor: string
+        measureLabelColor: string
+        octaveLabelColor: string
 
         meterChangeColor: string
         keyChangeColor: string
@@ -70,23 +70,23 @@ export function getDefault(): Prefs
 
         editor:
         {
-            bkgColor: "#202225",//"#29242e",
-            bkgVoidColor: "#0004",
+            bkgColor: "#202225",
+            bkgAlternateMeasureColor: "#1a1c1f",
+            bkgInactiveOverlayColor: "#0008",
             trackVBorderColor: "#888",
             trackHBorderColor: "#888",
             
             selectionCursorColor: "#0af",
-            selectionBkgColor: "#024",
+            selectionBkgColor: "#0248",
             playbackCursorColor: "#f00",
             trackSeparatorColor: "#aaa",
         
-            measureColor: "#444",
-            submeasureColor: "#222",
-            halfSubmeasureColor: "#111",
-            measureAlternateBkgColor: "#fff1",
+            measureColor: "#040404",
+            submeasureColor: "#080808",
+            halfSubmeasureColor: "#181818",
         
-            octaveDividerColor: "#444",
-            noteRowAlternateBkgColor: "#222",//"#19141e",
+            measureLabelColor: "#aaa",
+            octaveLabelColor: "#aaa",
         
             meterChangeColor: "#0cf",
             keyChangeColor: "#f0c",

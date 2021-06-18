@@ -53,6 +53,12 @@ export class TimelineTrack
     }
 
 
+    getActiveRange(state: Timeline.State): Range | null
+    {
+        return null
+    }
+
+
     *elemsAtRegion(
         state: Timeline.State,
         range: Range,
@@ -310,6 +316,12 @@ export class TimelineTrack
             }
 		}
 	}
+
+
+    renderBackground(state: Timeline.State, canvas: CanvasRenderingContext2D)
+    {
+
+    }
 
 
     render(state: Timeline.State, canvas: CanvasRenderingContext2D)

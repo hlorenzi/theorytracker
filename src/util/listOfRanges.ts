@@ -261,6 +261,25 @@ export default class ListOfRanges<T extends Element>
 			prevItem = nextItem
 		}
 	}
+
+
+	*iterAllPairwise(): Generator<[T | null, T | null], void, void>
+	{
+		if (this.idMap.size == 0)
+		{
+			yield [ null, null ]
+			return
+		}
+
+		let prevItem: T | null = null
+		for (const nextItem of this.iterAll())
+		{
+			yield [ prevItem, nextItem ]
+			prevItem = nextItem
+		}
+
+		yield [ prevItem, null ]
+	}
 	
 	
 	getTotalRange(): Range | null

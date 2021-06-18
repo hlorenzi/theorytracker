@@ -1,5 +1,6 @@
 export * from "./_global"
 export * from "./root"
+export * from "./measures"
 export * from "./elem"
 export * from "./midiImport"
 export * from "./jsonExport"
