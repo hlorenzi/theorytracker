@@ -58,21 +58,23 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
     {
         if (!refDiv.current || !refCanvas.current)
             return
+
+        const pixelRatio = window.devicePixelRatio || 1
         
         const rect = refDiv.current.getBoundingClientRect()
         const x = Math.floor(rect.x)
         const y = Math.floor(rect.y)
-        const w = Math.floor(rect.width)
-        const h = Math.floor(rect.height)
+        const w = Math.floor(rect.width * pixelRatio)
+        const h = Math.floor(rect.height * pixelRatio)
         
-        refCanvas.current.style.width = w + "px"
-        refCanvas.current.style.height = h + "px"
+        refCanvas.current.style.width = Math.floor(rect.width) + "px"
+        refCanvas.current.style.height = Math.floor(rect.height) + "px"
         refCanvas.current.width = w
         refCanvas.current.height = h
 
         const renderRect = new Rect(x, y, w, h)
 
-        Timeline.resize(editorState.ref.current, renderRect)
+        Timeline.resize(editorState.ref.current, pixelRatio, renderRect)
         render(true)
     }
 
@@ -118,8 +120,8 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
         {
             const rect = canvas.getBoundingClientRect()
             return {
-                x: (ev.clientX - rect.left),
-                y: (ev.clientY - rect.top)
+                x: (ev.clientX - rect.left) * editorState.ref.current.pixelRatio,
+                y: (ev.clientY - rect.top) * editorState.ref.current.pixelRatio,
             }
         }
 
@@ -334,6 +336,8 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
         Popup.notifyObservers()
     }
 
+    const pixelRatio = window.devicePixelRatio || 1
+
 	return React.useMemo(() =>
 		<div ref={ refDiv } style={{
 			width: "100%",
@@ -349,8 +353,8 @@ export function TimelineElement(props: { state?: RefState<Timeline.State> })
             <div style={{
                 position: "absolute",
                 left: 0,
-                top: yTrackEnd - editorState.ref.current.trackScroll,
-                width: editorState.ref.current.trackHeaderW,
+                top: (yTrackEnd - editorState.ref.current.trackScroll) / pixelRatio,
+                width: editorState.ref.current.trackHeaderW / pixelRatio,
                 height: 100,
                 boxSizing: "border-box",
                 padding: "1em 1em",

@@ -63,6 +63,7 @@ export interface State
     mode: Mode
     modeNoteBlockId: Project.ID
 
+    pixelRatio: number
     renderRect: Rect
 
     trackMeasuresH: number
@@ -172,6 +173,7 @@ export function init(): State
         mode: Mode.Project,
         modeNoteBlockId: -1,
 
+        pixelRatio: 1,
         renderRect: new Rect(0, 0, 0, 0),
 
         trackMeasuresH: 20,
@@ -264,8 +266,9 @@ export function init(): State
 }
 
 
-export function resize(state: Timeline.State, rect: Rect)
+export function resize(state: Timeline.State, pixelRatio: number, rect: Rect)
 {
+    state.pixelRatio = pixelRatio
     state.renderRect = rect
     refreshTracks(state)
 }
