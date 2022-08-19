@@ -90,6 +90,8 @@ export interface State
         time2: Rational
         trackIndex1: number
         trackIndex2: number
+        rectY1: number
+        rectY2: number
     }
 
     keysDown: Set<string>,
@@ -200,6 +202,8 @@ export function init(): State
             time2: new Rational(0),
             trackIndex1: 0,
             trackIndex2: 0,
+            rectY1: 0,
+            rectY2: 0,
         },
 
         keysDown: new Set<string>(),
@@ -660,7 +664,9 @@ export function selectionAdd(state: Timeline.State, id: Project.ID)
 }
 
 
-export function selectionAddAtCursor(state: Timeline.State)
+export function selectionAddAtCursor(
+    state: Timeline.State,
+    verticalRegion?: { y1: number, y2: number })
 {
     const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
     const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
@@ -673,7 +679,7 @@ export function selectionAddAtCursor(state: Timeline.State)
 
         for (let t = trackMin; t <= trackMax; t++)
         {
-            for (const id of state.tracks[t].elemsAtRegion(state, range))
+            for (const id of state.tracks[t].elemsAtRegion(state, range, verticalRegion))
                 selectionAdd(state, id)
         }
     }

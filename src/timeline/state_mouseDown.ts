@@ -21,6 +21,7 @@ export function mouseDown(state: Timeline.State, rightButton: boolean)
     const selectMultiple = state.keysDown.has(Prefs.global.editor.keySelectMultiple)
     const selectRange = state.keysDown.has(Prefs.global.editor.keySelectRange)
     const selectClone = state.keysDown.has(Prefs.global.editor.keySelectClone)
+    const selectRect = state.keysDown.has(Prefs.global.editor.keySelectRect)
     const forcePan = state.keysDown.has(Prefs.global.editor.keyPan)
     const doubleClick =
         state.mouse.downDate.getTime() - prevDownDate.getTime() <
@@ -79,7 +80,7 @@ export function mouseDown(state: Timeline.State, rightButton: boolean)
         state.mouse.action = Timeline.MouseAction.Pencil
         withTrackAtMouse(tr => tr.pencilStart(state))
     }
-    else if (state.hover)
+    else if (state.hover && !selectRect)
     {
         Timeline.keyHandlePendingFinish(state)
 
@@ -140,9 +141,16 @@ export function mouseDown(state: Timeline.State, rightButton: boolean)
 
         if (state.mouse.point.pos.x > state.trackHeaderW)
         {
-            state.mouse.action = Timeline.MouseAction.SelectCursor
-            state.cursor.visible = true
+            state.mouse.action = selectRect ?
+                Timeline.MouseAction.SelectRect :
+                Timeline.MouseAction.SelectCursor
+
+            state.cursor.visible = !selectRect
             Timeline.cursorSetTime(state, state.mouse.point.time, state.mouse.point.time)
+            
+            state.cursor.rectY1 = state.cursor.rectY2 =
+                state.mouse.point.trackPos.y
+            
             state.cursor.trackIndex1 = state.cursor.trackIndex2 =
                 state.mouse.point.trackIndex
 

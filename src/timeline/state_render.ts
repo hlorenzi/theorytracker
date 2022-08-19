@@ -92,9 +92,9 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
 
         //canvas.translate(0, -state.tracks[t].yScroll)
 
-        //Editor.renderRectCursorHighlight(state, ctx, t)
+        renderRectSelectHighlight(state, canvas, t)
         state.tracks[t].render(state, canvas)
-        //Editor.renderRectCursorContour(state, ctx, t)
+        renderRectSelectContour(state, canvas, t)
 
         canvas.restore()
 
@@ -151,7 +151,7 @@ export function render(state: Timeline.State, canvas: CanvasRenderingContext2D)
         renderCursorBeam(state, canvas, timeMin, false)
         renderCursorBeam(state, canvas, timeMax, true)
     }
-    
+
     if (Playback.global.playing)
         renderPlaybackBeam(state, canvas, Playback.global.playTime)
 
@@ -389,6 +389,35 @@ function renderCursorHighlight(state: Timeline.State, canvas: CanvasRenderingCon
     canvas.fillStyle = Prefs.global.editor.selectionBkgColor
     canvas.fillRect(x1, y1, x2 - x1, y2 - y1)
 }
+	
+	
+function renderRectSelectHighlight(
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
+    trackIndex: number)
+{
+    if (state.mouse.action !== Timeline.MouseAction.SelectRect ||
+        state.cursor.trackIndex1 !== trackIndex)
+        return
+    
+    const timeMin = state.cursor.time1.min(state.cursor.time2)!
+    const timeMax = state.cursor.time1.max(state.cursor.time2)!
+    const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const y1 = 0.5 + Math.floor(Math.min(state.cursor.rectY1, state.cursor.rectY2))
+    const y2 = 0.5 + Math.floor(Math.max(state.cursor.rectY1, state.cursor.rectY2))
+    
+    if (trackMin < 0 || trackMax < 0 ||
+        trackMin >= state.tracks.length ||
+        trackMax >= state.tracks.length)
+        return
+    
+    const x1 = 0.5 + Math.floor(Timeline.xAtTime(state, timeMin))
+    const x2 = 0.5 + Math.floor(Timeline.xAtTime(state, timeMax))
+    
+    canvas.fillStyle = Prefs.global.editor.selectionBkgColor
+    canvas.fillRect(x1, y1, x2 - x1, y2 - y1)
+}
 
 
 function renderCursorBeam(
@@ -434,6 +463,35 @@ function renderCursorBeam(
     canvas.moveTo(x, y1)
     canvas.lineTo(x, y2)
     canvas.stroke()
+}
+
+
+function renderRectSelectContour(
+    state: Timeline.State,
+    canvas: CanvasRenderingContext2D,
+    trackIndex: number)
+{
+    if (state.mouse.action !== Timeline.MouseAction.SelectRect ||
+        state.cursor.trackIndex1 !== trackIndex)
+        return
+    
+    const timeMin = state.cursor.time1.min(state.cursor.time2)!
+    const timeMax = state.cursor.time1.max(state.cursor.time2)!
+    const trackMin = Math.min(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const trackMax = Math.max(state.cursor.trackIndex1, state.cursor.trackIndex2)
+    const y1 = 0.5 + Math.floor(Math.min(state.cursor.rectY1, state.cursor.rectY2))
+    const y2 = 0.5 + Math.floor(Math.max(state.cursor.rectY1, state.cursor.rectY2))
+    
+    if (trackMin < 0 || trackMax < 0 ||
+        trackMin >= state.tracks.length ||
+        trackMax >= state.tracks.length)
+        return
+    
+    const x1 = 0.5 + Math.floor(Timeline.xAtTime(state, timeMin))
+    const x2 = 0.5 + Math.floor(Timeline.xAtTime(state, timeMax))
+    
+    canvas.strokeStyle = Prefs.global.editor.selectionCursorColor
+    canvas.strokeRect(x1, y1, x2 - x1, y2 - y1)
 }
 	
 	

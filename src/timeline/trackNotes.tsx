@@ -170,8 +170,25 @@ export class TimelineTrackNotes extends Timeline.TimelineTrack
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const note of this.iterNotesAtRange(state, range))
+        for (const [note, keyCh, xStart, xEnd] of this.iterNotesAndKeyChangesAtRange(state, range))
+        {
+            if (verticalRegion)
+            {
+                const rect = this.rectForNote(
+                    state,
+                    note.range,
+                    this.rowForPitch(state, note.midiPitch, keyCh.key),
+                    xStart,
+                    xEnd,
+                    false)
+
+                if (verticalRegion.y1 > rect.y2 ||
+                    verticalRegion.y2 < rect.y1)
+                    continue
+            }
+            
             yield note.id
+        }
     }
 	
 	

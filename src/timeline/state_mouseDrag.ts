@@ -85,6 +85,18 @@ export function mouseDrag(
         Timeline.selectionAddAtCursor(state)
         return true
     }
+    else if (state.mouse.action == Timeline.MouseAction.SelectRect)
+    {
+        state.cursor.time2 = state.mouse.point.time
+        state.cursor.rectY2 = state.mouse.point.trackPos.y
+
+        const y1 = Math.min(state.cursor.rectY1, state.cursor.rectY2)
+        const y2 = Math.max(state.cursor.rectY1, state.cursor.rectY2)
+
+        Timeline.selectionClear(state)
+        Timeline.selectionAddAtCursor(state, { y1, y2 })
+        return true
+    }
     else if (state.mouse.action == Timeline.MouseAction.DragTrackHeader)
     {
         return true
