@@ -68,8 +68,10 @@ function importElem(
     jsonElem: any,
     timeOffset: Rational)
 {
-    const range = Range.fromJson(jsonElem[2]).subtract(timeOffset)
-
+    const range = Range.fromJson(jsonElem[2])
+        .subtract(timeOffset)
+        .quantize(Project.MAX_RATIONAL_DENOMINATOR)
+    
     let elem: Project.Element
     switch (jsonElem[0] as Project.Element["type"])
     {

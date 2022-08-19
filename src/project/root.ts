@@ -6,6 +6,10 @@ import Rational from "../util/rational"
 import ListOfRanges from "../util/listOfRanges"
 
 
+// Least Common Multiple of 2, 3, 4, 5, 6, 7, 8, 9, and 10.
+export const MAX_RATIONAL_DENOMINATOR = 2520
+
+
 export interface Root
 {
     nextId: Project.ID

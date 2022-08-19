@@ -42,6 +42,16 @@ export default class Range
     {
         return this.end.subtract(this.start)
     }
+
+
+	setDuration(newDuration: Rational): Range
+	{
+		return new Range(
+			this.start,
+			this.start.add(newDuration),
+			this.startInclusive,
+			this.endInclusive)
+	}
 	
 	
 	sorted(): Range
@@ -247,12 +257,33 @@ export default class Range
 	}
 
 
-	toJson(): [[number, number, number]] | [[number, number, number], [number, number, number]]
+	quantize(maxDenom: number): Range
+	{
+		return new Range(
+			this.start.quantize(maxDenom),
+			this.end.quantize(maxDenom),
+			this.startInclusive,
+			this.endInclusive)
+	}
+	
+	
+	toString(): string
+	{
+		return "[" + this.start.toString() + " ~ " + this.end.toString() + "]"
+	}
+
+
+	toJson(quantize?: number): [[number, number, number]] | [[number, number, number], [number, number, number]]
 	{
 		if (this.start.compare(this.end) == 0)
 			return [this.start.toJson()]
 		else
-			return [this.start.toJson(), this.duration.toJson()]
+		{
+			if (quantize !== undefined)
+				return [this.start.toJson(), this.duration.quantize(quantize).toJson()]
+			else
+				return [this.start.toJson(), this.duration.toJson()]
+		}
 	}
 
 

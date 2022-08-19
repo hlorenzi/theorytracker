@@ -147,7 +147,9 @@ export function mouseDrag(
 
             if (mouseAction == Timeline.MouseAction.DragTime ||
                 mouseAction == Timeline.MouseAction.DragTimeAndRow)
-                changes.range = elem.range.displace(state.drag.timeDelta)
+                changes.range = elem.range
+                    .displace(state.drag.timeDelta)
+                    .quantize(Project.MAX_RATIONAL_DENOMINATOR)
             
             if (mouseAction == Timeline.MouseAction.StretchTimeStart &&
                 state.drag.origin.range)
@@ -162,6 +164,7 @@ export function mouseDrag(
                     changes.range = new Range(
                         changes.range.start.snap(state.timeSnap),
                         changes.range.end)
+                            .quantize(Project.MAX_RATIONAL_DENOMINATOR)
                     
                 changes.range = changes.range.sorted()
                 changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)
@@ -180,6 +183,7 @@ export function mouseDrag(
                     changes.range = new Range(
                         changes.range.start,
                         changes.range.end.snap(state.timeSnap))
+                            .quantize(Project.MAX_RATIONAL_DENOMINATOR)
 
                 changes.range = changes.range.sorted()
                 changes.range = Project.getRelativeRange(origProject, elem.parentId, changes.range)

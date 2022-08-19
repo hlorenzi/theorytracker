@@ -135,9 +135,11 @@ export default class Rational
 	quantize(maxDenominator: number): Rational
 	{
 		if (this.denominator <= maxDenominator)
-			return this
+			return this.simplify()
 		
-		return new Rational(Math.round(this.numerator / this.denominator * maxDenominator), maxDenominator)
+		return new Rational(
+			Math.round(this.numerator / this.denominator * maxDenominator),
+			maxDenominator)
 	}
 	
 	
@@ -255,6 +257,12 @@ export default class Rational
 	min(other:  Rational | null): Rational
 	{
 		return Rational.min(this, other)!
+	}
+
+
+	simplify()
+	{
+		return new Rational(this.numerator, this.denominator)
 	}
 	
 	

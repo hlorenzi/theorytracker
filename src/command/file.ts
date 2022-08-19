@@ -145,7 +145,7 @@ export const saveProject: Command.Command =
         }
 
         const jsonStr = Project.jsonExport(Project.global.project)
-        const writer = await Project.global.curFileHandleForSave.createWritable()
+        const writer = await (Project.global.curFileHandleForSave as any).createWritable()
         await writer.write(jsonStr)
         await writer.close()
         Project.markAsSaved()

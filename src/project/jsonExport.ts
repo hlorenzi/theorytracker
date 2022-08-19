@@ -65,11 +65,15 @@ function exportElem(
     timeOffset: Rational)
     : string
 {
+    const range = elem.range
+        .displace(timeOffset)
+        .quantize(Project.MAX_RATIONAL_DENOMINATOR)
+
     let json = `\t`.repeat(indent)
     json += `[`
     json += `${ JSON.stringify(elem.type) }`
     json += `, ${ JSON.stringify(elem.id) }`
-    json += `, ${ JSON.stringify(elem.range.displace(timeOffset).toJson()) }`
+    json += `, ${ JSON.stringify(range.toJson(Project.MAX_RATIONAL_DENOMINATOR)) }`
 
     switch (elem.type)
     {
