@@ -19,7 +19,7 @@ function isFileSystemAccessApiAvailable(showAlert?: boolean)
 
     if (showAlert)
     {
-        window.alert(
+        (window as Window).alert(
             "Your browser doesn't support the File System Access API.\n\n" +
             "Use the other commands labeled as \"Browser\", or " +
             "switch to a browser with support to that API, like Chrome.")
