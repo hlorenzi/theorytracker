@@ -20,6 +20,7 @@ export const allCommands =
     File.openFileBrowser,
     File.downloadProjectBrowser,
     File.previewProjectBrowser,
+    File.downloadMidiBrowser,
 
     History.undo,
     History.redo,

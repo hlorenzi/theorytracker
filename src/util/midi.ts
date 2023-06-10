@@ -1,4 +1,5 @@
 import { BinaryReader } from "./binaryReader"
+import { BinaryWriter } from "./binaryWriter"
 import Rational from "./rational"
 
 
@@ -133,6 +134,14 @@ export interface EventSequencerSpecific extends EventCommon
 }
 
 
+interface TrackEvent
+{
+	event: Event,
+	code: number,
+	midiTime: number,
+}
+
+
 export class Decoder
 {
 	static fromBytes(bytes: number[] | Buffer | Uint8Array): Root
@@ -214,12 +223,7 @@ export class Decoder
 		root: Root,
 		currentMidiTime: number,
 		runningModePreviousCode: number)
-		:
-		{
-			event: Event,
-			code: number,
-			midiTime: number,
-		}
+		: TrackEvent
 	{
 		const midiDeltaTime = this.readVarLengthUInt(r)
 		const midiTime = currentMidiTime + midiDeltaTime
@@ -486,5 +490,126 @@ export class Decoder
 		}
 		
 		return value
+	}
+}
+
+
+export class Encoder
+{
+	static encode(root: Root): Uint8Array
+	{
+		var writer = new BinaryWriter()
+
+		Encoder.encodeHeader(writer, root)
+
+		for (const track of root.tracks)
+			Encoder.encodeTrack(writer, root, track)
+
+		return new Uint8Array(writer.bytes)
+	}
+
+
+	static encodeHeader(writer: BinaryWriter, root: Root)
+	{
+		writer.writeAscii("MThd")
+		writer.writeUInt32BE(6)
+		writer.writeUInt16BE(1)
+		writer.writeUInt16BE(root.tracks.length)
+		writer.writeUInt16BE(root.ticksPerQuarterNote & 0x7fff)
+	}
+
+
+	static encodeTrack(writer: BinaryWriter, root: Root, track: Track)
+	{
+		writer.writeAscii("MTrk")
+
+		const trackByteLengthPos = writer.head
+		writer.writeUInt32BE(0)
+
+		let prevMidiTime = 0
+
+		track.events.sort((a, b) => a.tick.compare(b.tick))
+
+		for (const ev of track.events)
+		{
+			const midiTime = Math.floor(
+				ev.tick.asFloat() * 4 * root.ticksPerQuarterNote)
+
+			const deltaMidiTime = Math.max(0, midiTime - prevMidiTime)
+			prevMidiTime = midiTime
+
+			Encoder.writeVarLengthUInt(writer, deltaMidiTime)
+
+			switch (ev.kind)
+			{
+				case "noteOff":
+				{
+					writer.writeByte(0x80 | (ev.channel & 0x0f))
+					writer.writeByte(ev.key & 0x7f)
+					writer.writeByte(ev.velocity & 0x7f)
+					break
+				}
+				case "noteOn":
+				{
+					writer.writeByte(0x90 | (ev.channel & 0x0f))
+					writer.writeByte(ev.key & 0x7f)
+					writer.writeByte(ev.velocity & 0x7f)
+					break
+				}
+				case "programChange":
+				{
+					writer.writeByte(0xc0 | (ev.channel & 0x0f))
+					writer.writeByte(ev.program & 0x7f)
+					break
+				}
+				case "controller":
+				{
+					writer.writeByte(0xb0 | (ev.channel & 0x0f))
+					writer.writeByte(ev.controllerNumber)
+					writer.writeByte(ev.controllerValue)
+					break
+				}
+				case "setTempo":
+				{
+					writer.writeByte(0xff)
+					writer.writeByte(0x51)
+					writer.writeByte(0x03)
+					writer.writeUInt24BE((60 * 1000 * 1000) / ev.bpm)
+					break
+				}
+				case "endOfTrack":
+				{
+					writer.writeByte(0xff)
+					writer.writeByte(0x2f)
+					writer.writeByte(0x00)
+					break
+				}
+			}
+		}
+
+		const endPos = writer.head
+		writer.seek(trackByteLengthPos)
+		writer.writeUInt32BE(endPos - trackByteLengthPos - 4)
+		writer.seek(endPos)
+	}
+	
+	
+	static writeVarLengthUInt(writer: BinaryWriter, value: number)
+	{
+		let toWrite: number[] = []
+
+		while (true)
+		{
+			const byte = (value & 0x7f)
+			value >>= 7
+
+			toWrite.push(byte)
+
+			if (value == 0)
+				break
+		}
+
+		for (let i = toWrite.length - 1; i >= 0; i--)
+			writer.writeByte((i !== 0 ? 0x80 : 0) | toWrite[i])
 	}
 }

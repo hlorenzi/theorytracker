@@ -81,6 +81,7 @@ export default function MenuFile()
                     label="Render..."
                     onClick={ onRender }
                 />
+                <Popup.Button command={ Command.downloadMidiBrowser }/>
             </Popup.Root>
         </Menubar.Item>
 

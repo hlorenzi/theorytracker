@@ -28,13 +28,21 @@ export function linearGainToDb(linearGain: number): number
 }
 
 
+const minMidiDbLevel = -30
+
+
+export function dbToMidiVolume(db: number): number
+{
+    return Math.max(0, Math.min(1, 1 - (db / minMidiDbLevel)))
+}
+
+
 export function midiVolumeToDb(midiVol: number): number
 {
     if (midiVol <= 0)
         return 0
     
-    const minDbLevel = -15
-    return minDbLevel * (1 - midiVol)
+    return minMidiDbLevel * (1 - midiVol)
 }
 
 

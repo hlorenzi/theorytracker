@@ -205,3 +205,23 @@ export const previewProjectBrowser: Command.Command =
         newWindow.document.write("</code>")
     }
 }
+
+
+export const downloadMidiBrowser: Command.Command =
+{
+    name: "[Browser] Download MIDI",
+    icon: "📥",
+    func: async () =>
+    {
+        const bytes = Project.midiExport(Project.global.project)
+
+        const element = document.createElement("a")
+        element.setAttribute("href", "data:audio/midi;base64," + btoa(String.fromCharCode(...bytes)))
+        element.setAttribute("download", "song.mid")
+
+        element.style.display = "none"
+        document.body.appendChild(element)
+        element.click()
+        document.body.removeChild(element)
+    }
+}
