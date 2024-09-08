@@ -1,53 +1,43 @@
 const path = require("path")
 
 
-module.exports =
-{
-	mode: "production",
-	entry:
-	{
-		main: path.resolve(__dirname, "src/main.js"),
+module.exports = {
+    mode: "production",
+	devtool: "source-map",
+    
+	entry: {
+		main: path.resolve(__dirname, "src/main.tsx"),
 	},
 	
-	output:
-	{
+	output: {
 		filename: "[name].js",
-		path: path.resolve(__dirname, "build")
+		path: path.resolve(__dirname, ".build"),
+		publicPath: "/.build/",
 	},
-	
-    resolve: {
-		extensions: [".ts", ".tsx", ".js", ".json"],
+
+	resolve: {
+        extensions: [".ts", ".tsx"],
 		fallback: {
 			"assert": false,
-			/*"zlib": require.resolve("browserify-zlib"),
-			"util": require.resolve("util/"),
-			"buffer": require.resolve("buffer/"),
-			"stream": require.resolve("stream-browserify"),*/
 		},
-	},
-	
-	module:
-	{
-		rules:
-		[
+    },
+
+	module: {
+		rules: [
 			{
-				test: /\.tsx?$/,
-				exclude: /src_old/,
-				loader: "ts-loader",
-			},
-			{ test: /\.js$/, loader: "source-map-loader" },
-			{
-				test: /\.(js|jsx)$/,
+				test: /\.(ts|tsx)$/,
 				exclude: /node_modules/,
 				use:
 				{
 					loader: "babel-loader",
 					options: {
-						plugins: ["@babel/plugin-proposal-class-properties"],
-						presets: ["@babel/preset-env", "@babel/preset-react"]
+						presets: [
+							"@babel/preset-typescript",
+                            "babel-preset-solid",
+                        ]
 					}
 				}
 			}
 		]
-	}
+	},
 }

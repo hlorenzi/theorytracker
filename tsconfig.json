@@ -1,12 +1,22 @@
 {
     "compilerOptions": {
-      "sourceMap": true,
-      "target": "esnext",
-      "module": "esnext",
-      "moduleResolution": "node",
-      "allowSyntheticDefaultImports": true,
-      "strict": true,
-      "jsx": "react"
+        "baseUrl": "./src/",
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "es2022",
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "strictNullChecks": true,
+        "noImplicitAny": true
     },
-    "exclude": ["src_old"]
+    "include": [
+        "./src/*.ts",
+        "./src/*.tsx"
+    ],
+    "exclude": [
+      "src_old",
+      "src_old2"
+    ]
 }

@@ -1,4 +1,4 @@
-import PitchName from "./pitchName"
+import PitchName from "./pitchName.ts"
 
 
 interface ScaleMetadata

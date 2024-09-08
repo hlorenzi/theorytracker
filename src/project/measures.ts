@@ -1,10 +1,10 @@
-import * as Project from "./index"
-import * as Theory from "../theory"
 import Immutable from "immutable"
-import BinarySearch from "../util/binarySearch"
-import Rational from "../util/rational"
-import ListOfRanges from "../util/listOfRanges"
-import Range from "../util/range"
+import * as Project from "./index.ts"
+import * as Theory from "../theory"
+import BinarySearch from "../utils/binarySearch.ts"
+import Rational from "../utils/rational.ts"
+import ListOfRanges from "../utils/listOfRanges.ts"
+import Range from "../utils/range.ts"
 
 
 export interface Measure
@@ -23,10 +23,10 @@ let firstMeterCh: Project.MeterChange | null = null
 let lastMeterCh: Project.MeterChange | null = null
 
 
-export function ensureMeasureCacheRefreshed(project: Project.Root)
+export function ensureMeasureCacheRefreshed(project: Project.ImmutableRoot)
 {
     const meterChangeTrackId = Project.meterChangeTrackId(project)
-    const meterChangeList = Project.global.project.lists.get(meterChangeTrackId)!
+    const meterChangeList = project.lists.get(meterChangeTrackId)!
 
     if (meterChangeList === measureCacheKey)
         return
@@ -75,7 +75,7 @@ export function ensureMeasureCacheRefreshed(project: Project.Root)
 
 
 export function *iterMeasuresAtRange(
-    project: Project.Root,
+    project: Project.ImmutableRoot,
     range: Range)
     : Generator<Measure, void, void>
 {
@@ -114,7 +114,7 @@ export function *iterMeasuresAtRange(
     }
 
     let lastMeasureNum = -1
-    let measureIndex = measureStart || 0
+    let measureIndex = measureStart ?? 0
     while (true)
     {
         if (measureIndex >= measureCache.length)

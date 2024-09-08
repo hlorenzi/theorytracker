@@ -1,11 +1,10 @@
-import Range from "../util/range"
 import * as Theory from "../theory"
-import * as Playback from "../playback"
-import Rational from "../util/rational"
-import * as Misc from "../util/misc"
+import Range from "../utils/range.ts"
+import Rational from "../utils/rational.ts"
 
 
 export type ID = number
+
 
 export const MinVolumeDb = -30
 export const MaxVolumeDb = 0
@@ -21,47 +20,10 @@ export interface ElementBase
 }
 
 
-export interface InstrumentBasic
-{
-    type: "basic"
-}
-
-
-export interface InstrumentSflib
-{
-    type: "sflib"
-    collectionId: string
-    instrumentId: string
-}
-
-
-export type Instrument =
-    InstrumentBasic |
-    InstrumentSflib
-
-
 export interface TrackBase extends ElementBase
 {
     type: "track"
     name: string
-    mute: boolean
-    solo: boolean
-}
-
-
-export interface TrackNotes extends TrackBase
-{
-    trackType: "notes"
-    instrument: Instrument
-    volumeDb: number
-}
-
-
-export interface TrackChords extends TrackBase
-{
-    trackType: "chords"
-    instrument: Instrument
-    volumeDb: number
 }
 
 
@@ -77,11 +39,27 @@ export interface TrackMeterChanges extends TrackBase
 }
 
 
+export interface TrackChords extends TrackBase
+{
+    trackType: "chords"
+    mute: boolean
+    solo: boolean
+}
+
+
+export interface TrackNotes extends TrackBase
+{
+    trackType: "notes"
+    mute: boolean
+    solo: boolean
+}
+
+
 export type Track = 
-    TrackNotes |
-    TrackChords |
     TrackKeyChanges |
-    TrackMeterChanges
+    TrackMeterChanges |
+    TrackChords |
+    TrackNotes
 
 
 export interface KeyChange extends ElementBase
@@ -98,18 +76,10 @@ export interface MeterChange extends ElementBase
 }
 
 
-export interface NoteBlock extends ElementBase
-{
-    type: "noteBlock"
-}
-
-
 export interface Note extends ElementBase
 {
     type: "note"
     midiPitch: number
-    volumeDb: number
-    velocity: number
 }
 
 
@@ -124,7 +94,6 @@ export type Element =
     Track |
     KeyChange |
     MeterChange |
-    NoteBlock |
     Note |
     Chord
 
@@ -145,10 +114,8 @@ export function makeTrackNotes(): TrackNotes
         parentId: 0,
         range: Range.dummy(),
         name: "",
-        volumeDb: DefaultVolumeDb,
         mute: false,
         solo: false,
-        instrument: makeInstrument(),
     }
 }
 
@@ -162,116 +129,18 @@ export function makeTrackChords(): TrackChords
         parentId: 0,
         range: Range.dummy(),
         name: "Chords",
-        volumeDb: DefaultChordVolumeDb,
         mute: false,
         solo: false,
-        instrument: makeInstrument(),
-    }
-}
-
-
-export function makeInstrument(): Instrument
-{
-    return makeInstrumentOfKind("sflib")
-}
-
-
-export function makeInstrumentOfKind(kind: string): Instrument
-{
-    switch (kind)
-    {
-        case "basic":
-        default:
-        {
-            return {
-                type: "basic",
-            }
-        }
-        case "sflib":
-        {
-            return {
-                type: "sflib",
-                collectionId: "gm",
-                instrumentId: "piano_1",
-            }
-        }
-    }
-}
-
-
-export function instrumentName(instrument: Instrument): string
-{
-    switch (instrument.type)
-    {
-        case "basic": return "Basic"
-        case "sflib":
-        {
-            const sflibMeta = Playback.getSflibMeta()
-            if (!sflibMeta)
-                return instrument.collectionId + "/" + instrument.instrumentId
-
-            const coll = sflibMeta.collectionsById.get(instrument.collectionId)!
-            const instr = coll.instrumentsById.get(instrument.instrumentId)!
-            const emoji = Misc.getMidiPresetEmoji(instr.midiBank, instr.midiPreset)
-
-            return emoji + " " + coll.id + "/" + instr.name
-        }
-
-        default: return "???"
-    }
-}
-
-
-export function instrumentEmoji(instrument: Instrument): string
-{
-    switch (instrument.type)
-    {
-        case "basic": return Misc.getMidiPresetEmoji(0, 0)
-        case "sflib":
-        {
-            const sflibMeta = Playback.getSflibMeta()
-            if (!sflibMeta)
-                return Misc.getMidiPresetEmoji(0, 0)
-
-            const coll = sflibMeta.collectionsById.get(instrument.collectionId)!
-            const instr = coll.instrumentsById.get(instrument.instrumentId)!
-            return Misc.getMidiPresetEmoji(instr.midiBank, instr.midiPreset)
-        }
-
-        default: return Misc.getMidiPresetEmoji(0, 0)
     }
 }
 
 
 export function trackDisplayName(track: Track): string
 {
-    if (track.trackType == "notes" || track.trackType == "chords")
-    {
-        if (track.name)
-            return instrumentEmoji(track.instrument) + " " + track.name
-    
-        return instrumentName(track.instrument)
-    }
-
     if (track.name)
         return track.name
 
     return "New Track"
-}
-
-
-export function trackHasInstrument(track: Track): boolean
-{
-    return track.trackType == "notes" || track.trackType == "chords"
-}
-
-
-export function trackGetInstrument(track: Track): Instrument | null
-{
-    if (track.trackType == "notes" || track.trackType == "chords")
-        return track.instrument
-    else
-        return null
 }
 
 
@@ -284,8 +153,6 @@ export function makeTrackKeyChanges(): TrackKeyChanges
         parentId: 0,
         range: Range.dummy(),
         name: "Key Changes",
-        mute: false,
-        solo: false,
     }
 }
 
@@ -299,8 +166,6 @@ export function makeTrackMeterChanges(): TrackMeterChanges
         parentId: 0,
         range: Range.dummy(),
         name: "Meter Changes",
-        mute: false,
-        solo: false,
     }
 }
 
@@ -329,23 +194,10 @@ export function makeKeyChange(parentId: ID, time: Rational, key: Theory.Key): Ke
 }
 
 
-export function makeNoteBlock(parentId: ID, range: Range): NoteBlock
-{
-    return {
-        type: "noteBlock",
-        id: -1,
-        parentId,
-        range,
-    }
-}
-
-
 export function makeNote(
     parentId: ID,
     range: Range,
-    midiPitch: number,
-    volumeDb: number,
-    velocity: number)
+    midiPitch: number)
     : Note
 {
     return {
@@ -354,8 +206,6 @@ export function makeNote(
         parentId,
         range,
         midiPitch,
-        volumeDb,
-        velocity,
     }
 }
 

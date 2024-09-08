@@ -1,4 +1,4 @@
-import Utils from "./utils"
+import Utils from "./utils.ts"
 
 
 export default class PitchName

@@ -5,6 +5,7 @@ export default class Utils
 		return (x % m + m) % m
 	}
 
+	static midiMiddleC = 60
 
 	static chromaToLetter     = (chroma: number): number => [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6][chroma]
 	static chromaToAccidental = (chroma: number): number => [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0][chroma]

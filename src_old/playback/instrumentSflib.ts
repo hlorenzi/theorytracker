@@ -1,60 +1,256 @@
-import { Synth } from "./synth"
-import Project from "../project/project2"
-import { SflibInstrument, SflibMeta } from "./library"
-import { sflibGetInstrument } from "./libraryCache"
+import * as Playback from "./index"
+import * as Project from "../project"
+import * as MathUtils from "../util/mathUtils"
 
 
-export class InstrumentSflib
+const notesToDelete = new Set<Note>()
+
+
+interface Note
 {
-    synth: Synth
-    trackId: number
-    audioWorklet?: AudioWorkletNode
+    request: Playback.NoteRequest
+    zone: Playback.SflibInstrumentZone
+    timePassedMs: number
+    endTimeMs: number
+    nodeSrc: AudioBufferSourceNode
+    nodeEnvelope: GainNode
+    nodeVolume: GainNode
+}
 
 
-	constructor(synth: Synth, trackId: number)
+export class InstrumentSflib extends Playback.Instrument
+{
+    collectionId: string
+    instrumentId: string
+    sflibInstrument: Playback.SflibInstrument | null
+    notes: Note[]
+
+
+	constructor(
+        synth: Playback.SynthManager,
+        outputNode: AudioNode,
+        collectionId: string,
+        instrumentId: string)
 	{
-        this.synth = synth
-        this.trackId = trackId
+        super(synth, outputNode)
+        this.collectionId = collectionId
+        this.instrumentId = instrumentId
+        this.sflibInstrument = null
+        this.notes = []
 	}
 
 
-	async prepare(sflibMeta: SflibMeta, trackInstrument: Project.TrackInstrumentSflib)
+	async prepare()
 	{
-        const instrument = await sflibGetInstrument(sflibMeta, trackInstrument.collectionId, trackInstrument.instrumentId)
-        if (!instrument)
-            throw "missing sflib instrument"
-
-        this.audioWorklet = new AudioWorkletNode(this.synth.audioCtx, "SflibAudioProcessor")
-        this.audioWorklet.connect(this.synth.audioCtxOutput)
-        this.audioWorklet.port.postMessage({
-            type: "setInstrument",
-            outputSampleRate: this.synth.audioCtx.sampleRate,
-            instrument
-        })
-    }
+        this.sflibInstrument = await Playback.sflibGetInstrument(
+            this.collectionId, this.instrumentId, this.synth.audioCtx)
     
-
-    destroy()
-    {
-        this.audioWorklet!.disconnect()
-        this.audioWorklet = undefined
+        if (!this.sflibInstrument)
+        {
+            console.error("could not load sflib " + this.collectionId + "/" + this.instrumentId)
+            return
+        }
     }
 
 
-    noteOn(midiPitch: number)
-    {
-        this.audioWorklet!.port.postMessage({ type: "noteOn", midiPitch })
-    }
-    
-    
-    noteOff(midiPitch: number)
-    {
-        this.audioWorklet!.port.postMessage({ type: "noteOff", midiPitch })
-    }
-
-
-	stop()
+	async destroy()
 	{
-        this.audioWorklet!.port.postMessage({ type: "stopAll" })
+
+	}
+
+
+	isFinished()
+	{
+		return !this.sflibInstrument || this.notes.length == 0
+	}
+
+
+	playNote(request: Playback.NoteRequest)
+	{
+        if (!this.sflibInstrument)
+            return
+		
+        //if (this.notes.has(request.noteId))
+        //    return
+
+        const midiPitch = request.midiPitchSeq[0].value
+
+        let zone = this.sflibInstrument.zones.find(z =>
+            midiPitch >= z.midiPitchMin &&
+            midiPitch <= z.midiPitchMax)
+
+        if (!zone)
+        {
+            let nearestMidiPitchDistance = Infinity
+
+            for (const z of this.sflibInstrument.zones)
+            {
+                const distance = Math.min(
+                    Math.abs(z.midiPitchMin - midiPitch),
+                    Math.abs(z.midiPitchMax - midiPitch))
+
+                if (distance < nearestMidiPitchDistance)
+                {
+                    nearestMidiPitchDistance = distance
+                    zone = z
+                }
+            }
+        }
+
+        if (!zone)
+            return
+
+        const freq = MathUtils.midiToHertz(midiPitch)
+
+        const audioBuffer = this.sflibInstrument.audioBuffers[zone.sampleIndex]
+
+
+        const sourceNode = this.synth.audioCtx.createBufferSource()
+        sourceNode.playbackRate.value = freq / MathUtils.midiToHertz(zone.midiPitchBase)
+        sourceNode.buffer = audioBuffer
+        sourceNode.loop = (zone.loopMode == "loop")
+        sourceNode.loopStart = zone.loopStartIndex / audioBuffer.sampleRate
+        sourceNode.loopEnd = zone.loopEndIndex / audioBuffer.sampleRate
+
+
+        const time = 0.05 + Math.max(0, request.startMs / 1000)
+        const delayTime = time + zone.volEnvDelaySec
+        const attackTime = delayTime + (zone.volEnvAttackSec || 0.005)
+        const holdTime = attackTime + zone.volEnvHoldSec
+        const decayTime = holdTime + zone.volEnvDecaySec
+        const sustainLevel = zone.volEnvSustain || 0.0001
+        const releaseTime = time + request.durationMs / 1000
+        const endTime = releaseTime + Math.max(zone.volEnvReleaseSec, 0.05)
+
+        /*
+
+          Envelope parameters:
+
+          |          100% level
+          |          ______
+          |         /|    |\
+          |        / |    | \   sustainLevel
+          |       /  |    |  \____________
+          |      /   |    |   |          |\
+          |     /    |    |   |          | \
+          |    /     |    |   |          |  \
+        --+-------------------------------------------
+          ^   ^      ^    ^   ^          ^   ^ endTime
+          |   |      |    |   |          + releaseTime
+          |   |      |    |   + decayTime
+          |   |      |    + holdTime
+          |   |      + attackTime
+          |   + delayTime
+          + time
+
+        */
+
+        const releaseTimeCap = releaseTime - 0.001
+        const cappedDelayTime = Math.min(delayTime, releaseTimeCap)
+        const cappedAttackTime = Math.min(attackTime, releaseTimeCap)
+        const cappedHoldTime = Math.min(holdTime, releaseTimeCap)
+
+        const releaseF = (releaseTime - cappedHoldTime) / (decayTime - cappedHoldTime)
+        const releaseLevel = releaseF >= 1 ? sustainLevel : Math.pow(sustainLevel, releaseF)
+
+        const envelopeNode = this.synth.audioCtx.createGain()
+        envelopeNode.gain.value = 0
+        envelopeNode.gain.setValueAtTime(0.0001, cappedDelayTime)
+        envelopeNode.gain.exponentialRampToValueAtTime(1, cappedAttackTime)
+        envelopeNode.gain.setValueAtTime(1, cappedHoldTime)
+
+        if (decayTime < releaseTime)
+        {
+            envelopeNode.gain.exponentialRampToValueAtTime(sustainLevel, decayTime)
+            envelopeNode.gain.setValueAtTime(sustainLevel, releaseTime)
+            envelopeNode.gain.exponentialRampToValueAtTime(0.0001, endTime)
+        }
+        else
+        {
+            envelopeNode.gain.exponentialRampToValueAtTime(releaseLevel, releaseTime)
+            envelopeNode.gain.setValueAtTime(releaseLevel, releaseTime)
+            envelopeNode.gain.exponentialRampToValueAtTime(0.0001, endTime)
+        }
+
+        /*console.log("playNote", this.synth.audioCtx.currentTime, request)
+        console.log("envelope",
+            "del", (delayTime - time).toFixed(3),
+            "atk", (attackTime - time).toFixed(3),
+            "hld", (holdTime - time).toFixed(3),
+            "dec", (decayTime - time).toFixed(3),
+            "::",
+            sustainLevel.toFixed(3),
+            releaseLevel.toFixed(3),
+            "::",
+            "rel", (releaseTimeCap - time).toFixed(3),
+            "end", (endTime - time).toFixed(3))*/
+
+        const volumeNode = this.synth.audioCtx.createGain()
+        volumeNode.gain.value = MathUtils.dbToLinearGain(request.volumeSeq[0].value)
+        
+
+        sourceNode.connect(envelopeNode)
+        envelopeNode.connect(volumeNode)
+        volumeNode.connect(this.outputNode)
+        
+        sourceNode.start(time)
+        
+		const note: Note =
+		{
+            request,
+            zone,
+            timePassedMs: -(time - this.synth.audioCtx.currentTime) * 1000,
+            endTimeMs: (endTime - time) * 1000,
+            nodeSrc: sourceNode,
+            nodeEnvelope: envelopeNode,
+            nodeVolume: volumeNode,
+        }
+
+        this.notes.push(note)
+    }
+
+
+	stopNote(note: Note)
+	{
+        note.nodeSrc.stop()
+        note.nodeSrc.disconnect()
+	}
+
+
+	stopAll()
+	{
+        for (const note of this.notes)
+            this.stopNote(note)
+
+        this.notes = []
+	}
+
+
+	process(deltaTimeMs: number)
+	{
+        notesToDelete.clear()
+        
+        for (const note of this.notes)
+        {
+            note.timePassedMs += deltaTimeMs
+        
+            if (note.timePassedMs > note.endTimeMs)
+            {
+                this.stopNote(note)
+                notesToDelete.add(note)
+            }
+            else if (note.zone.loopMode != "loop")
+            {
+                const sample = this.sflibInstrument!.audioBuffers[note.zone.sampleIndex]
+                if (note.timePassedMs > sample.length / sample.sampleRate * 1000)
+                {
+                    this.stopNote(note)
+                    notesToDelete.add(note)
+                }
+            }
+        }
+
+        this.notes = this.notes.filter(n => !notesToDelete.has(n))
+        notesToDelete.clear()
 	}
 }

@@ -1,4 +1,4 @@
-import Rational from "../util/rational"
+import Rational from "../utils/rational.ts"
 
 
 export default class Meter

@@ -1,5 +1,5 @@
-import PitchName from "./pitchName"
-import Utils from "./utils"
+import PitchName from "./pitchName.ts"
+import Utils from "./utils.ts"
 
 
 export default class Pitch

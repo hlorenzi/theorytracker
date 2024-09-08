@@ -1,0 +1,440 @@
+import Immutable from "immutable"
+import * as Project from "../project"
+import * as Timeline from "./index.ts"
+import Rational from "../utils/rational.ts"
+import Range from "../utils/range.ts"
+import Rect from "../utils/rect.ts"
+
+
+export interface State
+{
+    pixelRatio: number
+    renderRect: Rect
+
+    trackMeasuresH: number
+    trackControlX: number
+    trackControlY: number
+    trackControlSize: number
+
+    layout: Timeline.Layout
+    hover: Timeline.LayoutElement | undefined
+    
+    yScroll: number
+    timeScroll: number
+    timeScale: number
+    timeSnap: Rational
+    timeSnapBase: Rational
+
+    noteRowH: number
+
+    cursor:
+    {
+        visible: boolean
+        time1: Rational
+        time2: Rational
+        laneIndex1: number
+        laneIndex2: number
+        rectY1: number
+        rectY2: number
+    }
+
+    keysDown: Set<string>,
+
+    mouse:
+    {
+        down: boolean
+        downDate: Date
+
+        action: MouseAction
+
+        point: Point
+        pointPrev: Point
+
+        wheelDate: Date
+    }
+
+    drag:
+    {
+        origin:
+        {
+            point: Point
+            range: Range | null
+            timeScroll: number
+            yScroll: number
+            project: Project.ImmutableRoot
+        }
+
+        xLocked: boolean
+        yLocked: boolean
+
+        posDelta: { x: number, y: number }
+        timeDelta: Rational
+        rowDelta: number
+        trackDelta: number
+        trackInsertionBefore: number
+
+        elemId: Project.ID
+        notePreviewLast: number | null
+    }
+
+    insertion:
+    {
+        nearMidiPitch: number
+        duration: Rational
+    }
+
+    selection: Immutable.Set<Project.ID>
+
+    needsKeyFinish: boolean
+    rangeSelectOriginTrackIndex: number
+}
+
+
+export enum MouseAction
+{
+    None,
+    Pan,
+    DragTime,
+    DragRow,
+    DragTimeAndRow,
+    StretchTimeStart,
+    StretchTimeEnd,
+    SelectCursor,
+}
+
+
+export interface Point
+{
+    pos: { x: number, y: number }
+    time: Rational
+    row: number
+    laneIndex: number
+    trackPos: { x: number, y: number }
+    originTrackPos: { x: number, y: number }
+}
+
+
+export interface HoverData
+{
+    id: Project.ID
+    range: Range
+    action: MouseAction
+}
+
+
+
+export function makeNew(): State
+{
+    return {
+        pixelRatio: 1,
+        renderRect: new Rect(0, 0, 0, 0),
+
+        trackMeasuresH: 20,
+        trackControlX: 10,
+        trackControlY: 25,
+        trackControlSize: 20,
+        
+        layout: new Timeline.Layout(),
+        hover: undefined,
+        
+        yScroll: 0,
+        timeScroll: -2.5,
+        timeScale: 100,
+        timeSnap: new Rational(1, 8),
+        timeSnapBase: new Rational(1, 16),
+
+        noteRowH: 16,
+
+        cursor:
+        {
+            visible: true,
+            time1: new Rational(0),
+            time2: new Rational(0),
+            laneIndex1: 0,
+            laneIndex2: 0,
+            rectY1: 0,
+            rectY2: 0,
+        },
+
+        keysDown: new Set<string>(),
+
+        mouse:
+        {
+            down: false,
+            downDate: new Date(),
+
+            action: MouseAction.None,
+            
+            point: 
+            {
+                pos: { x: 0, y: 0 },
+                time: new Rational(0),
+                row: 0,
+                laneIndex: 0,
+                trackPos: { x: 0, y: 0 },
+                originTrackPos: { x: 0, y: 0 },
+            },
+            
+            pointPrev:
+            {
+                pos: { x: 0, y: 0 },
+                time: new Rational(0),
+                row: 0,
+                laneIndex: 0,
+                trackPos: { x: 0, y: 0 },
+                originTrackPos: { x: 0, y: 0 },
+            },
+
+            wheelDate: new Date(),
+        },
+
+        drag:
+        {
+            origin: null!,
+            xLocked: true,
+            yLocked: true,
+            posDelta: { x: 0, y: 0 },
+            timeDelta: new Rational(0),
+            rowDelta: 0,
+            trackDelta: 0,
+            trackInsertionBefore: -1,
+
+            elemId: -1,
+            notePreviewLast: null,
+        },
+
+        insertion:
+        {
+            nearMidiPitch: 60,
+            duration: new Rational(1, 4),
+        },
+        
+        selection: Immutable.Set<Project.ID>(),
+
+        needsKeyFinish: false,
+        rangeSelectOriginTrackIndex: -1,
+    }
+}
+
+
+export function resize(
+    state: State,
+    pixelRatio: number,
+    rect: Rect)
+{
+    state.pixelRatio = pixelRatio
+    state.renderRect = rect
+}
+
+
+export function xAtTime(
+    timeline: Timeline.State,
+    time: Rational)
+    : number
+{
+    return (time.asFloat() - timeline.timeScroll) * timeline.timeScale
+}
+
+
+export function timeAtX(
+    timeline: Timeline.State,
+    x: number,
+    timeSnap?: Rational)
+    : Rational
+{
+    timeSnap = timeSnap || timeline.timeSnap
+    const time = x / timeline.timeScale + timeline.timeScroll
+    return Rational.fromFloat(time, timeSnap.denominator)
+}
+
+
+export function timeRangeAtX(
+    timeline: Timeline.State,
+    x1: number,
+    x2: number,
+    timeSnap?: Rational)
+    : Range
+{
+    timeSnap = timeSnap || timeline.timeSnap
+    return new Range(
+        timeAtX(timeline, x1, timeSnap).subtract(timeSnap),
+        timeAtX(timeline, x2, timeSnap).add(timeSnap))
+}
+
+
+export function visibleTimeRange(
+    timeline: Timeline.State)
+    : Range
+{
+    return new Range(
+        timeAtX(timeline, 0).subtract(timeline.timeSnap),
+        timeAtX(timeline, timeline.renderRect.w).add(timeline.timeSnap))
+}
+
+
+export function laneIndexAtY(
+    timeline: Timeline.State,
+    y: number)
+    : number
+{
+    if (y < 0)
+        return -1
+
+    for (let i = 0; i < timeline.layout.lanes.length; i++)
+    {
+        const lane = timeline.layout.lanes[i]
+
+        if (y < lane.rect.y2)
+            return i
+    }
+
+    return timeline.layout.lanes.length
+}
+
+
+export function pointAt(
+    timeline: Timeline.State,
+    x: number,
+    y: number)
+    : Point
+{
+    const time = timeAtX(timeline, x)
+
+    const row = timeline.layout.laneNotes ?
+        Timeline.rowAtY(timeline, timeline.layout.laneNotes, y) :
+        0
+    
+    const laneIndex = laneIndexAtY(timeline, y)
+    
+    /*const trackPosY = pos.y - trackY(state, state.mouse.point.trackIndex)
+    const trackPos = { x: pos.x, y: trackPosY }
+
+
+    let originTrackPos = trackPos
+    if (state.drag.origin)
+    {
+        const originTrackPosY = pos.y - trackY(state, state.drag.origin.point.trackIndex)
+        originTrackPos = { x: pos.x, y: originTrackPosY }
+    }*/
+    
+    return {
+        pos: { x, y },
+        time,
+        laneIndex,
+        trackPos: { x: 0, y: 0 },
+        row,
+        originTrackPos: { x: 0, y: 0 },
+    }
+}
+    
+
+export function selectionClear(
+    timeline: Timeline.State)
+{
+    timeline.selection = timeline.selection.clear()
+}
+
+
+export function selectionRange(
+    state: Timeline.State,
+    project: Project.ImmutableRoot)
+    : Range | null
+{
+    return Project.getRangeForElems(project, state.selection)
+}
+
+
+export function selectionToggle(
+    timeline: Timeline.State,
+    project: Project.ImmutableRoot,
+    element: Timeline.LayoutElement)
+{
+    if (element.id === undefined ||
+        element.action === undefined)
+        return
+
+    const alreadySelected = timeline.selection.has(element.id)
+
+    if (!alreadySelected)
+        timeline.selection = timeline.selection.add(element.id)
+    else
+        timeline.selection = timeline.selection.remove(element.id)
+}
+
+
+export function selectionAdd(
+    timeline: Timeline.State,
+    id: Project.ID)
+{
+    timeline.selection = timeline.selection.add(id)
+}
+
+
+export function selectionAddAtCursor(
+    timeline: Timeline.State,
+    project: Project.ImmutableRoot,
+    verticalRegion?: { y1: number, y2: number })
+{
+    const time1 = timeline.cursor.time1
+    const time2 = timeline.cursor.time2
+    if (time1.compare(time2) === 0)
+        return
+    
+    const range = new Range(time1, time2, false, false).sorted()
+
+    const laneIndexMin = cursorGetLaneIndexMin(timeline)
+    const laneIndexMax = cursorGetLaneIndexMax(timeline)
+    
+    for (let l = laneIndexMin; l <= laneIndexMax; l++)
+    {
+        const lane = timeline.layout.lanes[l]
+        if (lane.iterElementsAtRegion === undefined)
+            continue
+
+        for (const id of lane.iterElementsAtRegion(timeline, project, range, verticalRegion))
+            selectionAdd(timeline, id)
+    }
+}
+
+
+export function cursorSetTime(
+    timeline: Timeline.State,
+    time1: Rational | null,
+    time2?: Rational | null)
+{
+    timeline.cursor.time1 = time1 ?? timeline.cursor.time1
+    timeline.cursor.time2 = time2 ?? timeline.cursor.time2
+}
+
+
+export function cursorSetTrack(
+    timeline: Timeline.State,
+    trackIndex1: number | null,
+    trackIndex2?: number | null)
+{
+    timeline.cursor.laneIndex1 =
+        Math.max(0, Math.min(timeline.layout.lanes.length - 1,
+            trackIndex1 ?? timeline.cursor.laneIndex1))
+
+    timeline.cursor.laneIndex2 = 
+        Math.max(0, Math.min(timeline.layout.lanes.length - 1,
+            trackIndex2 ?? timeline.cursor.laneIndex2))
+}
+
+
+export function cursorGetLaneIndexMin(
+    timeline: Timeline.State)
+{
+    return Math.max(0, Math.min(
+        timeline.cursor.laneIndex1,
+        timeline.cursor.laneIndex2))
+}
+
+
+export function cursorGetLaneIndexMax(
+    timeline: Timeline.State)
+{
+    return Math.min(timeline.layout.lanes.length - 1, Math.max(
+        timeline.cursor.laneIndex1,
+        timeline.cursor.laneIndex2))
+}

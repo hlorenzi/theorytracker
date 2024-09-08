@@ -1,8 +1,8 @@
-import * as Project from "./index"
+import * as Project from "./index.ts"
 import * as Theory from "../theory"
-import Rational from "../util/rational"
-import Range from "../util/range"
-import * as MathUtils from "../util/mathUtils"
+import Rational from "../utils/rational.ts"
+import Range from "../utils/range.ts"
+import * as MathUtils from "../utils/mathUtils.ts"
 
 
 export function jsonExport(project: Project.Root): string

@@ -1,7 +1,7 @@
-import PitchName from "./pitchName"
-import Pitch from "./pitch"
-import Scale from "./scale"
-import Utils from "./utils"
+import PitchName from "./pitchName.ts"
+import Pitch from "./pitch.ts"
+import Scale from "./scale.ts"
+import Utils from "./utils.ts"
 
 
 export default class Key

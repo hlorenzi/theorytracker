@@ -1,30 +1,38 @@
-import * as Project from "./index"
-import * as Theory from "../theory"
 import Immutable from "immutable"
-import Range from "../util/range"
-import Rational from "../util/rational"
-import ListOfRanges from "../util/listOfRanges"
+import * as Project from "./index.ts"
+import * as Theory from "../theory"
+import Range from "../utils/range.ts"
+import Rational from "../utils/rational.ts"
+import ListOfRanges from "../utils/listOfRanges.ts"
 
 
 // Least Common Multiple of 2, 3, 4, 5, 6, 7, 8, 9, and 10.
 export const MAX_RATIONAL_DENOMINATOR = 2520
 
 
-export interface Root
+export interface Mutable
+{
+    root: ImmutableRoot
+}
+
+
+export interface ImmutableRoot
 {
     nextId: Project.ID
     range: Range
     baseBpm: number
+
     tracks: Project.Track[]
     lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>
     elems: Immutable.Map<Project.ID, Project.Element>
     keyChangeTrackId: number
     meterChangeTrackId: number
     chordTrackId: number
+    noteTrackId: number
 }
 
 
-export function makeEmpty(): Root
+export function makeEmpty(): ImmutableRoot
 {
     return {
         nextId: 1,
@@ -36,11 +44,12 @@ export function makeEmpty(): Root
         keyChangeTrackId: -1,
         meterChangeTrackId: -1,
         chordTrackId: -1,
+        noteTrackId: -1,
     }
 }
 
 
-export function makeNew(): Root
+export function makeNew(): ImmutableRoot
 {
     let project = makeEmpty()
 
@@ -63,64 +72,32 @@ export function makeNew(): Root
     project = upsertTrack(project, Project.makeTrackChords())
     
     const track4Id = project.nextId
+    project.noteTrackId = track4Id
     project = upsertTrack(project, Project.makeTrackNotes())
 
     return project
 }
 
 
-export function getDefault(): Root
+export function makeTest(): ImmutableRoot
 {
-    let project = makeEmpty()
+    let project = makeNew()
 
-    const track1Id = project.nextId
-    project.keyChangeTrackId = track1Id
-    project = upsertTrack(project, Project.makeTrackKeyChanges())
-    
-    const track2Id = project.nextId
-    project.meterChangeTrackId = track2Id
-    project = upsertTrack(project, Project.makeTrackMeterChanges())
-
-    project = upsertElement(project, Project.makeKeyChange(
-        track1Id, new Rational(0), Theory.Key.parse("C Major")))
-
-    project = upsertElement(project, Project.makeMeterChange(
-        track2Id, new Rational(0), new Theory.Meter(4, 4)))
-
-    const track3Id = project.nextId
-    project.chordTrackId = track3Id
-    project = upsertTrack(project, Project.makeTrackChords())
-    
-    project = upsertElement(project, Project.makeChord(
-        track3Id,
-        Range.fromStartDuration(new Rational(0), new Rational(1)),
-        new Theory.Chord(0, 0, 0, [])))
-
-    const track4Id = project.nextId
-    project = upsertTrack(project, Project.makeTrackNotes())
-
-    const noteBlockId = project.nextId
-    project = upsertElement(project, Project.makeNoteBlock(
-        track4Id,
-        Range.fromStartDuration(new Rational(0), new Rational(4))))
-
-    for (let i = 0; i < 16; i++)
+    for (let i = 0; i < 24; i++)
         project = upsertElement(project, Project.makeNote(
-            noteBlockId,
+            project.noteTrackId,
             Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
-            60 + i,
-            0,
-            1))
+            Theory.Utils.midiMiddleC + i))
 
     return project
 }
 
 
 export function upsertTrack(
-    project: Root,
+    project: ImmutableRoot,
     track: Project.Track,
     remove: boolean = false,
-    insertBefore: number = -1): Root
+    insertBefore: number = -1): ImmutableRoot
 {
     let nextId = project.nextId
     let tracks = project.tracks
@@ -174,7 +151,7 @@ export function upsertTrack(
 }
 
 
-export function upsertElement(project: Root, elem: Project.Element): Root
+export function upsertElement(project: ImmutableRoot, elem: Project.Element): ImmutableRoot
 {
     let nextId = project.nextId
     
@@ -189,7 +166,7 @@ export function upsertElement(project: Root, elem: Project.Element): Root
 
     if (!changeParent)
     {
-        let list = project.lists.get(elem.parentId) || new ListOfRanges()
+        let list = project.lists.get(elem.parentId) ?? new ListOfRanges()
         list = list.upsert(elem)
 
         let elems = project.elems.set(elem.id, elem)
@@ -198,31 +175,21 @@ export function upsertElement(project: Root, elem: Project.Element): Root
     }
     else if (elem.parentId < 0)
     {
-        let prevList = project.lists.get(prevElem!.parentId) || new ListOfRanges()
+        let prevList = project.lists.get(prevElem!.parentId) ?? new ListOfRanges()
         prevList = prevList.removeById(prevElem!.id)
 
         let elems = project.elems.delete(elem.id)
         let lists = project.lists.set(prevElem!.parentId, prevList)
 
-        /*console.log("delete elem " + elem.id + " from " + prevElem!.parentId)
-        console.log(prevList.findById(elem.id))
-        console.log(elems.get(elem.id))*/
-
         return { ...project, nextId, elems, lists }
     }
     else
     {
-        let prevList = project.lists.get(prevElem!.parentId) || new ListOfRanges()
+        let prevList = project.lists.get(prevElem!.parentId) ?? new ListOfRanges()
         prevList = prevList.removeById(prevElem!.id)
 
-        let nextList = project.lists.get(elem.parentId) || new ListOfRanges()
+        let nextList = project.lists.get(elem.parentId) ?? new ListOfRanges()
         nextList = nextList.upsert(elem)
-
-        /*console.log("change parent from " + prevElem!.parentId + " to " + elem.parentId)
-        console.log(prevElem!)
-        console.log(prevList.findById(elem.id))
-        console.log(elem)
-        console.log(nextList.findById(elem.id))*/
 
         let elems = project.elems.set(elem.id, elem)
         let lists = project.lists
@@ -234,19 +201,19 @@ export function upsertElement(project: Root, elem: Project.Element): Root
 }
 
 
-export function keyChangeTrackId(project: Root): Project.ID
+export function keyChangeTrackId(project: ImmutableRoot): Project.ID
 {
     return project.keyChangeTrackId
 }
 
 
-export function meterChangeTrackId(project: Root): Project.ID
+export function meterChangeTrackId(project: ImmutableRoot): Project.ID
 {
     return project.meterChangeTrackId
 }
 
 
-export function keyAt(project: Root, trackId: Project.ID, time: Rational): Theory.Key
+export function keyAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Theory.Key
 {
     const keyChangeTrackId = Project.keyChangeTrackId(project)
     const keyChangeTrackTimedElems = project.lists.get(keyChangeTrackId)
@@ -265,7 +232,7 @@ export function keyAt(project: Root, trackId: Project.ID, time: Rational): Theor
 }
 
 
-export function meterChangeAt(project: Root, trackId: Project.ID, time: Rational): Project.MeterChange | null
+export function meterChangeAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Project.MeterChange | null
 {
     const meterChangeTrackId = Project.meterChangeTrackId(project)
     const meterChangeTrackTimedElems = project.lists.get(meterChangeTrackId)
@@ -284,7 +251,7 @@ export function meterChangeAt(project: Root, trackId: Project.ID, time: Rational
 }
 
 
-export function meterAt(project: Root, trackId: Project.ID, time: Rational): Theory.Meter
+export function meterAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Theory.Meter
 {
     const meterCh = meterChangeAt(project, trackId, time)
     if (meterCh)
@@ -294,7 +261,7 @@ export function meterAt(project: Root, trackId: Project.ID, time: Rational): The
 }
 
 
-export function withRefreshedRange(project: Root): Root
+export function withRefreshedRange(project: ImmutableRoot): ImmutableRoot
 {
     let range = new Range(new Rational(0), new Rational(4));
 
@@ -314,7 +281,7 @@ export function withRefreshedRange(project: Root): Root
 
 
 export function getElem<T extends Project.Element["type"]>(
-    project: Root,
+    project: ImmutableRoot,
     id: Project.ID,
     type: T)
     : Extract<Project.Element, { type: T }> | null
@@ -328,7 +295,7 @@ export function getElem<T extends Project.Element["type"]>(
 
 
 export function getTrack<T extends Project.Track["trackType"]>(
-    project: Root,
+    project: ImmutableRoot,
     id: Project.ID,
     trackType: T)
     : Extract<Project.Track, { trackType: T }> | null
@@ -342,10 +309,10 @@ export function getTrack<T extends Project.Track["trackType"]>(
 
 
 export function cloneElem(
-    fromProject: Root,
+    fromProject: ImmutableRoot,
     elem: Project.Element,
-    toProject: Root)
-    : Root
+    toProject: ImmutableRoot)
+    : ImmutableRoot
 {
     const newElem = { ...elem }
     newElem.id = -1
@@ -370,10 +337,10 @@ export function cloneElem(
 
 
 export function splitElem(
-    project: Root,
+    project: ImmutableRoot,
     elem: Project.Element,
     splitRange: Range)
-    : Root
+    : ImmutableRoot
 {
     const origProject = project
     const absRange = getAbsoluteRange(origProject, elem.parentId, elem.range)
@@ -398,14 +365,14 @@ export function splitElem(
 
 
 function splitInnerElem(
-    origProject: Root,
-    project: Root,
+    origProject: ImmutableRoot,
+    project: ImmutableRoot,
     newParentId: Project.ID,
     elem: Project.Element,
     relativeDisplace: Rational,
     splitRange: Range,
     keepRange: Range)
-    : Root
+    : ImmutableRoot
 {
     const innerList = origProject.lists.get(elem.id)
 
@@ -448,7 +415,7 @@ function splitInnerElem(
 }
 
 
-export function parentTrackFor(project: Root, elemId: Project.ID): Project.Track
+export function parentTrackFor(project: ImmutableRoot, elemId: Project.ID): Project.Track
 {
     while (true)
     {
@@ -464,7 +431,7 @@ export function parentTrackFor(project: Root, elemId: Project.ID): Project.Track
 }
 
 
-export function getAbsoluteTime(project: Root, parentId: Project.ID, time: Rational): Rational
+export function getAbsoluteTime(project: ImmutableRoot, parentId: Project.ID, time: Rational): Rational
 {
     while (true)
     {
@@ -481,7 +448,7 @@ export function getAbsoluteTime(project: Root, parentId: Project.ID, time: Ratio
 }
 
 
-export function getRelativeTime(project: Root, parentId: Project.ID, time: Rational): Rational
+export function getRelativeTime(project: ImmutableRoot, parentId: Project.ID, time: Rational): Rational
 {
     while (true)
     {
@@ -498,7 +465,7 @@ export function getRelativeTime(project: Root, parentId: Project.ID, time: Ratio
 }
 
 
-export function getAbsoluteRange(project: Root, parentId: Project.ID, range: Range): Range
+export function getAbsoluteRange(project: ImmutableRoot, parentId: Project.ID, range: Range): Range
 {
     while (true)
     {
@@ -515,7 +482,7 @@ export function getAbsoluteRange(project: Root, parentId: Project.ID, range: Ran
 }
 
 
-export function getRelativeRange(project: Root, parentId: Project.ID, range: Range): Range
+export function getRelativeRange(project: ImmutableRoot, parentId: Project.ID, range: Range): Range
 {
     while (true)
     {
@@ -532,7 +499,10 @@ export function getRelativeRange(project: Root, parentId: Project.ID, range: Ran
 }
 
 
-export function getRangeForElems(project: Root, elemIds: Iterable<Project.ID>): Range | null
+export function getRangeForElems(
+    project: ImmutableRoot,
+    elemIds: Iterable<Project.ID>)
+    : Range | null
 {
     let range: Range | null = null
 
@@ -553,7 +523,7 @@ export function getRangeForElems(project: Root, elemIds: Iterable<Project.ID>): 
 }
 
 
-export function getMillisecondsAt(project: Root, time: Rational): number
+export function getMillisecondsAt(project: ImmutableRoot, time: Rational): number
 {
     const measuresPerSecond = (project.baseBpm / 4 / 60)
     return time.subtract(project.range.start).asFloat() / measuresPerSecond * 1000

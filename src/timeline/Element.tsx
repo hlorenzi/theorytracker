@@ -1,393 +1,189 @@
-import React from "react"
-import * as Timeline from "./index"
-import * as Project from "../project"
-import * as Playback from "../playback"
-import * as Prefs from "../prefs"
-import * as Popup from "../popup"
-import * as Dockable from "../dockable"
-import * as UI from "../ui"
-import { useRefState, RefState } from "../util/refState"
-import Rect from "../util/rect"
-import styled from "styled-components"
+import * as Solid from "solid-js"
+import * as Global from "../state.ts"
+import * as Timeline from "./index.ts"
+import Rect from "../utils/rect.ts"
 
 
-const StyledTrackButton = styled.button`
-    pointer-events: auto;
-    color: #fff;
-    border: 1px solid #888;
-    border-radius: 0.5em;
-    background-color: #2f3136;
-    padding: 0.1em 0.3em;
-    cursor: pointer;
-
-    &:hover
-    {
-        border: 1px solid #fff;
-    }
-`
-
-
-export function TimelineElement(props: { state?: RefState<Timeline.State> })
+export function Element(props: {})
 {
-    const refDiv = React.useRef<HTMLDivElement | null>(null)
-    const refCanvas = React.useRef<HTMLCanvasElement | null>(null)
+    let div: HTMLDivElement | undefined = undefined
+    let canvas: HTMLCanvasElement | undefined = undefined
 
-    const editorState = props.state ?? useRefState(() => Timeline.init())
-    const dockableWindow = Dockable.useWindow()
-
-    const lastTimelineRenderRef = React.useRef(0)
-
-    const render = (force?: boolean) =>
-    {
-        if (!refCanvas.current)
+    Solid.createEffect(() => {
+        if (!div || !canvas)
             return
 
-        const now = new Date().getTime()
-        if (!force && now < lastTimelineRenderRef.current + 15)
-            return
+        const cleanup = registerHandlers(div, canvas)
 
-        //console.log("Timeline render")
-        lastTimelineRenderRef.current = now
-
-        Timeline.render(
-            editorState.ref.current,
-            refCanvas.current.getContext("2d")!)
-    }
-
-    const onResize = () =>
-    {
-        if (!refDiv.current || !refCanvas.current)
-            return
-
-        const pixelRatio = window.devicePixelRatio || 1
-        
-        const rect = refDiv.current.getBoundingClientRect()
-        const x = Math.floor(rect.x)
-        const y = Math.floor(rect.y)
-        const w = Math.floor(rect.width * pixelRatio)
-        const h = Math.floor(rect.height * pixelRatio)
-        
-        refCanvas.current.style.width = Math.floor(rect.width) + "px"
-        refCanvas.current.style.height = Math.floor(rect.height) + "px"
-        refCanvas.current.width = w
-        refCanvas.current.height = h
-
-        const renderRect = new Rect(x, y, w, h)
-
-        Timeline.resize(editorState.ref.current, pixelRatio, renderRect)
-        render(true)
-    }
-
-    React.useLayoutEffect(() =>
-    {
-		if (!refDiv.current)
-            return
-
-        const observer = new ResizeObserver(entries =>
-        {
-            onResize()
-        })
-
-        const elem = refDiv.current
-        observer.observe(elem)
-
-        onResize()
-        return () => observer.unobserve(elem)
-
-    }, [refDiv.current])
-
-    React.useEffect(() =>
-    {
-        Timeline.scrollPlaybackTimeIntoView(editorState.ref.current)
-        render(!Playback.global.playing)
-        
-    }, [Playback.globalObservable.updateToken])
-
-    React.useEffect(() =>
-    {
-        Timeline.refreshTracks(editorState.ref.current)
-        render(true)
-
-    }, [Project.global.project.tracks])
-
-    React.useEffect(() =>
-    {
-        const refCanvasCurrent = refCanvas.current
-        if (!refCanvasCurrent)
-            return
-
-        const transformMousePos = (canvas: HTMLCanvasElement, ev: MouseEvent) =>
-        {
-            const rect = canvas.getBoundingClientRect()
-            return {
-                x: (ev.clientX - rect.left) * editorState.ref.current.pixelRatio,
-                y: (ev.clientY - rect.top) * editorState.ref.current.pixelRatio,
-            }
-        }
-
-		const preventDefault = (ev: Event) => ev.preventDefault()
-
-        const setCursor = (state: Timeline.State) =>
-        {
-            let cursor = "text"
-            const mouseAction =
-                state.mouse.down ? state.mouse.action :
-                state.hoverControl != Timeline.TrackControl.None ? Timeline.MouseAction.DragTrackControl :
-                state.hover ? state.hover.action :
-                Timeline.MouseAction.None
-            
-            if (state.tracks.some((tr: any) => !!tr.pencil) ||
-                mouseAction == Timeline.MouseAction.Pencil)
-                cursor = "crosshair"
-            else if (mouseAction == Timeline.MouseAction.DragTrackControl)
-                cursor = "crosshair"
-            else if (mouseAction == Timeline.MouseAction.DragClone)
-                cursor = "crosshair"
-            else if (mouseAction == Timeline.MouseAction.DragTime ||
-                mouseAction == Timeline.MouseAction.DragTimeAndRow ||
-                mouseAction == Timeline.MouseAction.DragRow ||
-                mouseAction == Timeline.MouseAction.DragTrackHeader)
-                cursor = (state.mouse.down ? "grabbing" : "grab")
-            else if (mouseAction == Timeline.MouseAction.Pan)
-                cursor = "move"
-            else if (mouseAction == Timeline.MouseAction.StretchTimeStart ||
-                mouseAction == Timeline.MouseAction.StretchTimeEnd)
-                cursor = "col-resize"
-
-            refCanvasCurrent.style.cursor = cursor
-        }
-
-		const onMouseMove = (ev: MouseEvent) =>
-		{
-            const state = editorState.ref.current
-            if (state.mouse.down)
-                ev.preventDefault()
-                
-            const pos = transformMousePos(refCanvasCurrent, ev)
-            const projectBefore = Project.global.project
-            const needsRender1 = Timeline.mouseMove(state, pos)
-            const needsRender2 = Timeline.mouseDrag(state, pos, false)
-
-            if (projectBefore !== Project.global.project)
-                Project.notifyObservers()
-
-            if (needsRender1 || needsRender2)
-                render(true)
-
-            setCursor(state)
-        }
-        
-		const onMouseDown = (ev: MouseEvent) =>
-		{
-            if (document.activeElement instanceof HTMLElement)
-                document.activeElement.blur()
-
-            ev.preventDefault()
-
-            Dockable.removeEphemerals(Dockable.global.state)
-            Dockable.notifyObservers()
-
-            const state = editorState.ref.current
-            const pos = transformMousePos(refCanvasCurrent, ev)
-            const projectBefore = Project.global.project
-            Timeline.mouseMove(state, pos)
-            Timeline.mouseDown(state, ev.button != 0)
-            Timeline.mouseDrag(state, pos, true)
-
-            if (projectBefore !== Project.global.project)
-                Project.notifyObservers()
-
-            render()
-            setCursor(state)
-            editorState.commit()
-        }
-        
-		const onMouseUp = (ev: MouseEvent) =>
-		{
-            const state = editorState.ref.current
-            if (state.mouse.down)
-                ev.preventDefault()
-
-            const pos = transformMousePos(refCanvasCurrent, ev)
-            const projectBefore = Project.global.project
-            Timeline.mouseUp(state)
-
-            if (projectBefore !== Project.global.project)
-            {
-                Project.notifyObservers()
-                window.dispatchEvent(new Event("timelineRefresh"))
-            }
-
-            render()
-            setCursor(state)
-            editorState.commit()
-        }
-		
-		const onMouseWheel = (ev: WheelEvent) =>
-		{
-			Timeline.mouseWheel(editorState.ref.current, ev.deltaX, ev.deltaY)
-            render()
-		}
-		
-		const onKeyDown = (ev: KeyboardEvent) =>
-		{
-            const isActiveWindow =
-                Dockable.global.state.activePanel === dockableWindow.panel &&
-                (!document.activeElement || document.activeElement.tagName != "INPUT")
-
-            const projectBefore = Project.global.project
-			Timeline.keyDown(editorState.ref.current, isActiveWindow, ev.key.toLowerCase())
-            
-            if (projectBefore !== Project.global.project)
-                Project.notifyObservers()
-
-            render()
-            editorState.commit()
-        }
-		
-		const onKeyUp = (ev: KeyboardEvent) =>
-		{
-			Timeline.keyUp(editorState.ref.current, ev.key.toLowerCase())
-        }
-
-        const onRewind = (ev: Event) =>
-        {
-            Timeline.rewind(editorState.ref.current)
-            editorState.commit()
-            render(true)
-        }
-		
-		const onRefresh = (ev: Event) =>
-		{
-            Timeline.refreshTracks(editorState.ref.current)
-            editorState.commit()
-            render(true)
-        }
-		
-		const onReset = (ev: Event) =>
-		{
-            const state = editorState.ref.current
-            Timeline.modeStackPop(state, 0)
-            Timeline.reset(state)
-            Timeline.rewind(state)
-            Timeline.refreshTracks(state)
-            editorState.commit()
-            render(true)
-        }
-        
-        refCanvasCurrent.addEventListener("mousedown", onMouseDown)
-        refCanvasCurrent.addEventListener("wheel", onMouseWheel)
-        refCanvasCurrent.addEventListener("contextmenu", preventDefault)
-
-        window.addEventListener("mousemove", onMouseMove)
-        window.addEventListener("mouseup", onMouseUp)
-        window.addEventListener("keydown", onKeyDown)
-        window.addEventListener("keyup", onKeyUp)
-
-        window.addEventListener("timelineRewind", onRewind)
-        window.addEventListener("timelineRefresh", onRefresh)
-        window.addEventListener("timelineReset", onReset)
-
-        return () =>
-        {
-            refCanvasCurrent.removeEventListener("mousedown", onMouseDown)
-            refCanvasCurrent.removeEventListener("wheel", onMouseWheel)
-            refCanvasCurrent.removeEventListener("contextmenu", preventDefault)
-
-            window.removeEventListener("mousemove", onMouseMove)
-            window.removeEventListener("mouseup", onMouseUp)
-            window.removeEventListener("keydown", onKeyDown)
-            window.removeEventListener("keyup", onKeyUp)
-
-            window.removeEventListener("timelineRewind", onRewind)
-            window.removeEventListener("timelineRefresh", onRefresh)
-            window.removeEventListener("timelineReset", onReset)
-        }
-
-    }, [refCanvas.current])
+        Solid.onCleanup(cleanup)
+    })
 
 
-    const yTrackEnd =
-        editorState.ref.current.tracks.length == 0 ?
-            0 :
-            editorState.ref.current.tracks[editorState.ref.current.tracks.length - 1].renderRect.y2
+    return <div ref={ div } style={{
+        width: "100%",
+        height: "100%",
+    }}>
+        <canvas ref={ canvas }/>
+    </div>
+}
 
-    const onAddTrack = () =>
-    {
-        let proj = Project.global.project
-        proj = Project.upsertTrack(proj, Project.makeTrackNotes())
-        Project.global.project = proj
-        Project.splitUndoPoint()
-        Project.addUndoPoint("addTrack")
-        Project.notifyObservers()
-        
-        window.dispatchEvent(new Event("timelineRefresh"))
-    }
 
-    const onTrackSettings = (ev: React.MouseEvent, trackIndex: number) =>
-    {
-        Popup.global.elem = () =>
-        {
-            return <Popup.Root>
-                <Popup.Button label="Delete"/>
-            </Popup.Root>
-        }
-        Popup.global.rect = Rect.fromElement(ev.target as HTMLElement)
-        Popup.notifyObservers()
-    }
-
+function canvasResize(
+    div: HTMLDivElement,
+    canvas: HTMLCanvasElement,
+    timeline: Timeline.State)
+{
     const pixelRatio = window.devicePixelRatio || 1
+    
+    const domRect = div.getBoundingClientRect()
+    const x = Math.floor(domRect.x)
+    const y = Math.floor(domRect.y)
+    const w = Math.floor(domRect.width * pixelRatio)
+    const h = Math.floor(domRect.height * pixelRatio)
+    
+    canvas.style.width = domRect.width + "px"
+    canvas.style.height = domRect.height + "px"
+    canvas.width = w
+    canvas.height = h
 
-	return React.useMemo(() =>
-		<div ref={ refDiv } style={{
-			width: "100%",
-			height: "100%",
-			position: "relative",
-            overflow: "hidden",
-		}}>
-			<canvas ref={ refCanvas } style={{
-				width: "100%",
-                height: "100%",
-			}}/>
+    const rect = new Rect(0, 0, w, h)
 
-            <div style={{
-                position: "absolute",
-                left: 0,
-                top: (yTrackEnd - editorState.ref.current.trackScroll) / pixelRatio,
-                width: editorState.ref.current.trackHeaderW / pixelRatio,
-                height: 100,
-                boxSizing: "border-box",
-                padding: "1em 1em",
-                userSelect: "none",
-                pointerEvents: "none",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "start",
-            }}>
-                <StyledTrackButton
-                    onClick={ onAddTrack }
-                    style={{
-                        padding: "0.5em 1em",
-                }}>
-                    +{/*➕*/}
-                </StyledTrackButton>
-            </div>
-		</div>
-        , [
-            Project.global.project.tracks,
-            editorState.ref.current.tracks,
-            editorState.ref.current.trackScroll,
-        ])
+    Timeline.resize(timeline, pixelRatio, rect)
 }
 
 
-export function sendEventRefresh()
+function registerHandlers(
+    div: HTMLDivElement,
+    canvas: HTMLCanvasElement)
 {
-    window.dispatchEvent(new Event("timelineRefresh"))
-}
+    const ctx = canvas.getContext("2d")!
 
+    const transformMousePos = (canvas: HTMLCanvasElement, ev: MouseEvent) =>
+    {
+        const rect = canvas.getBoundingClientRect()
+        const timeline = Global.get().timeline
+        return {
+            x: (ev.clientX - rect.left) * timeline.pixelRatio,
+            y: (ev.clientY - rect.top) * timeline.pixelRatio,
+        }
+    }
 
-export function sendEventReset()
-{
-    window.dispatchEvent(new Event("timelineReset"))
+    const setCursor = () => {
+        const timeline = Global.get().timeline
+
+        const action = timeline.mouse.down ?
+            timeline.mouse.action :
+            timeline.hover?.action
+
+        canvas.style.cursor =
+            action === Timeline.MouseAction.DragTime ||
+            action === Timeline.MouseAction.DragRow ||
+            action === Timeline.MouseAction.DragTimeAndRow ?
+                timeline.mouse.down ? "grabbing" : "grab" :
+            action === Timeline.MouseAction.StretchTimeStart ||
+            action === Timeline.MouseAction.StretchTimeEnd ?
+                "col-resize" :
+                "inherit"
+    }
+
+    const onResize = () => {
+        const timeline = Global.get().timeline
+        const project = Global.get().project
+
+        canvasResize(div, canvas, timeline)
+        Timeline.layout(timeline, project.root)
+        Timeline.draw(timeline, ctx)
+    }
+
+    const onMouseMove = (ev: MouseEvent) => {
+        ev.preventDefault()
+
+        const timeline = Global.get().timeline
+        const project = Global.get().project
+        const mouse = transformMousePos(canvas, ev)
+
+        Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
+
+        if (Timeline.mouseDrag(timeline, project))
+            Timeline.layout(timeline, project.root)
+        
+        Timeline.draw(timeline, ctx)
+        setCursor()
+    }
+
+    const onMouseDown = (ev: MouseEvent) => {
+        ev.preventDefault()
+
+        const timeline = Global.get().timeline
+        const project = Global.get().project
+        const prefs = Global.get().prefs
+        const mouse = transformMousePos(canvas, ev)
+        
+        Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
+        Timeline.mouseDown(timeline, project.root, prefs, ev.button !== 0)
+        Timeline.draw(timeline, ctx)
+        setCursor()
+    }
+
+    const onMouseUp = (ev: MouseEvent) => {
+        ev.preventDefault()
+
+        const timeline = Global.get().timeline
+        const project = Global.get().project
+        const mouse = transformMousePos(canvas, ev)
+        
+        Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
+        Timeline.mouseUp(timeline, project.root, ev.button !== 0)
+        Timeline.draw(timeline, ctx)
+        setCursor()
+    }
+    
+    const onMouseWheel = (ev: WheelEvent) => {
+        ev.preventDefault()
+        
+        const timeline = Global.get().timeline
+        const project = Global.get().project
+
+        Timeline.mouseWheel(timeline, ev.deltaX, ev.deltaY)
+        Timeline.layout(timeline, project.root)
+        Timeline.draw(timeline, ctx)
+    }
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+        const timeline = Global.get().timeline
+
+        Timeline.keyDown(timeline, ev.key.toLowerCase())
+    }
+
+    const onKeyUp = (ev: KeyboardEvent) => {
+        const timeline = Global.get().timeline
+
+        Timeline.keyUp(timeline, ev.key.toLowerCase())
+    }
+
+    const preventDefault = (ev: MouseEvent) => {
+        ev.preventDefault()
+    }
+
+    onResize()
+
+    canvas.addEventListener("resize", onResize)
+    window.addEventListener("mousemove", onMouseMove)
+    canvas.addEventListener("mousedown", onMouseDown)
+    window.addEventListener("mouseup", onMouseUp)
+    canvas.addEventListener("wheel", onMouseWheel)
+    canvas.addEventListener("contextmenu", preventDefault)
+    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("keyup", onKeyUp)
+
+    return () => {
+        canvas.removeEventListener("resize", onResize)
+        window.removeEventListener("mousemove", onMouseMove)
+        canvas.removeEventListener("mousedown", onMouseDown)
+        window.removeEventListener("mouseup", onMouseUp)
+        canvas.removeEventListener("wheel", onMouseWheel)
+        canvas.removeEventListener("contextmenu", preventDefault)
+        window.removeEventListener("keydown", onKeyDown)
+        window.removeEventListener("keyup", onKeyUp)
+    }
 }

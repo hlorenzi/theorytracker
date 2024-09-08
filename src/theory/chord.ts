@@ -1,6 +1,6 @@
-import * as MathUtils from "../util/mathUtils"
-import Key from "./key"
-import Utils from "./utils"
+import * as MathUtils from "../utils/mathUtils.ts"
+import Key from "./key.ts"
+import Utils from "./utils.ts"
 
 
 interface ChordMetadata
@@ -229,7 +229,7 @@ export default class Chord
 		
 		const rootMidi = Utils.mod(this.rootChroma, 12)
 		
-		let pitches = []
+		const pitches: number[] = []
 		for (let i = 0; i < chordData.pitches.length; i++)
 			pitches.push(rootMidi + chordData.pitches[i])
 		

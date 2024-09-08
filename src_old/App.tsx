@@ -1,153 +1,140 @@
 import React from "react"
-import Dockable from "./dockable/Dockable"
-import * as DockableData from "./dockable/state"
-import { EditorContent } from "./editor2/EditorContent"
-import { AppState, AppReducer, ContentManager, AppManager } from "./AppState"
-import { AppContext } from "./AppContext"
-import EditorState from "./editor2/editor"
-import Project from "./project/project2"
-import Immutable from "immutable"
-import Rect from "./util/rect"
-import MenuBar from "./popup/MenuBar"
-import Popup from "./popup/Popup"
-import InspectorContent from "./editor2/InspectorContent"
-import TrackInstrumentContent from "./editor2/TrackInstrumentContent"
-import { usePlaybackController } from "./playback/PlaybackController"
-import { useSoundfontLibrary } from "./playback/library"
+import * as Dockable from "./dockable"
+import * as Command from "./command"
+import * as Project from "./project"
+import * as Playback from "./playback"
+import * as Prefs from "./prefs"
+import * as Popup from "./popup"
+import * as Menubar from "./menubar"
+import * as UI from "./ui"
+import { useRefState } from "./util/refState"
+import PlaybackToolbar from "./PlaybackToolbar"
+import MenuFile from "./MenuFile"
+import MenuEdit from "./MenuEdit"
+import MenuWindow from "./MenuWindow"
+import "./types"
 
 
-const initialAppState = AppReducer.makeNew()
+let initializedGlobals = false
 
 
-export default function App(props: {})
+export default function App()
 {
-    const rootRef = React.useRef<HTMLDivElement>(null)
-
-    const [, setDummy] = React.useState(0)
-    const appStateRef = React.useRef<AppState>(initialAppState)
-    const appDispatch = React.useCallback((newState: AppState) =>
+    if (!initializedGlobals)
     {
-        //console.log(newState)
-        appStateRef.current = newState
-        setDummy(dummy => dummy + 1)
+        initializedGlobals = true
+        Prefs.initGlobal()
+        Project.initGlobal()
+        Playback.initGlobal()
+        Dockable.initGlobal()
+        Popup.initGlobal()
+    }
 
-    }, [])
+    Project.useGlobal()
+    Playback.useGlobal()
+    Dockable.useGlobal()
+    Popup.useGlobal()
 
-    const setDockableRoot = (newRoot: DockableData.State) => appDispatch({
-        ...appStateRef.current,
-        dockableRoot: newRoot,
-    })
-
-    const appManager = new AppManager(
-        () => appStateRef.current,
-        (newState) => appStateRef.current = newState,
-        (newState) => appDispatch(newState))
-
-    const playbackController = usePlaybackController(appManager)
-    const soundfontLibrary = useSoundfontLibrary(appManager)
+    const [version, setVersion] = React.useState("")
 
     React.useEffect(() =>
     {
-        if (!rootRef.current)
-            return
-            
-        const onResize = () =>
+        ;(async () =>
         {
-            const elemRect = rootRef.current!.getBoundingClientRect()
+            const versionFile = await fetch("build/build_version.txt")
+            const versionTxt = await versionFile.text()
+            if (versionTxt.startsWith("v0-"))
+                setVersion("v0." + versionTxt.match(".*?\-(.*?)\-")![1])
+        })()
 
-            appDispatch({
-                ...appStateRef.current,
-                dockableRect: new Rect(
-                    elemRect.x,
-                    elemRect.y,
-                    elemRect.width,
-                    elemRect.height),
-            })
-        }
+    }, [])
 
-        onResize()
-        
-        window.addEventListener("resize", onResize)
 
-        return () =>
+    React.useEffect(() =>
+    {
+        window.addEventListener("keydown", (ev: KeyboardEvent) =>
         {
-            window.removeEventListener("resize", onResize)
-        }
+            if (document.activeElement && document.activeElement.tagName == "INPUT")
+                return
 
-    }, [rootRef.current])
+            const key = ev.key.toLowerCase()
+
+            for (const command of Command.allCommands)
+            {
+                if (!command.shortcut)
+                    continue
+
+                if (command.isShortcutAvailable && !command.isShortcutAvailable())
+                    continue
+
+                if (command.isAvailable && !command.isAvailable({}))
+                    continue
+
+                for (const shortcut of command.shortcut)
+                {
+                    if (!!shortcut.ctrl !== ev.ctrlKey)
+                        continue
+
+                    if (!!shortcut.shift !== ev.shiftKey)
+                        continue
+
+                    if (key !== shortcut.key)
+                        continue
+
+                    //console.log("handled keyboard command: ", command.name)
+                    command.func({})
+                    ev.preventDefault()
+                    ev.stopPropagation()
+                    return
+                }
+            }
+        })
+
+    }, [])
 
 
-    return <AppContext.Provider value={{ appManager }}>
+    return <>
         <div style={{
-            position: "absolute",
-            top: "0px",
-            left: "0px",
-            width: "100vw",
-            height: "100vh",
             display: "grid",
             gridTemplate: "auto 1fr / 1fr",
+            width: "100vw",
+            height: "100vh",
         }}>
-            <MenuBar/>
 
-            <div ref={ rootRef } style={{
-                width: "100%",
-                height: "100%",
-                pointerEvents: "none",
-                zIndex: -1000,
-            }}/>
-            
-            <Dockable
-                state={ appStateRef.current.dockableRoot }
-                setState={ setDockableRoot }
-                contentTypeToComponent={ contentTypeToComponent }
-                contentTypeToTitle={ contentTypeToTitle }
-            />
+            <Menubar.Root>
+                <MenuFile/>
+                <MenuEdit/>
+                <MenuWindow/>
+                <PlaybackToolbar/>
+                <a
+                    href="https://github.com/hlorenzi/theorytracker#how-to-use"
+                    style={{
+                        color: "#fff",
+                        alignSelf: "center",
+                        marginLeft: "1em",
+                        fontSize: "1.25em",
+                }}>
+                    How to use the app
+                </a>
+                <span style={{
+                    color: "#aaa",
+                    alignSelf: "center",
+                    marginLeft: "1em",
+                }}>
+                    { version }
+                </span>
+            </Menubar.Root>
 
-            { !appStateRef.current.popup ? null :
-                <Popup
-                    rect={ appStateRef.current.popup.rect }
-                    isSub={ false }
-                    popupElem={ appStateRef.current.popup.elem }
-                    popupProps={ appStateRef.current.popup.props }
-                />
+            { !Playback.global.synthLoading ? null :
+                <UI.LoadingBar floating/>
             }
 
-            <input
-                id="gInputFileOpen"
-                type="file"
-                accept=".mid,.json,.txt"
-                style={{ display: "none" }}
-            />
+            <Dockable.Container/>
+
         </div>
-    </AppContext.Provider>
-}
 
-
-function contentTypeToComponent(type: string): any
-{
-    switch (type)
-    {
-        case "editor": return EditorContent
-        case "editorNotes": return EditorContent
-        case "inspector": return InspectorContent
-        case "trackInstrument": return TrackInstrumentContent
-
-        default:
-            throw "invalid content type"
-    }
-}
-
-
-function contentTypeToTitle(type: string): any
-{
-    switch (type)
-    {
-        case "editor": return "Project"
-        case "editorNotes": return "Note Track"
-        case "inspector": return "Inspector"
-        case "trackInstrument": return "Instrument Select"
-
-        default:
-            throw "invalid content type"
-    }
+        { !Popup.global.elem ? null :
+            <Popup.global.elem/>
+        }
+    </>
 }
