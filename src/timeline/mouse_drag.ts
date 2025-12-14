@@ -136,10 +136,12 @@ function handleDragElements(
             timeline.drag.origin.range)
         {
             changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
-            changes.range = changes.range.stretch(
-                timeline.drag.timeDelta,
-                timeline.drag.origin.range.end,
-                timeline.drag.origin.range.start)
+            changes.range = changes.range
+                .stretch(
+                    timeline.drag.timeDelta,
+                    timeline.drag.origin.range.end,
+                    timeline.drag.origin.range.start)
+                .sorted()
 
             if (elem.range.start.compare(timeline.drag.origin.range.start) == 0)
                 changes.range = new Range(
@@ -156,10 +158,12 @@ function handleDragElements(
             timeline.drag.origin.range)
         {
             changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
-            changes.range = changes.range.stretch(
-                timeline.drag.timeDelta,
-                timeline.drag.origin.range.start,
-                timeline.drag.origin.range.end)
+            changes.range = changes.range
+                .stretch(
+                    timeline.drag.timeDelta,
+                    timeline.drag.origin.range.start,
+                    timeline.drag.origin.range.end)
+                .sorted()
 
             if (elem.range.end.compare(timeline.drag.origin.range.end) == 0)
                 changes.range = new Range(

@@ -21,7 +21,8 @@ export function Element(props: {})
 
     return <div ref={ div } style={{
         width: "100%",
-        height: "100%",
+        height: "60%",
+        contain: "size",
     }}>
         <canvas ref={ canvas }/>
     </div>
@@ -45,6 +46,8 @@ function canvasResize(
     canvas.style.height = domRect.height + "px"
     canvas.width = w
     canvas.height = h
+
+    console.log("resize", w, h)
 
     const rect = new Rect(0, 0, w, h)
 
@@ -89,10 +92,11 @@ function registerHandlers(
     const onResize = () => {
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const prefs = Global.get().prefs
 
         canvasResize(div, canvas, timeline)
-        Timeline.layout(timeline, project.root)
-        Timeline.draw(timeline, ctx)
+        Timeline.layout(timeline, project.root, prefs)
+        Timeline.draw(timeline, prefs, ctx)
     }
 
     const onMouseMove = (ev: MouseEvent) => {
@@ -100,14 +104,15 @@ function registerHandlers(
 
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
 
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
 
         if (Timeline.mouseDrag(timeline, project))
-            Timeline.layout(timeline, project.root)
+            Timeline.layout(timeline, project.root, prefs)
         
-        Timeline.draw(timeline, ctx)
+        Timeline.draw(timeline, prefs, ctx)
         setCursor()
     }
 
@@ -121,7 +126,7 @@ function registerHandlers(
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
         Timeline.mouseDown(timeline, project.root, prefs, ev.button !== 0)
-        Timeline.draw(timeline, ctx)
+        Timeline.draw(timeline, prefs, ctx)
         setCursor()
     }
 
@@ -130,11 +135,12 @@ function registerHandlers(
 
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
         Timeline.mouseUp(timeline, project.root, ev.button !== 0)
-        Timeline.draw(timeline, ctx)
+        Timeline.draw(timeline, prefs, ctx)
         setCursor()
     }
     
@@ -143,10 +149,11 @@ function registerHandlers(
         
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const prefs = Global.get().prefs
 
         Timeline.mouseWheel(timeline, ev.deltaX, ev.deltaY)
-        Timeline.layout(timeline, project.root)
-        Timeline.draw(timeline, ctx)
+        Timeline.layout(timeline, project.root, prefs)
+        Timeline.draw(timeline, prefs, ctx)
     }
 
     const onKeyDown = (ev: KeyboardEvent) => {
@@ -167,7 +174,7 @@ function registerHandlers(
 
     onResize()
 
-    canvas.addEventListener("resize", onResize)
+    window.addEventListener("resize", onResize)
     window.addEventListener("mousemove", onMouseMove)
     canvas.addEventListener("mousedown", onMouseDown)
     window.addEventListener("mouseup", onMouseUp)
@@ -177,7 +184,7 @@ function registerHandlers(
     window.addEventListener("keyup", onKeyUp)
 
     return () => {
-        canvas.removeEventListener("resize", onResize)
+        window.removeEventListener("resize", onResize)
         window.removeEventListener("mousemove", onMouseMove)
         canvas.removeEventListener("mousedown", onMouseDown)
         window.removeEventListener("mouseup", onMouseUp)

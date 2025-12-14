@@ -1,7 +1,10 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Prefs from "../prefs.ts"
+import * as Theory from "../theory/index.ts"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
+import Rational from "utils/rational.ts"
 
 
 export interface LayoutElementCommon
@@ -9,6 +12,10 @@ export interface LayoutElementCommon
     id?: Project.ID
     action?: Timeline.MouseAction
     rect: Rect
+    zIndex?: number
+    zIndexForHover?: number
+    cutStart?: boolean
+    cutEnd?: boolean
     priority?: number
     subElements?: LayoutElement[]
 }
@@ -34,7 +41,7 @@ export interface LayoutElementLaneCommon extends LayoutElementCommon
 
 export interface LayoutElementLaneMarkers extends LayoutElementLaneCommon
 {
-    kind: "lane"
+    kind: "laneMarkers"
 }
 
 
@@ -44,9 +51,31 @@ export interface LayoutElementLaneNotes extends LayoutElementLaneCommon
 }
 
 
+export interface LayoutElementLaneChords extends LayoutElementLaneCommon
+{
+    kind: "laneChords"
+}
+
+
 export interface LayoutElementNote extends LayoutElementCommon
 {
     kind: "note"
+}
+
+
+export interface LayoutElementChord extends LayoutElementCommon
+{
+    kind: "chord"
+    chord: Project.Chord
+    key: Theory.Key
+}
+
+
+export interface LayoutElementMarker extends LayoutElementCommon
+{
+    kind: "marker"
+    keyCh?: Project.KeyChange
+    meterCh?: Project.MeterChange
 }
 
 
@@ -54,12 +83,16 @@ export type LayoutElement =
     LayoutElementHidden |
     LayoutElementLaneMarkers |
     LayoutElementLaneNotes |
-    LayoutElementNote
+    LayoutElementLaneChords |
+    LayoutElementNote |
+    LayoutElementChord |
+    LayoutElementMarker
 
 
 export type LayoutLane =
     LayoutElementLaneMarkers |
-    LayoutElementLaneNotes
+    LayoutElementLaneNotes |
+    LayoutElementLaneChords
 
 
 export interface KeyRegion
@@ -71,6 +104,14 @@ export interface KeyRegion
 }
 
 
+export interface Marker
+{
+    time: Rational
+    keyCh?: Project.KeyChange
+    meterCh?: Project.MeterChange
+}
+
+
 export class Layout
 {
     range: Range
@@ -78,9 +119,11 @@ export class Layout
     elements: LayoutElement[] = []
     elementCount: number = 0
     laneNotes?: LayoutElementLaneNotes
+    laneChords?: LayoutElementLaneChords
 
     measures: Project.Measure[] = []
     keyRegions: KeyRegion[] = []
+    markers: Marker[] = []
 
 
     constructor()
@@ -104,8 +147,9 @@ export class Layout
         {
             this.elements.push(elem)
 
-            if (elem.kind === "lane" ||
-                elem.kind === "laneNotes")
+            if (elem.kind === "laneMarkers" ||
+                elem.kind === "laneNotes" ||
+                elem.kind === "laneChords")
                 this.lanes.push(elem)
         }
     }
@@ -114,71 +158,46 @@ export class Layout
 
 export function layout(
     timeline: Timeline.State,
-    project: Project.ImmutableRoot)
+    project: Project.ImmutableRoot,
+    prefs: Prefs.Prefs)
 {
     const layout = new Layout()
     layout.range = Timeline.visibleTimeRange(timeline)
     layout.measures = [...Project.iterMeasuresAtRange(project, layout.range)]
     layout.keyRegions = [...iterKeyChangePairsAtRange(timeline, project, layout.range)]
+    layout.markers = []
 
 
-    const laneMarkerH = 32
     const laneChordH = 60
-    const laneMarginH = 8
+    const laneMarginY = 8
 
-    const laneKeyChanges: LayoutElementLaneMarkers = {
-        kind: "lane",
+    const laneNotes: LayoutElementLaneNotes = {
+        kind: "laneNotes",
         laneIndex: 0,
         rect: new Rect(
             0,
             0,
             timeline.renderRect.w,
-            laneMarkerH),
+            timeline.renderRect.h - laneChordH - laneMarginY),
     }
 
-    const laneMeterChanges: LayoutElementLaneMarkers = {
-        kind: "lane",
+    const laneChords: LayoutElementLaneChords = {
+        kind: "laneChords",
         laneIndex: 1,
         rect: new Rect(
             0,
-            laneMarkerH + laneMarginH,
+            timeline.renderRect.h - laneChordH,
             timeline.renderRect.w,
-            laneMarkerH),
+            laneChordH - 1),
     }
 
-    const laneChords: LayoutElementLaneMarkers = {
-        kind: "lane",
-        laneIndex: 2,
-        rect: new Rect(
-            0,
-            laneMarkerH + laneMarginH +
-                laneMarkerH + laneMarginH,
-            timeline.renderRect.w,
-            laneChordH),
-    }
-
-    const laneNotesY =
-        laneMarkerH + laneMarginH +
-        laneMarkerH + laneMarginH +
-        laneChordH + laneMarginH
-    
-    const laneNotes: LayoutElementLaneNotes = {
-        kind: "laneNotes",
-        laneIndex: 3,
-        rect: new Rect(
-            0,
-            laneNotesY,
-            timeline.renderRect.w,
-            timeline.renderRect.h - laneNotesY),
-    }
-
-    layout.add(undefined, laneKeyChanges)
-    layout.add(undefined, laneMeterChanges)
-    layout.add(undefined, laneChords)
     layout.add(undefined, laneNotes)
+    layout.add(undefined, laneChords)
     layout.laneNotes = laneNotes
 
-    Timeline.layoutLaneNotes(timeline, project, layout, laneNotes)
+    Timeline.layoutLaneMarkers(timeline, project, prefs, layout, laneNotes)
+    Timeline.layoutLaneNotes(timeline, project, prefs, layout, laneNotes)
+    Timeline.layoutLaneChords(timeline, project, prefs, layout, laneChords)
 
     timeline.layout = layout
     console.log(layout.elementCount, layout)

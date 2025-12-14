@@ -1,11 +1,13 @@
 import * as State from "../state.ts"
 import * as Timeline from "./index.ts"
+import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory"
 import Rational from "../utils/rational.ts"
 
 
 export function draw(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D)
 {
     ctx.save()
@@ -14,14 +16,14 @@ export function draw(
     ctx.fillStyle = "#fff"
     ctx.fillRect(0, 0, timeline.renderRect.w, timeline.renderRect.h)
 
-    drawElements(timeline, ctx, timeline.layout.elements)
+    drawElements(timeline, prefs, ctx, timeline.layout.elements)
 
     if (timeline.cursor.visible)
     {
         const timeMin = timeline.cursor.time1.min(timeline.cursor.time2)
         const timeMax = timeline.cursor.time1.max(timeline.cursor.time2)
-        drawCursorBeam(timeline, ctx, timeMin, false)
-        drawCursorBeam(timeline, ctx, timeMax, true)
+        drawCursorBeam(timeline, prefs, ctx, timeMin, false)
+        drawCursorBeam(timeline, prefs, ctx, timeMax, true)
     }
 
     ctx.restore()
@@ -30,12 +32,30 @@ export function draw(
 
 function drawElements(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
     elements: Timeline.LayoutElement[])
 {
     for (const element of elements)
     {
-        if (element.kind === "lane")
+        if (element.id !== undefined &&
+            timeline.selection.has(element.id))
+            element.zIndexForHover = 1
+
+        else if (timeline.hover?.id === element.id)
+            element.zIndexForHover = 2
+
+        else
+            element.zIndexForHover = 0
+    }
+
+    elements.sort((a, b) =>
+        ((a.zIndex ?? 0) + (a.zIndexForHover ?? 0)) -
+        ((b.zIndex ?? 0) + (b.zIndexForHover ?? 0)))
+
+    for (const element of elements)
+    {
+        if (element.kind === "laneChords")
         {
             ctx.save()
             ctx.beginPath()
@@ -46,20 +66,20 @@ function drawElements(
                 element.rect.h)
             ctx.clip()
 
-            drawLaneBkgSolid(timeline, ctx, element)
-            drawLaneBkgMeasures(timeline, ctx, element, false)
-            drawLaneBkgMeasures(timeline, ctx, element, true)
-            drawCursorBkg(timeline, ctx, element)
+            drawLaneBkgSolid(timeline, prefs, ctx, element)
+            drawLaneBkgMeasures(timeline, prefs, ctx, element, false)
+            drawLaneBkgMeasures(timeline, prefs, ctx, element, true)
+            drawCursorBkg(timeline, prefs, ctx, element)
             
             if (element.subElements)
-                drawElements(timeline, ctx, element.subElements)
+                drawElements(timeline, prefs, ctx, element.subElements)
 
-            drawLaneFrgOutline(timeline, ctx, element)
+            drawLaneFrgOutline(timeline, prefs, ctx, element)
 
             ctx.restore()
         }
 
-        if (element.kind === "laneNotes")
+        else if (element.kind === "laneNotes")
         {
             ctx.save()
             ctx.beginPath()
@@ -70,25 +90,24 @@ function drawElements(
                 element.rect.h)
             ctx.clip()
 
-            drawLaneBkgSolid(timeline, ctx, element)
-            drawLaneBkgOctaves(timeline, ctx, element, false)
-            drawLaneBkgMeasures(timeline, ctx, element, false)
-            drawLaneBkgOctaves(timeline, ctx, element, true)
-            drawLaneBkgMeasures(timeline, ctx, element, true)
-            drawCursorBkg(timeline, ctx, element)
+            drawLaneBkgSolid(timeline, prefs, ctx, element)
+            drawLaneBkgOctaves(timeline, prefs, ctx, element, false)
+            drawLaneBkgMeasures(timeline, prefs, ctx, element, false)
+            drawLaneBkgOctaves(timeline, prefs, ctx, element, true)
+            drawLaneBkgMeasures(timeline, prefs, ctx, element, true)
+            drawCursorBkg(timeline, prefs, ctx, element)
             
             if (element.subElements)
-                drawElements(timeline, ctx, element.subElements)
+                drawElements(timeline, prefs, ctx, element.subElements)
 
-            drawLaneFrgOutline(timeline, ctx, element)
+            drawLaneFrgOutline(timeline, prefs, ctx, element)
 
             ctx.restore()
         }
 
-        if (element.kind === "note")
+        else if (element.kind === "note")
         {
-            ctx.fillStyle =
-                timeline.hover?.id === element.id ? "#f88" : "#f00"
+            ctx.save()
             ctx.beginPath()
             ctx.roundRect(
                 element.rect.x,
@@ -96,17 +115,172 @@ function drawElements(
                 element.rect.w,
                 element.rect.h,
                 timeline.noteRowH / 4)
+            ctx.clip()
+
+            const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
+            const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
+
+            ctx.fillStyle = "#f00"
+            ctx.beginPath()
+            ctx.roundRect(
+                x1,
+                element.rect.y,
+                x2 - x1,
+                element.rect.h,
+                timeline.noteRowH / 4)
             ctx.fill()
+
+            if (timeline.hover?.id === element.id)
+            {
+                ctx.fillStyle = "#fff8"
+                ctx.fill()
+            }
 
             if (element.id !== undefined &&
                 timeline.selection.has(element.id))
             {
-                ctx.strokeStyle = "#fbb"
-                ctx.lineWidth = 4
+                ctx.strokeStyle = "#fff8"
+                ctx.lineWidth = 6
                 ctx.stroke()
             }
+
+            ctx.restore()
         }
+
+        else if (element.kind === "chord")
+        {
+            ctx.save()
+            ctx.beginPath()
+            ctx.roundRect(
+                element.rect.x,
+                element.rect.y,
+                element.rect.w,
+                element.rect.h,
+                5)
+            ctx.clip()
+
+            const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
+            const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
+
+            ctx.fillStyle = "#f00"
+            ctx.beginPath()
+            ctx.roundRect(
+                x1,
+                element.rect.y,
+                x2 - x1,
+                element.rect.h,
+                5)
+            ctx.fill()
+
+            const ornamentH = 6
+            ctx.fillStyle = "#ddd"
+            ctx.fillRect(
+                x1,
+                element.rect.y + ornamentH,
+                x2 - x1,
+                element.rect.h - ornamentH * 2)
+
+            ctx.fillStyle = "#000"
+            ctx.font = `${prefs.timeline.fontWeightChord} ${element.rect.h * 0.65}px ${prefs.timeline.fontNameChord}`
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+            ctx.fillText(
+                element.chord.chord.romanBase(element.key) +
+                    element.chord.chord.romanSup(element.key) +
+                    element.chord.chord.romanSub(element.key),
+                element.rect.xCenter,
+                element.rect.yCenter + element.rect.h * 0.05,
+                element.rect.w * 0.95)
+                
+            ctx.beginPath()
+            ctx.roundRect(
+                x1,
+                element.rect.y,
+                x2 - x1,
+                element.rect.h,
+                5)
+                
+            if (timeline.hover?.id === element.id)
+            {
+                ctx.fillStyle = "#fff8"
+                ctx.fill()
+            }
+
+            if (element.id !== undefined &&
+                timeline.selection.has(element.id))
+            {
+                ctx.strokeStyle = "#fff8"
+                ctx.lineWidth = 6
+                ctx.stroke()
+            }
+
+            ctx.restore()
+        }
+
+        else if (element.kind === "marker")
+            drawMarker(timeline, prefs, ctx, element)
     }
+}
+
+
+function drawMarker(
+    timeline: Timeline.State,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D,
+    element: Timeline.LayoutElementMarker)
+{
+    ctx.save()
+
+    const color =
+        element.keyCh ? prefs.timeline.keyChangeColor :
+        element.meterCh ? prefs.timeline.meterChangeColor :
+        "#000"
+
+    const text =
+        element.keyCh ? element.keyCh.key.toString() :
+        element.meterCh ? element.meterCh.meter.toString() :
+        ""
+
+    ctx.fillStyle = color
+    ctx.strokeStyle = prefs.timeline.bkgColor
+    ctx.font = `bold ${element.rect.h * 0.85}px ${prefs.timeline.fontNameMarker}`
+    ctx.textAlign = "left"
+    ctx.textBaseline = "middle"
+    ctx.lineWidth = 8
+    ctx.strokeText(
+        text,
+        element.rect.x2 + 8,
+        element.rect.yCenter)
+    ctx.fillText(
+        text,
+        element.rect.x2 + 8,
+        element.rect.yCenter)
+
+    ctx.beginPath()
+    ctx.moveTo(element.rect.x, element.rect.y)
+    ctx.lineTo(element.rect.x2, element.rect.y)
+    ctx.lineTo(element.rect.x2, element.rect.y + element.rect.h * 0.65)
+    ctx.lineTo(element.rect.xCenter, element.rect.y2)
+    ctx.lineTo(element.rect.x, element.rect.y + element.rect.h * 0.65)
+    ctx.lineTo(element.rect.x, element.rect.y)
+    ctx.clip()
+    ctx.fill()
+
+    if (timeline.hover?.id === element.id)
+    {
+        ctx.fillStyle = "#fff8"
+        ctx.fill()
+    }
+
+    if (element.id !== undefined &&
+        timeline.selection.has(element.id))
+    {
+        ctx.strokeStyle = "#fff8"
+        ctx.lineWidth = 6
+        ctx.stroke()
+    }
+
+    ctx.restore()
 }
 
 
@@ -127,24 +301,47 @@ export function drawLaneBkgCenterStroke(
 
 export function drawLaneBkgSolid(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
-    lane: Timeline.LayoutElementLaneMarkers | Timeline.LayoutElementLaneNotes)
+    lane: Timeline.LayoutLane)
 {
-    ctx.fillStyle = "#eee"
-    ctx.fillRect(
-        lane.rect.x,
-        lane.rect.y,
-        lane.rect.w,
-        lane.rect.h)
+    if (timeline.layout.measures.length > 100)
+    {
+        ctx.fillStyle = prefs.timeline.bkgColor
+        ctx.fillRect(
+            lane.rect.x,
+            lane.rect.y,
+            lane.rect.w,
+            lane.rect.h)
+
+        return
+    }
+
+    for (const measure of timeline.layout.measures)
+    {
+        const x1 = Math.floor(Timeline.xAtTime(timeline, measure.time1))
+        const x2 = Math.floor(Timeline.xAtTime(timeline, measure.time2))
+
+        ctx.fillStyle =
+            measure.num % 2 === 0 ? prefs.timeline.bkgColor :
+            prefs.timeline.bkgAlternateMeasureColor
+
+        ctx.fillRect(
+            x1,
+            lane.rect.y,
+            x2 - x1,
+            lane.rect.h)
+    }
 }
 
 
 export function drawLaneFrgOutline(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
-    lane: Timeline.LayoutElementLaneMarkers | Timeline.LayoutElementLaneNotes)
+    lane: Timeline.LayoutLane)
 {
-    ctx.strokeStyle = "#000"
+    ctx.strokeStyle = prefs.timeline.measureColor
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(lane.rect.x, lane.rect.y)
@@ -157,13 +354,12 @@ export function drawLaneFrgOutline(
 
 export function drawLaneBkgMeasures(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
-    lane: Timeline.LayoutElementLaneMarkers | Timeline.LayoutElementLaneNotes,
+    lane: Timeline.LayoutLane,
     mainLinePass: boolean)
 {
     // Render alternating measure background and sub-measure dividers.
-    const measureHalfH = lane.rect.h / 2
-    const submeasureHalfH = lane.rect.h / 2
     for (const measure of timeline.layout.measures)
     {
         const x1 = Math.floor(Timeline.xAtTime(timeline, measure.time1))
@@ -175,7 +371,7 @@ export function drawLaneBkgMeasures(
 
         if (mainLinePass)
         {
-            ctx.strokeStyle = "#444"
+            ctx.strokeStyle = prefs.timeline.measureColor
             ctx.lineWidth = 2
             ctx.beginPath()
             ctx.moveTo(x1 + 0.5, lane.rect.y)
@@ -186,7 +382,7 @@ export function drawLaneBkgMeasures(
         if (!mainLinePass &&
             submeasureSize > 8)
         {
-            ctx.strokeStyle = "#fff"
+            ctx.strokeStyle = prefs.timeline.submeasureColor
             ctx.lineWidth = 1
             ctx.beginPath()
 
@@ -203,11 +399,32 @@ export function drawLaneBkgMeasures(
             ctx.stroke()
         }
     }
+
+    if (mainLinePass)
+    {
+        for (const marker of timeline.layout.markers)
+        {
+            const x = Math.floor(Timeline.xAtTime(timeline, marker.time))
+            
+            const color =
+                marker.keyCh ? prefs.timeline.keyChangeColor :
+                marker.meterCh ? prefs.timeline.meterChangeColor :
+                prefs.timeline.measureColor
+                
+            ctx.strokeStyle = color
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(x + 0.5, lane.rect.y)
+            ctx.lineTo(x + 0.5, lane.rect.y + lane.rect.h)
+            ctx.stroke()
+        }
+    }
 }
 
 
 export function drawLaneBkgOctaves(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
     lane: Timeline.LayoutElementLaneNotes,
     mainLinePass: boolean)
@@ -218,7 +435,7 @@ export function drawLaneBkgOctaves(
     const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
     const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
 
-    ctx.fillStyle = "#444"
+    ctx.fillStyle = prefs.timeline.octaveLabelColor
     ctx.font = Math.floor(timeline.noteRowH - 4) + "px system-ui"
     ctx.textAlign = "left"
     ctx.textBaseline = "bottom"
@@ -232,12 +449,11 @@ export function drawLaneBkgOctaves(
 
         for (const measure of timeline.layout.measures)
         {
-            /*if (measure.time1.lessThan(keyRegion.keyCh1.range.start) ||
-                measure.time2.greaterThan(keyRegion.keyCh2.range.start))
-                continue*/
+            const time1 = measure.time1.max(keyRegion.keyCh1.range.start)
+            const time2 = measure.time2.min(keyRegion.keyCh2.range.start)
 
-            const x1 = Math.floor(Timeline.xAtTime(timeline, measure.time1))
-            const x2 = Math.floor(Timeline.xAtTime(timeline, measure.time2))
+            const x1 = Math.floor(Timeline.xAtTime(timeline, time1))
+            const x2 = Math.floor(Timeline.xAtTime(timeline, time2))
         
             for (let i = octaveAtBottom; i <= octaveAtTop; i++)
             {
@@ -253,7 +469,7 @@ export function drawLaneBkgOctaves(
                         drewOctaveLabels = true
                     }
 
-                    ctx.strokeStyle = "#444"
+                    ctx.strokeStyle = prefs.timeline.measureColor
                     ctx.beginPath()
                     ctx.moveTo(x1, y)
                     ctx.lineTo(x2, y)
@@ -264,7 +480,7 @@ export function drawLaneBkgOctaves(
 
                 if (!mainLinePass)
                 {
-                    ctx.strokeStyle = "#fff"
+                    ctx.strokeStyle = prefs.timeline.submeasureColor
                     ctx.beginPath()
                     for (let j = 1; j < 7; j += 1)
                     {
@@ -287,12 +503,11 @@ export function drawLaneBkgOctaves(
 
 function drawCursorBeam(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
     time: Rational,
     tipOffsetSide: boolean)
 {
-    const prefs = State.get().prefs
-
     const laneIndexMin = Timeline.cursorGetLaneIndexMin(timeline)
     const laneIndexMax = Timeline.cursorGetLaneIndexMax(timeline)
     
@@ -333,14 +548,13 @@ function drawCursorBeam(
 	
 function drawCursorBkg(
     timeline: Timeline.State,
+    prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
     lane: Timeline.LayoutLane)
 {
     if (!timeline.cursor.visible)
         return
     
-    const prefs = State.get().prefs
-
     const timeMin = timeline.cursor.time1.min(timeline.cursor.time2)
     const timeMax = timeline.cursor.time1.max(timeline.cursor.time2)
     const laneIndexMin = Timeline.cursorGetLaneIndexMin(timeline)

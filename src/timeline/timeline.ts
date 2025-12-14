@@ -1,4 +1,4 @@
-import Immutable from "immutable"
+import * as Immutable from "immutable"
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
 import Rational from "../utils/rational.ts"

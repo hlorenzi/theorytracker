@@ -1,6 +1,7 @@
 import * as Project from "../project"
 import * as Theory from "../theory"
 import * as Timeline from "./index.ts"
+import * as Prefs from "../prefs.ts"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
 
@@ -8,11 +9,12 @@ import Range from "../utils/range.ts"
 export function layoutLaneNotes(
     timeline: Timeline.State,
     project: Project.ImmutableRoot,
+    prefs: Prefs.Prefs,
     layout: Timeline.Layout,
     laneNotes: Timeline.LayoutElementLaneNotes)
 {
     laneNotes.iterElementsAtRegion = (timeline, project, range, verticalRegion) =>
-        iterNotesAtRegion(timeline, project, laneNotes, range, verticalRegion)
+        iterNotesAndMarkersAtRegion(timeline, project, laneNotes, range, verticalRegion)
 
     for (const [note, keyChPair] of iterNotesAndKeyChanges(timeline, project, layout))
     {
@@ -30,24 +32,47 @@ export function layoutLaneNotes(
 
         if (!cutStart)
         {
-            const rectStretchStart = rect.withX1(rect.x1 - 8)
             layout.add(laneNotes, {
                 kind: "hidden",
                 id: note.id,
                 action: Timeline.MouseAction.StretchTimeStart,
-                rect: rectStretchStart,
+                rect: rect.withX1(rect.x1 - prefs.timeline.hoverOuterStretchWidth),
             })
         }
 
         if (!cutEnd)
         {        
-            const rectStretchEnd = rect.withX2(rect.x2 + 8)
             layout.add(laneNotes, {
                 kind: "hidden",
                 id: note.id,
                 action: Timeline.MouseAction.StretchTimeEnd,
-                rect: rectStretchEnd,
+                rect: rect.withX2(rect.x2 + prefs.timeline.hoverOuterStretchWidth),
             })
+        }
+
+        if (rect.w > prefs.timeline.hoverInnerStretchWidth * 2)
+        {
+            if (!cutStart)
+            {
+                layout.add(laneNotes, {
+                    kind: "hidden",
+                    id: note.id,
+                    action: Timeline.MouseAction.StretchTimeStart,
+                    rect: rect.withX2(rect.x1 + prefs.timeline.hoverInnerStretchWidth),
+                    priority: 2,
+                })
+            }
+
+            if (!cutEnd)
+            {
+                layout.add(laneNotes, {
+                    kind: "hidden",
+                    id: note.id,
+                    action: Timeline.MouseAction.StretchTimeEnd,
+                    rect: rect.withX1(rect.x2 - prefs.timeline.hoverInnerStretchWidth),
+                    priority: 2,
+                })
+            }
         }
 
         layout.add(laneNotes, {
@@ -55,6 +80,8 @@ export function layoutLaneNotes(
             id: note.id,
             action: Timeline.MouseAction.DragTimeAndRow,
             rect,
+            cutStart,
+            cutEnd,
             priority: 1,
         })
     }
@@ -174,6 +201,22 @@ function rectForNote(
         new Rect(noteX1, noteY, noteW, timeline.noteRowH),
         cutStart,
         cutEnd]
+}
+
+
+function *iterNotesAndMarkersAtRegion(
+    timeline: Timeline.State,
+    project: Project.ImmutableRoot,
+    lane: Timeline.LayoutElementLaneNotes,
+    range: Range,
+    verticalRegion?: { y1: number, y2: number })
+    : Generator<Project.ID, void, void>
+{
+    for (const note of iterNotesAtRegion(timeline, project, lane, range, verticalRegion))
+        yield note
+    
+    for (const marker of Timeline.iterMarkersForSelection(timeline, project, range))
+        yield marker
 }
 
 

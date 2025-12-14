@@ -1,4 +1,4 @@
-import Immutable from "immutable"
+import * as Immutable from "immutable"
 import * as Project from "./index.ts"
 import * as Theory from "../theory"
 import Range from "../utils/range.ts"
@@ -88,6 +88,12 @@ export function makeTest(): ImmutableRoot
             project.noteTrackId,
             Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
             Theory.Utils.midiMiddleC + i))
+
+    for (let i = 0; i < 4; i++)
+        project = upsertElement(project, Project.makeChord(
+            project.chordTrackId,
+            Range.fromStartDuration(new Rational(i * 4, 4), new Rational(4, 4)),
+            new Theory.Chord(i, 0)))
 
     return project
 }

@@ -25,6 +25,12 @@ export interface Prefs
         noteVelocityMarkerColor: string
         noteVelocityMarkerInactiveColor: string
 
+        fontWeightChord: string,
+        fontNameChord: string,
+
+        fontWeightMarker: string,
+        fontNameMarker: string,
+    
         keyPan: string
         keyPencil: string
         keySelectMultiple: string
@@ -43,6 +49,9 @@ export interface Prefs
 
         mouseEdgeScrollThreshold: number
         mouseEdgeScrollSpeed: number
+        
+        hoverOuterStretchWidth: number
+        hoverInnerStretchWidth: number
     }
 }
 
@@ -52,18 +61,18 @@ export function makeNew(): Prefs
     return {
         timeline: {
             bkgColor: "#202225",
-            bkgAlternateMeasureColor: "#1a1c1f",
+            bkgAlternateMeasureColor: "#1c1e21",
             bkgInactiveOverlayColor: "#0008",
             trackVBorderColor: "#888",
             trackHBorderColor: "#888",
             
             selectionCursorColor: "#0af",
-            selectionBkgColor: "#8cf8",
+            selectionBkgColor: "#8cf4",
             playbackCursorColor: "#f00",
             trackSeparatorColor: "#aaa",
         
             measureColor: "#040404",
-            submeasureColor: "#080808",
+            submeasureColor: "#181818",
             halfSubmeasureColor: "#181818",
         
             measureLabelColor: "#aaa",
@@ -73,6 +82,12 @@ export function makeNew(): Prefs
             keyChangeColor: "#f0c",
             noteVelocityMarkerColor: "#0c4",
             noteVelocityMarkerInactiveColor: "#063",
+
+            fontWeightChord: "",
+            fontNameChord: "Verdana",
+
+            fontWeightMarker: "bold",
+            fontNameMarker: "Calibri",
         
             keyPan: " ",
             keyPencil: "a",
@@ -92,6 +107,9 @@ export function makeNew(): Prefs
         
             mouseEdgeScrollThreshold: 10,
             mouseEdgeScrollSpeed: 1,
+
+            hoverOuterStretchWidth: 8,
+            hoverInnerStretchWidth: 8,
         }
     }
 }

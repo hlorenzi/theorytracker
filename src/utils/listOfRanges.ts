@@ -1,5 +1,5 @@
 import assert from "assert"
-import Immutable from "immutable"
+import * as Immutable from "immutable"
 import Rational from "./rational.ts"
 import Range from "./range.ts"
 import BinarySearch from "./binarySearch.ts"
