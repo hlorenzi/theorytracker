@@ -8,13 +8,15 @@ import Range from "../utils/range.ts"
 
 export function mouseDown(
     timeline: Timeline.State,
-    project: Project.ImmutableRoot,
+    project: Project.Mutable,
     prefs: Prefs.Prefs,
     rightButton: boolean)
 {
     if (timeline.mouse.down)
         return
 
+    Timeline.keyHandlePendingFinish(timeline, project)
+    
     const prevDownDate = timeline.mouse.downDate
             
     timeline.mouse.down = true
@@ -43,7 +45,7 @@ export function mouseDown(
             range: null,
             timeScroll: timeline.timeScroll,
             yScroll: timeline.yScroll,
-            project,
+            project: project.root,
         },
 
         xLocked: true,
@@ -109,11 +111,11 @@ export function mouseDown(
         if (!hoverIsSelected)
             Timeline.selectionToggle(
                 timeline,
-                project,
+                project.root,
                 timeline.hover)
 
         timeline.drag.origin.range =
-            Timeline.selectionRange(timeline, project)
+            Timeline.selectionRange(timeline, project.root)
         
         timeline.mouse.action = timeline.hover.action
         return

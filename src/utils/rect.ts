@@ -168,4 +168,14 @@ export default class Rect
 			this.y2 >= other.y &&
 			this.y < other.y2
 	}
+	
+	
+	merge(other: Rect): Rect
+	{
+		return Rect.fromVertices(
+			Math.min(this.x1, other.x1),
+			Math.min(this.y1, other.y1),
+			Math.max(this.x2, other.x2),
+			Math.max(this.y2, other.y2))
+	}
 }

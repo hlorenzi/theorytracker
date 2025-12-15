@@ -438,3 +438,100 @@ export function cursorGetLaneIndexMax(
         timeline.cursor.laneIndex1,
         timeline.cursor.laneIndex2))
 }
+
+
+export function scrollTimeIntoView(
+    timeline: Timeline.State,
+    time: Rational)
+{
+    const range = visibleTimeRange(timeline)
+    const marginPixels = 100
+    const marginTime = Rational.fromFloat(marginPixels / timeline.timeScale, 10000)
+    
+    if (time.compare(range.end.subtract(marginTime)) >= 0)
+    {
+        timeline.timeScroll =
+            time.asFloat() -
+            (timeline.renderRect.w - marginPixels) / timeline.timeScale
+    }
+    else if (time.compare(range.start.add(marginTime)) <= 0)
+    {
+        timeline.timeScroll =
+            time.asFloat() -
+            marginPixels / timeline.timeScale
+    }
+}
+
+
+export function keyHandlePendingFinish(
+    timeline: Timeline.State,
+    project: Project.Mutable)
+{
+    if (!timeline.needsKeyFinish)
+        return
+
+    timeline.needsKeyFinish = false
+
+    selectionResolveOverlappingAndDegenerate(timeline, project)
+}
+
+
+export function selectionResolveOverlappingAndDegenerate(
+    timeline: Timeline.State,
+    project: Project.Mutable)
+{
+    for (const id of timeline.selection)
+    {
+        const selectedElem = project.root.elems.get(id)
+        if (!selectedElem)
+            continue
+
+        const list = project.root.lists.get(selectedElem.parentId)
+        if (!list)
+            continue
+
+        const absSelectedRange = Project.getAbsoluteRange(
+            project.root,
+            selectedElem.parentId,
+            selectedElem.range)
+    
+        if (selectedElem.range.duration.isZero())
+        {
+            if (selectedElem.type === "note" ||
+                selectedElem.type === "chord")
+            {
+                const removeElem = Project.elemModify(selectedElem, { parentId: -1 })
+                project.root = Project.upsertElement(project.root, removeElem)
+            }
+            else
+            {
+                for (const elem of list.iterAtPoint(selectedElem.range.start))
+                {
+                    if (timeline.selection.has(elem.id))
+                        continue
+
+                    const removeElem = Project.elemModify(elem, { parentId: -1 })
+                    project.root = Project.upsertElement(project.root, removeElem)
+                }
+            }
+        }
+        else
+        {
+            for (const elem of list.iterAtRange(selectedElem.range))
+            {
+                if (timeline.selection.has(elem.id))
+                    continue
+
+                if (elem.type === "note" &&
+                    selectedElem.type === "note" &&
+                    elem.midiPitch !== selectedElem.midiPitch)
+                    continue
+
+                project.root = Project.splitElem(
+                    project.root,
+                    elem,
+                    absSelectedRange)
+            }
+        }
+    }
+}

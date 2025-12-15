@@ -47,7 +47,7 @@ export function layoutLaneChords(
             })
         }
 
-        if (rect.w > prefs.timeline.hoverInnerStretchWidth * 2)
+        if (rect.w > prefs.timeline.hoverInnerStretchWidth * 4)
         {
             if (!cutStart)
             {

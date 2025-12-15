@@ -48,6 +48,7 @@ export interface LayoutElementLaneMarkers extends LayoutElementLaneCommon
 export interface LayoutElementLaneNotes extends LayoutElementLaneCommon
 {
     kind: "laneNotes"
+    tupleIndicators: TupleIndicator[]
 }
 
 
@@ -110,6 +111,19 @@ export interface Marker
     keyCh?: Project.KeyChange
     meterCh?: Project.MeterChange
 }
+
+
+export interface TupleIndicator
+{
+    denominator: number
+    rect: Rect
+    range: Range
+    highestMidiPitch: number
+    lowestMidiPitch: number
+}
+
+
+export const tupleDenominators = [13, 11, 7, 5, 3]
 
 
 export class Layout
@@ -179,6 +193,7 @@ export function layout(
             0,
             timeline.renderRect.w,
             timeline.renderRect.h - laneChordH - laneMarginY),
+        tupleIndicators: [],
     }
 
     const laneChords: LayoutElementLaneChords = {

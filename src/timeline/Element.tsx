@@ -125,7 +125,7 @@ function registerHandlers(
         const mouse = transformMousePos(canvas, ev)
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
-        Timeline.mouseDown(timeline, project.root, prefs, ev.button !== 0)
+        Timeline.mouseDown(timeline, project, prefs, ev.button !== 0)
         Timeline.draw(timeline, prefs, ctx)
         setCursor()
     }
@@ -139,7 +139,10 @@ function registerHandlers(
         const mouse = transformMousePos(canvas, ev)
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
-        Timeline.mouseUp(timeline, project.root, ev.button !== 0)
+
+        if (Timeline.mouseUp(timeline, project, ev.button !== 0))
+            Timeline.layout(timeline, project.root, prefs)
+
         Timeline.draw(timeline, prefs, ctx)
         setCursor()
     }
@@ -158,8 +161,12 @@ function registerHandlers(
 
     const onKeyDown = (ev: KeyboardEvent) => {
         const timeline = Global.get().timeline
+        const project = Global.get().project
+        const prefs = Global.get().prefs
 
-        Timeline.keyDown(timeline, ev.key.toLowerCase())
+        Timeline.keyDown(timeline, project, prefs, ev.key.toLowerCase())
+        Timeline.layout(timeline, project.root, prefs)
+        Timeline.draw(timeline, prefs, ctx)
     }
 
     const onKeyUp = (ev: KeyboardEvent) => {

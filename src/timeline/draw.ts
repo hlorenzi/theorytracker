@@ -14,7 +14,7 @@ export function draw(
     ctx.translate(0.5, 0.5)
 
     ctx.fillStyle = "#fff"
-    ctx.fillRect(0, 0, timeline.renderRect.w, timeline.renderRect.h)
+    ctx.clearRect(0, 0, timeline.renderRect.w, timeline.renderRect.h)
 
     drawElements(timeline, prefs, ctx, timeline.layout.elements)
 
@@ -99,6 +99,27 @@ function drawElements(
             
             if (element.subElements)
                 drawElements(timeline, prefs, ctx, element.subElements)
+
+            for (const tuple of element.tupleIndicators)
+            {
+                ctx.strokeStyle = prefs.timeline.octaveLabelColor
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                ctx.moveTo(tuple.rect.x, tuple.rect.y2 + 2)
+                ctx.lineTo(tuple.rect.x, tuple.rect.y2 + 5)
+                ctx.lineTo(tuple.rect.x2, tuple.rect.y2 + 5)
+                ctx.lineTo(tuple.rect.x2, tuple.rect.y2 + 2)
+                ctx.stroke()
+                
+                ctx.fillStyle = prefs.timeline.octaveLabelColor
+                ctx.font = Math.floor(timeline.noteRowH - 4) + "px system-ui"
+                ctx.textAlign = "center"
+                ctx.textBaseline = "top"
+                ctx.fillText(
+                    tuple.denominator.toString(),
+                    tuple.rect.xCenter,
+                    tuple.rect.y2 + 8)
+            }
 
             drawLaneFrgOutline(timeline, prefs, ctx, element)
 

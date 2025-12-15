@@ -50,7 +50,7 @@ export function layoutLaneNotes(
             })
         }
 
-        if (rect.w > prefs.timeline.hoverInnerStretchWidth * 2)
+        if (rect.w > prefs.timeline.hoverInnerStretchWidth * 4)
         {
             if (!cutStart)
             {
@@ -84,6 +84,35 @@ export function layoutLaneNotes(
             cutEnd,
             priority: 1,
         })
+
+        for (const denom of Timeline.tupleDenominators)
+        {
+            if (note.range.duration.denominator % denom !== 0)
+                continue
+            
+            let tuple = laneNotes.tupleIndicators.find(t =>
+                t.denominator === denom &&
+                t.range.end.compare(note.range.start) === 0)
+                
+            if (tuple === undefined)
+            {
+                tuple = {
+                    denominator: denom,
+                    rect: rect,
+                    range: note.range,
+                    highestMidiPitch: note.midiPitch,
+                    lowestMidiPitch: note.midiPitch,
+                }
+
+                laneNotes.tupleIndicators.push(tuple)
+            }
+
+            tuple.highestMidiPitch = Math.max(tuple.highestMidiPitch, note.midiPitch)
+            tuple.lowestMidiPitch = Math.min(tuple.lowestMidiPitch, note.midiPitch)
+            tuple.range = tuple.range.merge(note.range)
+            tuple.rect = tuple.rect.merge(rect)
+            break
+        }
     }
 }
 
