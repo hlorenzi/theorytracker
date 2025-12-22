@@ -21,7 +21,7 @@ export function Element(props: {})
 
     return <div ref={ div } style={{
         width: "100%",
-        height: "60%",
+        height: "100%",
         contain: "size",
     }}>
         <canvas ref={ canvas }/>
@@ -41,6 +41,12 @@ function canvasResize(
     const y = Math.floor(domRect.y)
     const w = Math.floor(domRect.width * pixelRatio)
     const h = Math.floor(domRect.height * pixelRatio)
+
+    if (canvas.width === w &&
+        canvas.height === h &&
+        timeline.renderRect.w === w &&
+        timeline.renderRect.h === h)
+        return
     
     canvas.style.width = domRect.width + "px"
     canvas.style.height = domRect.height + "px"
@@ -110,7 +116,10 @@ function registerHandlers(
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
 
         if (Timeline.mouseDrag(timeline, project))
+        {
             Timeline.layout(timeline, project.root, prefs)
+            Global.refresh()
+        }
         
         Timeline.draw(timeline, prefs, ctx)
         setCursor()
@@ -127,6 +136,7 @@ function registerHandlers(
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
         Timeline.mouseDown(timeline, project, prefs, ev.button !== 0)
         Timeline.draw(timeline, prefs, ctx)
+        Global.refresh()
         setCursor()
     }
 
@@ -144,6 +154,7 @@ function registerHandlers(
             Timeline.layout(timeline, project.root, prefs)
 
         Timeline.draw(timeline, prefs, ctx)
+        Global.refresh()
         setCursor()
     }
     
@@ -157,6 +168,7 @@ function registerHandlers(
         Timeline.mouseWheel(timeline, ev.deltaX, ev.deltaY)
         Timeline.layout(timeline, project.root, prefs)
         Timeline.draw(timeline, prefs, ctx)
+        Global.refresh()
     }
 
     const onKeyDown = (ev: KeyboardEvent) => {
@@ -167,12 +179,14 @@ function registerHandlers(
         Timeline.keyDown(timeline, project, prefs, ev.key.toLowerCase())
         Timeline.layout(timeline, project.root, prefs)
         Timeline.draw(timeline, prefs, ctx)
+        Global.refresh()
     }
 
     const onKeyUp = (ev: KeyboardEvent) => {
         const timeline = Global.get().timeline
 
         Timeline.keyUp(timeline, ev.key.toLowerCase())
+        Global.refresh()
     }
 
     const preventDefault = (ev: MouseEvent) => {

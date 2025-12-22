@@ -38,6 +38,31 @@ export default class Key
 				nextChroma += 1
 			}
 		}
+		
+		/*let firstFrac: number | undefined = undefined
+		for (let c = 0; c <= this.scale.chromas.length; c++)
+		{
+			if (c >= this.scale.chromas.length ||
+				(this._chromaToDegree[c] % 1) === 0)
+			{
+				if (firstFrac !== undefined)
+				{
+					const base = Math.floor(this._chromaToDegree[firstFrac])
+					for (let d = firstFrac; d < c; d++)
+					{
+						const frac = (d - firstFrac + 1) / (c - d + 1)
+						this._chromaToDegree[d] = base + frac
+					}
+
+					firstFrac = undefined
+				}
+					
+				continue
+			}
+
+			if (firstFrac === undefined)
+				firstFrac = c
+		}*/
 	}
 	
 	
@@ -55,8 +80,8 @@ export default class Key
 		if (separator < 1)
 			throw "invalid key string"
 		
-		const tonicStr = str.substr(0, separator)
-		const scaleStr = str.substr(separator)
+		const tonicStr = str.substring(0, separator)
+		const scaleStr = str.substring(separator)
 		
 		const tonic = PitchName.parse(tonicStr)
 		const scale = Scale.parse(scaleStr)

@@ -37,10 +37,8 @@ export function mouseDown(
         timeline.mouse.downDate.getTime() - prevDownDate.getTime() <
         prefs.timeline.mouseDoubleClickThresholdMs
 
-    timeline.drag =
-    {
-        origin:
-        {
+    timeline.drag = {
+        origin: {
             point: { ...timeline.mouse.point },
             range: null,
             timeScroll: timeline.timeScroll,
@@ -91,15 +89,18 @@ export function mouseDown(
         timeline.cursor.laneIndex1 = timeline.cursor.laneIndex2 =
             timeline.mouse.point.laneIndex
     
-        /*if (doubleClick)
+        if (doubleClick)
         {
             const anchor = Timeline.findPreviousAnchor(
-                timeline, timeline.mouse.point.time,
-                timeline.mouse.point.trackIndex, timeline.mouse.point.trackIndex)
+                timeline,
+                project.root,
+                timeline.mouse.point.time,
+                timeline.mouse.point.laneIndex,
+                timeline.mouse.point.laneIndex)
                 
             Timeline.cursorSetTime(timeline, anchor, anchor)
             Timeline.scrollTimeIntoView(timeline, anchor)
-        }*/
+        }
 
         return
     }

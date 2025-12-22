@@ -108,8 +108,8 @@ export function makeNew(): Prefs
             mouseEdgeScrollThreshold: 10,
             mouseEdgeScrollSpeed: 1,
 
-            hoverOuterStretchWidth: 8,
-            hoverInnerStretchWidth: 8,
+            hoverOuterStretchWidth: 16,
+            hoverInnerStretchWidth: 12,
         }
     }
 }

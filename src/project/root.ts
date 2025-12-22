@@ -286,7 +286,16 @@ export function withRefreshedRange(project: ImmutableRoot): ImmutableRoot
 }
 
 
-export function getElem<T extends Project.Element["type"]>(
+export function getElem(
+    project: ImmutableRoot,
+    id: Project.ID)
+    : Project.Element | undefined
+{
+    return project.elems.get(id)
+}
+
+
+/*export function getElem<T extends Project.Element["type"]>(
     project: ImmutableRoot,
     id: Project.ID,
     type: T)
@@ -297,7 +306,7 @@ export function getElem<T extends Project.Element["type"]>(
         return null
 
     return elem as Extract<Project.Element, { type: T }>
-}
+}*/
 
 
 export function getTrack<T extends Project.Track["trackType"]>(

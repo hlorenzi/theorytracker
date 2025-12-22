@@ -15,7 +15,25 @@ export function mouseMove(
     if (!timeline.mouse.down)
     {
         timeline.hover = undefined
-        hoverRecursive(timeline, timeline.layout.elements, x, y)
+        hoverLanes(timeline, x, y)
+    }
+}
+
+
+function hoverLanes(
+    timeline: Timeline.State,
+    x: number,
+    y: number)
+{
+    for (const lane of timeline.layout.lanes)
+    {
+        if (x >= lane.rect.x &&
+            x < lane.rect.x + lane.rect.w &&
+            y >= lane.rect.y &&
+            y < lane.rect.y + lane.rect.h)
+        {
+            hoverRecursive(timeline, lane.elements, x - lane.rect.x, y - lane.rect.y)
+        }
     }
 }
 
@@ -38,7 +56,7 @@ function hoverRecursive(
                 timeline.hover = elem
 
             if (elem.subElements)
-                hoverRecursive(timeline, elem.subElements, x, y)
+                hoverRecursive(timeline, elem.subElements, x - elem.rect.x, y - elem.rect.y)
         }
     }
 }

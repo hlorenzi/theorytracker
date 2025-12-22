@@ -4,7 +4,7 @@ import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory/index.ts"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
-import Rational from "utils/rational.ts"
+import Rational from "../utils/rational.ts"
 
 
 export interface LayoutElementCommon
@@ -48,7 +48,6 @@ export interface LayoutElementLaneMarkers extends LayoutElementLaneCommon
 export interface LayoutElementLaneNotes extends LayoutElementLaneCommon
 {
     kind: "laneNotes"
-    tupleIndicators: TupleIndicator[]
 }
 
 
@@ -61,6 +60,8 @@ export interface LayoutElementLaneChords extends LayoutElementLaneCommon
 export interface LayoutElementNote extends LayoutElementCommon
 {
     kind: "note"
+    note: Project.Note
+    key: Theory.Key
 }
 
 
@@ -76,6 +77,7 @@ export interface LayoutElementMarker extends LayoutElementCommon
 {
     kind: "marker"
     keyCh?: Project.KeyChange
+    keyChPrev?: Project.KeyChange
     meterCh?: Project.MeterChange
 }
 
@@ -113,27 +115,10 @@ export interface Marker
 }
 
 
-export interface TupleIndicator
-{
-    denominator: number
-    rect: Rect
-    range: Range
-    highestMidiPitch: number
-    lowestMidiPitch: number
-}
-
-
-export const tupleDenominators = [13, 11, 7, 5, 3]
-
-
 export class Layout
 {
     range: Range
-    lanes: LayoutLane[] = []
-    elements: LayoutElement[] = []
-    elementCount: number = 0
-    laneNotes?: LayoutElementLaneNotes
-    laneChords?: LayoutElementLaneChords
+    lanes: Timeline.Lane[] = []
 
     measures: Project.Measure[] = []
     keyRegions: KeyRegion[] = []
@@ -146,26 +131,20 @@ export class Layout
     }
 
 
-    add(parent: LayoutElement | undefined, elem: LayoutElement)
+    addLane(lane: Timeline.Lane)
     {
-        this.elementCount++
+        lane.laneIndex = this.lanes.length
+        this.lanes.push(lane)
+    }
 
-        if (parent !== undefined)
-        {
-            if (parent.subElements === undefined)
-                parent.subElements = []
-            
-            parent.subElements.push(elem)
-        }
-        else
-        {
-            this.elements.push(elem)
 
-            if (elem.kind === "laneMarkers" ||
-                elem.kind === "laneNotes" ||
-                elem.kind === "laneChords")
-                this.lanes.push(elem)
-        }
+    getElementCount()
+    {
+        let count = 0
+        for (const lane of this.lanes)
+            count += lane.elements.length
+
+        return count
     }
 }
 
@@ -176,6 +155,8 @@ export function layout(
     prefs: Prefs.Prefs)
 {
     const layout = new Layout()
+    timeline.layout = layout
+    
     layout.range = Timeline.visibleTimeRange(timeline)
     layout.measures = [...Project.iterMeasuresAtRange(project, layout.range)]
     layout.keyRegions = [...iterKeyChangePairsAtRange(timeline, project, layout.range)]
@@ -185,37 +166,27 @@ export function layout(
     const laneChordH = 60
     const laneMarginY = 8
 
-    const laneNotes: LayoutElementLaneNotes = {
-        kind: "laneNotes",
-        laneIndex: 0,
-        rect: new Rect(
-            0,
-            0,
-            timeline.renderRect.w,
-            timeline.renderRect.h - laneChordH - laneMarginY),
-        tupleIndicators: [],
-    }
+    const laneNotes = new Timeline.LaneNotes()
+    laneNotes.rect = new Rect(
+        0,
+        0,
+        timeline.renderRect.w,
+        timeline.renderRect.h - laneChordH - laneMarginY)
 
-    const laneChords: LayoutElementLaneChords = {
-        kind: "laneChords",
-        laneIndex: 1,
-        rect: new Rect(
-            0,
-            timeline.renderRect.h - laneChordH,
-            timeline.renderRect.w,
-            laneChordH - 1),
-    }
+    const laneChords = new Timeline.LaneChords()
+    laneChords.rect = new Rect(
+        0,
+        timeline.renderRect.h - laneChordH,
+        timeline.renderRect.w,
+        laneChordH - 1)
 
-    layout.add(undefined, laneNotes)
-    layout.add(undefined, laneChords)
-    layout.laneNotes = laneNotes
+    layout.addLane(laneNotes)
+    layout.addLane(laneChords)
 
-    Timeline.layoutLaneMarkers(timeline, project, prefs, layout, laneNotes)
-    Timeline.layoutLaneNotes(timeline, project, prefs, layout, laneNotes)
-    Timeline.layoutLaneChords(timeline, project, prefs, layout, laneChords)
+    laneNotes.refreshLayout(timeline, project, prefs)
+    laneChords.refreshLayout(timeline, project, prefs)
 
-    timeline.layout = layout
-    console.log(layout.elementCount, layout)
+    //console.log(layout.getElementCount(), layout)
 }
 
 

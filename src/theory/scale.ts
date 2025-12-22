@@ -1,26 +1,90 @@
 import PitchName from "./pitchName.ts"
 
 
-interface ScaleMetadata
+export interface ScaleMetadata
 {
-	chromas: number[]
-	mode: number
 	id: string
 	names: string[]
+	chromas: number[]
+	mode: number
+	circleOfFifthsOffset?: number
 }
 
 
-export const knownScales: ScaleMetadata[] =
-[
-	{ chromas: [0, 2, 4, 5, 7, 9, 11], mode: 0, id: "maj", names: ["Major", "Ionian"] },
-	{ chromas: [0, 2, 3, 5, 7, 9, 10], mode: 1, id: "dor", names: ["Dorian"] },
-	{ chromas: [0, 1, 3, 5, 7, 8, 10], mode: 2, id: "phr", names: ["Phrygian"] },
-	{ chromas: [0, 2, 4, 6, 7, 9, 11], mode: 3, id: "lyd", names: ["Lydian"] },
-	{ chromas: [0, 2, 4, 5, 7, 9, 10], mode: 4, id: "mix", names: ["Mixolydian"] },
-	{ chromas: [0, 2, 3, 5, 7, 8, 10], mode: 5, id: "min", names: ["Natural Minor", "Minor", "Aeolian"] },
-	{ chromas: [0, 1, 3, 5, 6, 8, 10], mode: 6, id: "loc", names: ["Locrian"] },
+export const knownScales: ScaleMetadata[] = [
+	{
+		id: "maj",
+		names: ["Major", "Ionian"],
+		chromas: [0, 2, 4, 5, 7, 9, 11],
+		mode: 0,
+		circleOfFifthsOffset: 0,
+	},
+	{
+		id: "dor",
+		names: ["Dorian"],
+		chromas: [0, 2, 3, 5, 7, 9, 10],
+		mode: 1,
+		circleOfFifthsOffset: 2,
+	},
+	{
+		id: "phr",
+		names: ["Phrygian"],
+		chromas: [0, 1, 3, 5, 7, 8, 10],
+		mode: 2,
+		circleOfFifthsOffset: 4,
+	},
+	{
+		id: "lyd",
+		names: ["Lydian"],
+		chromas: [0, 2, 4, 6, 7, 9, 11],
+		mode: 3,
+		circleOfFifthsOffset: -1,
+	},
+	{
+		id: "mix",
+		names: ["Mixolydian"],
+		chromas: [0, 2, 4, 5, 7, 9, 10],
+		mode: 4,
+		circleOfFifthsOffset: 1,
+	},
+	{
+		id: "min",
+		names: ["Natural Minor", "Minor", "Aeolian"],
+		chromas: [0, 2, 3, 5, 7, 8, 10],
+		mode: 5,
+		circleOfFifthsOffset: 3,
+	},
+	{
+		id: "loc",
+		names: ["Locrian"],
+		chromas: [0, 1, 3, 5, 6, 8, 10],
+		mode: 6,
+		circleOfFifthsOffset: 5,
+	},
 	
-	{ chromas: [0, 1, 4, 5, 7, 8, 11], mode: 0, id: "dharmaj", names: ["Double Harmonic Major"] },
+	{
+		id: "phrdom",
+		names: ["Phrygian Dominant"],
+		chromas: [0, 1, 4, 5, 7, 8, 10],
+		mode: 2,
+		circleOfFifthsOffset: 4,
+	},
+	
+	{
+		id: "dharmaj",
+		names: ["Double Harmonic Major"],
+		chromas: [0, 1, 4, 5, 7, 8, 11],
+		mode: 0,
+		circleOfFifthsOffset: 0,
+	},
+	
+	{
+		id: "whole",
+		names: ["Whole-tone"],
+		chromas: [0, 2, 4, 6, 8, 10],
+		mode: 0,
+		circleOfFifthsOffset: 0,
+	},
 ]
 
 
@@ -29,7 +93,7 @@ export default class Scale
 	static list = knownScales
 
 	chromas: number[]
-	metadata: ScaleMetadata | null | undefined
+	metadata: ScaleMetadata | undefined
 
 	
 	constructor(chromas: number[])
@@ -40,8 +104,8 @@ export default class Scale
 		this.chromas = chromas
 		
 		this.metadata = knownScales.find(s =>
-			s.chromas.length == this.chromas.length &&
-			s.chromas.every((p, index) => p == this.chromas[index]))
+			s.chromas.length === this.chromas.length &&
+			s.chromas.every((p, index) => p === this.chromas[index]))
 	}
 	
 	
@@ -53,7 +117,11 @@ export default class Scale
 	
 	static fromId(id: string): Scale
 	{
-		return new Scale(knownScales.find(s => s.id === id)!.chromas)
+		const meta = knownScales.find(s => s.id === id)
+		if (!meta)
+			throw "scale id not found"
+
+		return new Scale(meta.chromas)
 	}
 	
 	
@@ -61,7 +129,7 @@ export default class Scale
 	{
 		str = str.toLowerCase().trim()
 		
-		const knownScale = knownScales.find(s => s.names.some(n => n.toLowerCase() == str))
+		const knownScale = knownScales.find(s => s.names.some(n => n.toLowerCase() === str))
 		if (!knownScale)
 			throw "no known scale with given name"
 		
@@ -69,19 +137,19 @@ export default class Scale
 	}
 
 
-	get id(): string | null
+	get id(): string | undefined
 	{
 		if (!this.metadata)
-			return null
+			return undefined
 		
 		return this.metadata.id
 	}
 	
 	
-	get name(): string | null
+	get name(): string | undefined
 	{
 		if (!this.metadata)
-			return null
+			return undefined
 		
 		return this.metadata.names[0]
 	}
@@ -89,7 +157,7 @@ export default class Scale
 	
 	get alterationsFromMajor(): number[]
 	{
-		if (this.chromas.length != 7)
+		if (this.chromas.length !== 7)
 			throw "not a seven-note scale"
 		
 		return this.chromas.map((pitch, i) => pitch - knownScales[0].chromas[i])

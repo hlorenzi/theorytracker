@@ -1,9 +1,11 @@
 import * as Immutable from "immutable"
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Theory from "../theory"
 import Rational from "../utils/rational.ts"
 import Range from "../utils/range.ts"
 import Rect from "../utils/rect.ts"
+import * as MathUtils from "../utils/mathUtils.ts"
 
 
 export interface State
@@ -300,11 +302,10 @@ export function pointAt(
 {
     const time = timeAtX(timeline, x)
 
-    const row = timeline.layout.laneNotes ?
-        Timeline.rowAtY(timeline, timeline.layout.laneNotes, y) :
-        0
-    
     const laneIndex = laneIndexAtY(timeline, y)
+    const lane = timeline.layout.lanes[laneIndex]
+    
+    const row = lane?.rowAtY(timeline, y) ?? 0
     
     /*const trackPosY = pos.y - trackY(state, state.mouse.point.trackIndex)
     const trackPos = { x: pos.x, y: trackPosY }
@@ -394,6 +395,17 @@ export function selectionAddAtCursor(
         for (const id of lane.iterElementsAtRegion(timeline, project, range, verticalRegion))
             selectionAdd(timeline, id)
     }
+}
+
+
+export function rewind(
+    state: Timeline.State,
+    project: Project.ImmutableRoot)
+{
+    state.cursor.visible = true
+    state.cursor.time1 = state.cursor.time2 = project.range.start
+    //Playback.setStartTime(Project.global.project.range.start)
+    scrollTimeIntoView(state, state.cursor.time1)
 }
 
 
@@ -534,4 +546,166 @@ export function selectionResolveOverlappingAndDegenerate(
             }
         }
     }
+}
+
+
+export function insertNote(
+    timeline: Timeline.State,
+    project: Project.Mutable,
+    trackId: Project.ID,
+    time: Rational,
+    chroma: number)
+{
+    keyHandlePendingFinish(timeline, project)
+
+    const insertOctave = Math.floor(timeline.insertion.nearMidiPitch / 12)
+    const possiblePitches = [-1, 0, 1].map(offset => {
+        const pitch = (insertOctave + offset) * 12 + (MathUtils.mod(chroma, 12))
+        const delta = Math.abs(pitch - timeline.insertion.nearMidiPitch)
+        return { pitch, delta }
+    })
+
+    possiblePitches.sort((a, b) => a.delta - b.delta)
+    const chosenPitch = possiblePitches[0].pitch
+
+    const range = new Range(time, time.add(timeline.insertion.duration))
+        
+    const note = Project.makeNote(
+        trackId,
+        range,
+        chosenPitch)
+
+    const id = project.root.nextId
+    project.root = Project.upsertElement(project.root, note)
+    project.root = Project.withRefreshedRange(project.root)
+
+    timeline.insertion.nearMidiPitch = chosenPitch
+
+    timeline.cursor.visible = false
+    cursorSetTime(timeline, range.end, range.end)
+    scrollTimeIntoView(timeline, range.end)
+    selectionClear(timeline)
+    selectionAdd(timeline, id)
+    //Playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
+    selectionResolveOverlappingAndDegenerate(timeline, project)
+}
+
+
+export function findPreviousAnchor(
+    timeline: Timeline.State,
+    project: Project.ImmutableRoot,
+    time: Rational,
+    laneIndex1: number,
+    laneIndex2: number)
+    : Rational
+{
+    let prevAnchor: Rational | null = null
+    
+    const laneMin = Math.min(laneIndex1, laneIndex2)
+    const laneMax = Math.max(laneIndex1, laneIndex2)
+    
+    for (let i = Math.max(0, laneMin); i <= Math.min(timeline.layout.lanes.length - 1, laneMax); i++)
+    {
+        const anchor = timeline.layout.lanes[i].findPreviousAnchor(timeline, project, time)
+        if (!anchor)
+            continue
+
+        prevAnchor = Rational.max(prevAnchor, anchor)
+    }
+
+    if (!prevAnchor)
+        return project.range.start
+    
+    return prevAnchor
+}
+
+
+export function deleteRange(
+    timeline: Timeline.State,
+    project: Project.Mutable,
+    range: Range,
+    trackIndex1: number,
+    trackIndex2: number)
+{
+    const trackMin = Math.min(trackIndex1, trackIndex2)
+    const trackMax = Math.max(trackIndex1, trackIndex2)
+    
+    for (let tr = Math.max(0, trackMin); tr <= Math.min(timeline.layout.lanes.length - 1, trackMax); tr++)
+        timeline.layout.lanes[tr].deleteRange(timeline, project, range)
+}
+
+
+export function insertChord(
+    timeline: Timeline.State,
+    project: Project.Mutable,
+    trackId: Project.ID,
+    time: Rational,
+    chord: Theory.Chord)
+{
+    keyHandlePendingFinish(timeline, project)
+
+    const range = new Range(time, time.add(timeline.insertion.duration))
+        
+    const projChord = Project.makeChord(
+        trackId,
+        range,
+        chord)
+
+    const id = project.root.nextId
+    project.root = Project.upsertElement(project.root, projChord)
+    project.root = Project.withRefreshedRange(project.root)
+
+    timeline.cursor.visible = false
+    cursorSetTime(timeline, range.end, range.end)
+    scrollTimeIntoView(timeline, range.end)
+    selectionClear(timeline)
+    selectionAdd(timeline, id)
+    //Playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
+    selectionResolveOverlappingAndDegenerate(timeline, project)
+}
+
+
+export function deleteElems(
+    timeline: Timeline.State,
+    project: Project.Mutable,
+    elemIds: Iterable<Project.ID>)
+{
+    const range =
+        Project.getRangeForElems(project.root, elemIds) ??
+        new Range(timeline.cursor.time1, timeline.cursor.time1)
+
+    for (const id of elemIds)
+    {
+        const elem = project.root.elems.get(id)
+        if (!elem)
+            continue
+
+        if (elem.type == "track")
+            continue
+
+        const removeElem = Project.elemModify(elem, { parentId: -1 })
+        project.root = Project.upsertElement(project.root, removeElem)
+    }
+    
+    for (const id of elemIds)
+    {
+        const track = project.root.elems.get(id)
+        if (!track)
+            continue
+
+        if (track.type != "track")
+            continue
+
+        if (track.id === project.root.keyChangeTrackId ||
+            track.id === project.root.meterChangeTrackId ||
+            track.id === project.root.chordTrackId)
+            continue
+
+        project.root = Project.upsertTrack(project.root, track, true)
+    }
+
+    project.root = Project.withRefreshedRange(project.root)
+    timeline.cursor.visible = true
+    cursorSetTime(timeline, range.start, range.start)
+    scrollTimeIntoView(timeline, range.start)
 }

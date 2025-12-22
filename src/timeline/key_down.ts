@@ -16,6 +16,30 @@ export function keyDown(
 
     switch (key)
     {
+        case "escape":
+        {
+            handleEscape(timeline, project.root)
+            break
+        }
+
+        case "enter":
+        {
+            handleEnter(timeline, project)
+            break
+        }
+
+        case "delete":
+        {
+            handleDelete(timeline, project)
+            break
+        }
+
+		case "backspace":
+        {
+            handleBackspace(timeline, project)
+            break
+        }
+
         case "arrowright":
         case "arrowleft":
         {
@@ -27,6 +51,59 @@ export function keyDown(
         case "arrowdown":
         {
             handleUpDown(timeline, project, prefs, key === "arrowup", false)
+            break
+        }
+
+        case ".":
+        case ">":
+        case ",":
+        case "<":
+        {
+            handleUpDown(timeline, project, prefs, key === "." || key === ">", true)
+            break
+        }
+
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        {
+            const degree = key.charCodeAt(0) - "1".charCodeAt(0)
+            handleInsertByDegree(timeline, project, prefs, degree)
+            break
+        }
+
+        case "h":
+        {
+            handleLengthChange(timeline, project, prefs, 0)
+            break
+        }
+
+        case "j":
+        {
+            handleLengthChange(timeline, project, prefs, 1)
+            break
+        }
+
+        case "k":
+        {
+            handleLengthChange(timeline, project, prefs, 2)
+            break
+        }
+
+        case "l":
+        {
+            handleLengthChange(timeline, project, prefs, 3)
+            break
+        }
+
+        case ";":
+        case ":":
+        {
+            handleLengthChange(timeline, project, prefs, 4)
             break
         }
     }
@@ -51,6 +128,95 @@ function modifySelectedElems(
         project.root = Project.upsertElement(project.root, newElem)
     }
 
+    project.root = Project.withRefreshedRange(project.root)
+}
+
+
+function handleEscape(
+    timeline: Timeline.State,
+    project: Project.ImmutableRoot)
+{
+    /*if (Playback.global.playing)
+    {
+        Playback.setStartTime(Project.global.project.range.start)
+        Playback.setPlaying(true)
+    }
+    else*/
+    {
+        Timeline.rewind(timeline, project)
+    }
+}
+
+
+function handleEnter(
+    timeline: Timeline.State,
+    project: Project.Mutable)
+{
+    if (timeline.cursor.visible && timeline.selection.size != 0)
+    {
+        timeline.cursor.visible = false
+        return
+    }
+
+    timeline.cursor.visible = true
+
+    const range = Timeline.selectionRange(timeline, project.root)
+    if (range)
+    {
+        Timeline.cursorSetTime(timeline, range.end, range.end)
+        //Timeline.cursorSetTrack(state, trackIndex, trackIndex)
+        Timeline.scrollTimeIntoView(timeline, range.end)
+    }
+
+    Timeline.keyHandlePendingFinish(timeline, project)
+    Timeline.selectionClear(timeline)
+}
+
+
+function handleDelete(
+    state: Timeline.State,
+    project: Project.Mutable)
+{
+    Timeline.deleteElems(state, project, state.selection)
+}
+
+
+function handleBackspace(
+    state: Timeline.State,
+    project: Project.Mutable)
+{
+    if (!state.cursor.visible)
+    {
+        Timeline.deleteElems(state, project, state.selection)
+        return
+    }
+
+    const lane1 = Math.min(state.cursor.laneIndex1, state.cursor.laneIndex2)
+    const lane2 = Math.max(state.cursor.laneIndex1, state.cursor.laneIndex2)
+    
+    if (state.cursor.time1.compare(state.cursor.time2) === 0)
+    {
+        const time = state.cursor.time1.min(state.cursor.time2)
+        const prevAnchor = Timeline.findPreviousAnchor(state, project.root, time, lane1, lane2)
+        const range = new Range(prevAnchor, time, false, false)
+        Timeline.deleteRange(state, project, range, lane1, lane2)
+
+        state.cursor.visible = true
+        Timeline.cursorSetTime(state, prevAnchor, prevAnchor)
+        Timeline.scrollTimeIntoView(state, prevAnchor)
+    }
+    else
+    {
+        const time1 = state.cursor.time1.min(state.cursor.time2)
+        const time2 = state.cursor.time1.max(state.cursor.time2)
+        const range = new Range(time1, time2, false, false)
+        Timeline.deleteRange(state, project, range, lane1, lane2)
+
+        state.cursor.visible = true
+        Timeline.cursorSetTime(state, time1, time1)
+        Timeline.scrollTimeIntoView(state, time1)
+    }
+    
     project.root = Project.withRefreshedRange(project.root)
 }
 
@@ -270,4 +436,62 @@ function handleUpDown(
         timeline.cursor.visible = false
         timeline.needsKeyFinish = true
     }
+}
+
+
+function handleInsertByDegree(
+    timeline: Timeline.State,
+    project: Project.Mutable,
+    prefs: Prefs.Prefs,
+    degree: number)
+{
+    const time = timeline.cursor.time1.min(timeline.cursor.time2)
+    const lane = timeline.layout.lanes[timeline.cursor.laneIndex1]
+    lane.insertByDegree(timeline, project, prefs, time, degree)
+}
+
+
+function handleLengthChange(
+    timeline: Timeline.State,
+    project: Project.Mutable,
+    prefs: Prefs.Prefs,
+    lengthIndex: number)
+{
+    const lengths = [
+        new Rational(1, 16),
+        new Rational(1, 8),
+        new Rational(1, 4),
+        new Rational(1, 2),
+        new Rational(1, 1),
+    ]
+
+    if (lengthIndex < 0 ||
+        lengthIndex >= lengths.length)
+        return
+
+    const length = lengths[lengthIndex]
+
+    modifySelectedElems(timeline, project, (elem) => {
+        if (elem.type === "note" ||
+            elem.type === "chord")
+        {
+            timeline.insertion.duration = length
+
+            const newRange = Range.fromStartDuration(elem.range.start, length)
+            return Project.elemModify(elem, { range: newRange })
+        }
+        else
+            return elem
+    })
+
+    const range =
+        Timeline.selectionRange(timeline, project.root) ||
+        new Range(new Rational(0), new Rational(0))
+    
+    const newTime = range.end
+    timeline.cursor.visible = false
+    Timeline.cursorSetTime(timeline, newTime, newTime)
+    Timeline.scrollTimeIntoView(timeline, newTime)
+
+    timeline.needsKeyFinish = true
 }

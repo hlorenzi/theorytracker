@@ -12,7 +12,7 @@ export default class Rational
 
 	constructor(numerator: number = 0, denominator: number = 1)
 	{
-		if (denominator == 0)
+		if (denominator === 0)
 			throw "denominator zero"
 
 		if (!isFinite(numerator) || !isFinite(denominator))
@@ -145,12 +145,12 @@ export default class Rational
 	
 	stretch(offset: Rational, pivot: Rational, origin: Rational): Rational
 	{
-		let dist = origin.subtract(pivot)
-		if (dist.numerator == 0)
+		const dist = origin.subtract(pivot)
+		if (dist.numerator === 0)
 			return this
 		
-		let p    = this.subtract(pivot).divide(dist)
-		let move = origin.add(offset).subtract(pivot).divide(dist)
+		const p    = this.subtract(pivot).divide(dist)
+		const move = origin.add(offset).subtract(pivot).divide(dist)
 		
 		return pivot.add(dist.multiply(p).multiply(move))
 	}
@@ -158,14 +158,14 @@ export default class Rational
 	
 	isZero(): boolean
 	{
-		return this.numerator == 0
+		return this.numerator === 0
 	}
 	
 	
 	compare(other: Rational): number
 	{
-		let thisNumerator = this.numerator * other.denominator
-		let otherNumerator = other.numerator * this.denominator
+		const thisNumerator = this.numerator * other.denominator
+		const otherNumerator = other.numerator * this.denominator
 		
 		if (thisNumerator < otherNumerator)
 			return -1
@@ -178,13 +178,13 @@ export default class Rational
 	
 	equalTo(other: Rational): boolean
 	{
-		return this.compare(other) == 0
+		return this.compare(other) === 0
 	}
 	
 	
 	notEqualTo(other: Rational): boolean
 	{
-		return this.compare(other) != 0
+		return this.compare(other) !== 0
 	}
 	
 	
@@ -223,7 +223,7 @@ export default class Rational
 		if (b === null)
 			return a
 		
-		if (a.compare(b!) > 0)
+		if (a.compare(b) > 0)
 			return a
 		else
 			return b
@@ -241,20 +241,20 @@ export default class Rational
 		if (b === null)
 			return a
 		
-		if (a.compare(b!) < 0)
+		if (a.compare(b) < 0)
 			return a
 		else
 			return b
 	}
 
 
-	max(other:  Rational | null): Rational
+	max(other: Rational | null): Rational
 	{
 		return Rational.max(this, other)!
 	}
 
 
-	min(other:  Rational | null): Rational
+	min(other: Rational | null): Rational
 	{
 		return Rational.min(this, other)!
 	}
@@ -279,7 +279,7 @@ export default class Rational
 	
 	trySimplifyInPlaceBy(divider: number)
 	{
-		while ((this.numerator % divider) == 0 && (this.denominator % divider) == 0)
+		while ((this.numerator % divider) === 0 && (this.denominator % divider) === 0)
 		{
 			this.numerator /= divider
 			this.denominator /= divider
@@ -289,10 +289,10 @@ export default class Rational
 	
 	toString(): string
 	{
-		let integer = Math.floor(this.numerator / this.denominator)
-		let numerator = this.numerator % this.denominator
+		const integer = Math.floor(this.numerator / this.denominator)
+		const numerator = this.numerator % this.denominator
 		
-		if (numerator == 0)
+		if (numerator === 0)
 			return integer.toString()
 		else
 			return integer.toString() + " + " + numerator.toString() + "/" + this.denominator.toString()
