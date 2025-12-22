@@ -71,6 +71,13 @@ export const knownScales: ScaleMetadata[] = [
 	},
 	
 	{
+		id: "harmaj",
+		names: ["Harmonic Major"],
+		chromas: [0, 2, 4, 5, 7, 8, 11],
+		mode: 0,
+		circleOfFifthsOffset: 0,
+	},
+	{
 		id: "dharmaj",
 		names: ["Double Harmonic Major"],
 		chromas: [0, 1, 4, 5, 7, 8, 11],

@@ -134,7 +134,7 @@ export class LaneNotes extends Timeline.Lane
             }
         }
 
-        let keyChPrev = timeline.layout.keyRegions[0].keyCh1
+        let keyChCurrent = timeline.layout.keyRegions[0].keyCh1
 
         for (const elem of iterMarkersForLayout(timeline, project, timeline.layout.range))
         {
@@ -144,6 +144,19 @@ export class LaneNotes extends Timeline.Lane
                 elem.type === "keyChange" ? 0 :
                     1,
                 elem.range.start)
+
+            let keyCh: Project.KeyChange | undefined = undefined
+            let keyChPrev: Project.KeyChange | undefined = undefined
+            if (elem.type === "keyChange")
+            {
+                keyCh = elem
+
+                if (keyCh.id !== keyChCurrent.id &&
+                    keyChCurrent.id >= 0)
+                    keyChPrev = keyChCurrent
+
+                keyChCurrent = keyCh
+            }
             
             this.add({
                 kind: "marker",
@@ -152,8 +165,8 @@ export class LaneNotes extends Timeline.Lane
                 rect,
                 priority: 1,
                 zIndex: 1,
-                keyCh: elem.type === "keyChange" ? elem : undefined,
-                keyChPrev: elem.type === "keyChange" ? keyChPrev : undefined,
+                keyCh,
+                keyChPrev,
                 meterCh: elem.type === "meterChange" ? elem : undefined,
             })
     
@@ -162,9 +175,6 @@ export class LaneNotes extends Timeline.Lane
                 keyCh: elem.type === "keyChange" ? elem : undefined,
                 meterCh: elem.type === "meterChange" ? elem : undefined,
             })
-
-            if (elem.type === "keyChange")
-                keyChPrev = elem
         }
     }
 

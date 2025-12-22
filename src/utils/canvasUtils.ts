@@ -1,5 +1,7 @@
 import * as Theory from "../theory"
+import * as Prefs from "../prefs"
 import * as MathUtils from "./mathUtils"
+import Rect from "./rect"
 
 
 const fillPatterns = new Map()
@@ -48,4 +50,49 @@ export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number
 	const pattern = ctx.createPattern(canvas, "repeat")
 	fillPatterns.set(cacheKey, pattern)
 	return pattern
+}
+
+
+export function drawChord(
+	ctx: CanvasRenderingContext2D,
+	rect: Rect,
+	prefs: Prefs.Prefs,
+	chord: Theory.Chord,
+	key: Theory.Key)
+{
+	const mode = key.scale.metadata!.mode
+	const fillStyle = fillStyleForDegree(
+		ctx,
+		key.degreeForMidi(chord.rootChroma) + mode,
+		false)
+		
+	ctx.fillStyle = fillStyle
+	ctx.beginPath()
+	ctx.roundRect(
+		rect.x,
+		rect.y,
+		rect.w,
+		rect.h,
+		5)
+	ctx.fill()
+
+	const ornamentH = 6
+	ctx.fillStyle = "#ddd"
+	ctx.fillRect(
+		rect.x,
+		rect.y + ornamentH,
+		rect.w,
+		rect.h - ornamentH * 2)
+
+	ctx.fillStyle = "#000"
+	ctx.font = `${prefs.timeline.fontWeightChord} ${rect.h * 0.65}px ${prefs.timeline.fontNameChord}`
+	ctx.textAlign = "center"
+	ctx.textBaseline = "middle"
+	ctx.fillText(
+		chord.romanBase(key) +
+			chord.romanSup(key) +
+			chord.romanSub(key),
+		rect.xCenter,
+		rect.yCenter + rect.h * 0.05,
+		rect.w * 0.95)
 }

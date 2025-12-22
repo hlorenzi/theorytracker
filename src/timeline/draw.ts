@@ -4,6 +4,7 @@ import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory"
 import Rational from "../utils/rational.ts"
 import * as CanvasUtils from "../utils/canvasUtils.ts"
+import Rect from "../utils/rect.ts"
 
 
 export function draw(
@@ -191,85 +192,63 @@ function drawElements(
         }
 
         else if (element.kind === "chord")
-        {
-            ctx.save()
-            ctx.beginPath()
-            ctx.roundRect(
-                element.rect.x,
-                element.rect.y,
-                element.rect.w,
-                element.rect.h,
-                5)
-            ctx.clip()
-
-            const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
-            const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
-
-            const key = element.key
-            const mode = key.scale.metadata!.mode
-            const fillStyle = CanvasUtils.fillStyleForDegree(
-                ctx,
-                key.degreeForMidi(element.chord.chord.rootChroma) + mode,
-                false)
-                
-            ctx.fillStyle = fillStyle
-            ctx.beginPath()
-            ctx.roundRect(
-                x1,
-                element.rect.y,
-                x2 - x1,
-                element.rect.h,
-                5)
-            ctx.fill()
-
-            const ornamentH = 6
-            ctx.fillStyle = "#ddd"
-            ctx.fillRect(
-                x1,
-                element.rect.y + ornamentH,
-                x2 - x1,
-                element.rect.h - ornamentH * 2)
-
-            ctx.fillStyle = "#000"
-            ctx.font = `${prefs.timeline.fontWeightChord} ${element.rect.h * 0.65}px ${prefs.timeline.fontNameChord}`
-            ctx.textAlign = "center"
-            ctx.textBaseline = "middle"
-            ctx.fillText(
-                element.chord.chord.romanBase(element.key) +
-                    element.chord.chord.romanSup(element.key) +
-                    element.chord.chord.romanSub(element.key),
-                element.rect.xCenter,
-                element.rect.yCenter + element.rect.h * 0.05,
-                element.rect.w * 0.95)
-                
-            ctx.beginPath()
-            ctx.roundRect(
-                x1,
-                element.rect.y,
-                x2 - x1,
-                element.rect.h,
-                5)
-                
-            if (timeline.hover?.id === element.id)
-            {
-                ctx.fillStyle = "#fff8"
-                ctx.fill()
-            }
-
-            if (element.id !== undefined &&
-                timeline.selection.has(element.id))
-            {
-                ctx.strokeStyle = "#fff8"
-                ctx.lineWidth = 6
-                ctx.stroke()
-            }
-
-            ctx.restore()
-        }
+            drawChord(timeline, prefs, ctx, element)
 
         else if (element.kind === "marker")
             drawMarker(timeline, prefs, ctx, element)
     }
+}
+
+
+function drawChord(
+    timeline: Timeline.State,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D,
+    element: Timeline.LayoutElementChord)
+{
+    ctx.save()
+    ctx.beginPath()
+    ctx.roundRect(
+        element.rect.x,
+        element.rect.y,
+        element.rect.w,
+        element.rect.h,
+        5)
+    ctx.clip()
+
+    const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
+    const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
+
+    CanvasUtils.drawChord(
+        ctx,
+        Rect.fromVertices(x1, element.rect.y, x2, element.rect.y2),
+        prefs,
+        element.chord.chord,
+        element.key)
+        
+    ctx.beginPath()
+    ctx.roundRect(
+        x1,
+        element.rect.y,
+        x2 - x1,
+        element.rect.h,
+        5)
+        
+    if (timeline.hover?.id === element.id)
+    {
+        ctx.fillStyle = "#fff8"
+        ctx.fill()
+    }
+
+    if (element.id !== undefined &&
+        timeline.selection.has(element.id))
+    {
+        ctx.strokeStyle = "#fff8"
+        ctx.lineWidth = 6
+        ctx.stroke()
+    }
+
+    ctx.restore()
 }
 
 
@@ -312,14 +291,18 @@ function drawMarker(
     ctx.textAlign = "left"
     ctx.textBaseline = "middle"
     ctx.lineWidth = 8
-    ctx.strokeText(
-        text,
-        element.rect.x2 + 8,
-        element.rect.yCenter)
-    ctx.fillText(
-        text,
-        element.rect.x2 + 8,
-        element.rect.yCenter)
+
+    if (element.rect.xCenter >= 0)
+    {
+        ctx.strokeText(
+            text,
+            element.rect.x2 + 8,
+            element.rect.yCenter)
+        ctx.fillText(
+            text,
+            element.rect.x2 + 8,
+            element.rect.yCenter)
+    }
 
     ctx.beginPath()
     ctx.moveTo(element.rect.x, element.rect.y)
@@ -538,7 +521,26 @@ export function drawLaneBkgOctaves(
                     const labelX = Math.max(x1 + 5, 5)
                     if (needsOctaveLabels && labelX + 30 < x2)
                     {
-                        ctx.fillText(key.tonic.str + (i + 5).toString(), labelX, y - 1)
+                        for (let j = 0; j < scaleLength; j += 1)
+                        {
+                            const pitchName = key.namedPitches[j]
+                            const chroma = key.scale.chromas[j] + key.tonic.chroma + ((i + 5) * 12)
+                            const octave = Math.floor(chroma / 12)
+                            ctx.fillText(
+                                pitchName.str,
+                                labelX,
+                                y - 1 - j * timeline.noteRowH)
+                            
+                            if (j === 0)
+                            {
+                                const letterMeasure = ctx.measureText(pitchName.str)
+                                ctx.fillText(
+                                    octave.toString(),
+                                    labelX + Math.max(14, letterMeasure.width),
+                                    y - 1 - j * timeline.noteRowH)
+                            }
+                        }
+                        
                         drewOctaveLabels = true
                     }
 

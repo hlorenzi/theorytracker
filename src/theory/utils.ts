@@ -39,6 +39,12 @@ export default class Utils
 
 	static accidentalToStr(accidental: number, useUnicode: boolean = true): string
 	{
+		if (useUnicode && accidental === 2)
+			return "𝄪"
+
+		if (useUnicode && accidental === -2)
+			return "𝄫"
+
 		if (accidental < 0)
 			return (useUnicode ? "\u{266d}" : "b").repeat(-accidental)
 		else
