@@ -1,21 +1,147 @@
-import * as MathUtils from "../utils/mathUtils.ts"
-import Key from "./key.ts"
-import Utils from "./utils.ts"
+import * as Theory from "./index.ts"
 
 
 interface ChordMetadata
 {
-	pitches: number[]
 	id: string
-	symbol: [boolean, string, string | null]
 	name: string
-	startGroup?: string
+
+	add3?: number
+	add5?: number
+	add7?: number
+	add9?: number
+	add11?: number
+	add13?: number
+
+	suspended?: boolean
+
+	nameBase?: string
+	nameSup?: string
+	nameSub?: string
+
+	romanSup?: string
+	romanSub?: string
+	roman7?: number
 }
 
 
 export const chordKinds: ChordMetadata[] =
 [
-	{ pitches: [0, 4, 7], id: "M", symbol: [false, "", null], name: "Major", startGroup: "Triads" },
+	{
+		id: "M",
+		name: "Major",
+		add3: 0,
+		add5: 0,
+	},
+	{
+		id: "m",
+		name: "Minor",
+		add3: -1,
+		add5: 0,
+		nameBase: "m",
+	},
+	{
+		id: "+",
+		name: "Augmented",
+		add3: 0,
+		add5: 1,
+		nameSup: "+",
+		romanSup: "+",
+	},
+	{
+		id: "o",
+		name: "Diminished",
+		add3: -1,
+		add5: -1,
+		nameSup: "o",
+		romanSup: "o",
+	},
+	{
+		id: "oo",
+		name: "Doubly-diminished",
+		add3: -2,
+		add5: -1,
+		nameSup: "oo",
+		romanSup: "oo",
+	},
+	{
+		id: "dom7",
+		name: "Dominant Seventh",
+		add3: 0,
+		add5: 0,
+		add7: -1,
+		nameBase: "7",
+		roman7: -1,
+	},
+	{
+		id: "maj7",
+		name: "Major Seventh",
+		add3: 0,
+		add5: 0,
+		add7: 0,
+		nameBase: "maj7",
+	},
+	{
+		id: "min7",
+		name: "Minor Seventh",
+		add3: -1,
+		add5: 0,
+		add7: -1,
+		nameBase: "m7",
+		roman7: -1,
+	},
+	{
+		id: "minmaj7",
+		name: "Minor-major Seventh",
+		add3: -1,
+		add5: 0,
+		add7: 0,
+		nameBase: "mM7",
+	},
+	{
+		id: "aug7",
+		name: "Augmented Seventh",
+		add3: 0,
+		add5: 1,
+		add7: -1,
+		nameBase: "7",
+		nameSup: "(\u{266f}5)",
+		romanSup: "+",
+	},
+	{
+		id: "augmaj7",
+		name: "Augmented Major Seventh",
+		add3: 0,
+		add5: 1,
+		add7: 0,
+		nameBase: "maj7",
+		nameSup: "(\u{266f}5)",
+		romanSup: "+",
+	},
+	{
+		id: "dim7",
+		name: "Diminished Seventh",
+		add3: -1,
+		add5: -1,
+		add7: -2,
+		nameSup: "o7",
+		romanSup: "o",
+		roman7: -2,
+	},
+	{
+		id: "halfdim7",
+		name: "Half-diminished Seventh",
+		add3: -1,
+		add5: -1,
+		add7: -1,
+		nameBase: "m7",
+		nameSup: "(\u{266d}5)",
+		romanSup: "ø",
+		roman7: -1,
+	},
+]
+
+/*	{ pitches: [0, 4, 7], id: "M", symbol: [false, "", null], name: "Major", startGroup: "Triads" },
 	{ pitches: [0, 3, 7], id: "m", symbol: [true,  "", null], name: "Minor" },
 	{ pitches: [0, 4, 8], id: "+", symbol: [false, "", "+"],  name: "Augmented" },
 	{ pitches: [0, 3, 6], id: "o", symbol: [true,  "", "o"],  name: "Diminished" },
@@ -47,7 +173,7 @@ export const chordKinds: ChordMetadata[] =
 	{ pitches: [0, 3, 6,  9, 13], id: "ob9",   symbol: [true,  "",  "o♭9"], name: "Diminished Minor Ninth" },
 	{ pitches: [0, 3, 6, 10, 14], id: "%9",    symbol: [true,  "",  "ø9"],  name: "Half-Diminished Ninth" },
 	{ pitches: [0, 3, 6, 10, 13], id: "%b9",   symbol: [true,  "",  "ø♭9"], name: "Half-Diminished Minor Ninth" },
-]
+]*/
 
 
 export interface ChordSuggestion
@@ -64,23 +190,106 @@ export default class Chord
 
 
 	rootChroma: number
-	kind: number
+	degree: number
 	inversion: number
-	modifiers: any
+
+	sus2?: number
+	add3?: number
+	sus4?: number
+	add5?: number
+	add7?: number
+	add9?: number
+	add11?: number
+	add13?: number
 
 	
-	constructor(rootChroma: number, kind: number, inversion: number = 0, modifiers: any[] = [])
+	constructor(rootChroma: number, inversion: number = 0)
 	{
         this.rootChroma = rootChroma
-        this.kind = kind
         this.inversion = inversion
-        this.modifiers = modifiers
     }
+
+
+	clone()
+	{
+		const cloned = Object.assign({}, this)
+		Object.setPrototypeOf(cloned, Chord.prototype)
+		return cloned
+	}
+
+
+	withRoot(newRootChroma: number, newDegree: number)
+	{
+		const cloned = this.clone()
+		cloned.rootChroma = newRootChroma
+		cloned.degree = newDegree
+		return cloned
+	}
 	
 	
-	withChanges(obj: any): Chord
+	/*withChanges(obj: any): Chord
 	{
 		return Object.assign(new Chord(this.rootChroma, this.kind, this.inversion, this.modifiers), obj)
+	}*/
+
+
+	static fromDiatonicTriad(key: Theory.Key, rootDegree: number)
+	{
+		const rootChroma  = (key.tonic.chroma + key.scale.chromas[(rootDegree + 0) % key.scale.chromas.length]) % 12
+		const chord = new Chord(rootChroma)
+		chord.degree = rootDegree
+		chord.add3 = Chord.diatonicDegree(key, 2, rootChroma, rootDegree)
+		chord.add5 = Chord.diatonicDegree(key, 4, rootChroma, rootDegree)
+		return chord
+	}
+
+
+	static diatonicDegree(
+		key: Theory.Key,
+		degree: number,
+		rootChroma: number,
+		rootDegree: number)
+	{
+		const chroma = Theory.Utils.mod(
+			key.tonic.chroma +
+				key.scale.chromas[(rootDegree + degree) % key.scale.chromas.length],
+			12)
+
+		return Theory.Utils.modAccidental(
+			chroma -
+			(rootChroma + Theory.Scale.majorScale.chromas[degree]))
+	}
+
+
+	withSuspended2(key: Theory.Key)
+	{
+		const chord = this.clone()
+		chord.sus2 = Chord.diatonicDegree(key, 1, this.rootChroma, this.degree)
+		return chord
+	}
+
+
+	withRemoved3()
+	{
+		const chord = this.clone()
+		chord.add3 = undefined
+		return chord
+	}
+
+
+	withSuspended4(key: Theory.Key)
+	{
+		const chord = this.clone()
+		chord.sus4 = Chord.diatonicDegree(key, 3, this.rootChroma, this.degree)
+		return chord
+	}
+
+
+	withAdded7(key: Theory.Key)
+	{
+		const chord = this.clone()
+		chord.add7 = Chord.diatonicDegree(key, 6, this.rootChroma, this.degree)
+		return chord
 	}
 
 
@@ -90,7 +299,7 @@ export default class Chord
 	}
 
 
-	static kindFromPitches(pitches: number[]): number
+	/*static kindFromPitches(pitches: number[]): number
 	{
 		return chordKinds.findIndex(k =>
 			k.pitches.length === pitches.length &&
@@ -142,115 +351,216 @@ export default class Chord
 
 		//console.log("suggestions", pitches, suggestions)
 		return suggestions.slice(0, 10)
-	}
+	}*/
 
 
-	get kindId(): string
+	chordKind(): ChordMetadata | undefined
 	{
-		return chordKinds[this.kind].id
-	}
-	
-	
-	romanBase(key: Key): string
-	{
-		const degree = key.degreeForMidi(this.rootChroma)
-		const chordKind = chordKinds[this.kind] || { symbol: [false, "", "?"] }
-        
-        let roman = Math.floor(degree)
-        let accidental = 0
-		if (Math.floor(degree) != degree)
-		{
-			roman = MathUtils.mod(roman + 1, 7)
-			accidental = -1
+		const compare = (a: number | undefined, b: number | undefined) => {
+			if (a === b)
+				return true
+
+			if (a === undefined ||
+				b === undefined)
+				return false
+
+			return Theory.Utils.mod(a, 12) === Theory.Utils.mod(b, 12)
 		}
 
-		let baseStr = Utils.accidentalToStr(accidental, true) + Utils.degreeToRomanStr(roman)
-		if (chordKind.symbol[0])
-			baseStr = baseStr.toLowerCase()
-		
-		return baseStr + chordKind.symbol[1]
-	}
-	
-	
-	romanSup(key: Key): string
-	{
-		const chordKind = chordKinds[this.kind] || { symbol: [false, "", "?"] }
-		
-		let supStr = chordKind.symbol[2] || ""
-		
-		if (this.modifiers)
+		for (const meta of chordKinds)
 		{
-			if (this.modifiers.add9)
-				supStr += "(add9)"
-			
-			if (this.modifiers.add11)
-				supStr += "(add11)"
-			
-			if (this.modifiers.add13)
-				supStr += "(add13)"
-			
-			if (this.modifiers.no3)
-				supStr += "(no3)"
-			
-			if (this.modifiers.no5)
-				supStr += "(no5)"
-		}
-		
-		return supStr
-	}
-	
-	
-	romanSub(key: Key): string
-	{
-		let subStr = ""
-		
-		if (this.modifiers)
-		{
-			if (this.modifiers.sus2)
+			if (compare(meta.add3, this.add3) &&
+				compare(meta.add5, this.add5) &&
+				compare(meta.add7, this.add7))
 			{
-				if (this.modifiers.sus4)
-					subStr += "sus24"
-				else
-					subStr += "sus2"
+				return meta
 			}
-			else if (this.modifiers.sus4)
-				subStr += "sus4"
 		}
+
+		return undefined
+	}
+
+
+	accidentalStrForRoman(key: Theory.Key, degree: number, accidental: number)
+	{
+		const chroma = key.chromaForDegree(this.degree + degree)
+		const chromaInCMajor = this.rootChroma + Theory.Scale.majorScale.chromas[degree]
+		return Theory.Utils.accidentalToStr(
+			Theory.Utils.modAccidental(
+				chroma - chromaInCMajor - accidental))
+	}
+
+
+	static accidentalStrForName(accidental: number)
+	{
+		return Theory.Utils.accidentalToStr(Theory.Utils.modAccidental(accidental))
+	}
+	
+	
+	str(key: Theory.Key)
+	{
+		const kind = this.chordKind() ?? {
+			id: "custom",
+			name: "Custom",
+		}
+
+        let roman = this.degree % key.scale.chromas.length
+		let romanChroma = key.chromaForDegree(roman)
+        let accidental = Theory.Utils.accidentalFor(this.rootChroma, romanChroma)
+
+		if (accidental < -1 || accidental > 1)
+		{
+			for (let r = 0; r < 7; r++)
+			{
+				const newRoman = (this.degree + r) % key.scale.chromas.length
+				const newRomanChroma = key.chromaForDegree(newRoman)
+        		const newAccidental = Theory.Utils.accidentalFor(this.rootChroma, newRomanChroma)
+				if (Math.abs(newAccidental) < Math.abs(accidental))
+				{
+					roman = newRoman
+					romanChroma = newRomanChroma
+					accidental = newAccidental
+				}
+			}
+		}
+
+		let accidentalStr = Theory.Utils.accidentalToStr(accidental, true)
+
+		const isLowercase =
+			kind !== undefined &&
+			this.add3 !== undefined &&
+			this.add3 < 0
 		
-		return subStr
+		let nameBase =
+			Theory.Utils.lowercaseIf(
+				key.nameForChroma(this.rootChroma).strUnicode,
+				isLowercase) +
+			(kind.nameBase ?? "")
+
+		let nameSup = kind.nameSup ?? ""
+		let nameSub = kind.nameSub ?? ""
+
+		let romanBase =
+			accidentalStr +
+			Theory.Utils.lowercaseIf(
+				Theory.Utils.degreeToRomanStr(roman),
+				isLowercase)
+
+		let romanSup = kind.romanSup ?? ""
+		let romanSub = kind.romanSub ?? ""
+
+		const isSuspended =
+			this.sus2 !== undefined ||
+			this.sus4 !== undefined
+
+		if (this.sus2 !== undefined &&
+			this.sus4 !== undefined)
+		{
+			nameSub += `sus${ Chord.accidentalStrForName(this.sus2) }2${ Chord.accidentalStrForName(this.sus4) }4`
+			romanSub += `sus${ this.accidentalStrForRoman(key, 1, this.sus2) }2${ this.accidentalStrForRoman(key, 3, this.sus4) }4`
+		}
+		else if (this.sus2 !== undefined)
+		{
+			nameSub += `sus${ Chord.accidentalStrForName(this.sus2) }2`
+			romanSub += `sus${ this.accidentalStrForRoman(key, 1, this.sus2) }2`
+		}
+		else if (this.sus4 !== undefined)
+		{
+			nameSub += `sus${ Chord.accidentalStrForName(this.sus4) }4`
+			romanSub += `sus${ this.accidentalStrForRoman(key, 3, this.sus4) }4`
+		}
+
+		if (kind.add3 === undefined)
+		{
+			if (this.add3 === undefined &&
+				!isSuspended)
+			{
+				const no3Str = `(no3)`
+				nameSup += no3Str
+				romanSup += no3Str
+			}
+			else if (this.add3 !== undefined &&
+				this.add3 !== 0)
+			{
+				nameSup += `(${ Chord.accidentalStrForName(this.add3) }3)`
+				romanSup += `(${ Chord.accidentalStrForName(this.add3) }3)`
+			}
+		}
+
+		if (kind.add5 === undefined)
+		{
+			if (this.add5 === undefined)
+			{
+				const no5Str = `(no5)`
+				nameSup += no5Str
+				romanSup += no5Str
+			}
+			else if (this.add5 !== 0)
+			{
+				nameSup += `(${ Chord.accidentalStrForName(this.add5) }5)`
+				romanSup += `(${ Chord.accidentalStrForName(this.add5) }5)`
+			}
+		}
+
+		if (this.add7 !== undefined)
+		{
+			if (kind.add7 === undefined)
+			{
+				nameSup += `(${ Chord.accidentalStrForName(this.add7) }7)`
+				romanSup += `(${ this.accidentalStrForRoman(key, 6, this.add7) }7)`
+			}
+			else
+			{
+				romanSup += `${ this.accidentalStrForRoman(key, 6, this.add7) }7`
+			}
+		}
+
+		return {
+			nameBase,
+			nameSup,
+			nameSub,
+			romanBase,
+			romanSup,
+			romanSub,
+		}
+	}
+	
+	
+	get pitchesRelativeToRoot(): number[]
+	{
+		const pitches = [0]
+
+		if (this.sus2 !== undefined)
+			pitches.push(this.sus2 + Theory.Scale.majorScale.chromas[1])
+
+		if (this.add3 !== undefined &&
+			this.sus2 === undefined &&
+			this.sus4 === undefined)
+			pitches.push(this.add3 + Theory.Scale.majorScale.chromas[2])
+
+		if (this.sus4 !== undefined)
+			pitches.push(this.sus4 + Theory.Scale.majorScale.chromas[3])
+
+		if (this.add5 !== undefined)
+			pitches.push(this.add5 + Theory.Scale.majorScale.chromas[4])
+
+		if (this.add7 !== undefined)
+			pitches.push(this.add7 + Theory.Scale.majorScale.chromas[6])
+
+		return pitches
 	}
 	
 	
 	get pitches(): number[]
 	{
-		const chordData = chordKinds[this.kind]
-		if (!chordData)
-			return []
-		
-		const rootMidi = Utils.mod(this.rootChroma, 12)
-		
-		const pitches: number[] = []
-		for (let i = 0; i < chordData.pitches.length; i++)
-			pitches.push(rootMidi + chordData.pitches[i])
-		
-		if (this.modifiers.sus2)
-			pitches[1] = rootMidi + 2
-		
-		if (this.modifiers.sus4)
-		{
-			if (this.modifiers.sus2)
-				pitches.splice(2, 0, rootMidi + 5)
-			else
-				pitches[1] = rootMidi + 5
-		}
-		
-		return pitches
+		const rootMidi = Theory.Utils.mod(this.rootChroma, 12)
+		return this.pitchesRelativeToRoot.map(p => p + rootMidi)
 	}
 	
 	
 	get strummingPitches(): number[]
 	{
-		const rootMidi = Utils.mod(this.rootChroma, 12)
+		const rootMidi = Theory.Utils.mod(this.rootChroma, 12)
 		let pitches = this.pitches
 		if (pitches.length == 0)
 			return []

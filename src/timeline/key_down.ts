@@ -384,7 +384,7 @@ function handleUpDown(
 
         let playedPreview = false
         modifySelectedElems(timeline, project, (elem) => {
-            if (elem.type == "note")
+            if (elem.type === "note")
             {
                 const track = Project.parentTrackFor(project.root, elem.parentId)
                 const key = Project.keyAt(project.root, track.id, elem.range.start)
@@ -404,19 +404,23 @@ function handleUpDown(
 
                 return Project.elemModify(elem, { midiPitch: newPitch })
             }
-            else if (elem.type == "chord")
+            else if (elem.type === "chord")
             {
                 const track = Project.parentTrackFor(project.root, elem.parentId)
                 const key = Project.keyAt(project.root, track.id, elem.range.start)
                 const degree = key.octavedDegreeForMidi(elem.chord.rootChroma)
-                const newDegree = degree + degreeDelta
+                /*const newDegree = degree + degreeDelta
                 const newRoot = pitchDelta != 0 ?
                     elem.chord.rootChroma + pitchDelta :
-                    key.midiForDegree(degreeDelta >= 0 ? Math.floor(newDegree) : Math.ceil(newDegree))
-
-                const newChord = new Theory.Chord(
-                    newRoot,
-                    elem.chord.kind, elem.chord.inversion, elem.chord.modifiers)
+                    key.midiForDegree(degreeDelta >= 0 ? Math.floor(newDegree) : Math.ceil(newDegree))*/
+                const newDegree = degreeDelta >= 0 ?
+                    Math.floor(degree + degreeDelta) :
+                    Math.ceil(degree + degreeDelta)
+                const newRoot =
+                    key.chromaForDegree(newDegree)
+                    
+                const newChord = elem.chord.withRoot(newRoot, newDegree)
+                console.log(newChord)
 
                 if (!playedPreview)
                 {

@@ -99,6 +99,8 @@ export default class Scale
 {
 	static list = knownScales
 
+	static majorScale = knownScales[0]
+
 	chromas: number[]
 	metadata: ScaleMetadata | undefined
 

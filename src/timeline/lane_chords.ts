@@ -152,12 +152,7 @@ export class LaneChords extends Timeline.Lane
         const key = Project.keyAt(project.root, trackId, time)
         const root = key.midiForDegree(degree)
         
-        const pitches = [0]
-        pitches.push(key.midiForDegree(degree + 2) - root)
-        pitches.push(key.midiForDegree(degree + 4) - root)
-        
-        const kind = Theory.Chord.kindFromPitches(pitches)
-        const chord = new Theory.Chord(root, kind, 0, [])
+        const chord = Theory.Chord.fromDiatonicTriad(key, degree)
         Timeline.insertChord(timeline, project, trackId, time, chord)
     }
 }

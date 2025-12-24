@@ -163,16 +163,16 @@ export default class Key
 	{
 		const degree = this.degreeForMidi(midi)
 		
-		const letter1     = Utils.mod(this.tonic.letter + Math.floor(degree), 7)
+		const letter1     = Utils.mod(this.tonic.letter + Math.floor(degree), this.scale.chromas.length)
 		const accidental1 = Utils.mod(midi - Utils.letterToChroma(letter1) + 6, 12) - 6
 
 		if (degree == Math.floor(degree))
 			return new PitchName(letter1, accidental1)
 
-		const letter2     = Utils.mod(letter1 + 1, 7)
+		const letter2     = Utils.mod(letter1 + 1, this.scale.chromas.length)
 		const accidental2 = Utils.mod(midi - Utils.letterToChroma(letter2) + 6, 12) - 6
 
-		const letter3     = Utils.mod(letter1 - 1, 7)
+		const letter3     = Utils.mod(letter1 - 1, this.scale.chromas.length)
 		const accidental3 = Utils.mod(midi - Utils.letterToChroma(letter3) + 6, 12) - 6
 
 		const attempts = [

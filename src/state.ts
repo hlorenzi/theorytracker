@@ -10,7 +10,6 @@ const [state, setState] =
 
 export interface State
 {
-    test: number
     prefs: Prefs.Prefs
     project: Project.Mutable
     timeline: Timeline.State
@@ -20,7 +19,6 @@ export interface State
 export function makeNew(): State
 {
     return {
-        test: 0,
         prefs: Prefs.makeNew(),
         project: { root: Project.makeTest() },
         timeline: Timeline.makeNew(),

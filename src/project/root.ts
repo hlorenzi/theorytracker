@@ -87,13 +87,13 @@ export function makeTest(): ImmutableRoot
         project = upsertElement(project, Project.makeNote(
             project.noteTrackId,
             Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
-            Theory.Utils.midiMiddleC + i))
+            Theory.Utils.midiMiddleC - 12 + i))
 
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < 7; i++)
         project = upsertElement(project, Project.makeChord(
             project.chordTrackId,
             Range.fromStartDuration(new Rational(i * 4, 4), new Rational(4, 4)),
-            new Theory.Chord(i, 0)))
+            Theory.Chord.fromDiatonicTriad(Theory.Key.parse("C Major"), i)))
 
     return project
 }

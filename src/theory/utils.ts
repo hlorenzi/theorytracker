@@ -5,6 +5,30 @@ export default class Utils
 		return (x % m + m) % m
 	}
 
+	static modAccidental(accidental: number)
+	{
+		return Utils.mod(accidental + 6, 12) - 6
+	}
+
+	static accidentalFor(chroma: number, fromBaseChroma: number)
+	{
+        const accidental1 = chroma - fromBaseChroma
+        const accidental2 = chroma - fromBaseChroma - 12
+
+		if (Math.abs(accidental1) < Math.abs(accidental2))
+			return accidental1
+		else
+			return accidental2
+	}
+
+	static lowercaseIf(str: string, lowercase: boolean)
+	{
+		if (lowercase)
+			return str.toLowerCase()
+
+		return str
+	}
+
 	static midiMiddleC = 60
 
 	static degreeToChromaInCMajor = (degree: number): number => [0, 2, 4, 5, 7, 9, 11][degree]
@@ -27,10 +51,13 @@ export default class Utils
 	static circleOfFifthsToAccidental = (index: number): number =>
 		Math.floor((index + 1) / 7)
 
-	static degreeToRomanStr   = (degree: number): string =>
-		["I", "II", "III", "IV", "V", "VI", "VII"][degree]
+	static degreeToRomanStr = (degree: number): string =>
+		["I", "II", "III", "IV", "V", "VI", "VII"][Utils.mod(degree, 7)]
 
-	static degreeToColor      = (degree: number): string =>
+	static degreeToLetterStr = (degree: number): string =>
+		Utils.letterToStr(Utils.mod(degree, 7))
+
+	static degreeToColor = (degree: number): string =>
 		["#f00", "#f80", "#fd0", "#0d0", "#00f", "#80f", "#f0f"][degree]
 
 	static degreeToColorFaded = (degree: number): string =>
@@ -39,8 +66,8 @@ export default class Utils
 
 	static accidentalToStr(accidental: number, useUnicode: boolean = true): string
 	{
-		if (useUnicode && accidental === 2)
-			return "𝄪"
+		//if (useUnicode && accidental === 2)
+		//	return "𝄪"
 
 		if (useUnicode && accidental === -2)
 			return "𝄫"

@@ -84,15 +84,88 @@ export function drawChord(
 		rect.w,
 		rect.h - ornamentH * 2)
 
+	const chordStr = chord.str(key)
+
+	const maxWidth = rect.w * 0.9
+
 	ctx.fillStyle = "#000"
-	ctx.font = `${prefs.timeline.fontWeightChord} ${rect.h * 0.65}px ${prefs.timeline.fontNameChord}`
-	ctx.textAlign = "center"
-	ctx.textBaseline = "middle"
-	ctx.fillText(
-		chord.romanBase(key) +
-			chord.romanSup(key) +
-			chord.romanSub(key),
+	drawChordName(
+		ctx,
+		`${prefs.timeline.fontWeightChord} ${rect.h * 0.5}px ${prefs.timeline.fontNameChord}`,
+		`${prefs.timeline.fontWeightChord} ${rect.h * 0.25}px ${prefs.timeline.fontNameChord}`,
+		chordStr.romanBase,
+		chordStr.romanSup,
+		chordStr.romanSub,
 		rect.xCenter,
-		rect.yCenter + rect.h * 0.05,
-		rect.w * 0.95)
+		rect.yCenter + rect.h * (0.05 - 0.1),
+		rect.h * 0.5,
+		rect.h * 0.15,
+		maxWidth)
+		
+	drawChordName(
+		ctx,
+		`${prefs.timeline.fontWeightChord} ${rect.h * 0.2}px ${prefs.timeline.fontNameChord}`,
+		`${prefs.timeline.fontWeightChord} ${rect.h * 0.15}px ${prefs.timeline.fontNameChord}`,
+		chordStr.nameBase,
+		chordStr.nameSup,
+		chordStr.nameSub,
+		rect.xCenter,
+		rect.yCenter + rect.h * (0.05 + 0.22),
+		rect.h * 0.5,
+		rect.h * 0.05,
+		maxWidth)
+}
+
+
+function drawChordName(
+	ctx: CanvasRenderingContext2D,
+	fontBase: string,
+	fontSupSub: string,
+	strBase: string,
+	strSup: string,
+	strSub: string,
+	xCenter: number,
+	yCenter: number,
+	height: number,
+	supSubHeightOffset: number,
+	maxWidth: number)
+{
+	ctx.textAlign = "left"
+	ctx.textBaseline = "middle"
+
+	ctx.font = fontBase
+	const baseMetrics = ctx.measureText(strBase)
+	ctx.font = fontSupSub
+	const supMetrics = ctx.measureText(strSup)
+	const subMetrics = ctx.measureText(strSub)
+
+	let baseWidth = baseMetrics.width
+	let supSubWidth = Math.max(supMetrics.width, subMetrics.width)
+	if (baseWidth + supSubWidth > maxWidth)
+	{
+		const supSubWidthProportion = supSubWidth / (baseWidth + supSubWidth)
+		baseWidth = maxWidth * (1 - supSubWidthProportion)
+		supSubWidth = maxWidth * supSubWidthProportion
+	}
+
+	const strTotalWidth = baseWidth + supSubWidth
+
+	ctx.fillText(
+		strSup,
+		xCenter - strTotalWidth / 2 + baseWidth,
+		yCenter - supSubHeightOffset,
+		supSubWidth)
+
+	ctx.fillText(
+		strSub,
+		xCenter - strTotalWidth / 2 + baseWidth,
+		yCenter + supSubHeightOffset,
+		supSubWidth)
+	
+	ctx.font = fontBase
+	ctx.fillText(
+		strBase,
+		xCenter - strTotalWidth / 2,
+		yCenter,
+		baseWidth)
 }

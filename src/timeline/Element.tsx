@@ -34,7 +34,7 @@ function canvasResize(
     canvas: HTMLCanvasElement,
     timeline: Timeline.State)
 {
-    const pixelRatio = window.devicePixelRatio || 1
+    const pixelRatio = window.devicePixelRatio ?? 1
     
     const domRect = div.getBoundingClientRect()
     const x = Math.floor(domRect.x)
@@ -48,8 +48,8 @@ function canvasResize(
         timeline.renderRect.h === h)
         return
     
-    canvas.style.width = domRect.width + "px"
-    canvas.style.height = domRect.height + "px"
+    canvas.style.width = Math.floor(domRect.width) + "px"
+    canvas.style.height = Math.floor(domRect.height) + "px"
     canvas.width = w
     canvas.height = h
 

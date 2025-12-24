@@ -221,7 +221,7 @@ function drawChord(
 
     CanvasUtils.drawChord(
         ctx,
-        Rect.fromVertices(x1, element.rect.y, x2, element.rect.y2),
+        element.rect,
         prefs,
         element.chord.chord,
         element.key)
@@ -588,6 +588,9 @@ function drawCursorBeam(
     
     const laneMin = timeline.layout.lanes[laneIndexMin]
     const laneMax = timeline.layout.lanes[laneIndexMax]
+
+    if (!laneMin || !laneMax)
+        return
     
     const x = 0.5 + Math.floor(Timeline.xAtTime(timeline, time))
     
