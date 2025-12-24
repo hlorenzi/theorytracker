@@ -9,14 +9,17 @@ import * as CanvasUtils from "../utils/canvasUtils.ts"
 import { styled } from "solid-styled-components"
 
 
+type Stacking = 0 | 7 | 9 | 11 | 13
+
+
 export function InspectorChord(props: {
     value?: Project.Chord,
     setValue: (newValue: Project.Chord) => void,
     key: Theory.Key,
 })
 {
-    const [seventh, setSeventh] = Solid.createSignal(
-        !props.value ? false : props.value?.chord.add7 !== undefined)
+    const [stacking, setStacking] = Solid.createSignal<Stacking>(
+        !props.value ? 0 : props.value?.chord.add7 !== undefined ? 7 : 0)
 
     const [suspended2, setSuspended2] = Solid.createSignal(
         !props.value ? false :
@@ -28,22 +31,119 @@ export function InspectorChord(props: {
             props.value?.chord.sus4 !== undefined &&
             props.value?.chord.add3 === undefined)
 
+    const [add9, setAdd9] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add9 !== undefined)
+
+    const [add11, setAdd11] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add11 !== undefined)
+
+    const [add13, setAdd13] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add13 !== undefined)
+
+    const [no3, setNo3] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add3 === undefined)
+
+    const [no5, setNo5] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add5 === undefined)
+
+    const [flat5, setFlat5] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add5 === -1)
+
+    const [sharp5, setSharp5] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add5 === 1)
+
+    const [flat9, setFlat9] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add9 === -1)
+
+    const [sharp9, setSharp9] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add9 === 1)
+
+    const [sharp11, setSharp11] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add11 === 1)
+
+    const [flat13, setFlat13] = Solid.createSignal(
+        !props.value ? false :
+            props.value?.chord.add13 === -1)
+
     const makeChordButton = Solid.createMemo(() => {
-        const withAdded7 = seventh()
+        const withStacking = stacking()
         const withSus2 = suspended2()
         const withSus4 = suspended4()
+        const withAdd9 = add9()
+        const withAdd11 = add11()
+        const withAdd13 = add13()
+        const withNo3 = no3()
+        const withNo5 = no5()
+        const withFlat5 = flat5()
+        const withSharp5 = sharp5()
+        const withFlat9 = flat9()
+        const withSharp9 = sharp9()
+        const withSharp11 = sharp11()
+        const withFlat13 = flat13()
         
         return (degree: number) => {
             let chord = Theory.Chord.fromDiatonicTriad(props.key, degree)
 
-            if (withAdded7)
+            if (withStacking >= 7)
                 chord = chord.withAdded7(props.key)
+
+            if (withStacking >= 9)
+                chord = chord.withAdded9(props.key)
+
+            if (withStacking >= 11)
+                chord = chord.withAdded11(props.key)
+
+            if (withStacking >= 13)
+                chord = chord.withAdded13(props.key)
 
             if (withSus2)
                 chord = chord.withSuspended2(props.key)
 
             if (withSus4)
                 chord = chord.withSuspended4(props.key)
+
+            if (withAdd9)
+                chord = chord.withAdded9(props.key)
+
+            if (withAdd11)
+                chord = chord.withAdded11(props.key)
+
+            if (withAdd13)
+                chord = chord.withAdded13(props.key)
+
+            if (withFlat5)
+                chord = chord.withAdded5(props.key, -1)
+
+            if (withSharp5)
+                chord = chord.withAdded5(props.key, 1)
+
+            if (withFlat9)
+                chord = chord.withAdded9(props.key, -1)
+
+            if (withSharp9)
+                chord = chord.withAdded9(props.key, 1)
+
+            if (withSharp11)
+                chord = chord.withAdded11(props.key, 1)
+
+            if (withFlat13)
+                chord = chord.withAdded13(props.key, -1)
+
+            if (withNo3)
+                chord = chord.withNo3()
+
+            if (withNo5)
+                chord = chord.withNo5()
 
             console.log(degree, chord)
 
@@ -85,21 +185,98 @@ export function InspectorChord(props: {
             <div>
                 <input
                     type="checkbox"
-                    checked={ seventh() }
-                    onChange={ ev => setSeventh(ev.target.checked) }
+                    checked={ stacking() === 0 }
+                    onChange={ ev => setStacking(0) }
+                /> Triad
+                <input
+                    type="checkbox"
+                    checked={ stacking() === 7 }
+                    onChange={ ev => setStacking(7) }
                 /> 7
+                <input
+                    type="checkbox"
+                    checked={ stacking() === 9 }
+                    onChange={ ev => setStacking(9) }
+                /> 9
+                <input
+                    type="checkbox"
+                    checked={ stacking() === 11 }
+                    onChange={ ev => setStacking(11) }
+                /> 11
+                <input
+                    type="checkbox"
+                    checked={ stacking() === 13 }
+                    onChange={ ev => setStacking(13) }
+                /> 13
                 <br/>
                 <input
                     type="checkbox"
                     checked={ suspended2() }
                     onChange={ ev => setSuspended2(ev.target.checked) }
                 /> sus2
-                <br/>
                 <input
                     type="checkbox"
                     checked={ suspended4() }
                     onChange={ ev => setSuspended4(ev.target.checked) }
                 /> sus4
+                <br/>
+                <input
+                    type="checkbox"
+                    checked={ add9() }
+                    onChange={ ev => setAdd9(ev.target.checked) }
+                /> add9
+                <input
+                    type="checkbox"
+                    checked={ add11() }
+                    onChange={ ev => setAdd11(ev.target.checked) }
+                /> add11
+                <input
+                    type="checkbox"
+                    checked={ add13() }
+                    onChange={ ev => setAdd13(ev.target.checked) }
+                /> add13
+                <br/>
+                <input
+                    type="checkbox"
+                    checked={ no3() }
+                    onChange={ ev => setNo3(ev.target.checked) }
+                /> no3
+                <input
+                    type="checkbox"
+                    checked={ no5() }
+                    onChange={ ev => setNo5(ev.target.checked) }
+                /> no5
+                <input
+                    type="checkbox"
+                    checked={ flat5() }
+                    onChange={ ev => setFlat5(ev.target.checked) }
+                /> flat5
+                <input
+                    type="checkbox"
+                    checked={ sharp5() }
+                    onChange={ ev => setSharp5(ev.target.checked) }
+                /> sharp5
+                <br/>
+                <input
+                    type="checkbox"
+                    checked={ flat9() }
+                    onChange={ ev => setFlat9(ev.target.checked) }
+                /> flat9
+                <input
+                    type="checkbox"
+                    checked={ sharp9() }
+                    onChange={ ev => setSharp9(ev.target.checked) }
+                /> sharp9
+                <input
+                    type="checkbox"
+                    checked={ sharp11() }
+                    onChange={ ev => setSharp11(ev.target.checked) }
+                /> sharp11
+                <input
+                    type="checkbox"
+                    checked={ flat13() }
+                    onChange={ ev => setFlat13(ev.target.checked) }
+                /> flat13
                 <br/>
             </div>
 

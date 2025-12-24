@@ -99,7 +99,8 @@ export function drawChord(
 		rect.xCenter,
 		rect.yCenter + rect.h * (0.05 - 0.1),
 		rect.h * 0.5,
-		rect.h * 0.15,
+		rect.h * -0.15,
+		rect.h * 0.05,
 		maxWidth)
 		
 	drawChordName(
@@ -112,6 +113,7 @@ export function drawChord(
 		rect.xCenter,
 		rect.yCenter + rect.h * (0.05 + 0.22),
 		rect.h * 0.5,
+		rect.h * -0.05,
 		rect.h * 0.05,
 		maxWidth)
 }
@@ -127,7 +129,8 @@ function drawChordName(
 	xCenter: number,
 	yCenter: number,
 	height: number,
-	supSubHeightOffset: number,
+	supHeightOffset: number,
+	subHeightOffset: number,
 	maxWidth: number)
 {
 	ctx.textAlign = "left"
@@ -153,13 +156,13 @@ function drawChordName(
 	ctx.fillText(
 		strSup,
 		xCenter - strTotalWidth / 2 + baseWidth,
-		yCenter - supSubHeightOffset,
+		yCenter + supHeightOffset,
 		supSubWidth)
 
 	ctx.fillText(
 		strSub,
 		xCenter - strTotalWidth / 2 + baseWidth,
-		yCenter + supSubHeightOffset,
+		yCenter + subHeightOffset,
 		supSubWidth)
 	
 	ctx.font = fontBase
