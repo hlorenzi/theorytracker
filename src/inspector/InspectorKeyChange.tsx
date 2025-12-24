@@ -10,26 +10,52 @@ import { styled } from "solid-styled-components"
 
 export function InspectorKeyChange(props: {
     value: Project.KeyChange,
-    setValue: (newValue: Project.KeyChange) => void,
+    upsertElem: (newValue: Project.KeyChange) => void,
 })
 {
-    const tonic = props.value.key.tonic
-    const scale = props.value.key.scale
+    const [currKey, setCurrKey] = Solid.createSignal(props.value.key)
+    const circleOfFifthsOffset = Solid.createMemo(() => currKey().scale.metadata?.circleOfFifthsOffset ?? 0)
+    let needsScaleScroll = true
 
-    const circleOfFifthsOffset = scale.metadata?.circleOfFifthsOffset ?? 0
+
+    const applyKey = (key: Theory.Key) => {
+        setCurrKey(key)
+        const project = Global.get().project
+        const keyCh = Project.getTypedElem(project.root, props.value.id, "keyChange")
+        if (keyCh)
+            props.upsertElem({...keyCh, key })
+    }
+
+
+    const applyTonic = (tonic: Theory.PitchName) => {
+        const project = Global.get().project
+        const keyCh = Project.getTypedElem(project.root, props.value.id, "keyChange")
+        if (keyCh)
+        {
+            const key = new Theory.Key(tonic, keyCh.key.scale)
+            applyKey(key)
+        }
+    }
+
+
+    const applyScale = (scaleId: string) => {
+        const project = Global.get().project
+        const scale = Theory.Scale.fromId(scaleId)
+        const keyCh = Project.getTypedElem(project.root, props.value.id, "keyChange")
+        if (keyCh)
+        {
+            const key = new Theory.Key(keyCh.key.tonic, scale)
+            applyKey(key)
+        }
+    }
 
     
-    const makeTonicButton = (circleOfFifthsIndex: number) => {
-        const letter = Theory.Utils.circleOfFifthsToLetter(circleOfFifthsIndex + circleOfFifthsOffset)
-        const accidental = Theory.Utils.circleOfFifthsToAccidental(circleOfFifthsIndex + circleOfFifthsOffset)
+    const makeTonicButton = Solid.createMemo(() => (circleOfFifthsIndex: number) => {
+        const letter = Theory.Utils.circleOfFifthsToLetter(circleOfFifthsIndex + circleOfFifthsOffset())
+        const accidental = Theory.Utils.circleOfFifthsToAccidental(circleOfFifthsIndex + circleOfFifthsOffset())
         const letterStr = Theory.Utils.letterToStr(letter)
         const accidentalStr = Theory.Utils.accidentalToStr(accidental)
         const pitchName = new Theory.PitchName(letter, accidental)
-        const key = new Theory.Key(pitchName, props.value.key.scale)
-
-        const apply = () => {
-            props.setValue({...props.value, key })
-        }
 
         const angleArc = Math.PI * 2 / 12
         const angle1 = (circleOfFifthsIndex - 0.5) * angleArc
@@ -62,9 +88,9 @@ export function InspectorKeyChange(props: {
         return <g>
             <CircleOfFifthsPath
                 d={ path }
-                onClick={ apply }
+                onClick={ () => applyTonic(pitchName) }
                 fill="#444"
-                $selected={ tonic.chroma === pitchName.chroma }
+                $selected={ currKey().tonic.chroma === pitchName.chroma }
             />
             <text
                 x={ (trigX1 + trigX2) / 2 * (radius1 + radius2) / 1.9 }
@@ -80,14 +106,7 @@ export function InspectorKeyChange(props: {
                 { letterStr }{ accidentalStr }
             </text>
         </g>
-    }
-
-
-    const applyScale = (scaleId: string) => {
-        const scale = Theory.Scale.fromId(scaleId)
-        const key = new Theory.Key(props.value.key.tonic, scale)
-        props.setValue({...props.value, key })
-    }
+    })
 
 
     const makeScaleOption = (scaleMeta: Theory.ScaleMetadata) => {
@@ -122,13 +141,16 @@ export function InspectorKeyChange(props: {
     }
 
 
-    const makeScaleOption2 = (scaleMeta: Theory.ScaleMetadata) => {
-        const isSelected = scaleMeta.id === scale.id
+    const makeScaleOption2 = Solid.createMemo(() => (scaleMeta: Theory.ScaleMetadata) => {
+        const isSelected = scaleMeta.id === currKey().scale.id
         let button: HTMLButtonElement | undefined = undefined
         
         Solid.createEffect(() => {
-            if (isSelected && button)
+            if (needsScaleScroll && isSelected && button)
+            {
                 (button as HTMLButtonElement).scrollIntoView({ behavior: "instant", block: "center" })
+                needsScaleScroll = false
+            }
         })
 
         return <ScaleButton
@@ -161,7 +183,7 @@ export function InspectorKeyChange(props: {
                 </Solid.For>
             </span>
         </ScaleButton>
-    }
+    })
 
 
     return <>
@@ -169,15 +191,15 @@ export function InspectorKeyChange(props: {
             <h2 style={{ "grid-column": "1 / -1" }}>Key Change</h2>
 
             <svg width="12em" height="12em" viewBox="-100 -100 201 201">
-                <Solid.For each={ [0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1] }>
-                    { (index, i) => makeTonicButton(index) }
-                </Solid.For>
+                { [0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1].map(
+                    (index, i) => makeTonicButton()(index)
+                )}
             </svg>
 
             <ScaleList>
-                <Solid.For each={ Theory.Scale.list }>
-                    { (scaleMeta, i) => makeScaleOption2(scaleMeta) }
-                </Solid.For>
+                { Theory.Scale.list.map(
+                    (scaleMeta, i) => makeScaleOption2()(scaleMeta)
+                )}
             </ScaleList>
 
             {/*<StyledSelect

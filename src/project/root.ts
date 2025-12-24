@@ -288,25 +288,31 @@ export function withRefreshedRange(project: ImmutableRoot): ImmutableRoot
 
 export function getElem(
     project: ImmutableRoot,
-    id: Project.ID)
+    id: Project.ID | undefined)
     : Project.Element | undefined
 {
+    if (id === undefined)
+        return undefined
+
     return project.elems.get(id)
 }
 
 
-/*export function getElem<T extends Project.Element["type"]>(
+export function getTypedElem<T extends Project.Element["type"]>(
     project: ImmutableRoot,
-    id: Project.ID,
+    id: Project.ID | undefined,
     type: T)
-    : Extract<Project.Element, { type: T }> | null
+    : Extract<Project.Element, { type: T }> | undefined
 {
+    if (id === undefined)
+        return undefined
+
     const elem = project.elems.get(id)
-    if (!elem || elem.type != type)
-        return null
+    if (!elem || elem.type !== type)
+        return undefined
 
     return elem as Extract<Project.Element, { type: T }>
-}*/
+}
 
 
 export function getTrack<T extends Project.Track["trackType"]>(

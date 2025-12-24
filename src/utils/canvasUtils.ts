@@ -66,7 +66,31 @@ export function drawChord(
 		key.degreeForMidi(chord.rootChroma) + mode,
 		false)
 		
+	const ornamentH = 6
+
 	ctx.fillStyle = fillStyle
+	
+	/*ctx.save()
+	ctx.beginPath()
+	ctx.roundRect(
+		rect.x,
+		rect.y,
+		rect.w,
+		rect.h,
+		5)
+	ctx.clip()
+	ctx.fillRect(
+		rect.x,
+		rect.y,
+		rect.w,
+		ornamentH)
+	ctx.fillRect(
+		rect.x,
+		rect.y2 - ornamentH,
+		rect.w,
+		ornamentH)
+	ctx.restore()*/
+
 	ctx.beginPath()
 	ctx.roundRect(
 		rect.x,
@@ -76,8 +100,7 @@ export function drawChord(
 		5)
 	ctx.fill()
 
-	const ornamentH = 6
-	ctx.fillStyle = "#ddd"
+	ctx.fillStyle = "#fffe"
 	ctx.fillRect(
 		rect.x,
 		rect.y + ornamentH,

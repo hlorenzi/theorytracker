@@ -14,42 +14,55 @@ type Stacking = 0 | 7 | 9 | 11 | 13
 
 export function InspectorChord(props: {
     value?: Project.Chord,
-    setValue: (newValue: Project.Chord) => void,
+    insertElem?: (newValue: Theory.Chord) => void,
+    upsertElem?: (newValue: Project.Chord) => void,
     key: Theory.Key,
 })
 {
     const [stacking, setStacking] = Solid.createSignal<Stacking>(
-        !props.value ? 0 : props.value?.chord.add7 !== undefined ? 7 : 0)
+        !props.value ? 0 :
+            props.value?.chord.add7 !== undefined ?
+                props.value?.chord.add9 !== undefined ?
+                    props.value?.chord.add11 !== undefined ?
+                        props.value?.chord.add13 !== undefined ? 13 :
+                    11 :
+                9 :
+            7 :
+        0)
 
     const [suspended2, setSuspended2] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.sus2 !== undefined &&
-            props.value?.chord.add3 === undefined)
+            props.value?.chord.sus2 !== undefined)
 
     const [suspended4, setSuspended4] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.sus4 !== undefined &&
-            props.value?.chord.add3 === undefined)
+            props.value?.chord.sus4 !== undefined)
 
     const [add9, setAdd9] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.add9 !== undefined)
+            props.value?.chord.add7 === undefined &&
+            props.value?.chord.add9 === 0)
 
     const [add11, setAdd11] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.add11 !== undefined)
+            props.value?.chord.add7 === undefined &&
+            props.value?.chord.add9 === undefined &&
+            props.value?.chord.add11 === 0)
 
     const [add13, setAdd13] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.add13 !== undefined)
+            props.value?.chord.add7 === undefined &&
+            props.value?.chord.add9 === undefined &&
+            props.value?.chord.add11 === undefined &&
+            props.value?.chord.add13 === 0)
 
     const [no3, setNo3] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.add3 === undefined)
+            !!props.value?.chord.no3)
 
     const [no5, setNo5] = Solid.createSignal(
         !props.value ? false :
-            props.value?.chord.add5 === undefined)
+            !!props.value?.chord.no5)
 
     const [flat5, setFlat5] = Solid.createSignal(
         !props.value ? false :
@@ -74,6 +87,15 @@ export function InspectorChord(props: {
     const [flat13, setFlat13] = Solid.createSignal(
         !props.value ? false :
             props.value?.chord.add13 === -1)
+
+    const applyChord = (chord: Theory.Chord) => {
+        //setCurrKey(key)
+        props.insertElem?.(chord)
+        const project = Global.get().project
+        const projChord = Project.getTypedElem(project.root, props.value?.id, "chord")
+        if (projChord)
+            props.upsertElem?.({...projChord, chord })
+    }
 
     const makeChordButton = Solid.createMemo(() => {
         const withStacking = stacking()
@@ -164,7 +186,9 @@ export function InspectorChord(props: {
                     props.key)
             })
 
-            return <ChordButton>
+            return <ChordButton
+                onClick={ () => applyChord(chord) }
+            >
                 <ChordCanvas
                     ref={ canvas }
                 />

@@ -60,6 +60,11 @@ function drawLane(
         drawElements(timeline, prefs, ctx, lane.elements)
         ctx.restore()
 
+        ctx.save()
+        ctx.globalAlpha = 0.05
+        drawLaneBkgMeasures(timeline, prefs, ctx, lane, false)
+        drawLaneBkgMeasures(timeline, prefs, ctx, lane, true)
+        ctx.restore()
         drawLaneFrgOutline(timeline, prefs, ctx, lane)
 
         ctx.restore()

@@ -5,6 +5,7 @@ import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
 import Rect from "../utils/rect.ts"
+import Rational from "../utils/rational.ts"
 import { styled } from "solid-styled-components"
 
 
@@ -20,9 +21,9 @@ export function InspectorRoot(props: {})
         return ids
     })
 
-    const firstElem = Solid.createMemo(() => {
+    const firstElemId = Solid.createMemo(() => {
         if (selectedIds().count() !== 1)
-            return null
+            return undefined
 
         const project = Global.get().project
 
@@ -34,22 +35,33 @@ export function InspectorRoot(props: {})
                 break
         }
 
-        return firstElem
+        return firstElem?.id
     })
 
+    const project = Global.get().project
+
     const inspectorKind = Solid.createMemo(() => {
-        const setValue = (elem: Project.Element) => {
-            const project = Global.get().project
+        const upsertElem = (elem: Project.Element) => {
+            console.log(elem)
             project.root = Project.upsertElement(project.root, elem)
             Global.refresh()
         }
 
-        const elem = firstElem()
+        const elemId = firstElemId()
+        const elem = Project.getElem(project.root, elemId)
+        const key = Project.keyAt(project.root, project.root.keyChangeTrackId, elem?.range.start ?? new Rational(0))
 
         if (elem?.type === "keyChange")
             return <Inspector.InspectorKeyChange
                 value={ elem }
-                setValue={ setValue }
+                upsertElem={ upsertElem }
+            />
+        
+        if (elem?.type === "chord")
+            return <Inspector.InspectorChord
+                key={ key }
+                value={ elem }
+                upsertElem={ upsertElem }
             />
         
         return <Inspector.InspectorInsert/>

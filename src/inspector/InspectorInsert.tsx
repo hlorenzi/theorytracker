@@ -51,6 +51,21 @@ export function InspectorInsert(props: {
         Global.refresh()
     }
 
+    const insertChord = (chord: Theory.Chord) => {
+        const project = Global.get().project
+        const timeline = Global.get().timeline
+        const time = timeline.cursor.time1
+        const id = project.root.nextId
+        const trackId = project.root.chordTrackId
+        Timeline.insertChord(timeline, project, trackId, time, chord)
+        Timeline.selectionClear(timeline)
+        Timeline.selectionAdd(timeline, id)
+        Timeline.selectionResolveOverlappingAndDegenerate(timeline, project)
+        Timeline.selectionClear(timeline)
+        timeline.cursor.visible = true
+        Global.refresh()
+    }
+
     return <Layout>
         <button onClick={ insertKeyChange }>
             + Key Change
@@ -61,7 +76,7 @@ export function InspectorInsert(props: {
         <br/>
         <Inspector.InspectorChord
             key={ key() }
-            setValue={ () => {} }
+            insertElem={ insertChord }
         />
     </Layout>
 }
