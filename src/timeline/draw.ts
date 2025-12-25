@@ -50,21 +50,21 @@ function drawLane(
             lane.rect.h)
         ctx.clip()
 
+        ctx.translate(lane.rect.x, lane.rect.y)
+
         drawLaneBkgSolid(timeline, prefs, ctx, lane)
+        drawLaneBkgOutOfBounds(timeline, prefs, ctx, lane)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, false)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, true)
         drawCursorBkg(timeline, prefs, ctx, lane)
-
-        ctx.save()
-        ctx.translate(lane.rect.x, lane.rect.y)
         drawElements(timeline, prefs, ctx, lane.elements)
-        ctx.restore()
-
+        
         ctx.save()
         ctx.globalAlpha = 0.05
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, false)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, true)
         ctx.restore()
+
         drawLaneFrgOutline(timeline, prefs, ctx, lane)
 
         ctx.restore()
@@ -81,15 +81,16 @@ function drawLane(
             lane.rect.h)
         ctx.clip()
 
+        ctx.translate(lane.rect.x, lane.rect.y)
+
         drawLaneBkgSolid(timeline, prefs, ctx, lane)
+        drawLaneBkgOutOfBounds(timeline, prefs, ctx, lane)
+        drawLaneBkgChordTones(timeline, prefs, ctx, lane)
         drawLaneBkgOctaves(timeline, prefs, ctx, lane, false)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, false)
         drawLaneBkgOctaves(timeline, prefs, ctx, lane, true)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, true)
         drawCursorBkg(timeline, prefs, ctx, lane)
-
-        ctx.save()
-        ctx.translate(lane.rect.x, lane.rect.y)
         drawElements(timeline, prefs, ctx, lane.elements)
 
         for (const tuple of lane.tupleIndicators)
@@ -112,8 +113,6 @@ function drawLane(
                 tuple.rect.xCenter,
                 tuple.rect.y2 + 8)
         }
-
-        ctx.restore()
 
         drawLaneFrgOutline(timeline, prefs, ctx, lane)
 
@@ -163,7 +162,7 @@ function drawElements(
             const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
 
             const key = element.key
-            const mode = key.scale.metadata!.mode
+            const mode = key.scale.metadata?.mode ?? 0
             const fillStyle = CanvasUtils.fillStyleForDegree(
                 ctx,
                 key.degreeForMidi(element.note.midiPitch) + mode,
@@ -362,8 +361,8 @@ export function drawLaneBkgSolid(
     {
         ctx.fillStyle = prefs.timeline.bkgColor
         ctx.fillRect(
-            lane.rect.x,
-            lane.rect.y,
+            0,
+            0,
             lane.rect.w,
             lane.rect.h)
 
@@ -381,9 +380,56 @@ export function drawLaneBkgSolid(
 
         ctx.fillRect(
             x1,
-            lane.rect.y,
+            0,
             x2 - x1,
             lane.rect.h)
+    }
+}
+
+
+export function drawLaneBkgChordTones(
+    timeline: Timeline.State,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D,
+    lane: Timeline.Lane)
+{
+    const rowAtTop = Timeline.rowAtY(timeline, lane, 0)
+    const rowAtBottom = Timeline.rowAtY(timeline, lane, lane.rect.h)
+
+    const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
+    const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
+
+    // Render alternating measure background and sub-measure dividers.
+    for (const chordRegion of timeline.layout.chordRegions)
+    {
+        const key = chordRegion.key
+        const scaleLength = key.scale.chromas.length
+
+        for (const tone of chordRegion.tones)
+        {
+            const mode = key.scale.metadata?.mode ?? 0
+            const fillStyle = CanvasUtils.fillStyleForDegree(
+                ctx,
+                tone.degree + mode,
+                true)
+            
+            for (let i = octaveAtBottom; i <= octaveAtTop; i++)
+            {
+                const y = Math.floor(
+                    Timeline.yForRow(timeline, lane, tone.row + (5 + i) * scaleLength) +
+                    timeline.noteRowH)
+            
+                ctx.fillStyle = fillStyle
+                ctx.beginPath()
+                ctx.roundRect(
+                    chordRegion.x1,
+                    y,
+                    chordRegion.x2 - chordRegion.x1,
+                    timeline.noteRowH,
+                    timeline.noteRowH / 4)
+                ctx.fill()
+            }
+        }
     }
 }
 
@@ -397,11 +443,43 @@ export function drawLaneFrgOutline(
     ctx.strokeStyle = prefs.timeline.measureColor
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(lane.rect.x, lane.rect.y)
-    ctx.lineTo(lane.rect.x + lane.rect.w, lane.rect.y)
-    ctx.moveTo(lane.rect.x, lane.rect.y + lane.rect.h)
-    ctx.lineTo(lane.rect.x + lane.rect.w, lane.rect.y + lane.rect.h)
+    ctx.moveTo(0, 0)
+    ctx.lineTo(lane.rect.w, 0)
+    ctx.moveTo(0, lane.rect.h)
+    ctx.lineTo(lane.rect.w, lane.rect.h)
     ctx.stroke()
+}
+
+
+export function drawLaneBkgOutOfBounds(
+    timeline: Timeline.State,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D,
+    lane: Timeline.Lane)
+{
+    ctx.fillStyle = CanvasUtils.fillStyleForOutOfBounds(ctx, prefs)
+    
+    const leftX2 = Math.floor(Timeline.xAtTime(timeline, timeline.layout.inBoundsRange.start))
+
+    if (leftX2 > 0)
+    {
+        ctx.fillRect(
+            0,
+            0,
+            leftX2,
+            lane.rect.h)
+    }
+
+    const rightX1 = Math.floor(Timeline.xAtTime(timeline, timeline.layout.inBoundsRange.end))
+    
+    if (rightX1 < lane.rect.w)
+    {
+        ctx.fillRect(
+            rightX1,
+            0,
+            lane.rect.w - rightX1,
+            lane.rect.h)
+    }
 }
 
 
@@ -427,8 +505,8 @@ export function drawLaneBkgMeasures(
             ctx.strokeStyle = prefs.timeline.measureColor
             ctx.lineWidth = 2
             ctx.beginPath()
-            ctx.moveTo(x1 + 0.5, lane.rect.y)
-            ctx.lineTo(x1 + 0.5, lane.rect.y + lane.rect.h)
+            ctx.moveTo(x1 + 0.5, 0)
+            ctx.lineTo(x1 + 0.5, lane.rect.h)
             ctx.stroke()
         }
 
@@ -445,8 +523,8 @@ export function drawLaneBkgMeasures(
                 if (submeasureX >= x2)
                     break
 
-                ctx.moveTo(submeasureX, lane.rect.y)
-                ctx.lineTo(submeasureX, lane.rect.y + lane.rect.h)
+                ctx.moveTo(submeasureX, 0)
+                ctx.lineTo(submeasureX, lane.rect.h)
             }
 
             ctx.stroke()
@@ -467,8 +545,8 @@ export function drawLaneBkgMeasures(
             ctx.strokeStyle = color
             ctx.lineWidth = 2
             ctx.beginPath()
-            ctx.moveTo(x + 0.5, lane.rect.y)
-            ctx.lineTo(x + 0.5, lane.rect.y + lane.rect.h)
+            ctx.moveTo(x + 0.5, 0)
+            ctx.lineTo(x + 0.5, lane.rect.h)
             ctx.stroke()
         }
     }
@@ -482,8 +560,8 @@ export function drawLaneBkgOctaves(
     lane: Timeline.Lane,
     mainLinePass: boolean)
 {
-    const rowAtTop = Timeline.rowAtY(timeline, lane, lane.rect.y)
-    const rowAtBottom = Timeline.rowAtY(timeline, lane, lane.rect.y + lane.rect.h)
+    const rowAtTop = Timeline.rowAtY(timeline, lane, 0)
+    const rowAtBottom = Timeline.rowAtY(timeline, lane, lane.rect.h)
 
     const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
     const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
@@ -519,7 +597,8 @@ export function drawLaneBkgOctaves(
             for (let i = octaveAtBottom; i <= octaveAtTop; i++)
             {
                 const y = Math.floor(
-                    Timeline.yForRow(timeline, lane, tonicRowOffset + i * scaleLength) + timeline.noteRowH)
+                    Timeline.yForRow(timeline, lane, tonicRowOffset + i * scaleLength) +
+                    timeline.noteRowH)
                 
                 if (mainLinePass)
                 {
@@ -647,8 +726,8 @@ function drawCursorBkg(
         laneIndexMax < lane.laneIndex)
         return
 
-    const y1 = Math.floor(lane.rect.y)
-    const y2 = Math.floor(lane.rect.y2)
+    const y1 = 0
+    const y2 = Math.floor(lane.rect.h)
     
     const x1 = Timeline.xAtTime(timeline, timeMin)
     const x2 = Timeline.xAtTime(timeline, timeMax)

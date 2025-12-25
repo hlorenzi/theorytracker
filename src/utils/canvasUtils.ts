@@ -4,25 +4,17 @@ import * as MathUtils from "./mathUtils"
 import Rect from "./rect"
 
 
-const fillPatterns = new Map()
+const fillPatterns = new Map<string, CanvasPattern>()
 
 
-export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number, external: boolean): any
+function createStripedPattern(
+	cacheKey: string,
+	ctx: CanvasRenderingContext2D,
+	color1: string,
+	color2: string)
 {
-	degree = MathUtils.mod(degree, 7)
-
-	const colorFn = external ? Theory.Utils.degreeToColorFaded : Theory.Utils.degreeToColor
-
-	if (Math.floor(degree) === degree)
-		return colorFn(degree)
-
-	const cacheKey = degree + (external ? 100 : 0)
-	
 	if (fillPatterns.has(cacheKey))
 		return fillPatterns.get(cacheKey)
-	
-	const colorBefore = colorFn(MathUtils.mod(Math.floor(degree), 7))
-	const colorAfter  = colorFn(MathUtils.mod(Math.ceil(degree), 7))
 	
 	const canvas = document.createElement("canvas")
 	canvas.width = 24
@@ -31,10 +23,10 @@ export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number
 	document.body.appendChild(canvas)
 	
 	let ctxPatt = canvas.getContext("2d")!
-	ctxPatt.fillStyle = colorBefore
+	ctxPatt.fillStyle = color1
 	ctxPatt.fillRect(0, 0, 24, 24)
 	
-	ctxPatt.fillStyle = colorAfter
+	ctxPatt.fillStyle = color2
 	ctxPatt.beginPath()
 	ctxPatt.moveTo(12, 0)
 	ctxPatt.lineTo(24, 0)
@@ -47,9 +39,49 @@ export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number
 	ctxPatt.lineTo(24 - 12, 24)
 	ctxPatt.fill()
 	
-	const pattern = ctx.createPattern(canvas, "repeat")
+	const pattern = ctx.createPattern(canvas, "repeat")!
 	fillPatterns.set(cacheKey, pattern)
 	return pattern
+}
+
+
+export function fillStyleForDegree(ctx: CanvasRenderingContext2D, degree: number, external: boolean): any
+{
+	degree = MathUtils.mod(degree, 7)
+
+	const colorFn = external ?
+		Theory.Utils.degreeToColorFaded :
+		Theory.Utils.degreeToColor
+
+	if (Math.floor(degree) === degree)
+		return colorFn(degree)
+
+	const cacheKey = degree.toString() + (external ? ".ext" : 0)
+	
+	if (fillPatterns.has(cacheKey))
+		return fillPatterns.get(cacheKey)
+	
+	const color1 = colorFn(MathUtils.mod(Math.floor(degree), 7))
+	const color2 = colorFn(MathUtils.mod(Math.ceil(degree), 7))
+
+	return createStripedPattern(
+		cacheKey,
+		ctx,
+		color1,
+		color2)	
+}
+
+
+export function fillStyleForOutOfBounds(
+	ctx: CanvasRenderingContext2D,
+	prefs: Prefs.Prefs)
+	: any
+{
+	return createStripedPattern(
+		"oob",
+		ctx,
+		prefs.timeline.outOfBoundsColor1,
+		prefs.timeline.outOfBoundsColor2)	
 }
 
 

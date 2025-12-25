@@ -95,7 +95,7 @@ export function makeTest(): ImmutableRoot
             Range.fromStartDuration(new Rational(i * 4, 4), new Rational(4, 4)),
             Theory.Chord.fromDiatonicTriad(Theory.Key.parse("C Major"), i)))
 
-    return project
+    return withRefreshedRange(project)
 }
 
 
@@ -278,8 +278,8 @@ export function withRefreshedRange(project: ImmutableRoot): ImmutableRoot
             range = range.merge(list.getTotalRange())
     }
 
-    if (range.start.compare(project.range.start) == 0 &&
-        range.end.compare(project.range.end) == 0)
+    if (range.start.compare(project.range.start) === 0 &&
+        range.end.compare(project.range.end) === 0)
         return project
 
     return { ...project, range }

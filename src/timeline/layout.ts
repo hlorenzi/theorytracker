@@ -102,8 +102,26 @@ export interface KeyRegion
 {
     keyCh1: Project.KeyChange
     keyCh2: Project.KeyChange
+    range: Range
     x1: number
     x2: number
+}
+
+
+export interface ChordRegionTone
+{
+    row: number
+    degree: number
+}
+
+
+export interface ChordRegion
+{
+    key: Theory.Key
+    chord: Theory.Chord
+    x1: number
+    x2: number
+    tones: ChordRegionTone[]
 }
 
 
@@ -118,10 +136,12 @@ export interface Marker
 export class Layout
 {
     range: Range
+    inBoundsRange: Range
     lanes: Timeline.Lane[] = []
 
     measures: Project.Measure[] = []
     keyRegions: KeyRegion[] = []
+    chordRegions: ChordRegion[] = []
     markers: Marker[] = []
 
 
@@ -158,8 +178,10 @@ export function layout(
     timeline.layout = layout
     
     layout.range = Timeline.visibleTimeRange(timeline)
+    layout.inBoundsRange = project.range
     layout.measures = [...Project.iterMeasuresAtRange(project, layout.range)]
     layout.keyRegions = [...iterKeyChangePairsAtRange(timeline, project, layout.range)]
+    layout.chordRegions = [...iterChordRegions(timeline, project, layout.keyRegions)]
     layout.markers = []
 
 
@@ -213,6 +235,10 @@ function *iterKeyChangePairsAtRange(
         const keyCh2 =
             pair[1] as Project.KeyChange ??
             Project.makeKeyChange(-1, range.end,   defaultKey)
+
+        const regionRange = new Range(
+            keyCh1.range.start.max(range.start),
+            keyCh2.range.start.min(range.end))
         
         const x1 = Timeline.xAtTime(timeline, keyCh1.range.start)
         const x2 = Timeline.xAtTime(timeline, keyCh2.range.start)
@@ -220,8 +246,50 @@ function *iterKeyChangePairsAtRange(
         yield {
             keyCh1,
             keyCh2,
+            range: regionRange,
             x1,
             x2,
+        }
+    }
+}
+
+
+function *iterChordRegions(
+    timeline: Timeline.State,
+    project: Project.ImmutableRoot,
+    keyRegions: KeyRegion[])
+    : Generator<ChordRegion, void, void>
+{
+    const chordTrackElems = project.lists.get(project.chordTrackId)
+    if (!chordTrackElems)
+        return
+
+    for (const keyRegion of keyRegions)
+    {
+        const key = keyRegion.keyCh1.key
+
+        for (const elem of chordTrackElems.iterAtRange(keyRegion.range))
+        {
+            const chord = elem as Project.Chord
+            const x1 = Timeline.xAtTime(timeline, chord.range.start.max(keyRegion.range.start))
+            const x2 = Timeline.xAtTime(timeline, chord.range.end.min(keyRegion.range.end))
+
+            const tones: ChordRegionTone[] = chord.chord.pitches.map(pitch => {
+                const row = Timeline.rowForPitch(pitch, key)
+                const degree = key.degreeForMidi(pitch)
+                return {
+                    row,
+                    degree,
+                }
+            })
+            
+            yield {
+                key: keyRegion.keyCh1.key,
+                chord: chord.chord,
+                x1,
+                x2,
+                tones,
+            }
         }
     }
 }

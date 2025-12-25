@@ -335,7 +335,25 @@ export default class Chord
     }
 
 
-	clone()
+	isEqual(other: Chord): boolean
+	{
+		return this.rootChroma === other.rootChroma &&
+			this.baseDegree === other.baseDegree &&
+			this.inversion === other.inversion &&
+			this.sus2 === other.sus2 &&
+			this.add3 === other.add3 &&
+			this.no3 === other.no3 &&
+			this.sus4 === other.sus4 &&
+			this.add5 === other.add5 &&
+			this.no5 === other.no5 &&
+			this.add7 === other.add7 &&
+			this.add9 === other.add9 &&
+			this.add11 === other.add11 &&
+			this.add13 === other.add13
+	}
+
+
+	clone(): Chord
 	{
 		const cloned = Object.assign({}, this)
 		Object.setPrototypeOf(cloned, Chord.prototype)

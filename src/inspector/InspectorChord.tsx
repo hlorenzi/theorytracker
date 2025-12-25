@@ -9,9 +9,6 @@ import * as CanvasUtils from "../utils/canvasUtils.ts"
 import { styled } from "solid-styled-components"
 
 
-type Stacking = 0 | 7 | 9 | 11 | 13
-
-
 export function InspectorChord(props: {
     value?: Project.Chord,
     insertElem?: (newValue: Theory.Chord) => void,
@@ -19,77 +16,15 @@ export function InspectorChord(props: {
     key: Theory.Key,
 })
 {
-    const [stacking, setStacking] = Solid.createSignal<Stacking>(
-        !props.value ? 0 :
-            props.value?.chord.add7 !== undefined ?
-                props.value?.chord.add9 !== undefined ?
-                    props.value?.chord.add11 !== undefined ?
-                        props.value?.chord.add13 !== undefined ? 13 :
-                    11 :
-                9 :
-            7 :
-        0)
+    const [currChord, setCurrChord] = Solid.createSignal(props.value?.chord)
 
-    const [suspended2, setSuspended2] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.sus2 !== undefined)
-
-    const [suspended4, setSuspended4] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.sus4 !== undefined)
-
-    const [add9, setAdd9] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add7 === undefined &&
-            props.value?.chord.add9 === 0)
-
-    const [add11, setAdd11] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add7 === undefined &&
-            props.value?.chord.add9 === undefined &&
-            props.value?.chord.add11 === 0)
-
-    const [add13, setAdd13] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add7 === undefined &&
-            props.value?.chord.add9 === undefined &&
-            props.value?.chord.add11 === undefined &&
-            props.value?.chord.add13 === 0)
-
-    const [no3, setNo3] = Solid.createSignal(
-        !props.value ? false :
-            !!props.value?.chord.no3)
-
-    const [no5, setNo5] = Solid.createSignal(
-        !props.value ? false :
-            !!props.value?.chord.no5)
-
-    const [flat5, setFlat5] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add5 === -1)
-
-    const [sharp5, setSharp5] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add5 === 1)
-
-    const [flat9, setFlat9] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add9 === -1)
-
-    const [sharp9, setSharp9] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add9 === 1)
-
-    const [sharp11, setSharp11] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add11 === 1)
-
-    const [flat13, setFlat13] = Solid.createSignal(
-        !props.value ? false :
-            props.value?.chord.add13 === -1)
+    const [chordOptions, setChordOptionsRaw] = Solid.createSignal(
+        props.value ?
+            Theory.ChordOptions.makeFromChord(props.key, props.value?.chord) :
+            Theory.ChordOptions.makeEmpty())
 
     const applyChord = (chord: Theory.Chord) => {
-        //setCurrKey(key)
+        setCurrChord(chord)
         props.insertElem?.(chord)
         const project = Global.get().project
         const projChord = Project.getTypedElem(project.root, props.value?.id, "chord")
@@ -97,76 +32,34 @@ export function InspectorChord(props: {
             props.upsertElem?.({...projChord, chord })
     }
 
+    const setChordOptions = (modifyFn: (old: Theory.ChordOptions) => Theory.ChordOptions) => {
+        const oldOpts = chordOptions()
+        const newOpts = modifyFn(oldOpts)
+        setChordOptionsRaw(newOpts)
+
+        let selectedDegree: number | undefined = undefined
+        for (let degree = 0; degree < 7; degree++)
+        {
+            const chord = Theory.ChordOptions.buildChord(props.key, degree, oldOpts)
+            const isSelected = !!currChord()?.isEqual(chord)
+            if (isSelected)
+                selectedDegree = degree
+        }
+
+        if (props.value &&
+            selectedDegree !== undefined)
+        {
+            const newChord = Theory.ChordOptions.buildChord(props.key, selectedDegree, newOpts)
+            applyChord(newChord)
+        }
+    }
+
     const makeChordButton = Solid.createMemo(() => {
-        const withStacking = stacking()
-        const withSus2 = suspended2()
-        const withSus4 = suspended4()
-        const withAdd9 = add9()
-        const withAdd11 = add11()
-        const withAdd13 = add13()
-        const withNo3 = no3()
-        const withNo5 = no5()
-        const withFlat5 = flat5()
-        const withSharp5 = sharp5()
-        const withFlat9 = flat9()
-        const withSharp9 = sharp9()
-        const withSharp11 = sharp11()
-        const withFlat13 = flat13()
-        
+        const chOpts = chordOptions()
+
         return (degree: number) => {
-            let chord = Theory.Chord.fromDiatonicTriad(props.key, degree)
-
-            if (withStacking >= 7)
-                chord = chord.withAdded7(props.key)
-
-            if (withStacking >= 9)
-                chord = chord.withAdded9(props.key)
-
-            if (withStacking >= 11)
-                chord = chord.withAdded11(props.key)
-
-            if (withStacking >= 13)
-                chord = chord.withAdded13(props.key)
-
-            if (withSus2)
-                chord = chord.withSuspended2(props.key)
-
-            if (withSus4)
-                chord = chord.withSuspended4(props.key)
-
-            if (withAdd9)
-                chord = chord.withAdded9(props.key)
-
-            if (withAdd11)
-                chord = chord.withAdded11(props.key)
-
-            if (withAdd13)
-                chord = chord.withAdded13(props.key)
-
-            if (withFlat5)
-                chord = chord.withAdded5(props.key, -1)
-
-            if (withSharp5)
-                chord = chord.withAdded5(props.key, 1)
-
-            if (withFlat9)
-                chord = chord.withAdded9(props.key, -1)
-
-            if (withSharp9)
-                chord = chord.withAdded9(props.key, 1)
-
-            if (withSharp11)
-                chord = chord.withAdded11(props.key, 1)
-
-            if (withFlat13)
-                chord = chord.withAdded13(props.key, -1)
-
-            if (withNo3)
-                chord = chord.withNo3()
-
-            if (withNo5)
-                chord = chord.withNo5()
-
+            const chord = Theory.ChordOptions.buildChord(props.key, degree, chOpts)
+            const isSelected = props.value && currChord()?.isEqual(chord)
             console.log(degree, chord)
 
             let canvas: HTMLCanvasElement = undefined!
@@ -174,16 +67,33 @@ export function InspectorChord(props: {
             Solid.createEffect(() => {
                 const prefs = Global.get().prefs
                 const pixelRatio = window.devicePixelRatio
-                const rect = canvas.getBoundingClientRect()
-                canvas.width = Math.floor(rect.width * pixelRatio)
-                canvas.height = Math.floor(rect.height * pixelRatio)
+                const canvasRect = canvas.getBoundingClientRect()
+                canvas.width = Math.floor(canvasRect.width * pixelRatio)
+                canvas.height = Math.floor(canvasRect.height * pixelRatio)
                 const ctx = canvas.getContext("2d")!
+                const rect = Rect.fromVertices(0, 0, canvas.width, canvas.height)
                 CanvasUtils.drawChord(
                     ctx,
-                    Rect.fromVertices(0, 0, canvas.width, canvas.height),
+                    rect,
                     prefs,
                     chord,
                     props.key)
+
+                if (isSelected)
+                {
+                    ctx.save()
+                    ctx.roundRect(
+                        rect.x,
+                        rect.y,
+                        rect.w,
+                        rect.h,
+                        5)
+                    ctx.clip()
+                    ctx.lineWidth = 5
+                    ctx.strokeStyle = "#fffd"
+                    ctx.stroke()
+                    ctx.restore()
+                }
             })
 
             return <ChordButton
@@ -209,97 +119,97 @@ export function InspectorChord(props: {
             <div>
                 <input
                     type="checkbox"
-                    checked={ stacking() === 0 }
-                    onChange={ ev => setStacking(0) }
+                    checked={ chordOptions().withStacking === 0 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 0 })) }
                 /> Triad
                 <input
                     type="checkbox"
-                    checked={ stacking() === 7 }
-                    onChange={ ev => setStacking(7) }
+                    checked={ chordOptions().withStacking === 7 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 7 })) }
                 /> 7
                 <input
                     type="checkbox"
-                    checked={ stacking() === 9 }
-                    onChange={ ev => setStacking(9) }
+                    checked={ chordOptions().withStacking === 9 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 9 })) }
                 /> 9
                 <input
                     type="checkbox"
-                    checked={ stacking() === 11 }
-                    onChange={ ev => setStacking(11) }
+                    checked={ chordOptions().withStacking === 11 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 11 })) }
                 /> 11
                 <input
                     type="checkbox"
-                    checked={ stacking() === 13 }
-                    onChange={ ev => setStacking(13) }
+                    checked={ chordOptions().withStacking === 13 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 13 })) }
                 /> 13
                 <br/>
                 <input
                     type="checkbox"
-                    checked={ suspended2() }
-                    onChange={ ev => setSuspended2(ev.target.checked) }
+                    checked={ chordOptions().withSus2 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSus2: ev.target.checked })) }
                 /> sus2
                 <input
                     type="checkbox"
-                    checked={ suspended4() }
-                    onChange={ ev => setSuspended4(ev.target.checked) }
+                    checked={ chordOptions().withSus4 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSus4: ev.target.checked })) }
                 /> sus4
                 <br/>
                 <input
                     type="checkbox"
-                    checked={ add9() }
-                    onChange={ ev => setAdd9(ev.target.checked) }
+                    checked={ chordOptions().withAdd9 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd9: ev.target.checked })) }
                 /> add9
                 <input
                     type="checkbox"
-                    checked={ add11() }
-                    onChange={ ev => setAdd11(ev.target.checked) }
+                    checked={ chordOptions().withAdd11 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd11: ev.target.checked })) }
                 /> add11
                 <input
                     type="checkbox"
-                    checked={ add13() }
-                    onChange={ ev => setAdd13(ev.target.checked) }
+                    checked={ chordOptions().withAdd13 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd13: ev.target.checked })) }
                 /> add13
                 <br/>
                 <input
                     type="checkbox"
-                    checked={ no3() }
-                    onChange={ ev => setNo3(ev.target.checked) }
+                    checked={ chordOptions().withNo3 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withNo3: ev.target.checked })) }
                 /> no3
                 <input
                     type="checkbox"
-                    checked={ no5() }
-                    onChange={ ev => setNo5(ev.target.checked) }
+                    checked={ chordOptions().withNo5 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withNo5: ev.target.checked })) }
                 /> no5
                 <input
                     type="checkbox"
-                    checked={ flat5() }
-                    onChange={ ev => setFlat5(ev.target.checked) }
+                    checked={ chordOptions().withFlat5 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat5: ev.target.checked })) }
                 /> flat5
                 <input
                     type="checkbox"
-                    checked={ sharp5() }
-                    onChange={ ev => setSharp5(ev.target.checked) }
+                    checked={ chordOptions().withSharp5 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp5: ev.target.checked })) }
                 /> sharp5
                 <br/>
                 <input
                     type="checkbox"
-                    checked={ flat9() }
-                    onChange={ ev => setFlat9(ev.target.checked) }
+                    checked={ chordOptions().withFlat9 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat9: ev.target.checked })) }
                 /> flat9
                 <input
                     type="checkbox"
-                    checked={ sharp9() }
-                    onChange={ ev => setSharp9(ev.target.checked) }
+                    checked={ chordOptions().withSharp9 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp9: ev.target.checked })) }
                 /> sharp9
                 <input
                     type="checkbox"
-                    checked={ sharp11() }
-                    onChange={ ev => setSharp11(ev.target.checked) }
+                    checked={ chordOptions().withSharp11 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp11: ev.target.checked })) }
                 /> sharp11
                 <input
                     type="checkbox"
-                    checked={ flat13() }
-                    onChange={ ev => setFlat13(ev.target.checked) }
+                    checked={ chordOptions().withFlat13 }
+                    onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat13: ev.target.checked })) }
                 /> flat13
                 <br/>
             </div>
@@ -340,16 +250,24 @@ const LayoutMainButtons = styled.div`
 const ChordButton = styled.button<{
 }>`
     border: 0;
+    border-radius: 5px;
     margin: 0;
     padding: 0;
-    background-color: transparent;
+    width: 6em;
+    height: 3.5em;
+    background-color: #fff;
+    cursor: pointer;
 `
 
 
 const ChordCanvas = styled.canvas<{
 }>`
-    width: 6em;
-    height: 3.5em;
+    width: 100%;
+    height: 100%;
+
+    &:hover {
+        opacity: 0.5;
+    }
 `
 
 

@@ -7,6 +7,9 @@ export interface Prefs
         bkgInactiveOverlayColor: string
         trackVBorderColor: string
         trackHBorderColor: string
+
+        outOfBoundsColor1: string
+        outOfBoundsColor2: string
         
         selectionCursorColor: string
         selectionBkgColor: string
@@ -65,6 +68,9 @@ export function makeNew(): Prefs
             bkgInactiveOverlayColor: "#0008",
             trackVBorderColor: "#888",
             trackHBorderColor: "#888",
+            
+            outOfBoundsColor1: "#161719",
+            outOfBoundsColor2: "#141416",
             
             selectionCursorColor: "#0af",
             selectionBkgColor: "#8cf4",

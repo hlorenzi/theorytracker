@@ -18,5 +18,6 @@ export function mouseUp(
 
     const origProject = project.root
     Timeline.selectionResolveOverlappingAndDegenerate(timeline, project)
+    project.root = Project.withRefreshedRange(project.root)
     return project.root !== origProject
 }

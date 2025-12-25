@@ -7,11 +7,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "ts-node index.ts",
+    "start": "http-server -p 80",
     "build": "webpack --config webpack.config.cjs",
     "build-profile": "webpack --config webpack.config.cjs --profile --json > webpack.stats.json && npx webpack-bundle-analyzer webpack.stats.json ./.build/",
     "dev": "webpack --config webpack.config.cjs --watch --mode development",
-    "serve": "http-server -p 80",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "browserslist": "> 2%, not dead",
