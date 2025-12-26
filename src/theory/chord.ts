@@ -605,7 +605,7 @@ export default class Chord
 	{
 		const chroma = key.chromaForDegree(this.baseDegree + degree)
 		const chromaInCMajor = this.rootChroma + Theory.Scale.majorScale.chromas[degree % 7] + accidental
-		const finalAccidental = Theory.Utils.modAccidental(chromaInCMajor - chroma)
+		const finalAccidental = Theory.Utils.modRomanAccidental(chromaInCMajor - chroma)
 		return Theory.Utils.accidentalToStr(finalAccidental)
 	}
 
@@ -785,7 +785,7 @@ export default class Chord
 			add5Roman !== undefined &&
 			(kind.add5 === undefined || add5Roman !== kind.add5))
 		{
-			const accidentalStr = Chord.accidentalStrForName(add5Roman)
+			const accidentalStr = this.accidentalStrForRoman(key, 4, add5Roman)
 			if (accidentalStr !== "")
 			{
 				romanSup += `(${ accidentalStr }5)`

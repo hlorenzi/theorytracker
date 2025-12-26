@@ -155,7 +155,7 @@ export function drawChord(
 		rect.yCenter + rect.h * (0.05 - 0.1),
 		rect.h * 0.5,
 		rect.h * -0.15,
-		rect.h * 0.05,
+		rect.h * 0.075,
 		maxWidth)
 		
 	drawChordName(

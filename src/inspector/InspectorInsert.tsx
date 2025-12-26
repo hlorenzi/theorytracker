@@ -21,6 +21,25 @@ export function InspectorInsert(props: {
         return Project.keyAt(project.root, project.root.noteTrackId, time())
     })
 
+    const insertionKind = Solid.createMemo(() => {
+        const timeline = Global.get().timeline
+        if (timeline.selection.size !== 0)
+            return null
+
+        if (timeline.cursor.laneIndex1 !== timeline.cursor.laneIndex2)
+            return null
+
+        const lane = timeline.layout.lanes[timeline.cursor.laneIndex1]
+
+        if (lane instanceof Timeline.LaneChords)
+            return "chord"
+
+        if (lane instanceof Timeline.LaneNotes)
+            return "note"
+        
+        return null
+    })
+
     const insertKeyChange = () => {
         const project = Global.get().project
         const timeline = Global.get().timeline
@@ -67,24 +86,29 @@ export function InspectorInsert(props: {
     }
 
     return <Layout>
-        <button onClick={ insertKeyChange }>
-            + Key Change
-        </button>
-        <button onClick={ insertMeterChange }>
-            + Meter Change
-        </button>
-        <br/>
-        <Inspector.InspectorChord
-            key={ key() }
-            insertElem={ insertChord }
-        />
+        <Solid.Show when={ insertionKind() !== null }>
+            <div>
+                <button onClick={ insertKeyChange }>
+                    + Key Change
+                </button>
+                <button onClick={ insertMeterChange }>
+                    + Meter Change
+                </button>
+            </div>
+        </Solid.Show>
+        <Solid.Show when={ insertionKind() === "chord" }>
+            <Inspector.InspectorChord
+                key={ key() }
+                insertElem={ insertChord }
+            />
+        </Solid.Show>
     </Layout>
 }
 
 
 const Layout = styled.div`
     display: grid;
-    grid-template: auto 1fr / auto auto;
+    grid-template: auto 1fr / auto;
     width: 100%;
     height: 100%;
     min-height: 0;

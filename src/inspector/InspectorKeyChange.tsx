@@ -273,7 +273,7 @@ const ScaleButton = styled.div<{
     width: 90%;
     margin: 0.25em;
     padding: 0.25em 0.5em;
-    border-radius: 0.25em;
+    border-radius: var(--theme-buttonBorderRadius);
     background-color: var(--theme-buttonBkg);
 
     &:hover {

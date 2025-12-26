@@ -416,8 +416,7 @@ export function drawLaneBkgChordTones(
             for (let i = octaveAtBottom; i <= octaveAtTop; i++)
             {
                 const y = Math.floor(
-                    Timeline.yForRow(timeline, lane, tone.row + (5 + i) * scaleLength) +
-                    timeline.noteRowH)
+                    Timeline.yForRow(timeline, lane, tone.row + (5 + i) * scaleLength))
             
                 ctx.fillStyle = fillStyle
                 ctx.beginPath()

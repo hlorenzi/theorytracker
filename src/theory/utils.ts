@@ -10,6 +10,11 @@ export default class Utils
 		return Utils.mod(accidental + 6, 12) - 6
 	}
 
+	static modRomanAccidental(accidental: number)
+	{
+		return Utils.mod(accidental + 4, 7) - 4
+	}
+
 	static accidentalFor(chroma: number, fromBaseChroma: number)
 	{
         const accidental1 = chroma - fromBaseChroma
@@ -73,8 +78,8 @@ export default class Utils
 			return "𝄫"
 
 		if (accidental < 0)
-			return (useUnicode ? "\u{266d}" : "b").repeat(-accidental)
+			return (useUnicode ? "♭" : "b").repeat(-accidental)
 		else
-			return (useUnicode ? "\u{266f}" : "#").repeat(accidental)
+			return (useUnicode ? "♯" : "#").repeat(accidental)
 	}
 }

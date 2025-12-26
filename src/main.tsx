@@ -34,6 +34,7 @@ const AppRoot = styled.div`
     --theme-buttonBkgHover: #555;
     --theme-buttonBkgPress: #333;
     --theme-buttonBkgSelected: #06a;
+    --theme-buttonBorderRadius: 0.25em;
 `
 
 

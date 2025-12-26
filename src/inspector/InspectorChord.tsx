@@ -7,6 +7,7 @@ import * as Theory from "../theory"
 import Rect from "../utils/rect.ts"
 import * as CanvasUtils from "../utils/canvasUtils.ts"
 import { styled } from "solid-styled-components"
+import { Checkbox } from "../components"
 
 
 export function InspectorChord(props: {
@@ -108,111 +109,131 @@ export function InspectorChord(props: {
 
     return <>
         <Layout>
-            <h2 style={{ "grid-column": "1 / -1" }}>Chord</h2>
-
-            <LayoutMainButtons>
+            <LayoutChordButtons>
                 { props.key.chroma.map((chroma, degree) =>
                     makeChordButton()(degree)
                 )}
-            </LayoutMainButtons>
+            </LayoutChordButtons>
 
-            <div>
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withStacking === 0 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 0 })) }
-                /> Triad
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withStacking === 7 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 7 })) }
-                /> 7
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withStacking === 9 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 9 })) }
-                /> 9
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withStacking === 11 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 11 })) }
-                /> 11
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withStacking === 13 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 13 })) }
-                /> 13
-                <br/>
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withSus2 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSus2: ev.target.checked })) }
-                /> sus2
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withSus4 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSus4: ev.target.checked })) }
-                /> sus4
-                <br/>
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withAdd9 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd9: ev.target.checked })) }
-                /> add9
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withAdd11 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd11: ev.target.checked })) }
-                /> add11
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withAdd13 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd13: ev.target.checked })) }
-                /> add13
-                <br/>
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withNo3 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withNo3: ev.target.checked })) }
-                /> no3
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withNo5 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withNo5: ev.target.checked })) }
-                /> no5
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withFlat5 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat5: ev.target.checked })) }
-                /> flat5
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withSharp5 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp5: ev.target.checked })) }
-                /> sharp5
-                <br/>
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withFlat9 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat9: ev.target.checked })) }
-                /> flat9
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withSharp9 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp9: ev.target.checked })) }
-                /> sharp9
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withSharp11 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp11: ev.target.checked })) }
-                /> sharp11
-                <input
-                    type="checkbox"
-                    checked={ chordOptions().withFlat13 }
-                    onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat13: ev.target.checked })) }
-                /> flat13
-                <br/>
-            </div>
+            <LayoutChordOptions>
+                <div style={{
+                    "grid-column": "1 / -1",
+                    "justify-self": "center",
+                }}>
+                    <Checkbox
+                        label="Triad"
+                        groupStart
+                        checked={ chordOptions().withStacking === 0 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 0 })) }
+                    />
+                    <Checkbox
+                        label="7"
+                        groupMiddle
+                        checked={ chordOptions().withStacking === 7 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 7 : 0 })) }
+                    />
+                    <Checkbox
+                        label="9"
+                        groupMiddle
+                        checked={ chordOptions().withStacking === 9 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 9 : 0 })) }
+                    />
+                    <Checkbox
+                        label="11"
+                        groupMiddle
+                        checked={ chordOptions().withStacking === 11 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 11 : 0 })) }
+                    />
+                    <Checkbox
+                        label="13"
+                        groupEnd
+                        checked={ chordOptions().withStacking === 13 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 13 : 0 })) }
+                    />
+                </div>
+                <div>
+                    <Checkbox
+                        label="sus2"
+                        checked={ chordOptions().withSus2 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withSus2: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="sus4"
+                        checked={ chordOptions().withSus4 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withSus4: ev })) }
+                    />
+                </div>
+                <div>
+                    <Checkbox
+                        label="add9"
+                        checked={ chordOptions().withAdd9 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd9: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="add11"
+                        checked={ chordOptions().withAdd11 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd11: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="add13"
+                        checked={ chordOptions().withAdd13 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd13: ev })) }
+                    />
+                    <br/>
+                    <br/>
+                    <Checkbox
+                        label="no3"
+                        checked={ chordOptions().withNo3 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withNo3: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="no5"
+                        checked={ chordOptions().withNo5 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withNo5: ev })) }
+                    />
+                </div>
+                <div>
+                    <Checkbox
+                        label="♭5"
+                        checked={ chordOptions().withFlat5 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat5: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="♯5"
+                        checked={ chordOptions().withSharp5 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp5: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="♭9"
+                        checked={ chordOptions().withFlat9 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat9: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="♯9"
+                        checked={ chordOptions().withSharp9 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp9: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="♯11"
+                        checked={ chordOptions().withSharp11 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp11: ev })) }
+                    />
+                    <br/>
+                    <Checkbox
+                        label="♭13"
+                        checked={ chordOptions().withFlat13 }
+                        onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat13: ev })) }
+                    />
+                </div>
+            </LayoutChordOptions>
 
         </Layout>
     </>
@@ -221,28 +242,39 @@ export function InspectorChord(props: {
 
 const Layout = styled.div`
     display: grid;
-    grid-template: auto 1fr / auto auto auto;
+    grid-template: auto / auto auto;
     width: 100%;
     height: 100%;
     min-height: 0;
     justify-content: center;
     justify-items: center;
-    align-content: center;
-    align-items: center;
+    align-content: start;
+    align-items: start;
     column-gap: 1em;
 `
 
 
-const LayoutMainButtons = styled.div`
+const LayoutChordButtons = styled.div`
     display: grid;
-    grid-template: auto / repeat(7, 1fr);
-    grid-column: 1 / -1;
+    grid-template: 1fr / repeat(7, 1fr);
     width: 100%;
     height: 100%;
     justify-content: center;
     justify-items: center;
-    align-content: center;
-    align-items: center;
+    align-content: start;
+    align-items: start;
+    column-gap: 0.5em;
+`
+
+
+const LayoutChordOptions = styled.div`
+    display: grid;
+    grid-template: repeat(6, auto) / repeat(3, auto);
+    justify-content: start;
+    justify-items: start;
+    align-content: start;
+    align-items: start;
+    row-gap: 0.5em;
     column-gap: 1em;
 `
 
@@ -250,10 +282,10 @@ const LayoutMainButtons = styled.div`
 const ChordButton = styled.button<{
 }>`
     border: 0;
-    border-radius: 5px;
+    border-radius: var(--theme-buttonBorderRadius);
     margin: 0;
     padding: 0;
-    width: 6em;
+    width: 5em;
     height: 3.5em;
     background-color: #fff;
     cursor: pointer;

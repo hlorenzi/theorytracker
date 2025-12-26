@@ -161,14 +161,23 @@ export namespace ChordOptions
         if (chord.add9 === -1)
             opts.withFlat9 = true
 
+        if (chord.add9 === 0)
+            opts.withAdd9 = true
+
         if (chord.add9 === 1)
             opts.withSharp9 = true
+
+        if (chord.add11 === 0)
+            opts.withAdd11 = true
 
         if (chord.add11 === 1)
             opts.withSharp11 = true
 
         if (chord.add13 === -1)
             opts.withFlat13 = true
+
+        if (chord.add13 === 0)
+            opts.withAdd13 = true
 
         return opts
     }
