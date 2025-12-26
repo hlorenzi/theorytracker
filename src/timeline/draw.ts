@@ -1,5 +1,5 @@
-import * as State from "../state.ts"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory"
 import Rational from "../utils/rational.ts"
@@ -9,6 +9,7 @@ import Rect from "../utils/rect.ts"
 
 export function draw(
     timeline: Timeline.State,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D)
 {
@@ -19,7 +20,7 @@ export function draw(
     ctx.clearRect(0, 0, timeline.renderRect.w, timeline.renderRect.h)
 
     for (const lane of timeline.layout.lanes)
-        drawLane(ctx, timeline, prefs, lane)
+        drawLane(ctx, timeline, playback, prefs, lane)
 
     if (timeline.cursor.visible)
     {
@@ -29,6 +30,11 @@ export function draw(
         drawCursorBeam(timeline, prefs, ctx, timeMax, true)
     }
 
+    if (playback.playing)
+    {
+        drawPlaybackBeam(timeline, prefs, ctx, playback.playTime)
+    }
+
     ctx.restore()
 }
 
@@ -36,6 +42,7 @@ export function draw(
 function drawLane(
     ctx: CanvasRenderingContext2D,
     timeline: Timeline.State,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     lane: Timeline.Lane)
 {
@@ -57,7 +64,7 @@ function drawLane(
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, false)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, true)
         drawCursorBkg(timeline, prefs, ctx, lane)
-        drawElements(timeline, prefs, ctx, lane.elements)
+        drawElements(timeline, playback, prefs, ctx, lane.elements)
         
         ctx.save()
         ctx.globalAlpha = 0.05
@@ -91,7 +98,7 @@ function drawLane(
         drawLaneBkgOctaves(timeline, prefs, ctx, lane, true)
         drawLaneBkgMeasures(timeline, prefs, ctx, lane, true)
         drawCursorBkg(timeline, prefs, ctx, lane)
-        drawElements(timeline, prefs, ctx, lane.elements)
+        drawElements(timeline, playback, prefs, ctx, lane.elements)
 
         for (const tuple of lane.tupleIndicators)
         {
@@ -123,6 +130,7 @@ function drawLane(
 
 function drawElements(
     timeline: Timeline.State,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
     elements: Timeline.LayoutElement[])
@@ -183,6 +191,13 @@ function drawElements(
                 ctx.fillStyle = "#fff8"
                 ctx.fill()
             }
+        
+            if (playback.playing &&
+                element.note.range.overlapsPoint(playback.playTime))
+            {
+                ctx.fillStyle = "#fff8"
+                ctx.fill()
+            }
 
             if (element.id !== undefined &&
                 timeline.selection.has(element.id))
@@ -196,7 +211,7 @@ function drawElements(
         }
 
         else if (element.kind === "chord")
-            drawChord(timeline, prefs, ctx, element)
+            drawChord(timeline, playback, prefs, ctx, element)
 
         else if (element.kind === "marker")
             drawMarker(timeline, prefs, ctx, element)
@@ -206,6 +221,7 @@ function drawElements(
 
 function drawChord(
     timeline: Timeline.State,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     ctx: CanvasRenderingContext2D,
     element: Timeline.LayoutElementChord)
@@ -239,6 +255,13 @@ function drawChord(
         5)
         
     if (timeline.hover?.id === element.id)
+    {
+        ctx.fillStyle = "#fff8"
+        ctx.fill()
+    }
+        
+    if (playback.playing &&
+        element.chord.range.overlapsPoint(playback.playTime))
     {
         ctx.fillStyle = "#fff8"
         ctx.fill()
@@ -733,4 +756,36 @@ function drawCursorBkg(
     
     ctx.fillStyle = prefs.timeline.selectionBkgColor
     ctx.fillRect(x1, y1, x2 - x1, y2 - y1)
+}
+
+
+function drawPlaybackBeam(
+    timeline: Timeline.State,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D,
+    time: Rational)
+{
+    const laneMin = timeline.layout.lanes[0]
+    const laneMax = timeline.layout.lanes[timeline.layout.lanes.length - 1]
+
+    if (!laneMin || !laneMax)
+        return
+    
+    const x = 0.5 + Math.floor(Timeline.xAtTime(timeline, time))
+    
+    ctx.strokeStyle = prefs.timeline.playbackCursorColor
+    ctx.fillStyle = prefs.timeline.playbackCursorColor
+    ctx.lineCap = "square"
+    ctx.lineWidth = 2
+    
+    //const headYSize = 10
+    //const headXSize = headYSize * (tipOffsetSide ? -1 : 1)
+
+    const y1 = Math.floor(laneMin.rect.y)
+    const y2 = Math.floor(laneMax.rect.y2)
+    
+    ctx.beginPath()
+    ctx.moveTo(x, y1 + 1)
+    ctx.lineTo(x, y2 - 1)
+    ctx.stroke()
 }

@@ -4,11 +4,13 @@ import { styled } from "solid-styled-components"
 import * as State from "./state.ts"
 import * as Timeline from "./timeline"
 import * as Inspector from "./inspector"
+import { setupKeyboardShortcuts } from "./shortcuts.ts"
 
 
 function App()
 {
     State.get()
+    setupKeyboardShortcuts()
 
     return <AppRoot>
         <Timeline.Element/>

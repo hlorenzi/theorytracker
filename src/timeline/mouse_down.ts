@@ -102,6 +102,8 @@ export function mouseDown(
             Timeline.scrollTimeIntoView(timeline, anchor)
         }
 
+        timeline.playbackStartTime = timeline.cursor.time1
+
         return
     }
 

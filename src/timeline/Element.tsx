@@ -1,6 +1,7 @@
 import * as Solid from "solid-js"
 import * as Global from "../state.ts"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import Rect from "../utils/rect.ts"
 
 
@@ -95,6 +96,14 @@ function registerHandlers(
                 "inherit"
     }
 
+    const draw = () => {
+        const timeline = Global.get().timeline
+        const project = Global.get().project
+        const prefs = Global.get().prefs
+        const playback = Global.get().playback
+        Timeline.draw(timeline, playback, prefs, ctx)
+    }
+
     const onResize = () => {
         const timeline = Global.get().timeline
         const project = Global.get().project
@@ -102,7 +111,7 @@ function registerHandlers(
 
         canvasResize(div, canvas, timeline)
         Timeline.layout(timeline, project.root, prefs)
-        Timeline.draw(timeline, prefs, ctx)
+        draw()
     }
 
     const onMouseMove = (ev: MouseEvent) => {
@@ -121,7 +130,7 @@ function registerHandlers(
             Global.refresh()
         }
         
-        Timeline.draw(timeline, prefs, ctx)
+        draw()
         setCursor()
     }
 
@@ -135,7 +144,7 @@ function registerHandlers(
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
         Timeline.mouseDown(timeline, project, prefs, ev.button !== 0)
-        Timeline.draw(timeline, prefs, ctx)
+        draw()
         Global.refresh()
         setCursor()
     }
@@ -153,7 +162,7 @@ function registerHandlers(
         if (Timeline.mouseUp(timeline, project, ev.button !== 0))
             Timeline.layout(timeline, project.root, prefs)
 
-        Timeline.draw(timeline, prefs, ctx)
+        draw()
         Global.refresh()
         setCursor()
     }
@@ -167,7 +176,7 @@ function registerHandlers(
 
         Timeline.mouseWheel(timeline, ev.deltaX, ev.deltaY)
         Timeline.layout(timeline, project.root, prefs)
-        Timeline.draw(timeline, prefs, ctx)
+        draw()
         Global.refresh()
     }
 
@@ -178,7 +187,7 @@ function registerHandlers(
 
         Timeline.keyDown(timeline, project, prefs, ev.key.toLowerCase())
         Timeline.layout(timeline, project.root, prefs)
-        Timeline.draw(timeline, prefs, ctx)
+        draw()
         Global.refresh()
     }
 
@@ -195,6 +204,7 @@ function registerHandlers(
 
     onResize()
 
+    window.addEventListener(Playback.eventPlaybackRefresh, draw)
     window.addEventListener("resize", onResize)
     window.addEventListener("mousemove", onMouseMove)
     canvas.addEventListener("mousedown", onMouseDown)
@@ -205,6 +215,7 @@ function registerHandlers(
     window.addEventListener("keyup", onKeyUp)
 
     return () => {
+        window.removeEventListener(Playback.eventPlaybackRefresh, draw)
         window.removeEventListener("resize", onResize)
         window.removeEventListener("mousemove", onMouseMove)
         canvas.removeEventListener("mousedown", onMouseDown)

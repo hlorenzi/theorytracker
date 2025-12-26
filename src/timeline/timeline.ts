@@ -89,6 +89,8 @@ export interface State
 
     needsKeyFinish: boolean
     rangeSelectOriginTrackIndex: number
+
+    playbackStartTime: Rational
 }
 
 
@@ -215,6 +217,8 @@ export function makeNew(): State
 
         needsKeyFinish: false,
         rangeSelectOriginTrackIndex: -1,
+
+        playbackStartTime: new Rational(0),
     }
 }
 

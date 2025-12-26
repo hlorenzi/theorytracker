@@ -74,7 +74,7 @@ export function makeNew(): Prefs
             
             selectionCursorColor: "#0af",
             selectionBkgColor: "#8cf4",
-            playbackCursorColor: "#f00",
+            playbackCursorColor: "#0c4",
             trackSeparatorColor: "#aaa",
         
             measureColor: "#040404",
