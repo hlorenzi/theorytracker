@@ -24,7 +24,6 @@ export class Manager
     startTime: Rational
     startTimeMs: number
     nextStartTime: Rational
-    playTimeFloat: number
     playTime: Rational
     preloadTime: Rational
     refreshTimeMs: number
@@ -47,7 +46,6 @@ export class Manager
         this.startTime = new Rational(0)
         this.startTimeMs = 0
         this.nextStartTime = new Rational(0)
-        this.playTimeFloat = 0
         this.playTime = new Rational(0)
         this.preloadTime = new Rational(0)
         this.refreshTimeMs = 0
@@ -239,11 +237,11 @@ export class Manager
 
         const audioCtxOffsetMs = 15 + this.audioCtxTimestamp * 1000
 
-        const measuresPerSecond = (this.playingProject.baseBpm / 4 / 60)
-        
-        const playTimeFloatNext = this.playTimeFloat + deltaTimeMs / 1000 * measuresPerSecond
-        const playTimeNext = Rational.fromFloat(playTimeFloatNext, Project.MAX_RATIONAL_DENOMINATOR)
+        const startTimeNext = this.startTimeMs + deltaTimeMs
 
+        const playTimeNext =
+            Project.getTimeAtMilliseconds(this.playingProject, startTimeNext)
+        
         this.process(audioCtxOffsetMs, deltaTimeMs)
 
         const range = new Range(
@@ -269,9 +267,8 @@ export class Manager
         //if (noteEvents.length > 0)
         //    console.log(noteEvents)
 
-        this.playTimeFloat = playTimeFloatNext
         this.playTime = playTimeNext
-        this.startTimeMs += deltaTimeMs
+        this.startTimeMs = startTimeNext
 
         this.refreshTimeMs += deltaTimeMs
         if (canRedrawScreen)
@@ -349,7 +346,6 @@ export class Manager
         this.startTime = this.nextStartTime
         this.startTimeMs = Project.getMillisecondsAt(playingProject, this.startTime)
         this.playTime = this.nextStartTime
-        this.playTimeFloat = this.nextStartTime.asFloat()
         this.preloadTime = this.nextStartTime
         this.refreshTimeMs = 0
         this.audioCtxTimestamp = this.audioCtx?.currentTime ?? 0

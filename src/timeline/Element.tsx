@@ -181,6 +181,10 @@ function registerHandlers(
     }
 
     const onKeyDown = (ev: KeyboardEvent) => {
+        if (document.activeElement &&
+            document.activeElement.tagName === "INPUT")
+            return
+        
         const timeline = Global.get().timeline
         const project = Global.get().project
         const prefs = Global.get().prefs

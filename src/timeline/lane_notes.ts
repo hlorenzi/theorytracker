@@ -141,8 +141,7 @@ export class LaneNotes extends Timeline.Lane
             const rect = rectForMarker(
                 timeline,
                 this,
-                elem.type === "keyChange" ? 0 :
-                    1,
+                elem.type,
                 elem.range.start)
 
             let keyCh: Project.KeyChange | undefined = undefined
@@ -165,6 +164,7 @@ export class LaneNotes extends Timeline.Lane
                 rect,
                 priority: 1,
                 zIndex: 1,
+                tempoCh: elem.type === "tempoChange" ? elem : undefined,
                 keyCh,
                 keyChPrev,
                 meterCh: elem.type === "meterChange" ? elem : undefined,
@@ -172,6 +172,7 @@ export class LaneNotes extends Timeline.Lane
     
             timeline.layout.markers.push({
                 time: elem.range.start,
+                tempoCh: elem.type === "tempoChange" ? elem : undefined,
                 keyCh: elem.type === "keyChange" ? elem : undefined,
                 meterCh: elem.type === "meterChange" ? elem : undefined,
             })
@@ -411,31 +412,37 @@ function *iterMarkersForLayout(
     timeline: Timeline.State,
     project: Project.ImmutableRoot,
     range: Range)
-    : Generator<Project.KeyChange | Project.MeterChange, void, void>
+    : Generator<Project.TempoChange | Project.KeyChange | Project.MeterChange, void, void>
 {
-    const keyChTrackElems = project.lists.get(project.keyChangeTrackId)
-    if (!keyChTrackElems)
-        return
+    const tempoChTrackElems = project.lists.get(project.tempoChangeTrackId)
+    if (tempoChTrackElems)
+        for (const tempoCh of tempoChTrackElems.iterAtRange(range))
+            yield tempoCh as Project.TempoChange
 
-    for (const keyCh of keyChTrackElems.iterAtRange(range))
-        yield keyCh as Project.KeyChange
+    const keyChTrackElems = project.lists.get(project.keyChangeTrackId)
+    if (keyChTrackElems)
+        for (const keyCh of keyChTrackElems.iterAtRange(range))
+            yield keyCh as Project.KeyChange
     
     const meterChTrackElems = project.lists.get(project.meterChangeTrackId)
-    if (!meterChTrackElems)
-        return
-
-    for (const meterCh of meterChTrackElems.iterAtRange(range))
-        yield meterCh as Project.MeterChange
+    if (meterChTrackElems)
+        for (const meterCh of meterChTrackElems.iterAtRange(range))
+            yield meterCh as Project.MeterChange
 }
 
 
 function rectForMarker(
     timeline: Timeline.State,
     lane: Timeline.Lane,
-    row: number,
+    markerType: Project.Element["type"],
     time: Rational)
     : Rect
 {
+    const row =
+        markerType === "tempoChange" ? 0 :
+        markerType === "keyChange" ? 1 :
+        2
+    
     const x = Timeline.xAtTime(timeline, time)
     const w = 16
     const h = 24
@@ -451,17 +458,18 @@ function *iterMarkersForSelection(
     range: Range)
     : Generator<Project.ID, void, void>
 {
-    const keyChTrackElems = project.lists.get(project.keyChangeTrackId)
-    if (!keyChTrackElems)
-        return
+    const tempoChTrackElems = project.lists.get(project.tempoChangeTrackId)
+    if (tempoChTrackElems)
+        for (const tempoCh of tempoChTrackElems.iterAtRange(range))
+            yield tempoCh.id
 
-    for (const keyCh of keyChTrackElems.iterAtRange(range))
-        yield keyCh.id
+    const keyChTrackElems = project.lists.get(project.keyChangeTrackId)
+    if (keyChTrackElems)
+        for (const keyCh of keyChTrackElems.iterAtRange(range))
+            yield keyCh.id
     
     const meterChTrackElems = project.lists.get(project.meterChangeTrackId)
-    if (!meterChTrackElems)
-        return
-
-    for (const meterCh of meterChTrackElems.iterAtRange(range))
-        yield meterCh.id
+    if (meterChTrackElems)
+        for (const meterCh of meterChTrackElems.iterAtRange(range))
+            yield meterCh.id
 }

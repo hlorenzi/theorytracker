@@ -27,6 +27,12 @@ export interface TrackBase extends ElementBase
 }
 
 
+export interface TrackTempoChanges extends TrackBase
+{
+    trackType: "tempoChanges"
+}
+
+
 export interface TrackKeyChanges extends TrackBase
 {
     trackType: "keyChanges"
@@ -56,10 +62,18 @@ export interface TrackNotes extends TrackBase
 
 
 export type Track = 
+    TrackTempoChanges |
     TrackKeyChanges |
     TrackMeterChanges |
     TrackChords |
     TrackNotes
+
+
+export interface TempoChange extends ElementBase
+{
+    type: "tempoChange"
+    bpm: number
+}
 
 
 export interface KeyChange extends ElementBase
@@ -92,6 +106,7 @@ export interface Chord extends ElementBase
 
 export type Element =
     Track |
+    TempoChange |
     KeyChange |
     MeterChange |
     Note |
@@ -144,6 +159,19 @@ export function trackDisplayName(track: Track): string
 }
 
 
+export function makeTrackTempoChanges(): TrackTempoChanges
+{
+    return {
+        type: "track",
+        trackType: "tempoChanges",
+        id: -1,
+        parentId: 0,
+        range: Range.dummy(),
+        name: "Tempo Changes",
+    }
+}
+
+
 export function makeTrackKeyChanges(): TrackKeyChanges
 {
     return {
@@ -170,14 +198,14 @@ export function makeTrackMeterChanges(): TrackMeterChanges
 }
 
 
-export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Meter): MeterChange
+export function makeTempoChange(parentId: ID, time: Rational, bpm: number): TempoChange
 {
     return {
-        type: "meterChange",
+        type: "tempoChange",
         id: -1,
         parentId,
         range: Range.fromPoint(time),
-        meter,
+        bpm,
     }
 }
 
@@ -190,6 +218,18 @@ export function makeKeyChange(parentId: ID, time: Rational, key: Theory.Key): Ke
         parentId,
         range: Range.fromPoint(time),
         key,
+    }
+}
+
+
+export function makeMeterChange(parentId: ID, time: Rational, meter: Theory.Meter): MeterChange
+{
+    return {
+        type: "meterChange",
+        id: -1,
+        parentId,
+        range: Range.fromPoint(time),
+        meter,
     }
 }
 

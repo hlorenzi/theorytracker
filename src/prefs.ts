@@ -23,8 +23,9 @@ export interface Prefs
         measureLabelColor: string
         octaveLabelColor: string
 
-        meterChangeColor: string
+        tempoChangeColor: string
         keyChangeColor: string
+        meterChangeColor: string
         noteVelocityMarkerColor: string
         noteVelocityMarkerInactiveColor: string
 
@@ -84,8 +85,9 @@ export function makeNew(): Prefs
             measureLabelColor: "#aaa",
             octaveLabelColor: "#aaa",
         
-            meterChangeColor: "#0cf",
+            tempoChangeColor: "#d98",
             keyChangeColor: "#f0c",
+            meterChangeColor: "#0cf",
             noteVelocityMarkerColor: "#0c4",
             noteVelocityMarkerInactiveColor: "#063",
 

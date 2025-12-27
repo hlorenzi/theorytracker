@@ -155,60 +155,7 @@ function drawElements(
     for (const element of elements)
     {
         if (element.kind === "note")
-        {
-            ctx.save()
-            ctx.beginPath()
-            ctx.roundRect(
-                element.rect.x,
-                element.rect.y,
-                element.rect.w,
-                element.rect.h,
-                timeline.noteRowH / 4)
-            ctx.clip()
-
-            const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
-            const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
-
-            const key = element.key
-            const mode = key.scale.metadata?.mode ?? 0
-            const fillStyle = CanvasUtils.fillStyleForDegree(
-                ctx,
-                key.degreeForMidi(element.note.midiPitch) + mode,
-                false)
-                
-            ctx.fillStyle = fillStyle
-            ctx.beginPath()
-            ctx.roundRect(
-                x1,
-                element.rect.y,
-                x2 - x1,
-                element.rect.h,
-                timeline.noteRowH / 4)
-            ctx.fill()
-
-            if (timeline.hover?.id === element.id)
-            {
-                ctx.fillStyle = "#fff8"
-                ctx.fill()
-            }
-        
-            if (playback.playing &&
-                element.note.range.overlapsPoint(playback.playTime))
-            {
-                ctx.fillStyle = "#fff8"
-                ctx.fill()
-            }
-
-            if (element.id !== undefined &&
-                timeline.selection.has(element.id))
-            {
-                ctx.strokeStyle = "#fff8"
-                ctx.lineWidth = 6
-                ctx.stroke()
-            }
-
-            ctx.restore()
-        }
+            drawNote(timeline, playback, prefs, ctx, element)
 
         else if (element.kind === "chord")
             drawChord(timeline, playback, prefs, ctx, element)
@@ -216,6 +163,68 @@ function drawElements(
         else if (element.kind === "marker")
             drawMarker(timeline, prefs, ctx, element)
     }
+}
+
+
+function drawNote(
+    timeline: Timeline.State,
+    playback: Playback.Manager,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D,
+    element: Timeline.LayoutElementNote)
+{
+    ctx.save()
+    ctx.beginPath()
+    ctx.roundRect(
+        element.rect.x,
+        element.rect.y,
+        element.rect.w,
+        element.rect.h,
+        timeline.noteRowH / 4)
+    ctx.clip()
+
+    const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
+    const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
+
+    const key = element.key
+    const mode = key.scale.metadata?.mode ?? 0
+    const fillStyle = CanvasUtils.fillStyleForDegree(
+        ctx,
+        key.degreeForMidi(element.note.midiPitch) + mode,
+        false)
+        
+    ctx.fillStyle = fillStyle
+    ctx.beginPath()
+    ctx.roundRect(
+        x1,
+        element.rect.y,
+        x2 - x1,
+        element.rect.h,
+        timeline.noteRowH / 4)
+    ctx.fill()
+
+    if (timeline.hover?.id === element.id)
+    {
+        ctx.fillStyle = "#fff8"
+        ctx.fill()
+    }
+
+    if (playback.playing &&
+        element.note.range.overlapsPoint(playback.playTime))
+    {
+        ctx.fillStyle = "#fff8"
+        ctx.fill()
+    }
+
+    if (element.id !== undefined &&
+        timeline.selection.has(element.id))
+    {
+        ctx.strokeStyle = "#fff8"
+        ctx.lineWidth = 6
+        ctx.stroke()
+    }
+
+    ctx.restore()
 }
 
 
@@ -288,9 +297,10 @@ function drawMarker(
     ctx.save()
 
     const color =
+        element.tempoCh ? prefs.timeline.tempoChangeColor :
         element.keyCh ? prefs.timeline.keyChangeColor :
         element.meterCh ? prefs.timeline.meterChangeColor :
-        "#000"
+        prefs.timeline.measureLabelColor
 
     const makeKeyChangeDifferenceText = (chromaPrev: number | undefined, chromaNext: number) => {
         if (chromaPrev === undefined)
@@ -303,6 +313,8 @@ function drawMarker(
     }
 
     const text =
+        element.tempoCh ?
+            element.tempoCh.bpm.toString() + " bpm" :
         element.keyCh ?
             element.keyCh.key.toString() +
             makeKeyChangeDifferenceText(
@@ -560,6 +572,7 @@ export function drawLaneBkgMeasures(
             const x = Math.floor(Timeline.xAtTime(timeline, marker.time))
             
             const color =
+                marker.tempoCh ? prefs.timeline.tempoChangeColor :
                 marker.keyCh ? prefs.timeline.keyChangeColor :
                 marker.meterCh ? prefs.timeline.meterChangeColor :
                 prefs.timeline.measureColor

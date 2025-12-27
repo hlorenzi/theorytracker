@@ -20,11 +20,11 @@ export interface ImmutableRoot
 {
     nextId: Project.ID
     range: Range
-    baseBpm: number
 
     tracks: Project.Track[]
     lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>
     elems: Immutable.Map<Project.ID, Project.Element>
+    tempoChangeTrackId: number
     keyChangeTrackId: number
     meterChangeTrackId: number
     chordTrackId: number
@@ -37,10 +37,10 @@ export function makeEmpty(): ImmutableRoot
     return {
         nextId: 1,
         range: new Range(new Rational(0), new Rational(4)),
-        baseBpm: 120,
         tracks: [],
         lists: Immutable.Map<Project.ID, ListOfRanges<Project.Element>>(),
         elems: Immutable.Map<Project.ID, Project.Element>(),
+        tempoChangeTrackId: -1,
         keyChangeTrackId: -1,
         meterChangeTrackId: -1,
         chordTrackId: -1,
@@ -53,26 +53,28 @@ export function makeNew(): ImmutableRoot
 {
     let project = makeEmpty()
 
-    const track1Id = project.nextId
-    project.keyChangeTrackId = track1Id
+    project.tempoChangeTrackId = project.nextId
+    project = upsertTrack(project, Project.makeTrackTempoChanges())
+    
+    project.keyChangeTrackId = project.nextId
     project = upsertTrack(project, Project.makeTrackKeyChanges())
     
-    const track2Id = project.nextId
-    project.meterChangeTrackId = track2Id
+    project.meterChangeTrackId = project.nextId
     project = upsertTrack(project, Project.makeTrackMeterChanges())
 
+    project = upsertElement(project, Project.makeTempoChange(
+        project.tempoChangeTrackId, new Rational(0), 120))
+
     project = upsertElement(project, Project.makeKeyChange(
-        track1Id, new Rational(0), Theory.Key.parse("C Major")))
+        project.keyChangeTrackId, new Rational(0), Theory.Key.parse("C Major")))
 
     project = upsertElement(project, Project.makeMeterChange(
-        track2Id, new Rational(0), new Theory.Meter(4, 4)))
+        project.meterChangeTrackId, new Rational(0), new Theory.Meter(4, 4)))
 
-    const track3Id = project.nextId
-    project.chordTrackId = track3Id
+    project.chordTrackId = project.nextId
     project = upsertTrack(project, Project.makeTrackChords())
     
-    const track4Id = project.nextId
-    project.noteTrackId = track4Id
+    project.noteTrackId = project.nextId
     project = upsertTrack(project, Project.makeTrackNotes())
 
     return project
@@ -168,7 +170,7 @@ export function upsertElement(project: ImmutableRoot, elem: Project.Element): Im
     }
     
     const prevElem = project.elems.get(elem.id)
-    const changeParent = !!prevElem && prevElem.parentId != elem.parentId
+    const changeParent = !!prevElem && prevElem.parentId !== elem.parentId
 
     if (!changeParent)
     {
@@ -181,25 +183,25 @@ export function upsertElement(project: ImmutableRoot, elem: Project.Element): Im
     }
     else if (elem.parentId < 0)
     {
-        let prevList = project.lists.get(prevElem!.parentId) ?? new ListOfRanges()
-        prevList = prevList.removeById(prevElem!.id)
+        let prevList = project.lists.get(prevElem.parentId) ?? new ListOfRanges()
+        prevList = prevList.removeById(prevElem.id)
 
         let elems = project.elems.delete(elem.id)
-        let lists = project.lists.set(prevElem!.parentId, prevList)
+        let lists = project.lists.set(prevElem.parentId, prevList)
 
         return { ...project, nextId, elems, lists }
     }
     else
     {
-        let prevList = project.lists.get(prevElem!.parentId) ?? new ListOfRanges()
-        prevList = prevList.removeById(prevElem!.id)
+        let prevList = project.lists.get(prevElem.parentId) ?? new ListOfRanges()
+        prevList = prevList.removeById(prevElem.id)
 
         let nextList = project.lists.get(elem.parentId) ?? new ListOfRanges()
         nextList = nextList.upsert(elem)
 
         let elems = project.elems.set(elem.id, elem)
         let lists = project.lists
-            .set(prevElem!.parentId, prevList)
+            .set(prevElem.parentId, prevList)
             .set(elem.parentId, nextList)
 
         return { ...project, nextId, elems, lists }
@@ -207,22 +209,9 @@ export function upsertElement(project: ImmutableRoot, elem: Project.Element): Im
 }
 
 
-export function keyChangeTrackId(project: ImmutableRoot): Project.ID
-{
-    return project.keyChangeTrackId
-}
-
-
-export function meterChangeTrackId(project: ImmutableRoot): Project.ID
-{
-    return project.meterChangeTrackId
-}
-
-
 export function keyAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Theory.Key
 {
-    const keyChangeTrackId = Project.keyChangeTrackId(project)
-    const keyChangeTrackTimedElems = project.lists.get(keyChangeTrackId)
+    const keyChangeTrackTimedElems = project.lists.get(project.keyChangeTrackId)
     if (!keyChangeTrackTimedElems)
         return defaultKey()
         
@@ -240,8 +229,7 @@ export function keyAt(project: ImmutableRoot, trackId: Project.ID, time: Rationa
 
 export function meterChangeAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Project.MeterChange | null
 {
-    const meterChangeTrackId = Project.meterChangeTrackId(project)
-    const meterChangeTrackTimedElems = project.lists.get(meterChangeTrackId)
+    const meterChangeTrackTimedElems = project.lists.get(project.meterChangeTrackId)
     if (!meterChangeTrackTimedElems)
         return null
         
@@ -269,7 +257,7 @@ export function meterAt(project: ImmutableRoot, trackId: Project.ID, time: Ratio
 
 export function withRefreshedRange(project: ImmutableRoot): ImmutableRoot
 {
-    let range = new Range(new Rational(0), new Rational(4));
+    let range = new Range(new Rational(0), new Rational(4))
 
     for (const track of project.tracks)
     {
@@ -322,7 +310,7 @@ export function getTrack<T extends Project.Track["trackType"]>(
     : Extract<Project.Track, { trackType: T }> | null
 {
     const elem = project.elems.get(id)
-    if (!elem || elem.type != "track" || elem.trackType != trackType)
+    if (!elem || elem.type !== "track" || elem.trackType !== trackType)
         return null
 
     return elem as Extract<Project.Track, { trackType: T }>
@@ -444,7 +432,7 @@ export function parentTrackFor(project: ImmutableRoot, elemId: Project.ID): Proj
         if (!elem)
             return null!
             
-        if (elem.type == "track")
+        if (elem.type === "track")
             return elem
 
         elemId = elem.parentId
@@ -460,7 +448,7 @@ export function getAbsoluteTime(project: ImmutableRoot, parentId: Project.ID, ti
         if (!elem)
             return time
             
-        if (elem.type == "track")
+        if (elem.type === "track")
             return time
 
         time = time.add(elem.range.start)
@@ -477,7 +465,7 @@ export function getRelativeTime(project: ImmutableRoot, parentId: Project.ID, ti
         if (!elem)
             return time
             
-        if (elem.type == "track")
+        if (elem.type === "track")
             return time
 
         time = time.subtract(elem.range.start)
@@ -494,7 +482,7 @@ export function getAbsoluteRange(project: ImmutableRoot, parentId: Project.ID, r
         if (!elem)
             return range
             
-        if (elem.type == "track")
+        if (elem.type === "track")
             return range
 
         range = range.displace(elem.range.start)
@@ -511,7 +499,7 @@ export function getRelativeRange(project: ImmutableRoot, parentId: Project.ID, r
         if (!elem)
             return range
             
-        if (elem.type == "track")
+        if (elem.type === "track")
             return range
 
         range = range.subtract(elem.range.start)
@@ -533,7 +521,7 @@ export function getRangeForElems(
         if (!elem)
             continue
 
-        if (elem.type == "track")
+        if (elem.type === "track")
             continue
 
         const absRange = Project.getAbsoluteRange(project, elem.parentId, elem.range)
@@ -541,13 +529,6 @@ export function getRangeForElems(
     }
 
     return range
-}
-
-
-export function getMillisecondsAt(project: ImmutableRoot, time: Rational): number
-{
-    const measuresPerSecond = (project.baseBpm / 4 / 60)
-    return time.subtract(project.range.start).asFloat() / measuresPerSecond * 1000
 }
 
 

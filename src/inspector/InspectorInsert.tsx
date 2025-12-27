@@ -4,6 +4,7 @@ import * as Inspector from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
+import { Button } from "../components"
 import Rect from "../utils/rect.ts"
 import { styled } from "solid-styled-components"
 
@@ -39,6 +40,20 @@ export function InspectorInsert(props: {
         
         return null
     })
+
+    const insertTempoChange = () => {
+        const project = Global.get().project
+        const timeline = Global.get().timeline
+        const time = timeline.cursor.time1
+        const id = project.root.nextId
+        const tempoCh = Project.makeTempoChange(project.root.tempoChangeTrackId, time, 120)
+        project.root = Project.upsertElement(project.root, tempoCh)
+        Timeline.selectionClear(timeline)
+        Timeline.selectionAdd(timeline, id)
+        Timeline.selectionResolveOverlappingAndDegenerate(timeline, project)
+        timeline.cursor.visible = false
+        Global.refresh()
+    }
 
     const insertKeyChange = () => {
         const project = Global.get().project
@@ -88,12 +103,15 @@ export function InspectorInsert(props: {
     return <Layout>
         <Solid.Show when={ insertionKind() !== null }>
             <div>
-                <button onClick={ insertKeyChange }>
+                <Button onClick={ insertTempoChange }>
+                    + Tempo Change
+                </Button>
+                <Button onClick={ insertKeyChange }>
                     + Key Change
-                </button>
-                <button onClick={ insertMeterChange }>
+                </Button>
+                <Button onClick={ insertMeterChange }>
                     + Meter Change
-                </button>
+                </Button>
             </div>
         </Solid.Show>
         <Solid.Show when={ insertionKind() === "chord" }>

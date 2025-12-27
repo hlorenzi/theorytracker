@@ -25,8 +25,9 @@ let lastMeterCh: Project.MeterChange | null = null
 
 export function ensureMeasureCacheRefreshed(project: Project.ImmutableRoot)
 {
-    const meterChangeTrackId = Project.meterChangeTrackId(project)
-    const meterChangeList = project.lists.get(meterChangeTrackId)!
+    const meterChangeList = project.lists.get(project.meterChangeTrackId)
+    if (!meterChangeList)
+        return
 
     if (meterChangeList === measureCacheKey)
         return
@@ -51,7 +52,7 @@ export function ensureMeasureCacheRefreshed(project: Project.ImmutableRoot)
             continue
 
         const meterCh1 = elem1 as Project.MeterChange
-        const meterCh2 = elem2 as (Project.MeterChange | null)
+        const meterCh2 = elem2 as Project.MeterChange
         
         let numLocal = 0
 

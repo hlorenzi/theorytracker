@@ -76,6 +76,7 @@ export interface LayoutElementChord extends LayoutElementCommon
 export interface LayoutElementMarker extends LayoutElementCommon
 {
     kind: "marker"
+    tempoCh?: Project.TempoChange
     keyCh?: Project.KeyChange
     keyChPrev?: Project.KeyChange
     meterCh?: Project.MeterChange
@@ -128,6 +129,7 @@ export interface ChordRegion
 export interface Marker
 {
     time: Rational
+    tempoCh?: Project.TempoChange
     keyCh?: Project.KeyChange
     meterCh?: Project.MeterChange
 }
@@ -218,8 +220,7 @@ function *iterKeyChangePairsAtRange(
     range: Range)
     : Generator<KeyRegion, void, void>
 {
-    const keyChangeTrackId = Project.keyChangeTrackId(project)
-    const keyChangeTrackTimedElems = project.lists.get(keyChangeTrackId)
+    const keyChangeTrackTimedElems = project.lists.get(project.keyChangeTrackId)
     if (!keyChangeTrackTimedElems)
         return
 

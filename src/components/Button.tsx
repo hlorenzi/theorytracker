@@ -2,11 +2,11 @@ import * as Solid from "solid-js"
 import { styled } from "solid-styled-components"
 
 
-export function Checkbox(props: {
+export function Button(props: {
     children?: Solid.JSXElement,
     label?: Solid.JSXElement,
     checked?: boolean,
-    onChange?: (newValue: boolean) => void,
+    onClick?: () => void,
     groupStart?: boolean,
     groupMiddle?: boolean,
     groupEnd?: boolean,
@@ -17,7 +17,7 @@ export function Checkbox(props: {
         data-group-start={ !!props.groupStart }
         data-group-middle={ !!props.groupMiddle }
         data-group-end={ !!props.groupEnd }
-        onClick={ () => props.onChange?.(!props.checked) }
+        onClick={ props.onClick }
     >
         { props.label ?? props.children }
     </StyledButton>

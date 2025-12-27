@@ -51,6 +51,12 @@ export function InspectorRoot(props: {})
         const elem = Project.getElem(project.root, elemId)
         const key = Project.keyAt(project.root, project.root.keyChangeTrackId, elem?.range.start ?? new Rational(0))
 
+        if (elem?.type === "tempoChange")
+            return <Inspector.InspectorTempoChange
+                value={ elem }
+                upsertElem={ upsertElem }
+            />
+        
         if (elem?.type === "keyChange")
             return <Inspector.InspectorKeyChange
                 value={ elem }
