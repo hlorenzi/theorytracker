@@ -43,6 +43,7 @@ const StyledButton = styled.button<{
     background-color: var(--theme-buttonBkg);
     color: inherit;
     font-family: inherit;
+    font-size: inherit;
 
     &:hover {
         background-color: var(--theme-buttonBkgHover);

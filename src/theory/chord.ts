@@ -605,7 +605,7 @@ export default class Chord
 	{
 		const chroma = key.chromaForDegree(this.baseDegree + degree)
 		const chromaInCMajor = this.rootChroma + Theory.Scale.majorScale.chromas[degree % 7] + accidental
-		const finalAccidental = Theory.Utils.modRomanAccidental(chromaInCMajor - chroma)
+		const finalAccidental = Theory.Utils.modAccidental(chromaInCMajor - chroma)
 		return Theory.Utils.accidentalToStr(finalAccidental)
 	}
 

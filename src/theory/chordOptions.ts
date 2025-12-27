@@ -20,6 +20,7 @@ export interface ChordOptions
     withSharp9: boolean
     withSharp11: boolean
     withFlat13: boolean
+    borrowFromScaleId?: string
 }
 
 
@@ -42,6 +43,7 @@ export namespace ChordOptions
             withSharp9: false,
             withSharp11: false,
             withFlat13: false,
+            borrowFromScaleId: undefined,
         }
     }
 

@@ -7,7 +7,7 @@ import * as Theory from "../theory"
 import Rect from "../utils/rect.ts"
 import * as CanvasUtils from "../utils/canvasUtils.ts"
 import { styled } from "solid-styled-components"
-import { Checkbox } from "../components"
+import { Checkbox, Select } from "../components"
 
 
 export function InspectorChord(props: {
@@ -58,8 +58,8 @@ export function InspectorChord(props: {
     const makeChordButton = Solid.createMemo(() => {
         const chOpts = chordOptions()
 
-        return (degree: number) => {
-            const chord = Theory.ChordOptions.buildChord(props.key, degree, chOpts)
+        return (key: Theory.Key, degree: number) => {
+            const chord = Theory.ChordOptions.buildChord(key, degree, chOpts)
             const isSelected = props.value && currChord()?.isEqual(chord)
             console.log(degree, chord)
 
@@ -107,12 +107,51 @@ export function InspectorChord(props: {
         }
     })
 
+    const makeChordButtons = Solid.createMemo(() => {
+        const chOpts = chordOptions()
+        const scaleId = chOpts.borrowFromScaleId ?? props.key.scale.id!
+        const borrowedKey = new Theory.Key(props.key.tonic, Theory.Scale.fromId(scaleId))
+
+        return borrowedKey.chroma.map((chroma, degree) =>
+            makeChordButton()(borrowedKey, degree)
+        )
+    })
+
+    const makeScaleOption = (scaleMeta: Theory.ScaleMetadata) => {
+        return <OptionScale value={ scaleMeta.id }>
+            <div>
+                { scaleMeta.names[0] }
+                <span style={{ display: "none" }}> | </span>
+                <br/>
+                <Solid.For each={ scaleMeta.chromas }>
+                    { (chroma, i) => {
+                        const degree = i()
+                        const borrowedKey = new Theory.Key(props.key.tonic, Theory.Scale.fromId(scaleMeta.id))
+                        const chord = Theory.Chord.fromDiatonicTriad(borrowedKey, degree)
+                        const chordStr = chord.str(props.key)
+
+                        return <div style={{
+                            display: "inline-block",
+                            width: "1.5em",
+                            "margin-right": "1em",
+                            "text-align": "right",
+                            color: undefined,
+                        }}>
+                            { chordStr.romanBase }
+                            <sup>{chordStr.romanSup }</sup>
+                            <sub>{chordStr.romanSub }</sub>
+                            { " " }
+                        </div>
+                    }}
+                </Solid.For>
+            </div>
+        </OptionScale>
+    }
+    
     return <>
         <Layout>
             <LayoutChordButtons>
-                { props.key.chroma.map((chroma, degree) =>
-                    makeChordButton()(degree)
-                )}
+                { makeChordButtons() }
             </LayoutChordButtons>
 
             <LayoutChordOptions>
@@ -233,6 +272,19 @@ export function InspectorChord(props: {
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat13: ev })) }
                     />
                 </div>
+                <div style={{
+                    "grid-column": "1 / -1",
+                    "justify-self": "center",
+                }}>
+                    <Select
+                        value={ chordOptions().borrowFromScaleId }
+                        onChange={ scaleId => setChordOptions(opts => ({ ...opts, borrowFromScaleId: scaleId })) }
+                    >
+                        { Theory.Scale.list.map(
+                            (scaleMeta, i) => makeScaleOption(scaleMeta)
+                        )}
+                    </Select>
+                </div>
             </LayoutChordOptions>
 
         </Layout>
@@ -300,43 +352,6 @@ const ChordCanvas = styled.canvas<{
     &:hover {
         opacity: 0.5;
     }
-`
-
-
-const ScaleButton = styled.div<{
-    $selected: boolean,
-}>`
-    display: grid;
-    grid-template: auto auto / auto;
-    justify-items: start;
-    justify-content: start;
-    user-select: none;
-    cursor: pointer;
-
-    width: 90%;
-    margin: 0.25em;
-    padding: 0.25em 0.5em;
-    border-radius: 0.25em;
-    background-color: var(--theme-buttonBkg);
-
-    &:hover {
-        background-color: var(--theme-buttonBkgHover);
-    }
-
-    &:active {
-        background-color: var(--theme-buttonBkgPress);
-    }
-        
-    ${ props => props.$selected ? "background-color: var(--theme-buttonBkgSelected);" : "" }
-`
-
-
-const StyledSelect = styled.select`
-    /*appearance: base-select;
-    
-    &::picker(select) {
-        appearance: base-select;
-    }*/
 `
 
 
