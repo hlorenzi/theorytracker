@@ -14,6 +14,8 @@ export interface Measure
     time1: Rational
     time2: Rational
     meterCh: Project.MeterChange
+    numerator: number
+    denominator: number
 }
 
 
@@ -56,16 +58,19 @@ export function ensureMeasureCacheRefreshed(project: Project.ImmutableRoot)
         
         let numLocal = 0
 
-        for (const [measureN, measureD, time1, time2] of meterCh1.meter.iterMeasuresPairwise(meterCh1.range.start))
+        for (const [numerator, denominator, time1, time2] of meterCh1.meter.iterMeasuresPairwise(meterCh1.range.start))
         {
             if (meterCh2 && time1.compare(meterCh2.range.start) >= 0)
                 break
 
             measureCache.push({
-                num, numLocal,
+                num,
+                numLocal,
                 time1,
                 time2: time2.min(meterCh2 ? meterCh2.range.start : time2),
                 meterCh: meterCh1,
+                numerator,
+                denominator,
             })
 
             num++
@@ -89,15 +94,21 @@ export function *iterMeasuresAtRange(
         let time = firstMeterCh.range.start
         let num = 0
 
+        const fullCycleDuration = firstMeterCh.meter.fullCycleDuration
+
         while (time.compare(range.start) > 0)
         {
-            time = time.subtract(firstMeterCh.meter.fullCycleDuration)
+            time = time.subtract(fullCycleDuration)
             num--
         }
 
+        let ratioIndex = 0
+
         while (time.compare(firstMeterCh.range.start) < 0)
         {
-            const time2 = time.add(firstMeterCh.meter.fullCycleDuration)
+            const ratio = firstMeterCh.meter.ratios[ratioIndex]
+            const time2 = time.add(new Rational(ratio.numerator, ratio.denominator))
+            ratioIndex = (ratioIndex + 1) % firstMeterCh.meter.ratios.length
 
             if (time2.compare(range.start) >= 0)
             {
@@ -106,6 +117,8 @@ export function *iterMeasuresAtRange(
                     num, numLocal: num,
                     time1: time,
                     time2,
+                    numerator: ratio.numerator,
+                    denominator: ratio.denominator,
                 }
             }
 
@@ -135,9 +148,13 @@ export function *iterMeasuresAtRange(
         let num = lastMeasureNum + 1
         let time = lastMeterCh.range.start
         
+        let ratioIndex = 0
+
         while (time.compare(range.end) < 0)
         {
-            const time2 = time.add(lastMeterCh.meter.fullCycleDuration)
+            const ratio = lastMeterCh.meter.ratios[ratioIndex]
+            const time2 = time.add(new Rational(ratio.numerator, ratio.denominator))
+            ratioIndex = (ratioIndex + 1) % lastMeterCh.meter.ratios.length
 
             if (time2.compare(range.start) >= 0)
             {
@@ -146,6 +163,8 @@ export function *iterMeasuresAtRange(
                     num, numLocal: num,
                     time1: time,
                     time2,
+                    numerator: ratio.numerator,
+                    denominator: ratio.denominator,
                 }
             }
 

@@ -4,7 +4,9 @@ import { styled } from "solid-styled-components"
 
 export function Button(props: {
     children?: Solid.JSXElement,
+    style?: Solid.JSX.CSSProperties,
     label?: Solid.JSXElement,
+    disabled?: boolean
     checked?: boolean,
     onClick?: () => void,
     groupStart?: boolean,
@@ -18,6 +20,8 @@ export function Button(props: {
         data-group-middle={ !!props.groupMiddle }
         data-group-end={ !!props.groupEnd }
         onClick={ props.onClick }
+        disabled={ !!props.disabled }
+        style={ props.style }
     >
         { props.label ?? props.children }
     </StyledButton>
@@ -51,6 +55,12 @@ const StyledButton = styled.button<{
 
     &:active {
         background-color: var(--theme-buttonBkgPress);
+    }
+
+    &:disabled {
+        background-color: var(--theme-buttonBkgPress);
+        opacity: 0.5;
+        cursor: inherit;
     }
 
     &[data-checked=true] {

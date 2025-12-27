@@ -1,6 +1,6 @@
 import PitchName from "./pitchName.ts"
 import Pitch from "./pitch.ts"
-import Scale from "./scale.ts"
+import { Scale } from "./scale.ts"
 import Utils from "./utils.ts"
 
 

@@ -524,14 +524,13 @@ export function drawLaneBkgMeasures(
     lane: Timeline.Lane,
     mainLinePass: boolean)
 {
-    // Render alternating measure background and sub-measure dividers.
     for (const measure of timeline.layout.measures)
     {
         const x1 = Math.floor(Timeline.xAtTime(timeline, measure.time1))
         const x2 = Math.floor(Timeline.xAtTime(timeline, measure.time2))
 
         const submeasureSize =
-            Timeline.xAtTime(timeline, new Rational(1, measure.meterCh.meter.denominator)) -
+            Timeline.xAtTime(timeline, new Rational(1, measure.denominator)) -
             Timeline.xAtTime(timeline, new Rational(0))
 
         if (mainLinePass)
@@ -551,7 +550,7 @@ export function drawLaneBkgMeasures(
             ctx.lineWidth = 1
             ctx.beginPath()
 
-            for (let n = 1; n < measure.meterCh.meter.numerator; n++)
+            for (let n = 1; n < measure.numerator; n++)
             {
                 const submeasureX = x1 + Math.round(submeasureSize * n)
                 if (submeasureX >= x2)

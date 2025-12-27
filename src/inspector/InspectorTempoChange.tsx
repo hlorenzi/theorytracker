@@ -4,6 +4,7 @@ import * as Inspector from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
+import { TextInput } from "../components"
 import Rect from "../utils/rect.ts"
 import { styled } from "solid-styled-components"
 
@@ -39,11 +40,12 @@ export function InspectorTempoChange(props: {
         <Layout>
             <h2 style={{ "grid-column": "1 / -1" }}>Tempo Change</h2>
 
-            <input
+            <TextInput
                 value={ currTempo().toString() }
-                onChange={ ev => parseTempo(ev.target.value) }
-                onBlur={ ev => parseTempo(ev.target.value) }
-            /> bpm
+                labelAfter=" bpm"
+                onChange={ parseTempo }
+                width="4em"
+            />
 
         </Layout>
     </>

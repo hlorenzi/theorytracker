@@ -1,7 +1,7 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
 import * as Prefs from "../prefs.ts"
-import * as Theory from "../theory/index.ts"
+import * as Theory from "../theory"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
 import Rational from "../utils/rational.ts"

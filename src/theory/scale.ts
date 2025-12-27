@@ -95,7 +95,7 @@ export const knownScales: ScaleMetadata[] = [
 ]
 
 
-export default class Scale
+export class Scale
 {
 	static list = knownScales
 

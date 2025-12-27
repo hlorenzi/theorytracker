@@ -1,7 +1,6 @@
 export { default as Pitch } from "./pitch.ts"
 export { default as PitchName } from "./pitchName.ts"
-export { default as Scale } from "./scale.ts"
-export { ScaleMetadata } from "./scale.ts"
+export { Scale, ScaleMetadata } from "./scale.ts"
 export { default as Key } from "./key.ts"
 export { default as Meter } from "./meter.ts"
 export { default as Chord } from "./chord.ts"

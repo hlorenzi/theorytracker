@@ -166,9 +166,8 @@ function playChord(
     const measures = Project.iterMeasuresAtRange(project, chord.range)
     for (const measure of measures)
     {        
-        const meter = measure.meterCh.meter
-        const meterBeatLength = new Rational(1, meter.denominator)
-        const pattern = getChordStrummingPattern(meter)
+        const meterBeatLength = new Rational(1, measure.denominator)
+        const pattern = getChordStrummingPattern(measure.numerator, measure.denominator)
         
         let tick = measure.time1
         const endTime = chord.range.end.min(measure.time2)
@@ -249,7 +248,7 @@ function playChord(
 }
 
 
-function getChordStrummingPattern(meter: Theory.Meter)
+function getChordStrummingPattern(numerator: number, denominator: number)
 {
     // [[beat kind, duration], ...]
     // Beat kinds:
@@ -265,23 +264,31 @@ function getChordStrummingPattern(meter: Theory.Meter)
     const three: [number, Rational][] =
         [[0, new Rational(1)], [1, new Rational(1)   ], [1, new Rational(1)   ]]
     
-    switch (meter.numerator)
+    let pattern: [number, Rational][] = []
+    let accumulated = 0
+    while (accumulated < numerator)
     {
-        case 2: return two
-        case 3: return three
-        case 4: return two.concat(two)
-        case 5: return three.concat(two)
-        case 6: return three.concat(three)
-        case 7: return three.concat(two).concat(two)
-        case 8: return two.concat(two).concat(two).concat(two)
-        case 9: return three.concat(three).concat(three)
-        
-        default:
+        if (numerator % 3 === 0 &&
+            accumulated + 3 <= numerator)
         {
-            let pattern: [number, Rational][] = []
-            for (let i = 0; i < meter.numerator; i++)
-                pattern = pattern.concat(one)
-            return pattern
+            pattern = pattern.concat(three)
+            accumulated += 3
+        }
+        else if (accumulated + 3 === numerator)
+        {
+            pattern = pattern.concat(three)
+            accumulated += 3
+        }
+        else if (accumulated + 2 <= numerator)
+        {
+            pattern = pattern.concat(two)
+            accumulated += 2
+        }
+        else
+        {
+            pattern = pattern.concat(one)
+            accumulated += 1
         }
     }
+    return pattern
 }

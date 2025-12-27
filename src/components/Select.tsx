@@ -2,17 +2,32 @@ import * as Solid from "solid-js"
 import { styled } from "solid-styled-components"
 
 
+declare module "solid-js"
+{
+    namespace JSX
+    {
+        interface IntrinsicElements
+        {
+            "selectedcontent": HTMLAttributes<HTMLElement>
+        }
+    }
+}
+
+
 export function Select(props: {
     children?: Solid.JSXElement,
     label?: Solid.JSXElement,
     value?: string,
     onChange?: (newValue: string) => void,
+    width?: string,
 })
 {
     return <StyledSelect
         value={ props.value }
         onChange={ ev => props.onChange?.(ev.target.value) }
-    >
+        style={{
+            width: props.width,
+    }}>
         <button>{ props.label }<selectedcontent></selectedcontent></button>
         { props.children }
     </StyledSelect>
@@ -56,4 +71,3 @@ const StyledSelect = styled.select<{
         background-color: var(--theme-buttonBkgPress);
     }
 `
-//${ props => props.$checked ? "background-color: var(--theme-buttonBkgSelected);" : "" }

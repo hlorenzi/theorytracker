@@ -63,6 +63,12 @@ export function InspectorRoot(props: {})
                 upsertElem={ upsertElem }
             />
         
+        if (elem?.type === "meterChange")
+            return <Inspector.InspectorMeterChange
+                value={ elem }
+                upsertElem={ upsertElem }
+            />
+        
         if (elem?.type === "chord")
             return <Inspector.InspectorChord
                 key={ key }
