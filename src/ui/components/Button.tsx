@@ -6,7 +6,7 @@ export function Button(props: {
     children?: Solid.JSXElement,
     style?: Solid.JSX.CSSProperties,
     label?: Solid.JSXElement,
-    disabled?: boolean
+    disabled?: boolean,
     checked?: boolean,
     onClick?: () => void,
     groupStart?: boolean,

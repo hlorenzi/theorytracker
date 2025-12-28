@@ -3,7 +3,7 @@ import * as SolidWeb from "solid-js/web"
 import { styled } from "solid-styled-components"
 import * as State from "./state.ts"
 import * as Timeline from "./timeline"
-import * as Inspector from "./inspector"
+import * as Ui from "./ui"
 import { setupKeyboardShortcuts } from "./shortcuts.ts"
 
 
@@ -14,7 +14,7 @@ function App()
 
     return <AppRoot>
         <Timeline.Element/>
-        <Inspector.InspectorRoot/>
+        <Ui.InspectorRoot/>
     </AppRoot>
 }
 

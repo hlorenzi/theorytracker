@@ -1,6 +1,6 @@
 import * as Solid from "solid-js"
 import * as Global from "../state.ts"
-import * as Inspector from "./index.ts"
+import * as Ui from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
@@ -155,7 +155,7 @@ export function InspectorKeyChange(props: {
 
         return <ScaleButton
             ref={ button }
-            $selected={ isSelected }
+            data-selected={ isSelected }
             onClick={ () => applyScale(scaleMeta.id) }
         >
             { scaleMeta.names[0] }
@@ -261,7 +261,7 @@ const ScaleList = styled.div`
 
 
 const ScaleButton = styled.div<{
-    $selected: boolean,
+    "data-selected": boolean,
 }>`
     display: grid;
     grid-template: auto auto / auto;
@@ -283,17 +283,10 @@ const ScaleButton = styled.div<{
     &:active {
         background-color: var(--theme-buttonBkgPress);
     }
-        
-    ${ props => props.$selected ? "background-color: var(--theme-buttonBkgSelected);" : "" }
-`
 
-
-const StyledSelect = styled.select`
-    /*appearance: base-select;
-    
-    &::picker(select) {
-        appearance: base-select;
-    }*/
+    &:[data-selected=true] {
+        background-color: var(--theme-buttonBkgSelected);
+    }
 `
 
 

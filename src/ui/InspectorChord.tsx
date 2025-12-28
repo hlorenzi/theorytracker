@@ -1,13 +1,12 @@
 import * as Solid from "solid-js"
 import * as Global from "../state.ts"
-import * as Inspector from "./index.ts"
+import * as Ui from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
 import Rect from "../utils/rect.ts"
 import * as CanvasUtils from "../utils/canvasUtils.ts"
 import { styled } from "solid-styled-components"
-import { Checkbox, Select } from "../components"
 
 
 export function InspectorChord(props: {
@@ -159,31 +158,31 @@ export function InspectorChord(props: {
                     "grid-column": "1 / -1",
                     "justify-self": "center",
                 }}>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="Triad"
                         groupStart
                         checked={ chordOptions().withStacking === 0 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: 0 })) }
                     />
-                    <Checkbox
+                    <Ui.Checkbox
                         label="7"
                         groupMiddle
                         checked={ chordOptions().withStacking === 7 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 7 : 0 })) }
                     />
-                    <Checkbox
+                    <Ui.Checkbox
                         label="9"
                         groupMiddle
                         checked={ chordOptions().withStacking === 9 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 9 : 0 })) }
                     />
-                    <Checkbox
+                    <Ui.Checkbox
                         label="11"
                         groupMiddle
                         checked={ chordOptions().withStacking === 11 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withStacking: ev ? 11 : 0 })) }
                     />
-                    <Checkbox
+                    <Ui.Checkbox
                         label="13"
                         groupEnd
                         checked={ chordOptions().withStacking === 13 }
@@ -191,82 +190,82 @@ export function InspectorChord(props: {
                     />
                 </div>
                 <div>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="sus2"
                         checked={ chordOptions().withSus2 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withSus2: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="sus4"
                         checked={ chordOptions().withSus4 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withSus4: ev })) }
                     />
                 </div>
                 <div>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="add9"
                         checked={ chordOptions().withAdd9 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd9: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="add11"
                         checked={ chordOptions().withAdd11 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd11: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="add13"
                         checked={ chordOptions().withAdd13 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withAdd13: ev })) }
                     />
                     <br/>
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="no3"
                         checked={ chordOptions().withNo3 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withNo3: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="no5"
                         checked={ chordOptions().withNo5 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withNo5: ev })) }
                     />
                 </div>
                 <div>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="♭5"
                         checked={ chordOptions().withFlat5 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat5: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="♯5"
                         checked={ chordOptions().withSharp5 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp5: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="♭9"
                         checked={ chordOptions().withFlat9 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat9: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="♯9"
                         checked={ chordOptions().withSharp9 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp9: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="♯11"
                         checked={ chordOptions().withSharp11 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withSharp11: ev })) }
                     />
                     <br/>
-                    <Checkbox
+                    <Ui.Checkbox
                         label="♭13"
                         checked={ chordOptions().withFlat13 }
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat13: ev })) }
@@ -276,14 +275,14 @@ export function InspectorChord(props: {
                     "grid-column": "1 / -1",
                     "justify-self": "center",
                 }}>
-                    <Select
+                    <Ui.Select
                         value={ chordOptions().borrowFromScaleId }
                         onChange={ scaleId => setChordOptions(opts => ({ ...opts, borrowFromScaleId: scaleId })) }
                     >
                         { Theory.Scale.list.map(
                             (scaleMeta, i) => makeScaleOption(scaleMeta)
                         )}
-                    </Select>
+                    </Ui.Select>
                 </div>
             </LayoutChordOptions>
 

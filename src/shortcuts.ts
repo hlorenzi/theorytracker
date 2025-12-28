@@ -1,7 +1,6 @@
 import * as Solid from "solid-js"
 import * as Global from "./state.ts"
 import * as Timeline from "./timeline"
-import * as Inspector from "./inspector"
 import * as Playback from "./playback"
 
 
@@ -23,11 +22,13 @@ function handleKeyDown(ev: KeyboardEvent)
 
     if (key === " ")
     {
+        ev.preventDefault()
+        ev.stopPropagation()
         const project = Global.get().project
         const timeline = Global.get().timeline
         const playback = Global.get().playback
         playback.setStartTime(timeline.playbackStartTime)
-        playback.togglePlaying(project.root)
+        playback.togglePlaying()
     }
 
     /*for (const command of Command.allCommands)

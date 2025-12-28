@@ -146,6 +146,9 @@ function drawElements(
 
         else
             element.zIndexForHover = 0
+
+        if (element.ghost)
+            element.zIndexForHover -= 5
     }
 
     elements.sort((a, b) =>
@@ -192,6 +195,8 @@ function drawNote(
         ctx,
         key.degreeForMidi(element.note.midiPitch) + mode,
         false)
+
+    ctx.globalAlpha = element.ghost ? 0.5 : 1
         
     ctx.fillStyle = fillStyle
     ctx.beginPath()
@@ -434,7 +439,6 @@ export function drawLaneBkgChordTones(
     const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
     const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
 
-    // Render alternating measure background and sub-measure dividers.
     for (const chordRegion of timeline.layout.chordRegions)
     {
         const key = chordRegion.key

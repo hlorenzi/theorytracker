@@ -79,17 +79,30 @@ export function InspectorRoot(props: {})
         return <Inspector.InspectorInsert/>
     })
 
-    return <div style={{
-        width: "100%",
-        height: "100%",
-        display: "grid",
-        "grid-template": "auto 1fr / 1fr",
-        contain: "size",
-        "box-sizing": "border-box",
-        padding: "0.5em",
-    }}>
+    return <Layout>
+        <Inspector.TrackList
+            style={{
+                "grid-row": "1 / -1",
+        }}/>
+
         <div>{ `${selectedIds().count()} selected` }</div>
 
         { inspectorKind() }
-    </div>
+    </Layout>
 }
+
+
+const Layout = styled.div`
+    display: grid;
+    grid-template: auto auto 1fr / auto auto;
+    contain: size;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0.5em;
+    justify-content: start;
+    justify-items: start;
+    align-content: start;
+    align-items: start;
+    column-gap: 1em;
+`

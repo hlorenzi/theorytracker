@@ -136,6 +136,7 @@ function registerHandlers(
 
     const onMouseDown = (ev: MouseEvent) => {
         ev.preventDefault()
+        canvas.focus()
 
         const timeline = Global.get().timeline
         const project = Global.get().project

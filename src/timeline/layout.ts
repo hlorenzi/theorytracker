@@ -11,6 +11,7 @@ export interface LayoutElementCommon
 {
     id?: Project.ID
     action?: Timeline.MouseAction
+    ghost?: boolean
     rect: Rect
     zIndex?: number
     zIndexForHover?: number

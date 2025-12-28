@@ -1,10 +1,9 @@
 import * as Solid from "solid-js"
 import * as Global from "../state.ts"
-import * as Inspector from "./index.ts"
+import * as Ui from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
-import { Button } from "../components"
 import Rect from "../utils/rect.ts"
 import { styled } from "solid-styled-components"
 
@@ -103,19 +102,19 @@ export function InspectorInsert(props: {
     return <Layout>
         <Solid.Show when={ insertionKind() !== null }>
             <div>
-                <Button onClick={ insertTempoChange }>
+                <Ui.Button onClick={ insertTempoChange }>
                     + Tempo Change
-                </Button>
-                <Button onClick={ insertKeyChange }>
+                </Ui.Button>
+                <Ui.Button onClick={ insertKeyChange }>
                     + Key Change
-                </Button>
-                <Button onClick={ insertMeterChange }>
+                </Ui.Button>
+                <Ui.Button onClick={ insertMeterChange }>
                     + Meter Change
-                </Button>
+                </Ui.Button>
             </div>
         </Solid.Show>
         <Solid.Show when={ insertionKind() === "chord" }>
-            <Inspector.InspectorChord
+            <Ui.InspectorChord
                 key={ key() }
                 insertElem={ insertChord }
             />

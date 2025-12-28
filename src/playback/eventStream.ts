@@ -35,24 +35,38 @@ export function queryNoteEvents(
 {
     const noteEvents: NoteEvent[] = []
 
-    for (const [track, note] of iterNotesAtRange(project, range))
+    const hasSolo = project.tracks.some(tr =>
+        tr.trackType === "notes" || tr.trackType === "chords" ? tr.solo : false)
+
+    for (const track of project.tracks)
     {
-        if (range.overlapsPoint(note.range.start) ||
-            (isStart && note.range.overlapsPoint(range.start)))
+        if (track.trackType !== "notes" ||
+            track.mute ||
+            (hasSolo && !track.solo))
+            continue
+
+        for (const note of iterNotesAtRange(project, track.id, range))
         {
-            noteEvents.push(makeNoteEvent(
-                project,
-                track.id,            
-                note.range,
-                note.midiPitch,
-                0,//note.volumeDb,
-                1))//note.velocity)
+            if (range.overlapsPoint(note.range.start) ||
+                (isStart && note.range.overlapsPoint(range.start)))
+            {
+                noteEvents.push(makeNoteEvent(
+                    project,
+                    track.id,            
+                    note.range,
+                    note.midiPitch,
+                    0,//note.volumeDb,
+                    1))//note.velocity)
+            }
         }
     }
 
     const chordTrack = Project.getTrack(project, project.chordTrackId, "chords")
     const chordList = project.lists.get(project.chordTrackId)
-    if (chordTrack && chordList)
+    if (chordTrack &&
+        chordList &&
+        !chordTrack.mute &&
+        (!hasSolo || chordTrack.solo))
     {
         for (const chord of chordList.iterAtRange(range))
         {
@@ -104,28 +118,23 @@ function makeNoteEvent(
 
 function *iterNotesAtRange(
     project: Project.ImmutableRoot,
+    trackId: Project.ID,
     range: Range)
-    : Generator<[Project.TrackNotes, Project.Note], void, void>
+    : Generator<Project.Note, void, void>
 {
-    for (const track of project.tracks)
+    const noteList = project.lists.get(trackId)
+    if (!noteList)
+        return
+    
+    for (const elem of noteList.iterAtRange(range))
     {
-        if (track.trackType !== "notes")
+        if (elem.range.duration.isZero())
             continue
 
-        const noteList = project.lists.get(track.id)
-        if (!noteList)
+        if (!elem.range.overlapsRange(range))
             continue
         
-        for (const elem of noteList.iterAtRange(range))
-        {
-            if (elem.range.duration.isZero())
-                continue
-
-            if (!elem.range.overlapsRange(range))
-                continue
-            
-            yield [track, elem as Project.Note]
-        }
+        yield elem as Project.Note
     }
 }
 

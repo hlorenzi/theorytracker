@@ -19,7 +19,6 @@ export class Manager
     
     loading: number
     playing: boolean
-    playingProject: Project.ImmutableRoot | undefined
     firstPlayingFrame: boolean
     startTime: Rational
     startTimeMs: number
@@ -41,7 +40,6 @@ export class Manager
 
         this.loading = 0
         this.playing = false
-        this.playingProject = undefined
         this.firstPlayingFrame = false
         this.startTime = new Rational(0)
         this.startTimeMs = 0
@@ -210,7 +208,7 @@ export class Manager
             preloadTimeNext)
         
         this.prepare(
-            this.playingProject!,
+            Global.get().project.root,
             range,
             isStart)
 
@@ -220,9 +218,6 @@ export class Manager
 
     processFrame(canRedrawScreen: boolean)
     {
-        if (!this.playingProject)
-            return
-
         if (this.loading > 0)
             return
 
@@ -239,8 +234,10 @@ export class Manager
 
         const startTimeNext = this.startTimeMs + deltaTimeMs
 
+        const project = Global.get().project.root
+
         const playTimeNext =
-            Project.getTimeAtMilliseconds(this.playingProject, startTimeNext)
+            Project.getTimeAtMilliseconds(project, startTimeNext)
         
         this.process(audioCtxOffsetMs, deltaTimeMs)
 
@@ -251,7 +248,7 @@ export class Manager
             false)
         
         const noteEvents = Playback.queryNoteEvents(
-            this.playingProject,
+            project,
             range,
             this.firstPlayingFrame)
 
@@ -277,10 +274,10 @@ export class Manager
             window.dispatchEvent(new CustomEvent(eventPlaybackRefresh))
         }
 
-        if (this.playTime.compare(this.playingProject.range.end) > 0 &&
+        if (this.playTime.compare(project.range.end) > 0 &&
             this.isFinished())
         {
-            this.setPlaying(false, this.playingProject)
+            this.setPlaying(false)
             window.dispatchEvent(new CustomEvent(eventPlaybackRefresh))
         }
     }
@@ -326,8 +323,7 @@ export class Manager
 
     
     setPlaying(
-        playing: boolean,
-        playingProject: Project.ImmutableRoot)
+        playing: boolean)
     {
         if (this.requestAnimationFrameId !== 0)
         {
@@ -340,11 +336,12 @@ export class Manager
             this.setIntervalId = 0
         }
 
+        const project = Global.get().project.root
+
         this.playing = playing
-        this.playingProject = playingProject
         this.firstPlayingFrame = true
         this.startTime = this.nextStartTime
-        this.startTimeMs = Project.getMillisecondsAt(playingProject, this.startTime)
+        this.startTimeMs = Project.getMillisecondsAt(project, this.startTime)
         this.playTime = this.nextStartTime
         this.preloadTime = this.nextStartTime
         this.refreshTimeMs = 0
@@ -373,11 +370,8 @@ export class Manager
     }
 
 
-    togglePlaying(
-        playingProject: Project.ImmutableRoot)
+    togglePlaying()
     {
-        this.setPlaying(
-            !this.playing,
-            playingProject)
+        this.setPlaying(!this.playing)
     }
 }

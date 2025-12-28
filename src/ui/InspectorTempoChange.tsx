@@ -1,10 +1,9 @@
 import * as Solid from "solid-js"
 import * as Global from "../state.ts"
-import * as Inspector from "./index.ts"
+import * as Ui from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
-import { TextInput } from "../components"
 import Rect from "../utils/rect.ts"
 import { styled } from "solid-styled-components"
 
@@ -40,7 +39,7 @@ export function InspectorTempoChange(props: {
         <Layout>
             <h2 style={{ "grid-column": "1 / -1" }}>Tempo Change</h2>
 
-            <TextInput
+            <Ui.TextInput
                 value={ currTempo().toString() }
                 labelAfter=" bpm"
                 onChange={ parseTempo }

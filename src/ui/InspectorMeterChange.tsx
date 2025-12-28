@@ -1,10 +1,9 @@
 import * as Solid from "solid-js"
 import * as Global from "../state.ts"
-import * as Inspector from "./index.ts"
+import * as Ui from "./index.ts"
 import * as Project from "../project"
 import * as Timeline from "../timeline"
 import * as Theory from "../theory"
-import { Button, Select, TextInput } from "../components"
 import Rect from "../utils/rect.ts"
 import { styled } from "solid-styled-components"
 
@@ -63,13 +62,13 @@ export function InspectorMeterChange(props: {
             <Solid.Index each={ currMeter().ratios }>
             { (ratio, index) =>
                 <div>
-                    <TextInput
+                    <Ui.TextInput
                         value={ ratio().numerator.toString() }
                         onChange={ str => parseNumerator(str, index) }
                         width="4em"
                     />
                     { " / " }
-                    <Select
+                    <Ui.Select
                         value={ ratio().denominator.toString() }
                         onChange={ str => parseDenominator(str, index) }
                         width="4em"
@@ -81,8 +80,8 @@ export function InspectorMeterChange(props: {
                         <option value="16">16</option>
                         <option value="32">32</option>
                         <option value="64">64</option>
-                    </Select>
-                    <Button
+                    </Ui.Select>
+                    <Ui.Button
                         label="🗙"
                         onClick={ () => removeAlternating(index) }
                         disabled={ index === 0 }
@@ -91,7 +90,7 @@ export function InspectorMeterChange(props: {
             }
             </Solid.Index>
             <Solid.Show when={ currMeter().ratios.length < 4 }>
-                <Button
+                <Ui.Button
                     label="+ Alternating Measure"
                     onClick={ addAlternating }
                 />

@@ -25,6 +25,21 @@ export class LaneNotes extends Timeline.Lane
     tupleIndicators: TupleIndicator[] = []
 
 
+    getEditingNoteTrackId(
+        project: Project.ImmutableRoot)
+        : Project.ID | undefined
+    {
+        for (const track of project.tracks)
+        {
+            if (track.trackType === "notes" &&
+                track.editable)
+                return track.id
+        }
+
+        return undefined
+    }
+
+
     refreshLayout(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
@@ -33,104 +48,150 @@ export class LaneNotes extends Timeline.Lane
         this.elements = []
         this.tupleIndicators = []
 
-        for (const [note, keyChPair] of iterNotesAndKeyChanges(timeline, project))
+        const editingNoteTrackId = this.getEditingNoteTrackId(project)
+        if (editingNoteTrackId !== undefined)
         {
-            const key = keyChPair.keyCh1.key
-            const row = rowForPitch(note.midiPitch, key)
-
-            const [rect, cutStart, cutEnd] = rectForNote(
-                timeline,
-                this,
-                note.range,
-                row,
-                keyChPair.x1,
-                keyChPair.x2,
-                true)
-
-            if (!cutStart)
+            for (const [note, keyChPair] of iterNotesAndKeyChanges(
+                    timeline,
+                    project,
+                    editingNoteTrackId))
             {
-                this.add({
-                    kind: "hidden",
-                    id: note.id,
-                    action: Timeline.MouseAction.StretchTimeStart,
-                    rect: rect.withX1(rect.x1 - prefs.timeline.hoverOuterStretchWidth),
-                })
-            }
+                const key = keyChPair.keyCh1.key
+                const row = rowForPitch(note.midiPitch, key)
 
-            if (!cutEnd)
-            {        
-                this.add({
-                    kind: "hidden",
-                    id: note.id,
-                    action: Timeline.MouseAction.StretchTimeEnd,
-                    rect: rect.withX2(rect.x2 + prefs.timeline.hoverOuterStretchWidth),
-                })
-            }
+                const [rect, cutStart, cutEnd] = rectForNote(
+                    timeline,
+                    this,
+                    note.range,
+                    row,
+                    keyChPair.x1,
+                    keyChPair.x2,
+                    true)
 
-            if (rect.w > prefs.timeline.hoverInnerStretchWidth * 4)
-            {
                 if (!cutStart)
                 {
                     this.add({
                         kind: "hidden",
                         id: note.id,
                         action: Timeline.MouseAction.StretchTimeStart,
-                        rect: rect.withX2(rect.x1 + prefs.timeline.hoverInnerStretchWidth),
-                        priority: 2,
+                        rect: rect.withX1(rect.x1 - prefs.timeline.hoverOuterStretchWidth),
                     })
                 }
 
                 if (!cutEnd)
-                {
+                {        
                     this.add({
                         kind: "hidden",
                         id: note.id,
                         action: Timeline.MouseAction.StretchTimeEnd,
-                        rect: rect.withX1(rect.x2 - prefs.timeline.hoverInnerStretchWidth),
-                        priority: 2,
+                        rect: rect.withX2(rect.x2 + prefs.timeline.hoverOuterStretchWidth),
                     })
                 }
-            }
 
-            this.add({
-                kind: "note",
-                id: note.id,
-                note: note,
-                key: keyChPair.keyCh1.key,
-                action: Timeline.MouseAction.DragTimeAndRow,
-                rect,
-                cutStart,
-                cutEnd,
-                priority: 1,
-            })
-
-            for (const denom of Timeline.tupleDenominators)
-            {
-                if (note.range.duration.denominator % denom !== 0)
-                    continue
-                
-                let tuple = this.tupleIndicators.find(t =>
-                    t.denominator === denom &&
-                    t.range.end.compare(note.range.start) === 0)
-                    
-                if (tuple === undefined)
+                if (rect.w > prefs.timeline.hoverInnerStretchWidth * 4)
                 {
-                    tuple = {
-                        denominator: denom,
-                        rect: rect,
-                        range: note.range,
-                        highestMidiPitch: note.midiPitch,
-                        lowestMidiPitch: note.midiPitch,
+                    if (!cutStart)
+                    {
+                        this.add({
+                            kind: "hidden",
+                            id: note.id,
+                            action: Timeline.MouseAction.StretchTimeStart,
+                            rect: rect.withX2(rect.x1 + prefs.timeline.hoverInnerStretchWidth),
+                            priority: 2,
+                        })
                     }
 
-                    this.tupleIndicators.push(tuple)
+                    if (!cutEnd)
+                    {
+                        this.add({
+                            kind: "hidden",
+                            id: note.id,
+                            action: Timeline.MouseAction.StretchTimeEnd,
+                            rect: rect.withX1(rect.x2 - prefs.timeline.hoverInnerStretchWidth),
+                            priority: 2,
+                        })
+                    }
                 }
 
-                tuple.highestMidiPitch = Math.max(tuple.highestMidiPitch, note.midiPitch)
-                tuple.lowestMidiPitch = Math.min(tuple.lowestMidiPitch, note.midiPitch)
-                tuple.range = tuple.range.merge(note.range)
-                tuple.rect = tuple.rect.merge(rect)
-                break
+                this.add({
+                    kind: "note",
+                    id: note.id,
+                    note: note,
+                    key: keyChPair.keyCh1.key,
+                    action: Timeline.MouseAction.DragTimeAndRow,
+                    rect,
+                    cutStart,
+                    cutEnd,
+                    priority: 1,
+                })
+
+                for (const denom of Timeline.tupleDenominators)
+                {
+                    if (note.range.duration.denominator % denom !== 0)
+                        continue
+                    
+                    let tuple = this.tupleIndicators.find(t =>
+                        t.denominator === denom &&
+                        t.range.end.compare(note.range.start) === 0)
+                        
+                    if (tuple === undefined)
+                    {
+                        tuple = {
+                            denominator: denom,
+                            rect: rect,
+                            range: note.range,
+                            highestMidiPitch: note.midiPitch,
+                            lowestMidiPitch: note.midiPitch,
+                        }
+
+                        this.tupleIndicators.push(tuple)
+                    }
+
+                    tuple.highestMidiPitch = Math.max(tuple.highestMidiPitch, note.midiPitch)
+                    tuple.lowestMidiPitch = Math.min(tuple.lowestMidiPitch, note.midiPitch)
+                    tuple.range = tuple.range.merge(note.range)
+                    tuple.rect = tuple.rect.merge(rect)
+                    break
+                }
+            }
+        }
+
+        for (const track of project.tracks)
+        {
+            if (track.trackType !== "notes" ||
+                track.id === editingNoteTrackId ||
+                !track.visible)
+                continue
+
+            for (const [note, keyChPair] of iterNotesAndKeyChanges(
+                    timeline,
+                    project,
+                    track.id))
+            {
+                const key = keyChPair.keyCh1.key
+                const row = rowForPitch(note.midiPitch, key)
+
+                const [rect, cutStart, cutEnd] = rectForNote(
+                    timeline,
+                    this,
+                    note.range,
+                    row,
+                    keyChPair.x1,
+                    keyChPair.x2,
+                    true)
+
+                this.add({
+                    kind: "note",
+                    id: note.id,
+                    note: note,
+                    key: keyChPair.keyCh1.key,
+                    action: Timeline.MouseAction.None,
+                    ghost: true,
+                    rect,
+                    cutStart,
+                    cutEnd,
+                    priority: 1,
+                })
             }
         }
 
@@ -187,8 +248,11 @@ export class LaneNotes extends Timeline.Lane
         verticalRegion?: { y1: number, y2: number })
         : Generator<Project.ID, void, void>
     {
-        for (const note of iterNotesAtRegion(timeline, project, this, range, verticalRegion))
-            yield note
+        const editingNoteTrackId = this.getEditingNoteTrackId(project)
+
+        if (editingNoteTrackId !== undefined)
+            for (const note of iterNotesAtRegion(timeline, project, editingNoteTrackId, this, range, verticalRegion))
+                yield note
         
         for (const marker of iterMarkersForSelection(timeline, project, range))
             yield marker
@@ -201,7 +265,11 @@ export class LaneNotes extends Timeline.Lane
         time: Rational)
         : Rational | null
     {
-        const list = project.lists.get(project.noteTrackId)
+        const editingNoteTrackId = this.getEditingNoteTrackId(project)
+        if (editingNoteTrackId === undefined)
+            return null
+
+        const list = project.lists.get(editingNoteTrackId)
         if (!list)
             return null
     
@@ -215,7 +283,11 @@ export class LaneNotes extends Timeline.Lane
         project: Project.Mutable,
         range: Range)
     {
-        const list = project.root.lists.get(project.root.noteTrackId)
+        const editingNoteTrackId = this.getEditingNoteTrackId(project.root)
+        if (editingNoteTrackId === undefined)
+            return
+
+        const list = project.root.lists.get(editingNoteTrackId)
         if (!list)
             return
     
@@ -244,7 +316,10 @@ export class LaneNotes extends Timeline.Lane
         time: Rational,
         degree: number)
     {
-        const trackId = project.root.noteTrackId
+        const trackId = this.getEditingNoteTrackId(project.root)
+        if (trackId === undefined)
+            return
+
         const key = Project.keyAt(project.root, trackId, time)
         const chroma = key.chromaForDegree(degree)
         Timeline.insertNote(timeline, project, trackId, time, chroma)
@@ -262,7 +337,8 @@ export class LaneNotes extends Timeline.Lane
 
 function *iterNotesAndKeyChanges(
     timeline: Timeline.State,
-    project: Project.ImmutableRoot)
+    project: Project.ImmutableRoot,
+    noteTrackId: Project.ID)
     : Generator<[Project.Note, Timeline.KeyRegion], void, void>
 {
     for (const keyRegion of timeline.layout.keyRegions)
@@ -270,7 +346,7 @@ function *iterNotesAndKeyChanges(
         const time1 = keyRegion.keyCh1.range.start.max(timeline.layout.range.start)
         const time2 = keyRegion.keyCh2.range.start.min(timeline.layout.range.end)
         
-        for (const note of iterNotes(timeline, project, new Range(time1, time2)))
+        for (const note of iterNotes(timeline, project, noteTrackId, new Range(time1, time2)))
             yield [note, keyRegion]
     }
 }
@@ -279,10 +355,11 @@ function *iterNotesAndKeyChanges(
 function *iterNotes(
     timeline: Timeline.State,
     project: Project.ImmutableRoot,
+    noteTrackId: Project.ID,
     range: Range)
     : Generator<Project.Note, void, void>
 {
-    const list = project.lists.get(project.noteTrackId)
+    const list = project.lists.get(noteTrackId)
     if (!list)
         return
 
@@ -377,12 +454,13 @@ function rectForNote(
 function *iterNotesAtRegion(
     timeline: Timeline.State,
     project: Project.ImmutableRoot,
+    noteTrackId: Project.ID,
     lane: Timeline.Lane,
     range: Range,
     verticalRegion?: { y1: number, y2: number })
     : Generator<Project.ID, void, void>
 {
-    for (const [note, keyChPair] of iterNotesAndKeyChanges(timeline, project))
+    for (const [note, keyChPair] of iterNotesAndKeyChanges(timeline, project, noteTrackId))
     {
         if (!note.range.overlapsRange(range))
             continue

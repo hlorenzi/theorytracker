@@ -28,7 +28,6 @@ export interface ImmutableRoot
     keyChangeTrackId: number
     meterChangeTrackId: number
     chordTrackId: number
-    noteTrackId: number
 }
 
 
@@ -44,7 +43,6 @@ export function makeEmpty(): ImmutableRoot
         keyChangeTrackId: -1,
         meterChangeTrackId: -1,
         chordTrackId: -1,
-        noteTrackId: -1,
     }
 }
 
@@ -74,8 +72,9 @@ export function makeNew(): ImmutableRoot
     project.chordTrackId = project.nextId
     project = upsertTrack(project, Project.makeTrackChords())
     
-    project.noteTrackId = project.nextId
-    project = upsertTrack(project, Project.makeTrackNotes())
+    const trackNotes = Project.makeTrackNotes()
+    trackNotes.editable = true
+    project = upsertTrack(project, trackNotes)
 
     return project
 }
@@ -85,9 +84,11 @@ export function makeTest(): ImmutableRoot
 {
     let project = makeNew()
 
+    const noteTrackId = project.tracks.find(tr => tr.trackType === "notes")!.id
+
     for (let i = 0; i < 24; i++)
         project = upsertElement(project, Project.makeNote(
-            project.noteTrackId,
+            noteTrackId,
             Range.fromStartDuration(new Rational(i, 4), new Rational(1, 4)),
             Theory.Utils.midiMiddleC - 12 + i))
 

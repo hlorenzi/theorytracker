@@ -45,19 +45,24 @@ export interface TrackMeterChanges extends TrackBase
 }
 
 
-export interface TrackChords extends TrackBase
+export interface TrackAttributes
 {
-    trackType: "chords"
+    editable: boolean
+    visible: boolean
     mute: boolean
     solo: boolean
 }
 
 
-export interface TrackNotes extends TrackBase
+export interface TrackChords extends TrackBase, TrackAttributes
+{
+    trackType: "chords"
+}
+
+
+export interface TrackNotes extends TrackBase, TrackAttributes
 {
     trackType: "notes"
-    mute: boolean
-    solo: boolean
 }
 
 
@@ -128,7 +133,9 @@ export function makeTrackNotes(): TrackNotes
         id: -1,
         parentId: 0,
         range: Range.dummy(),
-        name: "",
+        name: "Notes",
+        editable: false,
+        visible: true,
         mute: false,
         solo: false,
     }
@@ -144,6 +151,8 @@ export function makeTrackChords(): TrackChords
         parentId: 0,
         range: Range.dummy(),
         name: "Chords",
+        editable: false,
+        visible: true,
         mute: false,
         solo: false,
     }

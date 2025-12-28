@@ -46,6 +46,9 @@ function hoverRecursive(
 {
     for (const elem of elements)
     {
+        if (elem.ghost)
+            continue
+        
         if (x >= elem.rect.x &&
             x < elem.rect.x + elem.rect.w &&
             y >= elem.rect.y &&
