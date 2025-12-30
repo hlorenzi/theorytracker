@@ -1,5 +1,6 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory"
 import Rational from "../utils/rational.ts"
@@ -9,6 +10,7 @@ import Range from "../utils/range.ts"
 export function keyDown(
     timeline: Timeline.State,
     project: Project.Mutable,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     key: string)
 {
@@ -50,7 +52,7 @@ export function keyDown(
         case "arrowup":
         case "arrowdown":
         {
-            handleUpDown(timeline, project, prefs, key === "arrowup", false)
+            handleUpDown(timeline, project, playback, prefs, key === "arrowup", false)
             break
         }
 
@@ -59,7 +61,7 @@ export function keyDown(
         case ",":
         case "<":
         {
-            handleUpDown(timeline, project, prefs, key === "." || key === ">", true)
+            handleUpDown(timeline, project, playback, prefs, key === "." || key === ">", true)
             break
         }
 
@@ -72,7 +74,7 @@ export function keyDown(
         case "7":
         {
             const degree = key.charCodeAt(0) - "1".charCodeAt(0)
-            handleInsertByDegree(timeline, project, prefs, degree)
+            handleInsertByDegree(timeline, project, playback, prefs, degree)
             break
         }
 
@@ -344,6 +346,7 @@ function handleLeftRight(
 function handleUpDown(
     timeline: Timeline.State,
     project: Project.Mutable,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     isUp: boolean,
     isChromatic: boolean)
@@ -364,7 +367,7 @@ function handleUpDown(
         if (keyCursor2)
         {
             const newTrack = timeline.cursor.laneIndex2 + trackDelta
-            Timeline.cursorSetTrack(timeline, null, newTrack)
+            Timeline.cursorSetLaneIndex(timeline, null, newTrack)
             Timeline.selectionClear(timeline)
             Timeline.selectionAddAtCursor(timeline, project.root)
         }
@@ -374,7 +377,7 @@ function handleUpDown(
             const trackMax = Math.max(timeline.cursor.laneIndex1, timeline.cursor.laneIndex2)
 
             const newTrack = (isUp ? trackMin : trackMax) + trackDelta
-            Timeline.cursorSetTrack(timeline, newTrack, newTrack)
+            Timeline.cursorSetLaneIndex(timeline, newTrack, newTrack)
         }
     }
     else
@@ -387,7 +390,7 @@ function handleUpDown(
             if (elem.type === "note")
             {
                 const track = Project.parentTrackFor(project.root, elem.parentId)
-                const key = Project.keyAt(project.root, track.id, elem.range.start)
+                const key = Project.keyAt(project.root, elem.range.start)
                 const degree = key.octavedDegreeForMidi(elem.midiPitch)
                 const newDegree = degree + degreeDelta
                 const newPitch = pitchDelta != 0 ?
@@ -397,7 +400,7 @@ function handleUpDown(
                 if (!playedPreview)
                 {
                     playedPreview = true
-                    //Playback.playNotePreview(track.id, newPitch, elem.volumeDb, elem.velocity)
+                    playback.playNotePreview(project.root, track.id, newPitch)
                     timeline.insertion.nearMidiPitch = newPitch
                     timeline.insertion.duration = elem.range.duration
                 }
@@ -407,7 +410,7 @@ function handleUpDown(
             else if (elem.type === "chord")
             {
                 const track = Project.parentTrackFor(project.root, elem.parentId)
-                const key = Project.keyAt(project.root, track.id, elem.range.start)
+                const key = Project.keyAt(project.root, elem.range.start)
                 const degree = key.octavedDegreeForMidi(elem.chord.rootChroma)
                 /*const newDegree = degree + degreeDelta
                 const newRoot = pitchDelta != 0 ?
@@ -425,7 +428,7 @@ function handleUpDown(
                 if (!playedPreview)
                 {
                     playedPreview = true
-                    //Playback.playChordPreview(track.id, newChord, 0, 1)
+                    playback.playChordPreview(project.root, track.id, newChord)
                     timeline.insertion.duration = elem.range.duration
                 }
 
@@ -446,12 +449,13 @@ function handleUpDown(
 function handleInsertByDegree(
     timeline: Timeline.State,
     project: Project.Mutable,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     degree: number)
 {
     const time = timeline.cursor.time1.min(timeline.cursor.time2)
     const lane = timeline.layout.lanes[timeline.cursor.laneIndex1]
-    lane.insertByDegree(timeline, project, prefs, time, degree)
+    lane.insertByDegree(timeline, project, playback, prefs, time, degree)
 }
 
 

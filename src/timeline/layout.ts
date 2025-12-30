@@ -10,6 +10,8 @@ import Rational from "../utils/rational.ts"
 export interface LayoutElementCommon
 {
     id?: Project.ID
+    trackId?: Project.ID
+    laneIndex?: number
     action?: Timeline.MouseAction
     ghost?: boolean
     rect: Rect
@@ -145,6 +147,7 @@ export class Layout
     measures: Project.Measure[] = []
     keyRegions: KeyRegion[] = []
     chordRegions: ChordRegion[] = []
+    chordTonesVisible: boolean = true
     markers: Marker[] = []
 
 
@@ -185,6 +188,7 @@ export function layout(
     layout.measures = [...Project.iterMeasuresAtRange(project, layout.range)]
     layout.keyRegions = [...iterKeyChangePairsAtRange(timeline, project, layout.range)]
     layout.chordRegions = [...iterChordRegions(timeline, project, layout.keyRegions)]
+    layout.chordTonesVisible = !!Project.getTrack(project, project.chordTrackId, "chords")?.visible
     layout.markers = []
 
 

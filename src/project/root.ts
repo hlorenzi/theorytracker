@@ -210,7 +210,7 @@ export function upsertElement(project: ImmutableRoot, elem: Project.Element): Im
 }
 
 
-export function keyAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Theory.Key
+export function keyAt(project: ImmutableRoot, time: Rational): Theory.Key
 {
     const keyChangeTrackTimedElems = project.lists.get(project.keyChangeTrackId)
     if (!keyChangeTrackTimedElems)
@@ -228,7 +228,7 @@ export function keyAt(project: ImmutableRoot, trackId: Project.ID, time: Rationa
 }
 
 
-export function meterChangeAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Project.MeterChange | null
+export function meterChangeAt(project: ImmutableRoot, time: Rational): Project.MeterChange | null
 {
     const meterChangeTrackTimedElems = project.lists.get(project.meterChangeTrackId)
     if (!meterChangeTrackTimedElems)
@@ -246,9 +246,9 @@ export function meterChangeAt(project: ImmutableRoot, trackId: Project.ID, time:
 }
 
 
-export function meterAt(project: ImmutableRoot, trackId: Project.ID, time: Rational): Theory.Meter
+export function meterAt(project: ImmutableRoot, time: Rational): Theory.Meter
 {
-    const meterCh = meterChangeAt(project, trackId, time)
+    const meterCh = meterChangeAt(project, time)
     if (meterCh)
         return meterCh.meter
         

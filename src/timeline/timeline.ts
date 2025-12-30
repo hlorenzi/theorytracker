@@ -72,10 +72,11 @@ export interface State
         posDelta: { x: number, y: number }
         timeDelta: Rational
         rowDelta: number
-        trackDelta: number
+        laneDelta: number
         trackInsertionBefore: number
 
-        elemId: Project.ID
+        elemId: Project.ID | undefined
+        trackId: Project.ID | undefined
         notePreviewLast: number | null
     }
 
@@ -200,10 +201,11 @@ export function makeNew(): State
             posDelta: { x: 0, y: 0 },
             timeDelta: new Rational(0),
             rowDelta: 0,
-            trackDelta: 0,
+            laneDelta: 0,
             trackInsertionBefore: -1,
 
-            elemId: -1,
+            elemId: undefined,
+            trackId: undefined,
             notePreviewLast: null,
         },
 
@@ -423,18 +425,18 @@ export function cursorSetTime(
 }
 
 
-export function cursorSetTrack(
+export function cursorSetLaneIndex(
     timeline: Timeline.State,
-    trackIndex1: number | null,
-    trackIndex2?: number | null)
+    laneIndex1: number | null,
+    laneIndex2?: number | null)
 {
     timeline.cursor.laneIndex1 =
         Math.max(0, Math.min(timeline.layout.lanes.length - 1,
-            trackIndex1 ?? timeline.cursor.laneIndex1))
+            laneIndex1 ?? timeline.cursor.laneIndex1))
 
     timeline.cursor.laneIndex2 = 
         Math.max(0, Math.min(timeline.layout.lanes.length - 1,
-            trackIndex2 ?? timeline.cursor.laneIndex2))
+            laneIndex2 ?? timeline.cursor.laneIndex2))
 }
 
 
@@ -559,6 +561,7 @@ export function insertNote(
     trackId: Project.ID,
     time: Rational,
     chroma: number)
+    : number
 {
     keyHandlePendingFinish(timeline, project)
 
@@ -592,6 +595,7 @@ export function insertNote(
     selectionAdd(timeline, id)
     //Playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
     selectionResolveOverlappingAndDegenerate(timeline, project)
+    return chosenPitch
 }
 
 

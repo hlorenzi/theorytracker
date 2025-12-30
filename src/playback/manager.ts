@@ -1,6 +1,7 @@
 import * as Global from "../state.ts"
 import * as Playback from "./index"
 import * as Project from "../project"
+import * as Theory from "../theory"
 import * as MathUtils from "../utils/mathUtils.ts"
 import Rational from "../utils/rational.ts"
 import Range from "../utils/range.ts"
@@ -14,6 +15,7 @@ export class Manager
     audioCtx?: BaseAudioContext
     nodeCompressor?: DynamicsCompressorNode
     nodeGlobalVolume?: GainNode
+    nodeTrackVolumes: Map<Project.ID, GainNode>
 
     instruments: Playback.Instrument[]
     
@@ -37,6 +39,7 @@ export class Manager
     constructor()//toBuffer?: boolean, bufferLen?: number, bufferSampleRate?: number)
     {
         this.instruments = []
+        this.nodeTrackVolumes = new Map<Project.ID, GainNode>()
 
         this.loading = 0
         this.playing = false
@@ -60,20 +63,7 @@ export class Manager
         else
         {
             this.audioCtx = new AudioContext()
-        }
-
-        this.nodeGlobalVolume = this.audioCtx.createGain()
-        this.nodeGlobalVolume.gain.value = 0.1
-
-        this.nodeCompressor = this.audioCtx.createDynamicsCompressor()
-        this.nodeCompressor.threshold.value = -10
-        this.nodeCompressor.knee.value = 12
-        this.nodeCompressor.ratio.value = 12
-        this.nodeCompressor.attack.value = 0
-        this.nodeCompressor.release.value = 0.05
-        
-        this.nodeGlobalVolume.connect(this.nodeCompressor)
-        this.nodeCompressor.connect(this.audioCtx.destination)*/
+        }*/
     }
 
 
@@ -108,7 +98,20 @@ export class Manager
     }
 
 
-    async prepare(
+    getTrackOutput(trackId: Project.ID): GainNode
+    {
+        let node = this.nodeTrackVolumes.get(trackId)
+        if (node)
+            return node
+
+        node = this.audioCtx!.createGain()
+        node.connect(this.nodeGlobalVolume!)
+        this.nodeTrackVolumes.set(trackId, node)
+        return node
+    }
+
+
+    async prepareRange(
         project: Project.ImmutableRoot,
         range: Range,
         isStart: boolean)
@@ -121,7 +124,7 @@ export class Manager
 
             for (const noteEvent of Playback.queryNoteEvents(project, range, isStart))
             {
-                const instrument = await this.prepareInstrument(noteEvent)
+                const instrument = await this.getInstrument(noteEvent)
                 tasks.push(instrument.prepare(noteEvent))
             }
 
@@ -134,7 +137,7 @@ export class Manager
     }
 
 
-    async prepareInstrument(noteEvent: Playback.NoteEvent)
+    async getInstrument(noteEvent: Playback.NoteEvent)
     {
         if (this.instruments.length > 0)
             return this.instruments[0]
@@ -191,15 +194,75 @@ export class Manager
         noteEvent: Playback.NoteEvent,
         audioCtxOffsetMs: number)
     {
-        const instrument = await this.prepareInstrument(noteEvent)
+        const instrument = await this.getInstrument(noteEvent)
         if (!instrument)
             return
 
-        instrument.playNote(noteEvent, audioCtxOffsetMs)
+        await instrument.prepare(noteEvent)
+
+        const output = this.getTrackOutput(noteEvent.trackId)
+        instrument.playNote(noteEvent, audioCtxOffsetMs, output)
     }
 
 
-    preloadNextBlock(isStart: boolean)
+    async playNotePreview(
+        project: Project.ImmutableRoot,
+        trackId: Project.ID,
+        midiPitch: number)
+    {
+        await this.start()
+        this.stopAll()
+        
+        const audioCtxOffsetMs = 15 + this.audioCtx!.currentTime * 1000
+        this.updateTracks(project, audioCtxOffsetMs)
+
+        const noteEvent: Playback.NoteEvent = {
+            project,
+            trackId,
+
+            startMs: 0,
+            endMs: 500,
+
+            midiPitchSeq: [{ timeMs: 0, value: midiPitch }],
+            volumeSeq: [{ timeMs: 0, value: 0 }],
+            velocitySeq: [{ timeMs: 0, value: 1 }],
+        }
+
+        await this.playNote(noteEvent, audioCtxOffsetMs)
+    }
+
+
+    async playChordPreview(
+        project: Project.ImmutableRoot,
+        trackId: Project.ID,
+        chord: Theory.Chord)
+    {
+        await this.start()
+        this.stopAll()
+
+        const audioCtxOffsetMs = 15 + this.audioCtx!.currentTime * 1000
+        this.updateTracks(project, audioCtxOffsetMs)
+        
+        for (const midiPitch of chord.strummingPitches)
+        {
+            const noteEvent: Playback.NoteEvent = {
+                project,
+                trackId,
+
+                startMs: 0,
+                endMs: 750,
+
+                midiPitchSeq: [{ timeMs: 0, value: midiPitch }],
+                volumeSeq: [{ timeMs: 0, value: 0 }],
+                velocitySeq: [{ timeMs: 0, value: 1 }],
+            }
+
+            await this.playNote(noteEvent, audioCtxOffsetMs)
+        }
+    }
+
+
+    prepareNextRange(isStart: boolean)
     {
         const preloadTimeNext = this.preloadTime.add(new Rational(4, 4))
 
@@ -207,12 +270,37 @@ export class Manager
             this.preloadTime,
             preloadTimeNext)
         
-        this.prepare(
+        this.prepareRange(
             Global.get().project.root,
             range,
             isStart)
 
         this.preloadTime = preloadTimeNext
+    }
+
+
+    updateTracks(
+        project: Project.ImmutableRoot,
+        audioCtxOffsetMs: number)
+    {
+        const hasSoloTrack = project.tracks.some(tr =>
+            tr.trackType === "notes" || tr.trackType === "chords" ? tr.solo : false)
+
+        for (const track of project.tracks)
+        {
+            const trackWithAttrbs =
+                track.trackType === "notes" || track.trackType === "chords" ?
+                    track :
+                    undefined
+            
+            const trackOutput = this.getTrackOutput(track.id)
+            const trackVolume =
+                trackWithAttrbs?.mute ? 0 :
+                hasSoloTrack && !trackWithAttrbs?.solo ? 0 :
+                MathUtils.dbToLinearGain(0)
+            
+            trackOutput.gain.linearRampToValueAtTime(trackVolume, (audioCtxOffsetMs + 50) / 1000)
+        }
     }
 
 
@@ -228,7 +316,7 @@ export class Manager
         if (deltaTimeMs > 100)
             return
 
-        this.preloadNextBlock(false)
+        this.prepareNextRange(false)
 
         const audioCtxOffsetMs = 15 + this.audioCtxTimestamp * 1000
 
@@ -251,6 +339,8 @@ export class Manager
             project,
             range,
             this.firstPlayingFrame)
+
+        this.updateTracks(project, audioCtxOffsetMs)
 
         this.firstPlayingFrame = false
 
@@ -278,7 +368,6 @@ export class Manager
             this.isFinished())
         {
             this.setPlaying(false)
-            window.dispatchEvent(new CustomEvent(eventPlaybackRefresh))
         }
     }
 
@@ -350,7 +439,7 @@ export class Manager
         if (playing)
         {
             this.start()
-            this.preloadNextBlock(true)
+            this.prepareNextRange(true)
 
             this.requestAnimationFrameId =
                 requestAnimationFrame(timestamp => this.processAnimationFrame(timestamp))
@@ -361,6 +450,8 @@ export class Manager
             this.setIntervalId =
                 +setInterval(() => this.processInterval(1000 / 60), 1000 / 60)
         }
+        
+        window.dispatchEvent(new CustomEvent(eventPlaybackRefresh))
     }
 
 

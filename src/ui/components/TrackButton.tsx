@@ -77,7 +77,7 @@ const StyledButton = styled.button<{
 
     margin: 0;
     padding: 0.05em 0.05em;
-    border: 0;
+    border: 1px solid transparent;
     border-radius: var(--theme-buttonBorderRadius);
     background-color: var(--theme-buttonBkg);
     color: inherit;
@@ -94,11 +94,11 @@ const StyledButton = styled.button<{
 
     &:disabled {
         background-color: var(--theme-buttonBkgPress);
-        opacity: 0.5;
+        opacity: 0;
         cursor: inherit;
     }
 
     &[data-checked=true] {
-        background-color: var(--theme-buttonBkgSelected);
+        background-color: var(--theme-buttonBkgSelected2);
     }
 `

@@ -18,7 +18,7 @@ export function InspectorInsert(props: {
 
     const key = Solid.createMemo(() => {
         const project = Global.get().project
-        return Project.keyAt(project.root, project.root.noteTrackId, time())
+        return Project.keyAt(project.root, time())
     })
 
     const insertionKind = Solid.createMemo(() => {

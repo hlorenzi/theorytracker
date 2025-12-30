@@ -186,7 +186,8 @@ export class InstrumentBasic extends Playback.Instrument
 
     override playNote(
         noteEvent: Playback.NoteEvent,
-        audioCtxTimestamp: number)
+        audioCtxTimestamp: number,
+        outputNode: AudioNode)
     {
         const neededSamples = this.getNeededSamples(noteEvent)
 
@@ -200,6 +201,7 @@ export class InstrumentBasic extends Playback.Instrument
             voices.push(this.playVoice(
                 noteEvent,
                 audioCtxTimestamp,
+                outputNode,
                 sample,
                 noteEvent.midiPitchSeq[0].value,
                 neededSample.volume * noteEvent.velocitySeq[0].value))
@@ -214,6 +216,7 @@ export class InstrumentBasic extends Playback.Instrument
     playVoice(
         noteEvent: Playback.NoteEvent,
         audioCtxTimestamp: number,
+        outputNode: AudioNode,
         sample: Sample,
         midiPitch: number,
         volume: number)
@@ -237,7 +240,7 @@ export class InstrumentBasic extends Playback.Instrument
         
         sourceNode.connect(envelopeNode)
         envelopeNode.connect(volumeNode)
-        volumeNode.connect(this.gainNode)
+        volumeNode.connect(outputNode)
         
         sourceNode.start(startMs / 1000)
         

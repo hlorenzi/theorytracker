@@ -1,12 +1,14 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
 
 
 export function mouseDrag(
     timeline: Timeline.State,
-    project: Project.Mutable)
+    project: Project.Mutable,
+    playback: Playback.Manager)
     : boolean
 {
     if (!timeline.mouse.down)
@@ -46,7 +48,7 @@ export function mouseDrag(
         return handleSelectCursor(timeline, project)
 
     else
-        return handleDragElements(timeline, project)
+        return handleDragElements(timeline, project, playback)
 }
 
 
@@ -83,7 +85,8 @@ function handleSelectCursor(
 
 function handleDragElements(
     timeline: Timeline.State,
-    project: Project.Mutable)
+    project: Project.Mutable,
+    playback: Playback.Manager)
     : boolean
 {
     let action = timeline.mouse.action
@@ -176,16 +179,29 @@ function handleDragElements(
         }
         
 
-        if ((action == Timeline.MouseAction.DragRow ||
-            action == Timeline.MouseAction.DragTimeAndRow) &&
+        if ((action === Timeline.MouseAction.DragRow ||
+            action === Timeline.MouseAction.DragTimeAndRow) &&
             elem.type === "note")
         {
             const note = elem as Project.Note
-            const trackId = project.root.noteTrackId
-            const key = Project.keyAt(project.root, trackId, note.range.start)
+            const key = Project.keyAt(project.root, note.range.start)
             const degree = key.octavedDegreeForMidi(note.midiPitch)
             const newPitch = key.midiForDegree(Math.floor(degree + timeline.drag.rowDelta))
             changes.midiPitch = newPitch
+            
+            if (elem.id === timeline.drag.elemId &&
+                timeline.drag.trackId !== undefined)
+            {
+                if ((timeline.drag.notePreviewLast && newPitch !== timeline.drag.notePreviewLast) ||
+                    (!timeline.drag.notePreviewLast && newPitch !== note.midiPitch))
+                {
+                    timeline.drag.notePreviewLast = newPitch
+                    playback.playNotePreview(
+                        newProject,
+                        timeline.drag.trackId,
+                        newPitch)
+                }
+            }
         }
         
         newProject = Project.upsertElement(

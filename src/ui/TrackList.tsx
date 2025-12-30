@@ -83,6 +83,9 @@ export function TrackList(props: {
                     track :
                     undefined
 
+            if (!trackWithAttrb)
+                return undefined
+
             const isEditable = !!trackWithAttrb?.editable
             const isSelected = selection().has(track.id)
 

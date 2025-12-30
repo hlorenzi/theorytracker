@@ -1,5 +1,6 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory"
 import Rect from "../utils/rect.ts"
@@ -40,7 +41,7 @@ export class LaneNotes extends Timeline.Lane
     }
 
 
-    refreshLayout(
+    override refreshLayout(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         prefs: Prefs.Prefs)
@@ -73,6 +74,8 @@ export class LaneNotes extends Timeline.Lane
                     this.add({
                         kind: "hidden",
                         id: note.id,
+                        trackId: editingNoteTrackId,
+                        laneIndex: this.laneIndex,
                         action: Timeline.MouseAction.StretchTimeStart,
                         rect: rect.withX1(rect.x1 - prefs.timeline.hoverOuterStretchWidth),
                     })
@@ -83,6 +86,8 @@ export class LaneNotes extends Timeline.Lane
                     this.add({
                         kind: "hidden",
                         id: note.id,
+                        trackId: editingNoteTrackId,
+                        laneIndex: this.laneIndex,
                         action: Timeline.MouseAction.StretchTimeEnd,
                         rect: rect.withX2(rect.x2 + prefs.timeline.hoverOuterStretchWidth),
                     })
@@ -95,6 +100,8 @@ export class LaneNotes extends Timeline.Lane
                         this.add({
                             kind: "hidden",
                             id: note.id,
+                            trackId: editingNoteTrackId,
+                            laneIndex: this.laneIndex,
                             action: Timeline.MouseAction.StretchTimeStart,
                             rect: rect.withX2(rect.x1 + prefs.timeline.hoverInnerStretchWidth),
                             priority: 2,
@@ -106,6 +113,8 @@ export class LaneNotes extends Timeline.Lane
                         this.add({
                             kind: "hidden",
                             id: note.id,
+                            trackId: editingNoteTrackId,
+                            laneIndex: this.laneIndex,
                             action: Timeline.MouseAction.StretchTimeEnd,
                             rect: rect.withX1(rect.x2 - prefs.timeline.hoverInnerStretchWidth),
                             priority: 2,
@@ -116,6 +125,8 @@ export class LaneNotes extends Timeline.Lane
                 this.add({
                     kind: "note",
                     id: note.id,
+                    trackId: editingNoteTrackId,
+                    laneIndex: this.laneIndex,
                     note: note,
                     key: keyChPair.keyCh1.key,
                     action: Timeline.MouseAction.DragTimeAndRow,
@@ -183,6 +194,8 @@ export class LaneNotes extends Timeline.Lane
                 this.add({
                     kind: "note",
                     id: note.id,
+                    trackId: track.id,
+                    laneIndex: this.laneIndex,
                     note: note,
                     key: keyChPair.keyCh1.key,
                     action: Timeline.MouseAction.None,
@@ -221,6 +234,7 @@ export class LaneNotes extends Timeline.Lane
             this.add({
                 kind: "marker",
                 id: elem.id,
+                laneIndex: this.laneIndex,
                 action: Timeline.MouseAction.DragTime,
                 rect,
                 priority: 1,
@@ -241,7 +255,7 @@ export class LaneNotes extends Timeline.Lane
     }
 
 
-    *iterElementsAtRegion(
+    override *iterElementsAtRegion(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         range: Range,
@@ -257,9 +271,28 @@ export class LaneNotes extends Timeline.Lane
         for (const marker of iterMarkersForSelection(timeline, project, range))
             yield marker
     }
+
+
+    override click(
+        timeline: Timeline.State,
+        project: Project.ImmutableRoot,
+        playback: Playback.Manager,
+        element: Timeline.LayoutElement)
+    {
+        const note = Project.getTypedElem(project, element.id, "note")
+        if (!note)
+            return
+
+        if (element.trackId === undefined)
+            return
+
+        timeline.insertion.nearMidiPitch = note.midiPitch
+        timeline.insertion.duration = note.range.duration
+        playback.playNotePreview(project, element.trackId, note.midiPitch)
+    }
     
     
-    findPreviousAnchor(
+    override findPreviousAnchor(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         time: Rational)
@@ -278,7 +311,7 @@ export class LaneNotes extends Timeline.Lane
     }
 
         
-    deleteRange(
+    override deleteRange(
         timeline: Timeline.State,
         project: Project.Mutable,
         range: Range)
@@ -309,9 +342,10 @@ export class LaneNotes extends Timeline.Lane
     }
     
     
-    insertByDegree(
+    override insertByDegree(
         timeline: Timeline.State,
         project: Project.Mutable,
+        playback: Playback.Manager,
         prefs: Prefs.Prefs,
         time: Rational,
         degree: number)
@@ -320,13 +354,14 @@ export class LaneNotes extends Timeline.Lane
         if (trackId === undefined)
             return
 
-        const key = Project.keyAt(project.root, trackId, time)
+        const key = Project.keyAt(project.root, time)
         const chroma = key.chromaForDegree(degree)
-        Timeline.insertNote(timeline, project, trackId, time, chroma)
+        const midiPitch = Timeline.insertNote(timeline, project, trackId, time, chroma)
+        playback.playNotePreview(project.root, trackId, midiPitch)
     }
     
     
-    rowAtY(
+    override rowAtY(
         timeline: Timeline.State,
         y: number)
     {

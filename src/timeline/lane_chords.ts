@@ -1,6 +1,7 @@
 import * as Project from "../project"
 import * as Theory from "../theory"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs.ts"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
@@ -9,7 +10,7 @@ import Rational from "../utils/rational.ts"
 
 export class LaneChords extends Timeline.Lane
 {
-    refreshLayout(
+    override refreshLayout(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         prefs: Prefs.Prefs)
@@ -32,6 +33,8 @@ export class LaneChords extends Timeline.Lane
                 this.add({
                     kind: "hidden",
                     id: chord.id,
+                    trackId: project.chordTrackId,
+                    laneIndex: this.laneIndex,
                     action: Timeline.MouseAction.StretchTimeStart,
                     rect: rect.withX1(rect.x1 - prefs.timeline.hoverOuterStretchWidth),
                 })
@@ -42,6 +45,8 @@ export class LaneChords extends Timeline.Lane
                 this.add({
                     kind: "hidden",
                     id: chord.id,
+                    trackId: project.chordTrackId,
+                    laneIndex: this.laneIndex,
                     action: Timeline.MouseAction.StretchTimeEnd,
                     rect: rect.withX2(rect.x2 + prefs.timeline.hoverOuterStretchWidth),
                 })
@@ -54,6 +59,8 @@ export class LaneChords extends Timeline.Lane
                     this.add({
                         kind: "hidden",
                         id: chord.id,
+                        trackId: project.chordTrackId,
+                        laneIndex: this.laneIndex,
                         action: Timeline.MouseAction.StretchTimeStart,
                         rect: rect.withX2(rect.x1 + prefs.timeline.hoverInnerStretchWidth),
                         priority: 2,
@@ -65,6 +72,8 @@ export class LaneChords extends Timeline.Lane
                     this.add({
                         kind: "hidden",
                         id: chord.id,
+                        trackId: project.chordTrackId,
+                        laneIndex: this.laneIndex,
                         action: Timeline.MouseAction.StretchTimeEnd,
                         rect: rect.withX1(rect.x2 - prefs.timeline.hoverInnerStretchWidth),
                         priority: 2,
@@ -75,6 +84,8 @@ export class LaneChords extends Timeline.Lane
             this.add({
                 kind: "chord",
                 id: chord.id,
+                trackId: project.chordTrackId,
+                laneIndex: this.laneIndex,
                 action: Timeline.MouseAction.DragTime,
                 rect,
                 cutStart,
@@ -87,7 +98,7 @@ export class LaneChords extends Timeline.Lane
     }
 
     
-    *iterElementsAtRegion(
+    override *iterElementsAtRegion(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         range: Range,
@@ -99,7 +110,7 @@ export class LaneChords extends Timeline.Lane
     }
         
         
-    findPreviousAnchor(
+    override findPreviousAnchor(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         time: Rational)
@@ -113,8 +124,26 @@ export class LaneChords extends Timeline.Lane
         return anchor
     }
     
+    
+    override click(
+        timeline: Timeline.State,
+        project: Project.ImmutableRoot,
+        playback: Playback.Manager,
+        element: Timeline.LayoutElement)
+    {
+        const chord = Project.getTypedElem(project, element.id, "chord")
+        if (!chord)
+            return
+
+        if (element.trackId === undefined)
+            return
+
+        timeline.insertion.duration = chord.range.duration
+        playback.playChordPreview(project, element.trackId, chord.chord)
+    }
+    
             
-    deleteRange(
+    override deleteRange(
         timeline: Timeline.State,
         project: Project.Mutable,
         range: Range)
@@ -141,19 +170,20 @@ export class LaneChords extends Timeline.Lane
     }
         
         
-    insertByDegree(
+    override insertByDegree(
         timeline: Timeline.State,
         project: Project.Mutable,
+        playback: Playback.Manager,
         prefs: Prefs.Prefs,
         time: Rational,
         degree: number)
     {
         const trackId = project.root.chordTrackId
-        const key = Project.keyAt(project.root, trackId, time)
-        const root = key.midiForDegree(degree)
+        const key = Project.keyAt(project.root, time)
         
         const chord = Theory.Chord.fromDiatonicTriad(key, degree)
         Timeline.insertChord(timeline, project, trackId, time, chord)
+        playback.playChordPreview(project.root, trackId, chord)
     }
 }
 

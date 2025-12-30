@@ -119,12 +119,13 @@ function registerHandlers(
 
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const playback = Global.get().playback
         const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
 
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
 
-        if (Timeline.mouseDrag(timeline, project))
+        if (Timeline.mouseDrag(timeline, project, playback))
         {
             Timeline.layout(timeline, project.root, prefs)
             Global.refresh()
@@ -140,11 +141,12 @@ function registerHandlers(
 
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const playback = Global.get().playback
         const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
-        Timeline.mouseDown(timeline, project, prefs, ev.button !== 0)
+        Timeline.mouseDown(timeline, project, playback, prefs, ev.button !== 0)
         draw()
         Global.refresh()
         setCursor()
@@ -188,9 +190,10 @@ function registerHandlers(
         
         const timeline = Global.get().timeline
         const project = Global.get().project
+        const playback = Global.get().playback
         const prefs = Global.get().prefs
 
-        Timeline.keyDown(timeline, project, prefs, ev.key.toLowerCase())
+        Timeline.keyDown(timeline, project, playback, prefs, ev.key.toLowerCase())
         Timeline.layout(timeline, project.root, prefs)
         draw()
         Global.refresh()

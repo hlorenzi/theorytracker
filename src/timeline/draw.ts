@@ -433,6 +433,9 @@ export function drawLaneBkgChordTones(
     ctx: CanvasRenderingContext2D,
     lane: Timeline.Lane)
 {
+    if (!timeline.layout.chordTonesVisible)
+        return
+    
     const rowAtTop = Timeline.rowAtY(timeline, lane, 0)
     const rowAtBottom = Timeline.rowAtY(timeline, lane, lane.rect.h)
 

@@ -1,5 +1,6 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs.ts"
 import * as Theory from "../theory/index.ts"
 import Rect from "../utils/rect.ts"
@@ -45,6 +46,16 @@ export class Lane
     {
         
     }
+    
+    
+    click(
+        timeline: Timeline.State,
+        project: Project.ImmutableRoot,
+        playback: Playback.Manager,
+        element: Timeline.LayoutElement)
+    {
+
+    }
 
 
     findPreviousAnchor(
@@ -69,6 +80,7 @@ export class Lane
     insertByDegree(
         timeline: Timeline.State,
         project: Project.Mutable,
+        playback: Playback.Manager,
         prefs: Prefs.Prefs,
         time: Rational,
         degree: number)

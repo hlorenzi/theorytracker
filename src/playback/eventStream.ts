@@ -35,14 +35,9 @@ export function queryNoteEvents(
 {
     const noteEvents: NoteEvent[] = []
 
-    const hasSolo = project.tracks.some(tr =>
-        tr.trackType === "notes" || tr.trackType === "chords" ? tr.solo : false)
-
     for (const track of project.tracks)
     {
-        if (track.trackType !== "notes" ||
-            track.mute ||
-            (hasSolo && !track.solo))
+        if (track.trackType !== "notes")
             continue
 
         for (const note of iterNotesAtRange(project, track.id, range))
@@ -64,9 +59,7 @@ export function queryNoteEvents(
     const chordTrack = Project.getTrack(project, project.chordTrackId, "chords")
     const chordList = project.lists.get(project.chordTrackId)
     if (chordTrack &&
-        chordList &&
-        !chordTrack.mute &&
-        (!hasSolo || chordTrack.solo))
+        chordList)
     {
         for (const chord of chordList.iterAtRange(range))
         {

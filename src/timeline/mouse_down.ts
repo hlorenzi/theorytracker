@@ -1,5 +1,6 @@
 import * as Timeline from "./index.ts"
 import * as Project from "../project"
+import * as Playback from "../playback"
 import * as Prefs from "../prefs.ts"
 import Rect from "../utils/rect.ts"
 import Rational from "../utils/rational.ts"
@@ -9,6 +10,7 @@ import Range from "../utils/range.ts"
 export function mouseDown(
     timeline: Timeline.State,
     project: Project.Mutable,
+    playback: Playback.Manager,
     prefs: Prefs.Prefs,
     rightButton: boolean)
 {
@@ -51,10 +53,11 @@ export function mouseDown(
         posDelta: { x: 0, y: 0 },
         timeDelta: new Rational(0),
         rowDelta: 0,
-        trackDelta: 0,
+        laneDelta: 0,
         trackInsertionBefore: -1,
 
-        elemId: -1,
+        elemId: undefined,
+        trackId: undefined,
         notePreviewLast: null,
     }
 
@@ -110,6 +113,12 @@ export function mouseDown(
     if (timeline.hover !== undefined)
     {
         timeline.cursor.visible = false
+        
+        if (timeline.hover.laneIndex !== undefined)
+            Timeline.cursorSetLaneIndex(
+                timeline,
+                timeline.hover.laneIndex,
+                timeline.hover.laneIndex)
 
         if (!hoverIsSelected)
             Timeline.selectionToggle(
@@ -117,10 +126,21 @@ export function mouseDown(
                 project.root,
                 timeline.hover)
 
+        timeline.drag.elemId = timeline.hover.id
+        timeline.drag.trackId = timeline.hover.trackId
         timeline.drag.origin.range =
             Timeline.selectionRange(timeline, project.root)
         
+        if (timeline.drag.origin.range)
+            Timeline.cursorSetTime(
+                timeline,
+                timeline.drag.origin.range.start,
+                timeline.drag.origin.range.end)
+
         timeline.mouse.action = timeline.hover.action
+
+        const lane = timeline.layout.lanes[timeline.mouse.point.laneIndex]
+        lane?.click(timeline, project.root, playback, timeline.hover)
         return
     }
 }

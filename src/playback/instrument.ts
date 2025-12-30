@@ -7,16 +7,11 @@ import Range from "../utils/range.ts"
 export class Instrument
 {
     manager: Playback.Manager
-    gainNode: GainNode
 
 
     constructor(manager: Playback.Manager)
     {
         this.manager = manager
-        
-        this.gainNode = this.manager.audioCtx!.createGain()
-        this.gainNode.gain.value = 1//trackIsMuted ? 0 : MathUtils.dbToLinearGain(0)
-        this.gainNode.connect(this.manager.nodeGlobalVolume!)
     }
 
 
@@ -40,7 +35,8 @@ export class Instrument
 
     playNote(
         noteEvent: Playback.NoteEvent,
-        audioCtxTimestampMs: number)
+        audioCtxTimestampMs: number,
+        outputNode: AudioNode)
     {
         
     }
