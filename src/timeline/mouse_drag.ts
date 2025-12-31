@@ -1,6 +1,7 @@
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
 import * as Playback from "../playback"
+import * as Prefs from "../prefs.ts"
 import Rect from "../utils/rect.ts"
 import Range from "../utils/range.ts"
 
@@ -8,7 +9,8 @@ import Range from "../utils/range.ts"
 export function mouseDrag(
     timeline: Timeline.State,
     project: Project.Mutable,
-    playback: Playback.Manager)
+    playback: Playback.Manager,
+    prefs: Prefs.Prefs)
     : boolean
 {
     if (!timeline.mouse.down)
@@ -20,8 +22,7 @@ export function mouseDrag(
         timeline.mouse.point.pos.x,
         timeline.mouse.point.pos.y)
     
-    timeline.drag.posDelta =
-    {
+    timeline.drag.posDelta = {
         x: timeline.mouse.point.pos.x - timeline.drag.origin.point.pos.x,
         y: timeline.mouse.point.pos.y - timeline.drag.origin.point.pos.y,
     }
@@ -31,14 +32,17 @@ export function mouseDrag(
 
     timeline.drag.rowDelta =
         timeline.mouse.point.row - timeline.drag.origin.point.row
+
+    timeline.drag.laneDelta =
+        timeline.mouse.point.laneIndex - timeline.drag.origin.point.laneIndex
     
     timeline.drag.xLocked =
         timeline.drag.xLocked &&
-        Math.abs(timeline.drag.posDelta.x) < 10
+        Math.abs(timeline.drag.posDelta.x) < prefs.timeline.mouseDragXLockedDistance
 
     timeline.drag.yLocked =
         timeline.drag.yLocked &&
-        Math.abs(timeline.drag.posDelta.y) < 10
+        Math.abs(timeline.drag.posDelta.y) < prefs.timeline.mouseDragYLockedDistance
     
 
     if (timeline.mouse.action === Timeline.MouseAction.Pan)
@@ -77,6 +81,22 @@ function handleSelectCursor(
     timeline.cursor.time2 = timeline.mouse.point.time
     timeline.cursor.laneIndex2 = timeline.mouse.point.laneIndex
 
+    timeline.cursor.verticalRegion = {
+        y1: timeline.cursor.verticalRegion.y1,
+        y2: timeline.mouse.point.lanePos.y,
+    }
+    
+    const lane = timeline.layout.lanes[timeline.cursor.laneIndex1]
+
+    timeline.cursor.rectMode =
+        timeline.cursor.laneIndex1 === timeline.cursor.laneIndex2 &&
+        (timeline.cursor.time1.compare(timeline.cursor.time2) !== 0 ||
+            !timeline.drag.yLocked) &&
+        lane?.allowsRectSelect()
+
+    timeline.playbackStartTime =
+        timeline.cursor.time1.min(timeline.cursor.time2)
+    
     Timeline.selectionClear(timeline)
     Timeline.selectionAddAtCursor(timeline, project.root)
     return true
@@ -126,8 +146,8 @@ function handleDragElements(
             
         const changes: Partial<Project.Note> = {}
 
-        if (action == Timeline.MouseAction.DragTime ||
-            action == Timeline.MouseAction.DragTimeAndRow)
+        if (action === Timeline.MouseAction.DragTime ||
+            action === Timeline.MouseAction.DragTimeAndRow)
         {
             changes.range = elem.range
                 .displace(timeline.drag.timeDelta)
@@ -135,7 +155,7 @@ function handleDragElements(
         }
 
         
-        if (action == Timeline.MouseAction.StretchTimeStart &&
+        if (action === Timeline.MouseAction.StretchTimeStart &&
             timeline.drag.origin.range)
         {
             changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
@@ -146,7 +166,7 @@ function handleDragElements(
                     timeline.drag.origin.range.start)
                 .sorted()
 
-            if (elem.range.start.compare(timeline.drag.origin.range.start) == 0)
+            if (elem.range.start.compare(timeline.drag.origin.range.start) === 0)
                 changes.range = new Range(
                     changes.range.start.snap(timeline.timeSnap),
                     changes.range.end)
@@ -157,7 +177,7 @@ function handleDragElements(
         }
 
 
-        if (action == Timeline.MouseAction.StretchTimeEnd &&
+        if (action === Timeline.MouseAction.StretchTimeEnd &&
             timeline.drag.origin.range)
         {
             changes.range = Project.getAbsoluteRange(origProject, elem.parentId, elem.range)
@@ -168,7 +188,7 @@ function handleDragElements(
                     timeline.drag.origin.range.end)
                 .sorted()
 
-            if (elem.range.end.compare(timeline.drag.origin.range.end) == 0)
+            if (elem.range.end.compare(timeline.drag.origin.range.end) === 0)
                 changes.range = new Range(
                     changes.range.start,
                     changes.range.end.snap(timeline.timeSnap))

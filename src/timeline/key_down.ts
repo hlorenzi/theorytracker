@@ -154,7 +154,8 @@ function handleEnter(
     timeline: Timeline.State,
     project: Project.Mutable)
 {
-    if (timeline.cursor.visible && timeline.selection.size != 0)
+    if (timeline.cursor.visible &&
+        timeline.selection.size !== 0)
     {
         timeline.cursor.visible = false
         return
@@ -168,6 +169,15 @@ function handleEnter(
         Timeline.cursorSetTime(timeline, range.end, range.end)
         //Timeline.cursorSetTrack(state, trackIndex, trackIndex)
         Timeline.scrollTimeIntoView(timeline, range.end)
+    }
+    else
+    {
+        const time = Rational.max(
+            timeline.cursor.time1,
+            timeline.cursor.time2)
+
+        Timeline.cursorSetTime(timeline, time, time)
+        Timeline.scrollTimeIntoView(timeline, time)
     }
 
     Timeline.keyHandlePendingFinish(timeline, project)

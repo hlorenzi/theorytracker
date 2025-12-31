@@ -255,20 +255,20 @@ export class LaneNotes extends Timeline.Lane
     }
 
 
-    override *iterElementsAtRegion(
+    override *iterElementsForSelection(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         range: Range,
-        verticalRegion?: { y1: number, y2: number })
+        verticalRegion?: Timeline.VerticalRegion)
         : Generator<Project.ID, void, void>
     {
         const editingNoteTrackId = this.getEditingNoteTrackId(project)
 
         if (editingNoteTrackId !== undefined)
-            for (const note of iterNotesAtRegion(timeline, project, editingNoteTrackId, this, range, verticalRegion))
+            for (const note of iterNotesForSelection(timeline, project, editingNoteTrackId, this, range, verticalRegion))
                 yield note
         
-        for (const marker of iterMarkersForSelection(timeline, project, range))
+        for (const marker of iterMarkersForSelection(timeline, project, range, verticalRegion))
             yield marker
     }
 
@@ -308,6 +308,12 @@ export class LaneNotes extends Timeline.Lane
     
         const anchor = list.findPreviousDeletionAnchor(time)
         return anchor
+    }
+
+
+    override allowsRectSelect(): boolean
+    {
+        return true
     }
 
         
@@ -486,13 +492,13 @@ function rectForNote(
 }
 
 
-function *iterNotesAtRegion(
+function *iterNotesForSelection(
     timeline: Timeline.State,
     project: Project.ImmutableRoot,
     noteTrackId: Project.ID,
     lane: Timeline.Lane,
     range: Range,
-    verticalRegion?: { y1: number, y2: number })
+    verticalRegion?: Timeline.VerticalRegion)
     : Generator<Project.ID, void, void>
 {
     for (const [note, keyChPair] of iterNotesAndKeyChanges(timeline, project, noteTrackId))
@@ -568,9 +574,13 @@ function rectForMarker(
 function *iterMarkersForSelection(
     timeline: Timeline.State,
     project: Project.ImmutableRoot,
-    range: Range)
+    range: Range,
+    verticalRegion?: Timeline.VerticalRegion)
     : Generator<Project.ID, void, void>
 {
+    if (verticalRegion !== undefined)
+        return
+
     const tempoChTrackElems = project.lists.get(project.tempoChangeTrackId)
     if (tempoChTrackElems)
         for (const tempoCh of tempoChTrackElems.iterAtRange(range))

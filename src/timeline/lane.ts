@@ -37,11 +37,11 @@ export class Lane
     }
 
 
-    *iterElementsAtRegion(
+    *iterElementsForSelection(
         timeline: Timeline.State,
         project: Project.ImmutableRoot,
         range: Range,
-        verticalRegion?: { y1: number, y2: number })
+        verticalRegion?: Timeline.VerticalRegion)
         : Generator<Project.ID, void, void>
     {
         
@@ -65,6 +65,12 @@ export class Lane
         : Rational | null
     {
         return null
+    }
+
+
+    allowsRectSelect(): boolean
+    {
+        return false
     }
 	
 	

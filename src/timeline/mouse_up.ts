@@ -16,6 +16,12 @@ export function mouseUp(
     timeline.mouse.down = false
     timeline.mouse.action = Timeline.MouseAction.None
 
+    if (timeline.cursor.rectMode)
+    {
+        timeline.cursor.rectMode = false
+        timeline.cursor.visible = false
+    }
+
     const origProject = project.root
     Timeline.selectionResolveOverlappingAndDegenerate(timeline, project)
     project.root = Project.withRefreshedRange(project.root)

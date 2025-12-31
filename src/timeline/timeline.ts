@@ -36,8 +36,8 @@ export interface State
         time2: Rational
         laneIndex1: number
         laneIndex2: number
-        rectY1: number
-        rectY2: number
+        rectMode: boolean
+        verticalRegion: VerticalRegion
     }
 
     keysDown: Set<string>,
@@ -114,8 +114,8 @@ export interface Point
     time: Rational
     row: number
     laneIndex: number
-    trackPos: { x: number, y: number }
-    originTrackPos: { x: number, y: number }
+    lanePos: { x: number, y: number }
+    originLanePos: { x: number, y: number }
 }
 
 
@@ -124,6 +124,13 @@ export interface HoverData
     id: Project.ID
     range: Range
     action: MouseAction
+}
+
+
+export interface VerticalRegion
+{
+    y1: number
+    y2: number
 }
 
 
@@ -157,8 +164,11 @@ export function makeNew(): State
             time2: new Rational(0),
             laneIndex1: 0,
             laneIndex2: 0,
-            rectY1: 0,
-            rectY2: 0,
+            rectMode: false,
+            verticalRegion: {
+                y1: 0,
+                y2: 0,
+            },
         },
 
         keysDown: new Set<string>(),
@@ -176,8 +186,8 @@ export function makeNew(): State
                 time: new Rational(0),
                 row: 0,
                 laneIndex: 0,
-                trackPos: { x: 0, y: 0 },
-                originTrackPos: { x: 0, y: 0 },
+                lanePos: { x: 0, y: 0 },
+                originLanePos: { x: 0, y: 0 },
             },
             
             pointPrev:
@@ -186,8 +196,8 @@ export function makeNew(): State
                 time: new Rational(0),
                 row: 0,
                 laneIndex: 0,
-                trackPos: { x: 0, y: 0 },
-                originTrackPos: { x: 0, y: 0 },
+                lanePos: { x: 0, y: 0 },
+                originLanePos: { x: 0, y: 0 },
             },
 
             wheelDate: new Date(),
@@ -312,25 +322,26 @@ export function pointAt(
     const lane = timeline.layout.lanes[laneIndex]
     
     const row = lane?.rowAtY(timeline, y) ?? 0
+
+    const laneY = lane?.rect.y ?? 0
     
-    /*const trackPosY = pos.y - trackY(state, state.mouse.point.trackIndex)
-    const trackPos = { x: pos.x, y: trackPosY }
+    const lanePosY = y - laneY
+    const lanePos = { x: x, y: lanePosY }
 
-
-    let originTrackPos = trackPos
-    if (state.drag.origin)
+    let originLanePos = lanePos
+    if (timeline.drag.origin)
     {
-        const originTrackPosY = pos.y - trackY(state, state.drag.origin.point.trackIndex)
-        originTrackPos = { x: pos.x, y: originTrackPosY }
-    }*/
+        const originTrackPosY = y - laneY
+        originLanePos = { x: x, y: originTrackPosY }
+    }
     
     return {
         pos: { x, y },
         time,
         laneIndex,
-        trackPos: { x: 0, y: 0 },
+        lanePos,
         row,
-        originTrackPos: { x: 0, y: 0 },
+        originLanePos,
     }
 }
     
@@ -379,13 +390,19 @@ export function selectionAdd(
 
 export function selectionAddAtCursor(
     timeline: Timeline.State,
-    project: Project.ImmutableRoot,
-    verticalRegion?: { y1: number, y2: number })
+    project: Project.ImmutableRoot)
 {
     const time1 = timeline.cursor.time1
     const time2 = timeline.cursor.time2
     if (time1.compare(time2) === 0)
         return
+
+    const verticalRegion =
+        !timeline.cursor.rectMode ? undefined :
+        {
+            y1: Math.min(timeline.cursor.verticalRegion.y1, timeline.cursor.verticalRegion.y2),
+            y2: Math.max(timeline.cursor.verticalRegion.y1, timeline.cursor.verticalRegion.y2),
+        }
     
     const range = new Range(time1, time2, false, false).sorted()
 
@@ -395,10 +412,10 @@ export function selectionAddAtCursor(
     for (let l = laneIndexMin; l <= laneIndexMax; l++)
     {
         const lane = timeline.layout.lanes[l]
-        if (lane.iterElementsAtRegion === undefined)
+        if (lane.iterElementsForSelection === undefined)
             continue
 
-        for (const id of lane.iterElementsAtRegion(timeline, project, range, verticalRegion))
+        for (const id of lane.iterElementsForSelection(timeline, project, range, verticalRegion))
             selectionAdd(timeline, id)
     }
 }

@@ -28,6 +28,7 @@ export function draw(
         const timeMax = timeline.cursor.time1.max(timeline.cursor.time2)
         drawCursorBeam(timeline, prefs, ctx, timeMin, false)
         drawCursorBeam(timeline, prefs, ctx, timeMax, true)
+        drawCursorRect(timeline, prefs, ctx)
     }
 
     if (playback.playing)
@@ -708,6 +709,9 @@ function drawCursorBeam(
     time: Rational,
     tipOffsetSide: boolean)
 {
+    if (timeline.cursor.rectMode)
+        return
+
     const laneIndexMin = Timeline.cursorGetLaneIndexMin(timeline)
     const laneIndexMax = Timeline.cursorGetLaneIndexMax(timeline)
     
@@ -747,6 +751,42 @@ function drawCursorBeam(
     ctx.lineTo(x, y2 - 1)
     ctx.stroke()
 }
+
+
+function drawCursorRect(
+    timeline: Timeline.State,
+    prefs: Prefs.Prefs,
+    ctx: CanvasRenderingContext2D)
+{
+    if (!timeline.cursor.rectMode)
+        return
+    
+    const laneIndexMin = Timeline.cursorGetLaneIndexMin(timeline)
+    const laneIndexMax = Timeline.cursorGetLaneIndexMax(timeline)
+    
+    const laneMin = timeline.layout.lanes[laneIndexMin]
+    const laneMax = timeline.layout.lanes[laneIndexMax]
+
+    if (!laneMin || !laneMax)
+        return
+    
+    const timeMin = timeline.cursor.time1.min(timeline.cursor.time2)
+    const timeMax = timeline.cursor.time1.max(timeline.cursor.time2)
+    const x1 = 0.5 + Timeline.xAtTime(timeline, timeMin)
+    const x2 = 0.5 + Timeline.xAtTime(timeline, timeMax)
+    
+    ctx.strokeStyle = prefs.timeline.selectionCursorColor
+    ctx.fillStyle = prefs.timeline.selectionCursorColor
+    ctx.lineCap = "square"
+    ctx.lineWidth = 2
+
+    const yMin = Math.min(timeline.cursor.verticalRegion.y1, timeline.cursor.verticalRegion.y2)
+    const yMax = Math.max(timeline.cursor.verticalRegion.y1, timeline.cursor.verticalRegion.y2)
+    const y1 = Math.floor(laneMin.rect.y + yMin)
+    const y2 = Math.floor(laneMax.rect.y + yMax)
+
+    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1)
+}
 	
 	
 function drawCursorBkg(
@@ -767,8 +807,16 @@ function drawCursorBkg(
         laneIndexMax < lane.laneIndex)
         return
 
-    const y1 = 0
-    const y2 = Math.floor(lane.rect.h)
+    const yMin = Math.min(timeline.cursor.verticalRegion.y1, timeline.cursor.verticalRegion.y2)
+    const yMax = Math.max(timeline.cursor.verticalRegion.y1, timeline.cursor.verticalRegion.y2)
+
+    const y1 = timeline.cursor.rectMode ?
+        Math.floor(yMin) :
+        0
+    
+    const y2 = timeline.cursor.rectMode ?
+        Math.floor(yMax) :
+        Math.floor(lane.rect.h)
     
     const x1 = Timeline.xAtTime(timeline, timeMin)
     const x2 = Timeline.xAtTime(timeline, timeMax)
@@ -797,9 +845,6 @@ function drawPlaybackBeam(
     ctx.lineCap = "square"
     ctx.lineWidth = 2
     
-    //const headYSize = 10
-    //const headXSize = headYSize * (tipOffsetSide ? -1 : 1)
-
     const y1 = Math.floor(laneMin.rect.y)
     const y2 = Math.floor(laneMax.rect.y2)
     

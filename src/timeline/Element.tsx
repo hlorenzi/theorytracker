@@ -93,7 +93,9 @@ function registerHandlers(
             action === Timeline.MouseAction.StretchTimeStart ||
             action === Timeline.MouseAction.StretchTimeEnd ?
                 "col-resize" :
-                "inherit"
+            action === Timeline.MouseAction.SelectCursor ?
+                timeline.cursor.rectMode ? "crosshair" : "text" :
+                "text"
     }
 
     const draw = () => {
@@ -125,7 +127,7 @@ function registerHandlers(
 
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
 
-        if (Timeline.mouseDrag(timeline, project, playback))
+        if (Timeline.mouseDrag(timeline, project, playback, prefs))
         {
             Timeline.layout(timeline, project.root, prefs)
             Global.refresh()

@@ -38,9 +38,8 @@ export interface Prefs
         keyPan: string
         keyPencil: string
         keySelectMultiple: string
-        keySelectRange: string
-        keySelectRect: string
-        keySelectClone: string
+        keyForceCursorSelect: string
+        keyClone: string
         keyDisplaceCursor2: string
         keyDisplaceFast: string
         keyDisplaceChromatically: string
@@ -100,9 +99,8 @@ export function makeNew(): Prefs
             keyPan: " ",
             keyPencil: "a",
             keySelectMultiple: "control",
-            keySelectRange: "shift",
-            keySelectRect: "shift",
-            keySelectClone: "alt",
+            keyForceCursorSelect: "shift",
+            keyClone: "alt",
             keyDisplaceCursor2: "shift",
             keyDisplaceFast: "control",
             keyDisplaceChromatically: "shift",

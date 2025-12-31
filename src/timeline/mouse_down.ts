@@ -27,12 +27,10 @@ export function mouseDown(
     
     const selectMultiple =
         timeline.keysDown.has(prefs.timeline.keySelectMultiple)
-    const selectRange =
-        timeline.keysDown.has(prefs.timeline.keySelectRange)
+    const forceCursorSelect =
+        timeline.keysDown.has(prefs.timeline.keyForceCursorSelect)
     const selectClone =
-        timeline.keysDown.has(prefs.timeline.keySelectClone)
-    const selectRect =
-        timeline.keysDown.has(prefs.timeline.keySelectRect)
+        timeline.keysDown.has(prefs.timeline.keyClone)
     const forcePan =
         timeline.keysDown.has(prefs.timeline.keyPan)
     const doubleClick =
@@ -79,15 +77,18 @@ export function mouseDown(
 
     
     if (timeline.hover === undefined ||
-        timeline.hover.action === undefined)
+        timeline.hover.action === undefined ||
+        forceCursorSelect)
     {
         timeline.mouse.action = Timeline.MouseAction.SelectCursor
-
-        timeline.cursor.visible = true//!selectRect
+        timeline.cursor.visible = true
+        timeline.cursor.rectMode = false
         Timeline.cursorSetTime(timeline, timeline.mouse.point.time, timeline.mouse.point.time)
-        
-        timeline.cursor.rectY1 = timeline.cursor.rectY2 =
-            timeline.mouse.point.trackPos.y
+
+        timeline.cursor.verticalRegion = {
+            y1: timeline.mouse.point.lanePos.y,
+            y2: timeline.mouse.point.lanePos.y,
+        }
         
         timeline.cursor.laneIndex1 = timeline.cursor.laneIndex2 =
             timeline.mouse.point.laneIndex
@@ -103,6 +104,9 @@ export function mouseDown(
                 
             Timeline.cursorSetTime(timeline, anchor, anchor)
             Timeline.scrollTimeIntoView(timeline, anchor)
+            
+            timeline.mouse.down = false
+            timeline.mouse.action = Timeline.MouseAction.None
         }
 
         timeline.playbackStartTime = timeline.cursor.time1
