@@ -96,7 +96,7 @@ export function makeNew(): Prefs
             fontWeightMarker: "bold",
             fontNameMarker: "Calibri",
         
-            keyPan: " ",
+            keyPan: "q",
             keyPencil: "a",
             keySelectMultiple: "control",
             keyForceCursorSelect: "shift",

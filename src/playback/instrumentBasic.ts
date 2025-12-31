@@ -204,7 +204,9 @@ export class InstrumentBasic extends Playback.Instrument
                 outputNode,
                 sample,
                 noteEvent.midiPitchSeq[0].value,
-                neededSample.volume * noteEvent.velocitySeq[0].value))
+                neededSample.volume *
+                    MathUtils.dbToLinearGain(noteEvent.volumeDbSeq[0].value) *
+                    noteEvent.velocitySeq[0].value))
         }
 
         this.notes.push({

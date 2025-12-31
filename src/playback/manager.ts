@@ -217,14 +217,13 @@ export class Manager
         this.updateTracks(project, audioCtxOffsetMs)
 
         const noteEvent: Playback.NoteEvent = {
-            project,
             trackId,
 
             startMs: 0,
             endMs: 500,
 
             midiPitchSeq: [{ timeMs: 0, value: midiPitch }],
-            volumeSeq: [{ timeMs: 0, value: 0 }],
+            volumeDbSeq: [{ timeMs: 0, value: 0 }],
             velocitySeq: [{ timeMs: 0, value: 1 }],
         }
 
@@ -246,14 +245,13 @@ export class Manager
         for (const midiPitch of chord.strummingPitches)
         {
             const noteEvent: Playback.NoteEvent = {
-                project,
                 trackId,
 
                 startMs: 0,
                 endMs: 750,
 
                 midiPitchSeq: [{ timeMs: 0, value: midiPitch }],
-                volumeSeq: [{ timeMs: 0, value: 0 }],
+                volumeDbSeq: [{ timeMs: 0, value: 0 }],
                 velocitySeq: [{ timeMs: 0, value: 1 }],
             }
 
@@ -351,8 +349,7 @@ export class Manager
             this.playNote(noteEvent, audioCtxOffsetMs)
         }
 
-        //if (noteEvents.length > 0)
-        //    console.log(noteEvents)
+        //if (noteEvents.length > 0) console.log(noteEvents)
 
         this.playTime = playTimeNext
         this.startTimeMs = startTimeNext

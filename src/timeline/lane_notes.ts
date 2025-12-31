@@ -362,8 +362,13 @@ export class LaneNotes extends Timeline.Lane
 
         const key = Project.keyAt(project.root, time)
         const chroma = key.chromaForDegree(degree)
-        const midiPitch = Timeline.insertNote(timeline, project, trackId, time, chroma)
-        playback.playNotePreview(project.root, trackId, midiPitch)
+        Timeline.insertNote(
+            timeline,
+            project,
+            playback,
+            trackId,
+            time,
+            chroma)
     }
     
     

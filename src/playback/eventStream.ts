@@ -8,14 +8,13 @@ import * as MathUtils from "../utils/mathUtils.ts"
 
 export interface NoteEvent
 {
-    project: Project.ImmutableRoot,
     trackId: Project.ID
     
     startMs: number
     endMs: number
 
     midiPitchSeq: TimeVariableProperty[]
-    volumeSeq: TimeVariableProperty[]
+    volumeDbSeq: TimeVariableProperty[]
     velocitySeq: TimeVariableProperty[]
 }
 
@@ -63,16 +62,13 @@ export function queryNoteEvents(
     {
         for (const chord of chordList.iterAtRange(range))
         {
-            if (range.overlapsPoint(chord.range.start) ||
-                (isStart && chord.range.overlapsPoint(range.start)))
-            {
-                playChord(
-                    project,
-                    chordTrack,
-                    noteEvents,
-                    range,
-                    chord as Project.Chord)
-            }
+            playChord(
+                project,
+                chordTrack,
+                noteEvents,
+                range,
+                isStart,
+                chord as Project.Chord)
         }
     }
 
@@ -96,14 +92,13 @@ function makeNoteEvent(
         Project.getMillisecondsAt(project, noteRange.end)
 
     return {
-        project,
         trackId,
 
         startMs: startMs,
         endMs: endMs,
 
         midiPitchSeq: [{ timeMs: startMs, value: midiPitch }],
-        volumeSeq: [{ timeMs: startMs, value: volumeDb }],
+        volumeDbSeq: [{ timeMs: startMs, value: volumeDb }],
         velocitySeq: [{ timeMs: startMs, value: velocity }],
     }
 }
@@ -137,23 +132,24 @@ function playChord(
     chordTrack: Project.TrackChords,
     noteEvents: NoteEvent[],
     range: Range,
+    isStart: boolean,
     chord: Project.Chord)
 {
     const addNoteEvent = (start: Rational, duration: Rational, midiPitch: number, volume: number) => {
-        if (start.add(duration).compare(range.start) <= 0)
-            return
+        const noteRange = Range.fromStartDuration(start, duration)
 
-        noteEvents.push(makeNoteEvent(
-            project,
-            chordTrack.id,
-            Range.fromStartDuration(start, duration),
-            midiPitch,
-            MathUtils.linearGainToDb(volume),
-            1))
+        if (range.overlapsPoint(noteRange.start) ||
+            (isStart && noteRange.overlapsPoint(range.start)))
+        {
+            noteEvents.push(makeNoteEvent(
+                project,
+                chordTrack.id,
+                noteRange,
+                midiPitch,
+                MathUtils.linearGainToDb(volume),
+                1))
+        }
     }
-
-    /*if (chord.range.end.compare(startTick) <= 0)
-        continue*/
     
     const pitches = chord.chord.strummingPitches
         
@@ -165,6 +161,8 @@ function playChord(
         continue
     }*/
 
+    const zero = new Rational(0)
+
     const measures = Project.iterMeasuresAtRange(project, chord.range)
     for (const measure of measures)
     {        
@@ -175,7 +173,7 @@ function playChord(
         const endTime = chord.range.end.min(measure.time2)
 
         let mustPlayFirstBeat = false
-        let skipTick = new Rational(0)
+        let skipTick = zero
         let patternIndex = 0
         
         while (tick.compare(endTime) < 0)
@@ -194,13 +192,13 @@ function playChord(
             
             // Handle beats after the first one.
             if (tick.compare(chord.range.start) > 0 &&
-                skipTick.compare(new Rational(0)) <= 0)
+                skipTick.compare(zero) <= 0)
             {
                 if (mustPlayFirstBeat)
                 {
                     mustPlayFirstBeat = false
                     for (let j = 0; j < pitches.length; j++)
-                        addNoteEvent(chord.range.start, tick.subtract(chord.range.start), pitches[j], 1)
+                        addNoteEvent(chord.range.start, tick.subtract(chord.range.start), pitches[j], 0.75)
                 }
                 
                 switch (patternBeatKind)
@@ -208,7 +206,7 @@ function playChord(
                     case 0:
                     {
                         for (let j = 0; j < pitches.length; j++)
-                            addNoteEvent(tick, patternBeatLength, pitches[j], 0.9)
+                            addNoteEvent(tick, patternBeatLength, pitches[j], 0.75)
                         break
                     }
                     case 1:
@@ -244,7 +242,7 @@ function playChord(
         {
             mustPlayFirstBeat = false
             for (let j = 0; j < pitches.length; j++)
-                addNoteEvent(chord.range.start, tick.subtract(chord.range.start), pitches[j], 0.7)
+                addNoteEvent(chord.range.start, tick.subtract(chord.range.start), pitches[j], 0.75)
         }
     }
 }

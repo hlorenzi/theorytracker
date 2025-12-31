@@ -1,6 +1,7 @@
 import * as Immutable from "immutable"
 import * as Project from "../project"
 import * as Timeline from "./index.ts"
+import * as Playback from "../playback"
 import * as Theory from "../theory"
 import Rational from "../utils/rational.ts"
 import Range from "../utils/range.ts"
@@ -427,7 +428,7 @@ export function rewind(
 {
     state.cursor.visible = true
     state.cursor.time1 = state.cursor.time2 = project.range.start
-    //Playback.setStartTime(Project.global.project.range.start)
+    state.playbackStartTime = state.cursor.time1
     scrollTimeIntoView(state, state.cursor.time1)
 }
 
@@ -575,10 +576,10 @@ export function selectionResolveOverlappingAndDegenerate(
 export function insertNote(
     timeline: Timeline.State,
     project: Project.Mutable,
+    playback: Playback.Manager,
     trackId: Project.ID,
     time: Rational,
     chroma: number)
-    : number
 {
     keyHandlePendingFinish(timeline, project)
 
@@ -610,9 +611,8 @@ export function insertNote(
     scrollTimeIntoView(timeline, range.end)
     selectionClear(timeline)
     selectionAdd(timeline, id)
-    //Playback.playNotePreview(noteBlock.parentId, chosenPitch, volumeDb, velocity)
+    playback.playNotePreview(project.root, trackId, chosenPitch)
     selectionResolveOverlappingAndDegenerate(timeline, project)
-    return chosenPitch
 }
 
 
@@ -663,6 +663,7 @@ export function deleteRange(
 export function insertChord(
     timeline: Timeline.State,
     project: Project.Mutable,
+    playback: Playback.Manager,
     trackId: Project.ID,
     time: Rational,
     chord: Theory.Chord)
@@ -685,7 +686,7 @@ export function insertChord(
     scrollTimeIntoView(timeline, range.end)
     selectionClear(timeline)
     selectionAdd(timeline, id)
-    //Playback.playChordPreview(track.projectTrackId, chord, volumeDb, velocity)
+    playback.playChordPreview(project.root, trackId, chord)
     selectionResolveOverlappingAndDegenerate(timeline, project)
 }
 
