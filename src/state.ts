@@ -5,37 +5,51 @@ import * as Playback from "./playback"
 import * as Prefs from "./prefs"
 
 
-const [state, setState] =
-    Solid.createSignal(makeNew())
+const [refreshToken, setRefreshToken] =
+    Solid.createSignal(0)
 
 
 export interface State
 {
     prefs: Prefs.Prefs
     project: Project.Mutable
+    lastSavedProject: Project.ImmutableRoot
     timeline: Timeline.State
     playback: Playback.Manager
 }
 
 
+export const state = makeNew()
+
+
 export function makeNew(): State
 {
+    const newProject = Project.makeTest()
+
     return {
         prefs: Prefs.makeNew(),
-        project: { root: Project.makeTest() },
+        project: { root: newProject },
+        lastSavedProject: newProject,
         timeline: Timeline.makeNew(),
         playback: new Playback.Manager(),
     }
 }
 
 
+export function getStatic(): State
+{
+    return state
+}
+
+
 export function get(): State
 {
-    return state()
+    refreshToken()
+    return state
 }
 
 
 export function refresh()
 {
-    setState({ ...state() })
+    setRefreshToken(t => t + 1)
 }

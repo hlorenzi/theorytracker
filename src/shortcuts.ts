@@ -2,6 +2,7 @@ import * as Solid from "solid-js"
 import * as Global from "./state.ts"
 import * as Timeline from "./timeline"
 import * as Playback from "./playback"
+import * as Command from "./command"
 
 
 export function setupKeyboardShortcuts()
@@ -29,9 +30,10 @@ function handleKeyDown(ev: KeyboardEvent)
         const playback = Global.get().playback
         playback.setStartTime(timeline.playbackStartTime)
         playback.togglePlaying()
+        return
     }
 
-    /*for (const command of Command.allCommands)
+    for (const command of Command.allCommands)
     {
         if (!command.shortcut)
             continue
@@ -59,5 +61,5 @@ function handleKeyDown(ev: KeyboardEvent)
             ev.stopPropagation()
             return
         }
-    }*/
+    }
 }

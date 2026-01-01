@@ -177,15 +177,27 @@ function drawNote(
     ctx: CanvasRenderingContext2D,
     element: Timeline.LayoutElementNote)
 {
-    ctx.save()
-    ctx.beginPath()
-    ctx.roundRect(
-        element.rect.x,
-        element.rect.y,
-        element.rect.w,
-        element.rect.h,
-        timeline.noteRowH / 4)
-    ctx.clip()
+    const isSelected =
+        element.id !== undefined &&
+        timeline.selection.has(element.id)
+    
+    const needsClipping =
+        isSelected ||
+        element.cutStart ||
+        element.cutEnd
+
+    if (needsClipping)
+    {
+        ctx.save()
+        ctx.beginPath()
+        ctx.roundRect(
+            element.rect.x,
+            element.rect.y,
+            element.rect.w,
+            element.rect.h,
+            timeline.noteRowH / 4)
+        ctx.clip()
+    }
 
     const x1 = element.rect.x  + (element.cutStart ? -16 : 0)
     const x2 = element.rect.x2 + (element.cutEnd ? 16 : 0)
@@ -195,9 +207,9 @@ function drawNote(
     const fillStyle = CanvasUtils.fillStyleForDegree(
         ctx,
         key.degreeForMidi(element.note.midiPitch) + mode,
-        false)
+        !!element.ghost)
 
-    ctx.globalAlpha = element.ghost ? 0.5 : 1
+    //ctx.globalAlpha = element.ghost ? 0.5 : 1
         
     ctx.fillStyle = fillStyle
     ctx.beginPath()
@@ -218,19 +230,21 @@ function drawNote(
     if (playback.playing &&
         element.note.range.overlapsPoint(playback.playTime))
     {
-        ctx.fillStyle = "#fff8"
+        ctx.fillStyle =
+            element.ghost ? "#fff2" :
+            "#fff8"
         ctx.fill()
     }
 
-    if (element.id !== undefined &&
-        timeline.selection.has(element.id))
+    if (isSelected)
     {
         ctx.strokeStyle = "#fff8"
         ctx.lineWidth = 6
         ctx.stroke()
     }
 
-    ctx.restore()
+    if (needsClipping)
+        ctx.restore()
 }
 
 
@@ -398,7 +412,7 @@ export function drawLaneBkgSolid(
     ctx: CanvasRenderingContext2D,
     lane: Timeline.Lane)
 {
-    if (timeline.layout.measures.length > 100)
+    if (timeline.layout.measures.length > 20)
     {
         ctx.fillStyle = prefs.timeline.bkgColor
         ctx.fillRect(
@@ -443,6 +457,8 @@ export function drawLaneBkgChordTones(
     const octaveAtTop = Math.ceil(rowAtTop / 7) + 1
     const octaveAtBottom = Math.floor(rowAtBottom / 7) - 1
 
+    const chordToneH = timeline.noteRowH / 3
+
     for (const chordRegion of timeline.layout.chordRegions)
     {
         const key = chordRegion.key
@@ -451,7 +467,7 @@ export function drawLaneBkgChordTones(
         for (const tone of chordRegion.tones)
         {
             const mode = key.scale.metadata?.mode ?? 0
-            const fillStyle = CanvasUtils.fillStyleForDegree(
+            ctx.fillStyle = CanvasUtils.fillStyleForDegree(
                 ctx,
                 tone.degree + mode,
                 true)
@@ -461,15 +477,11 @@ export function drawLaneBkgChordTones(
                 const y = Math.floor(
                     Timeline.yForRow(timeline, lane, tone.row + (5 + i) * scaleLength))
             
-                ctx.fillStyle = fillStyle
-                ctx.beginPath()
-                ctx.roundRect(
+                ctx.fillRect(
                     chordRegion.x1,
-                    y,
+                    y + timeline.noteRowH / 2 - chordToneH / 2,
                     chordRegion.x2 - chordRegion.x1,
-                    timeline.noteRowH,
-                    timeline.noteRowH / 4)
-                ctx.fill()
+                    chordToneH)
             }
         }
     }

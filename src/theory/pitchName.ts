@@ -6,6 +6,9 @@ export default class PitchName
 	letter: number
 	accidental: number
 
+	cachedStr?: string
+	cachedStrUnicode?: string
+
 
 	constructor(letter: number, accidental: number)
 	{
@@ -91,19 +94,27 @@ export default class PitchName
 	
 	get str(): string
 	{
+		if (this.cachedStr)
+			return this.cachedStr
+
 		const letterStr     = Utils.letterToStr(this.letter)
 		const accidentalStr = Utils.accidentalToStr(this.accidental)
 			
-		return letterStr + accidentalStr
+		this.cachedStr = letterStr + accidentalStr
+		return this.cachedStr
 	}
 	
 	
 	get strUnicode(): string
 	{
+		if (this.cachedStrUnicode)
+			return this.cachedStrUnicode
+
 		const letterStr     = Utils.letterToStr(this.letter)
 		const accidentalStr = Utils.accidentalToStr(this.accidental, true)
 			
-		return letterStr + accidentalStr
+		this.cachedStrUnicode = letterStr + accidentalStr
+		return this.cachedStrUnicode
 	}
 	
 	

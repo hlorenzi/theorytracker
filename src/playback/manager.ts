@@ -1,13 +1,11 @@
 import * as Global from "../state.ts"
 import * as Playback from "./index"
 import * as Project from "../project"
+import * as Timeline from "../timeline"
 import * as Theory from "../theory"
 import * as MathUtils from "../utils/mathUtils.ts"
 import Rational from "../utils/rational.ts"
 import Range from "../utils/range.ts"
-
-
-export const eventPlaybackRefresh = "playbackRefresh"
 
 
 export class Manager
@@ -269,7 +267,7 @@ export class Manager
             preloadTimeNext)
         
         this.prepareRange(
-            Global.get().project.root,
+            Global.getStatic().project.root,
             range,
             isStart)
 
@@ -293,8 +291,8 @@ export class Manager
             
             const trackOutput = this.getTrackOutput(track.id)
             const trackVolume =
-                trackWithAttrbs?.mute ? 0 :
-                hasSoloTrack && !trackWithAttrbs?.solo ? 0 :
+                !trackWithAttrbs?.solo &&
+                    (hasSoloTrack || trackWithAttrbs?.mute) ? 0 :
                 MathUtils.dbToLinearGain(0)
             
             trackOutput.gain.linearRampToValueAtTime(trackVolume, (audioCtxOffsetMs + 50) / 1000)
@@ -320,7 +318,7 @@ export class Manager
 
         const startTimeNext = this.startTimeMs + deltaTimeMs
 
-        const project = Global.get().project.root
+        const project = Global.getStatic().project.root
 
         const playTimeNext =
             Project.getTimeAtMilliseconds(project, startTimeNext)
@@ -358,7 +356,10 @@ export class Manager
         if (canRedrawScreen)
         {
             this.refreshTimeMs = 0
-            window.dispatchEvent(new CustomEvent(eventPlaybackRefresh))
+            if (Timeline.scrollPlayTimeIntoView(Global.getStatic().timeline, this.playTime))
+                window.dispatchEvent(new CustomEvent(Timeline.eventTimelineRelayout))
+            else
+                window.dispatchEvent(new CustomEvent(Timeline.eventTimelineRedraw))
         }
 
         if (this.playTime.compare(project.range.end) > 0 &&
@@ -394,9 +395,7 @@ export class Manager
         // process playback on the setInterval callback only if
         // requestAnimationFrame was blocked (by e.g. being in the background)
 
-        this.processFrame(false)
-        
-        /*const msSinceLastRequestAnimationFrame = 
+        const msSinceLastRequestAnimationFrame = 
             (new Date().getTime()) -
             this.requestAnimationFrameDate.getTime()
 
@@ -404,7 +403,7 @@ export class Manager
             deltaTimeMs > 0 && deltaTimeMs < 250)
         {
             this.processFrame(false)
-        }*/
+        }
     }
 
     
@@ -422,7 +421,7 @@ export class Manager
             this.setIntervalId = 0
         }
 
-        const project = Global.get().project.root
+        const project = Global.getStatic().project.root
 
         this.playing = playing
         this.firstPlayingFrame = true
@@ -448,7 +447,7 @@ export class Manager
                 +setInterval(() => this.processInterval(1000 / 60), 1000 / 60)
         }
         
-        window.dispatchEvent(new CustomEvent(eventPlaybackRefresh))
+        window.dispatchEvent(new CustomEvent(Timeline.eventTimelineRedraw))
     }
 
 

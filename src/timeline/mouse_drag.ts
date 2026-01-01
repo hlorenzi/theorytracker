@@ -78,8 +78,8 @@ function handleSelectCursor(
     project: Project.Mutable)
     : boolean
 {
-    timeline.cursor.time2 = timeline.mouse.point.time
-    timeline.cursor.laneIndex2 = timeline.mouse.point.laneIndex
+    Timeline.cursorSetTime(timeline, null, timeline.mouse.point.time)
+    Timeline.cursorSetLaneIndex(timeline, null, timeline.mouse.point.laneIndex)
 
     timeline.cursor.verticalRegion = {
         y1: timeline.cursor.verticalRegion.y1,
@@ -94,9 +94,6 @@ function handleSelectCursor(
             !timeline.drag.yLocked) &&
         lane?.allowsRectSelect()
 
-    timeline.playbackStartTime =
-        timeline.cursor.time1.min(timeline.cursor.time2)
-    
     Timeline.selectionClear(timeline)
     Timeline.selectionAddAtCursor(timeline, project.root)
     return true

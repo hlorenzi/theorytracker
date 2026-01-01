@@ -92,6 +92,26 @@ export default class Meter
 	}
 
 
+	toJson(): [number, number][]
+	{
+		return this.ratios.map(r => [r.numerator, r.denominator])
+	}
+
+
+	static fromJson(data: [number, number][]): Meter
+	{
+		let meter = new Meter(data[0][0], data[0][1])
+		for (let i = 1; i < data.length; i++)
+		{
+			meter = meter.withAddedRatio()
+			meter.ratios[i].numerator = data[i][0]
+			meter.ratios[i].denominator = data[i][1]
+		}
+
+		return meter
+	}
+
+
 	toString(): string
 	{
 		let str = ""

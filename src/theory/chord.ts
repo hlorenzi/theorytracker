@@ -307,6 +307,17 @@ export interface ChordSuggestion
 }
 
 
+export interface ChordStringRepresentation
+{
+    nameBase: string
+    nameSup: string
+    nameSub: string
+    romanBase: string
+    romanSup: string
+    romanSub: string
+}
+
+
 export default class Chord
 {
 	static kinds: ChordMetadata[] = chordKinds
@@ -327,6 +338,9 @@ export default class Chord
 	add11?: number
 	add13?: number
 
+	cachedStrKey?: Theory.Key
+	cachedStr?: ChordStringRepresentation
+
 	
 	constructor(rootChroma: number, inversion: number = 0)
 	{
@@ -335,10 +349,9 @@ export default class Chord
     }
 
 
-	isEqual(other: Chord): boolean
+	isEqualForPalette(other: Chord): boolean
 	{
 		return this.rootChroma === other.rootChroma &&
-			this.baseDegree === other.baseDegree &&
 			this.inversion === other.inversion &&
 			this.sus2 === other.sus2 &&
 			this.add3 === other.add3 &&
@@ -476,15 +489,105 @@ export default class Chord
 	}
 
 
-	/*static kindFromPitches(pitches: number[]): number
+	toJson(): Record<string, any>
 	{
-		return chordKinds.findIndex(k =>
-			k.pitches.length === pitches.length &&
-			k.pitches.every((p, i) => pitches[i] === p))
+		const json: Record<string, any> = {
+			rootChroma: this.rootChroma,
+			baseDegree: this.baseDegree,
+		}
+
+		if (this.inversion !== 0)
+			json.inversion = this.inversion
+		
+		if (this.sus2 !== undefined)
+			json.sus2 = this.sus2
+		
+		if (this.add3 !== undefined)
+			json.add3 = this.add3
+		
+		if (this.no3)
+			json.no3 = this.no3
+		
+		if (this.sus4 !== undefined)
+			json.sus4 = this.sus4
+		
+		if (this.add5 !== undefined)
+			json.add5 = this.add5
+		
+		if (this.no5)
+			json.no5 = this.no5
+		
+		if (this.add7 !== undefined)
+			json.add7 = this.add7
+		
+		if (this.add9 !== undefined)
+			json.add9 = this.add9
+		
+		if (this.add11 !== undefined)
+			json.add11 = this.add11
+		
+		if (this.add13 !== undefined)
+			json.add13 = this.add13
+
+		return json
+	}
+
+	
+	static fromJson(json: Record<string, any>): Chord
+	{
+		let chord = new Chord(json.rootChroma, json.inversion)
+		for (const field of Object.entries(json))
+			(chord as Record<string, any>)[field[0]] = json[field[1]]
+
+		return chord
 	}
 
 
-	static suggestChordsForPitches(pitches: number[]): ChordSuggestion[]
+	static fromLegacyKind(rootChroma: number, inversion: number, kindId: string): Chord
+	{
+		rootChroma = Theory.Utils.mod(rootChroma, 12)
+
+		let chord = new Chord(rootChroma, inversion)
+		chord.baseDegree = Theory.Utils.mod(
+			Math.ceil(Theory.Utils.chromaToDegreeInCMajor(rootChroma)), 7)
+
+		const legacyKinds: Record<string, number[]> = {
+			"M":     [0, 4, 7],
+			"m":     [0, 3, 7],
+			"+":     [0, 4, 8],
+			"o":     [0, 3, 6],
+			"oo":    [0, 2, 6],
+			"b5":    [0, 4, 6],
+			"7":     [0, 4, 7, 10],
+			"maj7":  [0, 4, 7, 11],
+			"m7":    [0, 3, 7, 10],
+			"mmaj7": [0, 3, 7, 11],
+			"+7":    [0, 4, 8, 10],
+			"+maj7": [0, 4, 8, 11],
+			"o7":    [0, 3, 6,  9],
+			"%7":    [0, 3, 6, 10],
+		}
+
+		const legacyKind = legacyKinds[kindId]
+		if (legacyKind)
+		{
+			chord.add3 = legacyKind[1] - 4
+			chord.add5 = legacyKind[2] - 7
+			if (legacyKind.length >= 4)
+				chord.add7 = legacyKind[3] - 11
+		}
+		else
+		{
+			chord.add3 = 0
+			chord.add5 = 0
+		}
+
+		console.log(kindId, chord)
+		return chord
+	}
+
+
+	/*static suggestChordsForPitches(pitches: number[]): ChordSuggestion[]
 	{
 		const suggestions: ChordSuggestion[] = []
 
@@ -600,10 +703,11 @@ export default class Chord
 
 	accidentalStrForRoman(
 		key: Theory.Key,
+		baseDegree: number,
 		degree: number,
 		accidental: number)
 	{
-		const chroma = key.chromaForDegree(this.baseDegree + degree)
+		const chroma = key.chromaForDegree(baseDegree + degree)
 		const chromaInCMajor = this.rootChroma + Theory.Scale.majorScale.chromas[degree % 7] + accidental
 		const finalAccidental = Theory.Utils.modAccidental(chromaInCMajor - chroma)
 		return Theory.Utils.accidentalToStr(finalAccidental)
@@ -615,15 +719,10 @@ export default class Chord
 		const finalAccidental = Theory.Utils.modAccidental(accidental)
 		return Theory.Utils.accidentalToStr(finalAccidental)
 	}
-	
-	
-	str(key: Theory.Key)
-	{
-		const kind = this.chordKind() ?? {
-			id: "custom",
-			name: "Custom",
-		}
 
+
+	normalizedRoman(key: Theory.Key)
+	{
         let roman = this.baseDegree % key.scale.chromas.length
 		let romanChroma = key.chromaForDegree(roman)
         let accidental = Theory.Utils.accidentalFor(this.rootChroma, romanChroma)
@@ -644,6 +743,27 @@ export default class Chord
 			}
 		}
 
+		return {
+			roman,
+			romanChroma,
+			accidental,
+		}
+	}
+	
+	
+	str(key: Theory.Key): ChordStringRepresentation
+	{
+		if (this.cachedStr &&
+			this.cachedStrKey === key)
+			return this.cachedStr
+		
+		const kind = this.chordKind() ?? {
+			id: "custom",
+			name: "Custom",
+		}
+
+		let { roman, romanChroma, accidental } = this.normalizedRoman(key)
+
 		let accidentalStr = Theory.Utils.accidentalToStr(accidental, true)
 
 		const isLowercase =
@@ -653,7 +773,7 @@ export default class Chord
 		
 		let nameBase =
 			Theory.Utils.lowercaseIf(
-				key.nameForChroma(this.rootChroma).strUnicode,
+				key.nameForDegree(roman).altered(accidental).strUnicode,
 				isLowercase) +
 			(kind.nameBase ?? "")
 
@@ -672,13 +792,13 @@ export default class Chord
 		if (this.sus2 !== undefined)
 		{
 			nameSub += `sus${ Chord.accidentalStrForName(this.sus2) }2`
-			romanSub += `sus${ this.accidentalStrForRoman(key, 1, this.sus2) }2`
+			romanSub += `sus${ this.accidentalStrForRoman(key, roman, 1, this.sus2) }2`
 		}
 		
 		if (this.sus4 !== undefined)
 		{
 			nameSub += `sus${ Chord.accidentalStrForName(this.sus4) }4`
-			romanSub += `sus${ this.accidentalStrForRoman(key, 3, this.sus4) }4`
+			romanSub += `sus${ this.accidentalStrForRoman(key, roman, 3, this.sus4) }4`
 		}
 
 		let add3Name = this.add3
@@ -744,7 +864,7 @@ export default class Chord
 			add9Roman !== undefined &&
 			add7Roman !== undefined)
 		{
-			romanSup += `${ this.accidentalStrForRoman(key, 12, add13Roman) }13`
+			romanSup += `${ this.accidentalStrForRoman(key, roman, 12, add13Roman) }13`
 			add13Roman = undefined
 			add11Roman = undefined
 			add9Roman = undefined
@@ -755,7 +875,7 @@ export default class Chord
 			add9Roman !== undefined &&
 			add7Roman !== undefined)
 		{
-			romanSup += `${ this.accidentalStrForRoman(key, 10, add11Roman) }11`
+			romanSup += `${ this.accidentalStrForRoman(key, roman, 10, add11Roman) }11`
 			add11Roman = undefined
 			add9Roman = undefined
 			add7Roman = undefined
@@ -764,14 +884,14 @@ export default class Chord
 		if (add9Roman !== undefined &&
 			add7Roman !== undefined)
 		{
-			romanSup += `${ this.accidentalStrForRoman(key, 8, add9Roman) }9`
+			romanSup += `${ this.accidentalStrForRoman(key, roman, 8, add9Roman) }9`
 			add9Roman = undefined
 			add7Roman = undefined
 		}
 
 		if (add7Roman !== undefined)
 		{
-			romanSup += `${ this.accidentalStrForRoman(key, 6, add7Roman) }7`
+			romanSup += `${ this.accidentalStrForRoman(key, roman, 6, add7Roman) }7`
 			add7Roman = undefined
 		}
 
@@ -785,7 +905,7 @@ export default class Chord
 			add5Roman !== undefined &&
 			(kind.add5 === undefined || add5Roman !== kind.add5))
 		{
-			const accidentalStr = this.accidentalStrForRoman(key, 4, add5Roman)
+			const accidentalStr = this.accidentalStrForRoman(key, roman, 4, add5Roman)
 			if (accidentalStr !== "")
 			{
 				romanSup += `(${ accidentalStr }5)`
@@ -813,7 +933,7 @@ export default class Chord
 			nameSup += `(${ Chord.accidentalStrForName(add7Name) }7)`
 
 		if (add7Roman !== undefined)
-			romanSup += `(${ this.accidentalStrForRoman(key, 6, add7Roman) }7)`
+			romanSup += `(${ this.accidentalStrForRoman(key, roman, 6, add7Roman) }7)`
 
 		const hasAdd9 =
 			this.add7 === undefined
@@ -832,23 +952,23 @@ export default class Chord
 			nameSup += `(${ hasAdd9 ? "add" : ""}${ Chord.accidentalStrForName(add9Name) }9)`
 
 		if (add9Roman !== undefined)
-			romanSup += `(${ hasAdd9 ? "add" : ""}${ this.accidentalStrForRoman(key, 8, add9Roman) }9)`
+			romanSup += `(${ hasAdd9 ? "add" : ""}${ this.accidentalStrForRoman(key, roman, 8, add9Roman) }9)`
 
 		if (add11Name !== undefined &&
 			(kind.add11 === undefined || add11Name !== kind.add11))
 			nameSup += `(${ hasAdd11 ? "add" : ""}${ Chord.accidentalStrForName(add11Name) }11)`
 
 		if (add11Roman !== undefined)
-			romanSup += `(${ hasAdd11 ? "add" : ""}${ this.accidentalStrForRoman(key, 10, add11Roman) }11)`
+			romanSup += `(${ hasAdd11 ? "add" : ""}${ this.accidentalStrForRoman(key, roman, 10, add11Roman) }11)`
 
 		if (add13Name !== undefined &&
 			(kind.add13 === undefined || add13Name !== kind.add13))
 			nameSup += `(${ hasAdd13 ? "add" : ""}${ Chord.accidentalStrForName(add13Name) }13)`
 
 		if (add13Roman !== undefined)
-			romanSup += `(${ hasAdd13 ? "add" : ""}${ this.accidentalStrForRoman(key, 12, add13Roman) }13)`
+			romanSup += `(${ hasAdd13 ? "add" : ""}${ this.accidentalStrForRoman(key, roman, 12, add13Roman) }13)`
 
-		return {
+		this.cachedStr = {
 			nameBase,
 			nameSup,
 			nameSub,
@@ -856,6 +976,9 @@ export default class Chord
 			romanSup,
 			romanSub,
 		}
+
+		this.cachedStrKey = key
+		return this.cachedStr
 	}
 	
 	

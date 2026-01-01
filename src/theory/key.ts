@@ -10,6 +10,8 @@ export default class Key
 	scale: Scale
 	_chromaToDegree: number[]
 
+	cachedNamedPitches?: PitchName[]
+
 
 	constructor(tonic: PitchName, scale: Scale)
 	{
@@ -219,6 +221,12 @@ export default class Key
 	
 	get namedPitches(): PitchName[]
 	{
-		return this.scale.chromas.map(chroma => this.nameForMidi(chroma + this.tonic.midi))
+		if (this.cachedNamedPitches)
+			return this.cachedNamedPitches
+
+		this.cachedNamedPitches = this.scale.chromas.map(chroma =>
+			this.nameForMidi(chroma + this.tonic.midi))
+
+		return this.cachedNamedPitches
 	}
 }

@@ -18,6 +18,9 @@ export function InspectorChord(props: {
 {
     const [currChord, setCurrChord] = Solid.createSignal(props.value?.chord)
 
+    if (props.value?.chord)
+        console.log(props.value.chord)
+
     const [chordOptions, setChordOptionsRaw] = Solid.createSignal(
         props.value ?
             Theory.ChordOptions.makeFromChord(props.key, props.value?.chord) :
@@ -41,7 +44,7 @@ export function InspectorChord(props: {
         for (let degree = 0; degree < 7; degree++)
         {
             const chord = Theory.ChordOptions.buildChord(props.key, degree, oldOpts)
-            const isSelected = !!currChord()?.isEqual(chord)
+            const isSelected = !!currChord()?.isEqualForPalette(chord)
             if (isSelected)
                 selectedDegree = degree
         }
@@ -59,7 +62,7 @@ export function InspectorChord(props: {
 
         return (key: Theory.Key, degree: number) => {
             const chord = Theory.ChordOptions.buildChord(key, degree, chOpts)
-            const isSelected = props.value && currChord()?.isEqual(chord)
+            const isSelected = props.value && currChord()?.isEqualForPalette(chord)
             console.log(degree, chord)
 
             let canvas: HTMLCanvasElement = undefined!
@@ -271,20 +274,20 @@ export function InspectorChord(props: {
                         onChange={ ev => setChordOptions(opts => ({ ...opts, withFlat13: ev })) }
                     />
                 </div>
-                <div style={{
-                    "grid-column": "1 / -1",
-                    "justify-self": "center",
-                }}>
-                    <Ui.Select
-                        value={ chordOptions().borrowFromScaleId }
-                        onChange={ scaleId => setChordOptions(opts => ({ ...opts, borrowFromScaleId: scaleId })) }
-                    >
-                        { Theory.Scale.list.map(
-                            (scaleMeta, i) => makeScaleOption(scaleMeta)
-                        )}
-                    </Ui.Select>
-                </div>
             </LayoutChordOptions>
+
+            <div style={{
+                "justify-self": "start",
+            }}>
+                <Ui.Select
+                    value={ chordOptions().borrowFromScaleId }
+                    onChange={ scaleId => setChordOptions(opts => ({ ...opts, borrowFromScaleId: scaleId })) }
+                >
+                    { Theory.Scale.list.map(
+                        (scaleMeta, i) => makeScaleOption(scaleMeta)
+                    )}
+                </Ui.Select>
+            </div>
 
         </Layout>
     </>
@@ -293,7 +296,7 @@ export function InspectorChord(props: {
 
 const Layout = styled.div`
     display: grid;
-    grid-template: auto / auto auto;
+    grid-template: auto / auto auto auto;
     width: 100%;
     height: 100%;
     min-height: 0;

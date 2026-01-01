@@ -21,7 +21,7 @@ function App()
 
 const AppRoot = styled.div`
     display: grid;
-    grid-template: 1fr 1fr / 1fr;
+    grid-template: 1fr 18em / 1fr;
     margin: auto;
     width: 100%;
     height: 100%;

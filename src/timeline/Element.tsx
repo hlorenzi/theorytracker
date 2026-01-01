@@ -5,6 +5,10 @@ import * as Playback from "../playback"
 import Rect from "../utils/rect.ts"
 
 
+export const eventTimelineRedraw = "timelineRedraw"
+export const eventTimelineRelayout = "timelineRelayout"
+
+
 export function Element(props: {})
 {
     let div: HTMLDivElement | undefined = undefined
@@ -67,11 +71,14 @@ function registerHandlers(
     canvas: HTMLCanvasElement)
 {
     const ctx = canvas.getContext("2d")!
+        
+    const timeline = Global.getStatic().timeline
+    const project = Global.getStatic().project
+    const prefs = Global.getStatic().prefs
+    const playback = Global.getStatic().playback
 
-    const transformMousePos = (canvas: HTMLCanvasElement, ev: MouseEvent) =>
-    {
+    const transformMousePos = (canvas: HTMLCanvasElement, ev: MouseEvent) => {
         const rect = canvas.getBoundingClientRect()
-        const timeline = Global.get().timeline
         return {
             x: (ev.clientX - rect.left) * timeline.pixelRatio,
             y: (ev.clientY - rect.top) * timeline.pixelRatio,
@@ -79,8 +86,6 @@ function registerHandlers(
     }
 
     const setCursor = () => {
-        const timeline = Global.get().timeline
-
         const action = timeline.mouse.down ?
             timeline.mouse.action :
             timeline.hover?.action
@@ -98,31 +103,39 @@ function registerHandlers(
                 "text"
     }
 
-    const draw = () => {
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const prefs = Global.get().prefs
-        const playback = Global.get().playback
-        Timeline.draw(timeline, playback, prefs, ctx)
+    let needsRedraw = true
+
+    let drawLoopHandle = -1
+
+    const drawLoop = () => {
+        if (needsRedraw)
+        {
+            needsRedraw = false
+            Timeline.draw(timeline, playback, prefs, ctx)
+        }
+
+        window.requestAnimationFrame(drawLoop)
+    }
+
+    drawLoopHandle = window.requestAnimationFrame(drawLoop)
+
+    const queueRedraw = () => {
+        needsRedraw = true
+    }
+
+    const relayout = () => {
+        Timeline.layout(timeline, project.root, prefs)
+        queueRedraw()
     }
 
     const onResize = () => {
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const prefs = Global.get().prefs
-
         canvasResize(div, canvas, timeline)
-        Timeline.layout(timeline, project.root, prefs)
-        draw()
+        relayout()
     }
 
     const onMouseMove = (ev: MouseEvent) => {
         ev.preventDefault()
 
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const playback = Global.get().playback
-        const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
 
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
@@ -133,7 +146,7 @@ function registerHandlers(
             Global.refresh()
         }
         
-        draw()
+        queueRedraw()
         setCursor()
     }
 
@@ -141,15 +154,11 @@ function registerHandlers(
         ev.preventDefault()
         canvas.focus()
 
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const playback = Global.get().playback
-        const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
         Timeline.mouseDown(timeline, project, playback, prefs, ev.button !== 0)
-        draw()
+        queueRedraw()
         Global.refresh()
         setCursor()
     }
@@ -157,9 +166,6 @@ function registerHandlers(
     const onMouseUp = (ev: MouseEvent) => {
         ev.preventDefault()
 
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const prefs = Global.get().prefs
         const mouse = transformMousePos(canvas, ev)
         
         Timeline.mouseMove(timeline, project.root, mouse.x, mouse.y)
@@ -167,7 +173,7 @@ function registerHandlers(
         if (Timeline.mouseUp(timeline, project, ev.button !== 0))
             Timeline.layout(timeline, project.root, prefs)
 
-        draw()
+        queueRedraw()
         Global.refresh()
         setCursor()
     }
@@ -175,13 +181,9 @@ function registerHandlers(
     const onMouseWheel = (ev: WheelEvent) => {
         ev.preventDefault()
         
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const prefs = Global.get().prefs
-
         Timeline.mouseWheel(timeline, ev.deltaX, ev.deltaY)
         Timeline.layout(timeline, project.root, prefs)
-        draw()
+        queueRedraw()
         Global.refresh()
     }
 
@@ -190,22 +192,20 @@ function registerHandlers(
             document.activeElement.tagName === "INPUT")
             return
         
-        const timeline = Global.get().timeline
-        const project = Global.get().project
-        const playback = Global.get().playback
-        const prefs = Global.get().prefs
-
         Timeline.keyDown(timeline, project, playback, prefs, ev.key.toLowerCase())
         Timeline.layout(timeline, project.root, prefs)
-        draw()
+        queueRedraw()
         Global.refresh()
     }
 
     const onKeyUp = (ev: KeyboardEvent) => {
-        const timeline = Global.get().timeline
-
         Timeline.keyUp(timeline, ev.key.toLowerCase())
         Global.refresh()
+    }
+
+    const onWindowBlur = () => {
+        console.log("blur")
+        Timeline.allKeysUp(timeline)
     }
 
     const preventDefault = (ev: MouseEvent) => {
@@ -214,24 +214,36 @@ function registerHandlers(
 
     onResize()
 
-    window.addEventListener(Playback.eventPlaybackRefresh, draw)
+    Solid.createComputed(
+        (prevProject) => {
+            if (Global.get().project.root !== prevProject)
+                relayout()
+        },
+        project.root)
+
+    window.addEventListener(eventTimelineRedraw, queueRedraw)
+    window.addEventListener(eventTimelineRelayout, relayout)
     window.addEventListener("resize", onResize)
     window.addEventListener("mousemove", onMouseMove)
     canvas.addEventListener("mousedown", onMouseDown)
     window.addEventListener("mouseup", onMouseUp)
     canvas.addEventListener("wheel", onMouseWheel)
     canvas.addEventListener("contextmenu", preventDefault)
+    window.addEventListener("blur", onWindowBlur)
     window.addEventListener("keydown", onKeyDown)
     window.addEventListener("keyup", onKeyUp)
 
     return () => {
-        window.removeEventListener(Playback.eventPlaybackRefresh, draw)
+        window.cancelAnimationFrame(drawLoopHandle)
+        window.removeEventListener(eventTimelineRedraw, queueRedraw)
+        window.removeEventListener(eventTimelineRelayout, relayout)
         window.removeEventListener("resize", onResize)
         window.removeEventListener("mousemove", onMouseMove)
         canvas.removeEventListener("mousedown", onMouseDown)
         window.removeEventListener("mouseup", onMouseUp)
         canvas.removeEventListener("wheel", onMouseWheel)
         canvas.removeEventListener("contextmenu", preventDefault)
+        window.removeEventListener("blur", onWindowBlur)
         window.removeEventListener("keydown", onKeyDown)
         window.removeEventListener("keyup", onKeyUp)
     }

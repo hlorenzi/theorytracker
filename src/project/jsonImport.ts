@@ -5,27 +5,20 @@ import Range from "../utils/range.ts"
 import * as MathUtils from "../utils/mathUtils.ts"
 
 
-export function jsonImport(json: any): Project.Root
+export function jsonImport(json: any): Project.ImmutableRoot
 {
     console.log("jsonImport", json)
 
     let project = Project.makeEmpty()
-    project.baseBpm = json.baseBpm
+    const version = json.version as number
 
     for (const jsonTrack of json.tracks)
     {
         let track: Project.Track
         switch (jsonTrack.trackType as Project.Track["trackType"])
         {
-            case "notes":
-                track = Project.makeTrackNotes()
-                track.instrument = jsonTrack.instrument
-                track.volumeDb = jsonTrack.volumeDb
-                break
-            case "chords":
-                track = Project.makeTrackChords()
-                track.instrument = jsonTrack.instrument
-                track.volumeDb = jsonTrack.volumeDb
+            case "tempoChanges":
+                track = Project.makeTrackTempoChanges()
                 break
             case "keyChanges":
                 track = Project.makeTrackKeyChanges()
@@ -33,28 +26,53 @@ export function jsonImport(json: any): Project.Root
             case "meterChanges":
                 track = Project.makeTrackMeterChanges()
                 break
+            case "notes":
+                track = Project.makeTrackNotes()
+                //track.instrument = jsonTrack.instrument
+                //track.volumeDb = jsonTrack.volumeDb
+                break
+            case "chords":
+                track = Project.makeTrackChords()
+                //track.instrument = jsonTrack.instrument
+                //track.volumeDb = jsonTrack.volumeDb
+                break
         }
 
         track.name = jsonTrack.name
-        track.mute = jsonTrack.mute
-        track.solo = jsonTrack.solo
+
+        if (track.trackType === "notes" ||
+            track.trackType === "chords")
+        {
+            track.mute = jsonTrack.mute
+            track.solo = jsonTrack.solo
+        }
 
         const trackId = project.nextId
         project = Project.upsertTrack(project, track)
 
-        if (track.trackType == "keyChanges")
+        if (track.trackType === "tempoChanges")
+            project.tempoChangeTrackId = trackId
+        else if (track.trackType === "keyChanges")
             project.keyChangeTrackId = trackId
-        else if (track.trackType == "meterChanges")
+        else if (track.trackType === "meterChanges")
             project.meterChangeTrackId = trackId
-        else if (track.trackType == "chords")
+        else if (track.trackType === "chords")
             project.chordTrackId = trackId
 
         for (const jsonElem of jsonTrack.elems)
         {
-            const projectRef = { ref: project }
-            importElem(projectRef, trackId, jsonElem, new Rational(0))
-            project = projectRef.ref
+            const projectMutable = { root: project }
+            importElem(version, projectMutable, trackId, jsonElem, new Rational(0))
+            project = projectMutable.root
         }
+    }
+
+    if (json.version < 2)
+    {
+        project.tempoChangeTrackId = project.nextId
+        project = Project.upsertTrack(project, Project.makeTrackTempoChanges())
+        const tempoCh = Project.makeTempoChange(project.tempoChangeTrackId, new Rational(0), json.baseBpm)
+        project = Project.upsertElement(project, tempoCh)
     }
 
     console.log("project", project)
@@ -63,7 +81,8 @@ export function jsonImport(json: any): Project.Root
 
 
 function importElem(
-    projectRef: { ref: Project.Root },
+    version: number,
+    project: Project.Mutable,
     parentId: Project.ID,
     jsonElem: any,
     timeOffset: Rational)
@@ -73,29 +92,14 @@ function importElem(
         .quantize(Project.MAX_RATIONAL_DENOMINATOR)
     
     let elem: Project.Element
-    switch (jsonElem[0] as Project.Element["type"])
+    switch (jsonElem[0] as Project.Element["type"] | "noteBlock")
     {
-        case "note":
+        case "tempoChange":
         {
-            elem = Project.makeNote(
+            elem = Project.makeTempoChange(
                 parentId,
-                range,
-                jsonElem[3][0],
-                jsonElem[3][1],
-                jsonElem[3][2])
-            break
-        }
-
-        case "chord":
-        {
-            elem = Project.makeChord(
-                parentId,
-                range,
-                new Theory.Chord(
-                    jsonElem[3][0],
-                    Theory.Chord.kindFromId(jsonElem[3][1]),
-                    jsonElem[3][2],
-                    []))
+                range.start,
+                jsonElem[3].bpm)
             break
         }
 
@@ -113,30 +117,66 @@ function importElem(
             elem = Project.makeMeterChange(
                 parentId,
                 range.start,
-                Theory.Meter.parse(jsonElem[3]))
+                version < 2 ?
+                    Theory.Meter.parse(jsonElem[3]) :
+                    Theory.Meter.fromJson(jsonElem[3]))
+            break
+        }
+
+        case "note":
+        {
+            elem = Project.makeNote(
+                parentId,
+                range,
+                jsonElem[3][0])
+                //jsonElem[3][1],
+                //jsonElem[3][2])
             break
         }
 
         case "noteBlock":
         {
-            elem = Project.makeNoteBlock(
-                parentId,
-                range)
+            for (const jsonInner of jsonElem[4])
+            {
+                importElem(version, project, parentId, jsonInner, new Rational(0))
+            }
+            return
+        }
+
+        case "chord":
+        {
+            if (version < 2)
+            {
+                elem = Project.makeChord(
+                    parentId,
+                    range,
+                    Theory.Chord.fromLegacyKind(
+                        jsonElem[3][0],
+                        jsonElem[3][2],
+                        jsonElem[3][1]))
+            }
+            else
+            {
+                elem = Project.makeChord(
+                    parentId,
+                    range,
+                    Theory.Chord.fromJson(jsonElem[3]))
+            }
             break
         }
 
-        case "track":
-            throw "invalid json"
+        default:
+            throw "invalid project json"
     }
 
-    const id = projectRef.ref.nextId
-    projectRef.ref = Project.upsertElement(projectRef.ref, elem)
+    const id = project.root.nextId
+    project.root = Project.upsertElement(project.root, elem)
 
     if (jsonElem[4])
     {
         for (const jsonInner of jsonElem[4])
         {
-            importElem(projectRef, id, jsonInner, range.start)
+            importElem(version, project, id, jsonInner, range.start)
         }
     }
 }

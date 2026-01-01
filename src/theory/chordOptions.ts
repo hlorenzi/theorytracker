@@ -120,7 +120,7 @@ export namespace ChordOptions
             for (let degree = 0; degree < 7; degree++)
             {
                 const testOpts: ChordOptions = { ...makeEmpty(), withStacking }
-                if (chord.isEqual(buildChord(key, degree, testOpts)))
+                if (chord.isEqualForPalette(buildChord(key, degree, testOpts)))
                     return testOpts
             }
         }

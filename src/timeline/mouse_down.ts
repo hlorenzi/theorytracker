@@ -84,14 +84,12 @@ export function mouseDown(
         timeline.cursor.visible = true
         timeline.cursor.rectMode = false
         Timeline.cursorSetTime(timeline, timeline.mouse.point.time, timeline.mouse.point.time)
+        Timeline.cursorSetLaneIndex(timeline, timeline.mouse.point.laneIndex, timeline.mouse.point.laneIndex)
 
         timeline.cursor.verticalRegion = {
             y1: timeline.mouse.point.lanePos.y,
             y2: timeline.mouse.point.lanePos.y,
         }
-        
-        timeline.cursor.laneIndex1 = timeline.cursor.laneIndex2 =
-            timeline.mouse.point.laneIndex
     
         if (doubleClick)
         {
@@ -108,8 +106,6 @@ export function mouseDown(
             timeline.mouse.down = false
             timeline.mouse.action = Timeline.MouseAction.None
         }
-
-        timeline.playbackStartTime = timeline.cursor.time1
 
         return
     }

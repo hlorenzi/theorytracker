@@ -7,3 +7,10 @@ export function keyUp(
 {
     timeline.keysDown.delete(key)
 }
+
+
+export function allKeysUp(
+    timeline: Timeline.State)
+{
+    timeline.keysDown.clear()
+}

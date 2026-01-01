@@ -139,9 +139,11 @@ export function drawChord(
 		rect.w,
 		rect.h - ornamentH * 2)
 
-	const chordStr = chord.str(key)
-
 	const maxWidth = rect.w * 0.9
+	if (maxWidth < 8)
+		return
+
+	const chordStr = chord.str(key)
 
 	ctx.fillStyle = "#000"
 	drawChordName(
@@ -199,6 +201,9 @@ function drawChordName(
 
 	let baseWidth = baseMetrics.width
 	let supSubWidth = Math.max(supMetrics.width, subMetrics.width)
+	if (baseWidth + supSubWidth > maxWidth * 4)
+		return
+
 	if (baseWidth + supSubWidth > maxWidth)
 	{
 		const supSubWidthProportion = supSubWidth / (baseWidth + supSubWidth)

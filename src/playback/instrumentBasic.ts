@@ -283,6 +283,12 @@ export class InstrumentBasic extends Playback.Instrument
         audioCtxTimestampMs: number,
         deltaTimeMs: number)
     {
+        for (const note of this.notes)
+        {
+            if (note.voices.every(v => audioCtxTimestampMs >= v.endMs))
+                this.stopNote(note)
+        }
+
         this.notes = this.notes.filter(note =>
             note.voices.some(v => audioCtxTimestampMs < v.endMs))
     }

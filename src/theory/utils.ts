@@ -63,10 +63,10 @@ export default class Utils
 		Utils.letterToStr(Utils.mod(degree, 7))
 
 	static degreeToColor = (degree: number): string =>
-		["#f00", "#f80", "#fd0", "#0d0", "#00f", "#80f", "#f0f"][degree]
+		["#f20", "#f80", "#edcd00", "#0b0", "#02f", "#80f", "#f0e"][degree]
 
 	static degreeToColorFaded = (degree: number): string =>
-		["#400", "#420", "#430", "#030", "#004", "#2c0c4c", "#404"][degree]
+		["#400", "#420", "#430", "#030", "#025", "#2c0c4c", "#404"][degree]
 
 
 	static accidentalToStr(accidental: number, useUnicode: boolean = true): string

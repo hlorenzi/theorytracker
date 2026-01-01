@@ -423,13 +423,12 @@ export function selectionAddAtCursor(
 
 
 export function rewind(
-    state: Timeline.State,
+    timeline: Timeline.State,
     project: Project.ImmutableRoot)
 {
-    state.cursor.visible = true
-    state.cursor.time1 = state.cursor.time2 = project.range.start
-    state.playbackStartTime = state.cursor.time1
-    scrollTimeIntoView(state, state.cursor.time1)
+    timeline.cursor.visible = true
+    cursorSetTime(timeline, project.range.start, project.range.start)
+    scrollTimeIntoView(timeline, timeline.cursor.time1)
 }
 
 
@@ -440,6 +439,8 @@ export function cursorSetTime(
 {
     timeline.cursor.time1 = time1 ?? timeline.cursor.time1
     timeline.cursor.time2 = time2 ?? timeline.cursor.time2
+
+    timeline.playbackStartTime = timeline.cursor.time1.min(timeline.cursor.time2)
 }
 
 
@@ -489,13 +490,44 @@ export function scrollTimeIntoView(
         timeline.timeScroll =
             time.asFloat() -
             (timeline.renderRect.w - marginPixels) / timeline.timeScale
+
+        return true
     }
     else if (time.compare(range.start.add(marginTime)) <= 0)
     {
         timeline.timeScroll =
             time.asFloat() -
             marginPixels / timeline.timeScale
+
+        return true
     }
+
+    return false
+}
+
+
+export function scrollPlayTimeIntoView(
+    timeline: Timeline.State,
+    time: Rational)
+{
+    if (timeline.mouse.down)
+        return false
+
+    const range = visibleTimeRange(timeline)
+    const marginPixels = 100
+    const marginTime = Rational.fromFloat(marginPixels / timeline.timeScale, 10000)
+    
+    if (time.compare(range.end.subtract(marginTime)) >= 0 ||
+        time.compare(range.start.add(marginTime)) <= 0)
+    {
+        timeline.timeScroll =
+            time.asFloat() -
+            marginPixels / timeline.timeScale
+
+        return true
+    }
+
+    return false
 }
 
 
